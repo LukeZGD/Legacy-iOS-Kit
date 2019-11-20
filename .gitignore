@@ -2,5 +2,6 @@
 *.shsh2
 iP*/
 tmp/
-tools/
 BuildManifest.plist
+tools/futurerestore*
+tools/tsschecker*
