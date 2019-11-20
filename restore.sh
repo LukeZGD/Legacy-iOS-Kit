@@ -53,6 +53,11 @@ key_n41=baf05fe0282f78c18c2e3842be4f9021919d586b55594281f5b5abd0f6e61495
 iv_n42=fdad2b7a35384fa2ffc7221213ca1082
 key_n42=74cd68729b800a20b1f8e8a3cb5517024a09f074eaa05b099db530fb5783275e
 
+rm -rf iP*/
+rm -rf tmp/
+rm -rf $(ls *.shsh2)
+rm -rf BuildManifest.plist
+
 clear
 echo "******* 841-OTA-Downgrader *******"
 echo "          - by LukeZGD            "
@@ -81,8 +86,7 @@ echo
 
 IPSW="${ProductType}_8.4.1_12H321_Restore"
 
-#if [ ! -e ${IPSW}.ipsw ]
-if [  -e ${IPSW}.ipsw ]
+if [ ! -e ${IPSW}.ipsw ]
 then
     echo "iOS 8.4.1 IPSW is missing! Please put the IPSW on the same directory of this script"
     echo
@@ -91,33 +95,32 @@ fi
 
 echo "Downloading tsschecker..."
 mkdir tmp
-wget -q "https://github.com/tihmstar/tsschecker/releases/download/v212/tsschecker_v212_mac_win_linux.zip" -O "tmp/tsschecker.zip"
+curl -L -# "https://github.com/tihmstar/tsschecker/releases/download/v212/tsschecker_v212_mac_win_linux.zip" > "tmp/tsschecker.zip"
 echo "Extracting tsschecker..."
-unzip -q tmp/tsschecker.zip -d tools/tsschecker/
-chmod +x tools/tsschecker/tsschecker_$platform
+unzip -j tmp/tsschecker.zip tsschecker_$platform -d tools/
+chmod +x tools/tsschecker_$platform
 echo
 
 echo "Downloading futurerestore..."
-wget -q "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -O "tmp/futurerestore.zip"
+curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" > "tmp/futurerestore.zip"
 echo "Extracting futurerestore..."
-unzip -q tmp/futurerestore.zip -d tools/futurerestore/
-chmod +x tools/futurerestore/futurerestore_$platform
+unzip -j tmp/futurerestore.zip futurerestore_$platform -d tools/
+chmod +x tools/futurerestore_$platform
 echo 
 
 echo "Downloading ota.json..."
-wget -q "https://api.ipsw.me/v2.1/ota.json/condensed" -O tmp/ota.json
+curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" > "tmp/ota.json"
 echo "Copying ota.json to /tmp..."
 cp tmp/ota.json /tmp
 echo
 
-echo "Downloading OTA Firmware..."
-wget -q "https://api.ipsw.me/v4/ota/download/$ProductType/12H321?prerequisite=12H143" -O tmp/ota.zip
-echo "Extracting BuildManifest.plist..."
-unzip -q -j tmp/ota.zip AssetData/boot/BuildManifest.plist -d tmp/
+echo "Downloading BuildManifest.plist..."
+OTAFirmware=$(curl "https://api.ipsw.me/v4/ota/download/$ProductType/12H321?prerequisite=12H143" -s -L -I -o /dev/null -w '%{url_effective}')
+pzb -g AssetData/boot/BuildManifest.plist $OTAFirmware
 echo
 
 echo "Saving 8.4.1 blobs with tsschecker..."
-env "LD_PRELOAD=libcurl.so.3" tools/tsschecker/tsschecker_$platform -d $ProductType -i 8.4.1 -o -s -e $UniqueChipID -m tmp/BuildManifest.plist > /dev/null 2>&1
+env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i 8.4.1 -o -s -e $UniqueChipID -m BuildManifest.plist
 echo
 
 echo "Extracting 8.4.1 IPSW..."
@@ -133,27 +136,38 @@ tools/xpwntool_$platform $IPSW/Firmware/dfu/$iBSS.dfu tmp/iBSS.dec -k ${!key} -i
 echo
 
 echo "Patching iBSS..."
-bspatch tmp/iBSS.dec patches/$iBSS.patch tmp/pwnediBSS
+bspatch tmp/iBSS.dec tmp/pwnediBSS patches/$iBSS.patch
 echo
 
-if [ ! $iOS10 ]
+if [ $(echo $version | cut -c 1) == 1 ]
 then
-    kloader="kloader"
-else
     kloader="kloader_hgsp"
+elif [ $(echo $version | cut -c 1) == 5 ]
+then
+    kloader="kloader5"
+else
+    kloader="kloader"
 fi
 
+echo "Make sure SSH is installed and working on the device!"
 echo "Please enter Wi-Fi IP address of device for SSH connection:"
-#read IPAddress
+read IPAddress
 echo "Will now connect to device using SSH"
 echo "Please enter root password when prompted (default is 'alpine')"
 echo
 
 echo "Copying stuff to device..."
-scp tools/$kloader root@$IPAddress:/usr/bin
-scp tmp/pwnediBSS root@$IPAddress:/
+scp tools/$kloader tmp/pwnediBSS root@$IPAddress:/
 echo
 
-echo "Entering pwnDFU mode..."
-ssh root@$IPAddress "$kloader /pwnediBSS"
+echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
+ssh root@$IPAddress "chmod 0755 /$kloader && /$kloader /pwnediBSS"
 echo
+
+echo "Press home/power button once when screen goes black on the device, then press [enter]"
+read
+echo "Will now proceed to futurerestore in 5 seconds..."
+sleep 5
+echo
+
+sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --latest-baseband --use-pwndfu ${IPSW}.ipsw

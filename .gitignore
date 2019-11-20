@@ -1,3 +1,6 @@
+*.ipsw
 *.shsh2
+iP*/
 tmp/
 tools/
+BuildManifest.plist
