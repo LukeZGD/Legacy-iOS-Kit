@@ -1,6 +1,15 @@
 #!/bin/bash
 
-platform="linux"
+if [[ $OSTYPE == "linux-gnu" ]]
+then
+    platform="linux"
+elif [[ $OSTYPE == "darwin"* ]]
+then
+    platform="macos"
+else
+    echo "OSTYPE unknown/not supported"
+    exit
+fi
 
 iv_k93=781b9672a86ba1b41f8b7fa0af714c94
 key_k93=db03d63a767b5211d644fccd3e85ef4d5704c94d7589e0fa9ca475a353d8734b
@@ -53,30 +62,53 @@ key_n41=baf05fe0282f78c18c2e3842be4f9021919d586b55594281f5b5abd0f6e61495
 iv_n42=fdad2b7a35384fa2ffc7221213ca1082
 key_n42=74cd68729b800a20b1f8e8a3cb5517024a09f074eaa05b099db530fb5783275e
 
+iv_n48=dbecd5f265e031835584e6bfbdb4c47f
+key_n48=248f86d983626b75d26718fa52732eca64466ab73df048f278e034a272041f7e
+
+iv_n49=039241f2b0212bb7c7b62ab4deec263f
+key_n49=d0b49d366469ae2b1580d7d31b1bcf783d835e4fac13cfe9f9a160fa95010ac4
+
+iv_k93_613=b69f753dccd09c9b98d345ec73bbf044
+key_k93_613=6e4cce9ea6f2ec346cba0b279beab1b43e44a0680f1fde789a00f66a1e68ffab
+
+iv_k94_613=bc3c9f168d7fb86aa219b7ad8039584b
+key_k94_613=b1bd1dc5e6076054392be054d50711ae70e8fcf31a47899fb90ab0ff3111b687
+
+iv_k95_613=56f964ee19bfd31f06e43e9d8fe93902
+key_k95_613=0bb841b8f1922ae73d85ed9ed0d7a3583a10af909787857c15af2691b39bba30
+
+iv_n94_613=147cdef921ed14a5c10631c5e6e02d1e
+key_n94_613=6ea1eb62a9f403ee212c1f6b3039df093963b46739c6093407190fe3d750c69c
+
 function Downgrade841 {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     DowngradeVersion="8.4.1"
     DowngradeBuildVer="12H321"
     DowngradeBuildPre="12H143"
+    iv=iv_$HardwareModelLower
+    key=key_$HardwareModelLower
     Downgrade
 }
 
 function Downgrade613 {
-    if [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,1 ]
+    if [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,2 ] || [ $HardwareModel == iPad2,3 ] || [ $HardwareModel == iPhone4,1 ]
     then
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
         DowngradeBuildVer="10B329"
         DowngradeBuildPre="10B146"
+        iv=iv_${HardwareModelLower}_613
+        key=key_${HardwareModelLower}_613
         Downgrade
     else
         echo "Your device does not support downgrading to 6.1.3 OTA"
-        read
     fi
 }
 
 function Downgrade {
     IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
+    iBSSDir="$IPSW/Firmware/dfu"
+    
     if [ ! -e ${IPSW}.ipsw ]
     then
         echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
@@ -160,19 +192,18 @@ function Downgrade {
         rm -rf tmp/ BuildManifest.plist
         exit
     fi
-
+    
     echo "Extracting $DowngradeVersion IPSW..."
     unzip -q ${IPSW}.ipsw -d "$IPSW/"
     echo
-
+    
     pwnDFU
 
     echo "Will now proceed to futurerestore..."
     echo
 
-    while [[ ! $ScriptDone ]]
+    while [[ $ScriptDone != 1 ]]
     do
-        
         if [[ ! $NoBaseband ]]
         then
             sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --latest-baseband --use-pwndfu ${IPSW}.ipsw
@@ -189,21 +220,34 @@ function Downgrade {
         then
             ScriptDone=1
         fi
-
     done
 
     echo "Downgrade script done!"
-    read
+    exit
+}
+
+function pwnDFUSelf {
+    DowngradeVersion="8.4.1"
+    IPSW="${ProductType}_8.4.1_12H321_Restore"
+    iBSS="iBSS.$HardwareModelLower.RELEASE"
+    iBSSDir="tmp"
+    iv=iv_$HardwareModelLower
+    key=key_$HardwareModelLower
+    if [ ! -e ${IPSW}.ipsw ]
+    then
+        echo "Please provide an iOS 8.4.1 IPSW for your device to get to pwnDFU mode"
+    else
+        echo "Extracting iBSS from IPSW..."
+        unzip -j ${IPSW}.ipsw Firmware/dfu/$iBSS.dfu -d "tmp/"
+        pwnDFU
+    fi
 }
 
 function pwnDFU {
-
     echo "Decrypting iBSS..."
-    iv=iv_$HardwareModelLower
-    key=key_$HardwareModelLower
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
-    tools/xpwntool_$platform $IPSW/Firmware/dfu/$iBSS.dfu tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
+    tools/xpwntool_$platform "${iBSSDir}/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
 
@@ -258,8 +302,9 @@ function pwnDFU {
     fi
 
     echo "Press home/power button once when screen goes black on the device"
+    echo "Finding device in pwnDFU mode..."
 
-    while [[ $pwnDFUDevice == 1 ]]
+    while [[ $pwnDFUDevice != 1 ]]
     do
         pwnDFUDevice=$(lsusb | grep -c "1227")
         sleep 2
@@ -267,19 +312,18 @@ function pwnDFU {
 
     echo "Entering pwnDFU mode successful"
     echo
-
 }
+
+HardwareModel=$(ideviceinfo | grep 'HardwareModel' | cut -c 16-)
+HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
+ProductVersion=$(ideviceinfo | grep 'ProductVersion' | cut -c 17-)
+VersionDetect=$(echo $ProductVersion | cut -c 1)
+UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
 
 function MainMenu {
     rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
     mkdir tmp
-
-    HardwareModel=$(ideviceinfo | grep 'HardwareModel' | cut -c 16-)
-    HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-    ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-    ProductVersion=$(ideviceinfo | grep 'ProductVersion' | cut -c 17-)
-    VersionDetect=$(echo $ProductVersion | cut -c 1)
-    UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
 
     clear
     echo "******* 32bit-OTA-Downgrader *******"
@@ -304,12 +348,12 @@ function MainMenu {
 
 MainMenu
 
-select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Put device in pwnDFU mode" "Exit"; do
+select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Exit"; do
     case $opt in
-        "Downgrade device to iOS 8.4.1" ) Downgrade841; MainMenu;;
-        "Downgrade device to iOS 6.1.3" ) Downgrade613; MainMenu;;
-        "Put device in pwnDFU mode" ) pwnDFUStart; MainMenu;;
-        "Exit" ) exit;;
+        "Downgrade device to iOS 8.4.1" ) Downgrade841; break;;
+        "Downgrade device to iOS 6.1.3" ) Downgrade613; break;;
+        "Just put device in pwnDFU mode" ) pwnDFUSelf; break;;
+        "Exit" ) break;;
         *) MainMenu;;
     esac
 done

@@ -1,7 +1,7 @@
 # 32bit-OTA-Downgrader
-- Script that can be used to downgrade almost any supported 32-bit device to **iOS 8.4.1**
-- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3** (UNTESTED)
+- This script can be used to downgrade almost any supported 32-bit device to **iOS 8.4.1**
 - This can also be used to enter pwnDFU mode for all devices
+- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3** (UNTESTED) (iPad 2,3 users have to enter pwnDFU mode manually with tools like [kDFUApp](https://twitter.com/tihmstar/status/661302215928381441?lang=en))
 
 ### Prerequisites:
 - **Any jailbroken 32-bit iOS device**
@@ -33,6 +33,8 @@
 - [kloader5 (iOS 5)](http://www.pmbonneau.com/cydia/)
 - [kloader_hgsp (iOS 10)](https://twitter.com/nyan_satan/status/945203180522045440)
 - [futurerestore](https://github.com/tihmstar/futurerestore)
+
+- iBSS patches are from [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
 
 ### Devices tested on:
 - iPad3,3

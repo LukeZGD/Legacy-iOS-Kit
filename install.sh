@@ -2,11 +2,11 @@
 
 function ubuntu {
     sudo apt update
-    sudo apt install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
+    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
 }
 
 function arch {
-    sudo pacman -Sy bsdiff libcurl-compat libpng12 libzip openssl-1.0 usbmuxd usbutils
+    sudo pacman -Sy --noconfirm bsdiff libcurl-compat libpng12 libzip openssl-1.0 usbmuxd usbutils
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
 }
 
