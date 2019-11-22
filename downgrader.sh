@@ -149,7 +149,7 @@ function Downgrade {
     then
         echo "Downloading ota.json..."
         curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "tmp/ota.json"
-        echo 'Copying ota.json to /tmp or $TMPDIR...'
+        echo 'Copying ota.json to tmp...'
         if [ $platform == macos ] 
         then
             cp tmp/ota.json $TMPDIR
@@ -178,13 +178,7 @@ function Downgrade {
     fi
 
     echo "Saving $DowngradeVersion blobs with tsschecker..."
-    if [[ ! $NoBaseband ]]
-    then
-        env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/BuildManifest.plist
-    else
-        echo "Detected device has no baseband"
-        env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -b -e $UniqueChipID -m tmp/BuildManifest.plist
-    fi
+    env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/BuildManifest.plist
     echo
     if [ ! -e $(ls *.shsh2) ]
     then
@@ -332,7 +326,7 @@ function MainMenu {
 
     if [ ! $HardwareModel ]
     then
-        echo "Please plug the device in before proceeding"
+        echo "Please plug the device in and trust this computer before proceeding"
         exit
     elif [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,4 ] || [ $HardwareModel == iPad2,5 ] || [ $HardwareModel == iPad3,1 ] || [ $HardwareModel == iPad3,4 ] || [ $HardwareModel == iPod5,1 ]
     then

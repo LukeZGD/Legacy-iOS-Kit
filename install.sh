@@ -6,7 +6,7 @@ function ubuntu {
 }
 
 function arch {
-    sudo pacman -Sy --noconfirm bsdiff libcurl-compat libpng12 libzip openssl-1.0 usbmuxd usbutils
+    sudo pacman -Sy --noconfirm bsdiff curl libcurl-compat libpng12 libzip openssl-1.0 usbmuxd usbutils
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
 }
 
