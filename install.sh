@@ -6,13 +6,13 @@ function ubuntu {
 }
 
 function arch {
-    sudo pacman -Sy bsdiff libcurl-compat libpng12 libzip openssl-1.0 usbmuxd
+    sudo pacman -Sy bsdiff libcurl-compat libpng12 libzip openssl-1.0 usbmuxd usbutils
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
 }
 
 clear
-echo "******* 841-OTA-Downgrader *******"
-echo "          - by LukeZGD            "
+echo "******* 32bit-OTA-Downgrader *******"
+echo "           - by LukeZGD             "
 echo
 echo "Install dependencies"
 select opt in "Ubuntu 16.04" "Arch Linux"; do
