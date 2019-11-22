@@ -9,7 +9,7 @@
 - **MTerminal** installed on iOS device (10.x users)
 - iOS 7 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb)
 - iOS 8 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-- A Linux install or live USB (Tested on Lubuntu **16.04**, Manjaro, and Arch Linux)
+- A Linux install or live USB (Tested on Lubuntu **16.04**, Manjaro, and Arch Linux) (macOS may also work with dependencies installed)
 - For VirtualBox users, add a New USB Filter in the VM settings
 - For VMWare users, enable Autoconnect USB Devices
 - The computer and device must be on the same network (for SSH)
@@ -18,7 +18,7 @@
 - When the prerequisites are met, usage should be straightforward:
 1. Download or `git clone` this repo
 2. Open Terminal, cd to the directory where the scripts are located (eg. `cd /home/user/32bit-OTA-Downgrader`)
-3. Run `chmod +x install.sh restore.sh`
+3. Run `chmod +x install.sh downgrader.sh`
 4. Run `./install.sh`
 5. Run `./downgrader.sh`
 6. Select option to be used (8.4.1/6.1.3 downgrade or just enter pwnDFU mode)
@@ -26,13 +26,16 @@
 
 ### Tools used by this script:
 - cURL
-- [tsschecker](https://github.com/tihmstar/tsschecker)
 - bsdiff (bspatch)
+- ideviceinfo
+- ifuse
+- [tsschecker](https://github.com/tihmstar/tsschecker)
+- [futurerestore](https://github.com/tihmstar/futurerestore)
 - [xpwntool](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 (iOS 5)](http://www.pmbonneau.com/cydia/)
 - [kloader_hgsp (iOS 10)](https://twitter.com/nyan_satan/status/945203180522045440)
-- [futurerestore](https://github.com/tihmstar/futurerestore)
+
 
 - iBSS patches are from [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
 

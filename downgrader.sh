@@ -209,7 +209,7 @@ function Downgrade {
             sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
             echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --latest-baseband --use-pwndfu --no-baseband ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --no-baseband --use-pwndfu ${IPSW}.ipsw
         fi
         
         echo "futurerestore done!"
