@@ -105,16 +105,7 @@ function Downgrade613 {
     fi
 }
 
-function Downgrade {
-    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
-    iBSSDir="$IPSW/Firmware/dfu"
-    
-    if [ ! -e ${IPSW}.ipsw ]
-    then
-        echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
-        exit
-    fi
-
+function SaveOTABlobs {
     if [ ! -e tools/tsschecker_$platform ]
     then
         echo "Downloading tsschecker..."
@@ -127,21 +118,6 @@ function Downgrade {
     if [ ! -e tools/tsschecker_$platform ]
     then
         echo "Download/extract tsschecker failed. Please run the script again"
-        exit
-    fi
-
-    if [ ! -e tools/futurerestore_$platform ]
-    then
-        echo "Downloading futurerestore..."
-        curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -o "tmp/futurerestore.zip"
-        echo "Extracting futurerestore..."
-        unzip -j tmp/futurerestore.zip futurerestore_$platform -d "tools/"
-        chmod +x tools/futurerestore_$platform
-        echo 
-    fi
-    if [ ! -e tools/futurerestore_$platform ]
-    then
-        echo "Download/extract futurerestore failed. Please run the script again"
         exit
     fi
 
@@ -180,15 +156,50 @@ function Downgrade {
     echo "Saving $DowngradeVersion blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/BuildManifest.plist
     echo
-    if [ ! -e $(ls *.shsh2) ]
+    SHSH=$(ls *.shsh2)
+    if [ ! -e $SHSH ]
     then
         echo "Saving $DowngradeVersion blobs failed. Please run the script again"
         rm -rf tmp/ BuildManifest.plist
         exit
     fi
+}
+
+function Downgrade {
+    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
+    
+    if [ ! -e ${IPSW}.ipsw ]
+    then
+        echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
+        exit
+    fi
+    
+    if [ ! -e tools/futurerestore_$platform ]
+    then
+        echo "Downloading futurerestore..."
+        curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -o "tmp/futurerestore.zip"
+        echo "Extracting futurerestore..."
+        unzip -j tmp/futurerestore.zip futurerestore_$platform -d "tools/"
+        chmod +x tools/futurerestore_$platform
+        echo 
+    fi
+    if [ ! -e tools/futurerestore_$platform ]
+    then
+        echo "Download/extract futurerestore failed. Please run the script again"
+        exit
+    fi
+    
+    if [ ! $NotOTADowngrade ]
+    then
+        SaveOTABlobs
+    else
+        echo "Please provide the path and name to the SHSH blob:"
+        read SHSH
+    fi
     
     echo "Extracting $DowngradeVersion IPSW..."
     unzip -q ${IPSW}.ipsw -d "$IPSW/"
+    cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     echo
     
     pwnDFU
@@ -200,12 +211,13 @@ function Downgrade {
     do
         if [[ ! $NoBaseband ]]
         then
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --latest-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
             echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $(ls *.shsh2) --no-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
         fi
         
+        echo
         echo "futurerestore done!"
         echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
         echo "Retry? (y/n)"
@@ -224,7 +236,6 @@ function pwnDFUSelf {
     DowngradeVersion="8.4.1"
     IPSW="${ProductType}_8.4.1_12H321_Restore"
     iBSS="iBSS.$HardwareModelLower.RELEASE"
-    iBSSDir="tmp"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
     if [ ! -e ${IPSW}.ipsw ]
@@ -241,7 +252,7 @@ function pwnDFU {
     echo "Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
-    tools/xpwntool_$platform "${iBSSDir}/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
+    tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
 
@@ -263,21 +274,22 @@ function pwnDFU {
     then
         WifiAddr=$(ideviceinfo | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
-        mkdir mountdir
+        mkdir tmp/mountdir
         echo "Mounting device using ifuse..."
-        ifuse mountdir
+        ifuse tmp/mountdir
         echo "Copying stuff to device..."
-        cp "tools/$kloader" "tmp/pwnediBSS" "mountdir/"
-        umount mountdir
-        rm -rf mountdir
+        cp "tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
+        echo "Unmounting device..."
+        sudo umount tmp/mountdir
+        #rm -rf tmp/mountdir
         echo
         echo "Enter MTerminal and run these commands:"
         echo
         echo "su"
         echo "(enter root password, default is 'alpine')"
         echo "nvram wifiaddr=$WifiAddrDecr"
-        echo "cd /var/mobile/Media"
-        echo "chmod 0755 kloader_hgsp"
+        echo "cd Media"
+        echo "chmod 755 kloader_hgsp"
         echo "./kloader_hgsp pwnediBSS"
         echo
     else
@@ -291,6 +303,7 @@ function pwnDFU {
         scp tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         echo
         echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
+        echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU (like on iPad2,3)"
         ssh root@$IPAddress "chmod 0755 /$kloader && /$kloader /pwnediBSS"
         echo
     fi
