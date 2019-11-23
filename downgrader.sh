@@ -112,9 +112,9 @@ function SaveOTABlobs {
         curl -L -# "https://github.com/tihmstar/tsschecker/releases/download/v212/tsschecker_v212_mac_win_linux.zip" -o "tmp/tsschecker.zip"
         echo "Extracting tsschecker..."
         unzip -j tmp/tsschecker.zip tsschecker_$platform -d "tools/"
-        chmod +x tools/tsschecker_$platform
         echo
     fi
+    chmod +x tools/tsschecker_$platform
     if [ ! -e tools/tsschecker_$platform ]
     then
         echo "Download/extract tsschecker failed. Please run the script again"
@@ -180,9 +180,9 @@ function Downgrade {
         curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -o "tmp/futurerestore.zip"
         echo "Extracting futurerestore..."
         unzip -j tmp/futurerestore.zip futurerestore_$platform -d "tools/"
-        chmod +x tools/futurerestore_$platform
         echo 
     fi
+    chmod +x tools/futurerestore_$platform
     if [ ! -e tools/futurerestore_$platform ]
     then
         echo "Download/extract futurerestore failed. Please run the script again"
@@ -252,6 +252,7 @@ function pwnDFU {
     echo "Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
+    chmod +x tools/xpwntool_$platform
     tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
@@ -304,7 +305,7 @@ function pwnDFU {
         echo
         echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
         echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU (like on iPad2,3)"
-        ssh root@$IPAddress "chmod 0755 /$kloader && /$kloader /pwnediBSS"
+        ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS"
         echo
     fi
 

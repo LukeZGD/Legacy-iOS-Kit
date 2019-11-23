@@ -9,7 +9,7 @@
 - **MTerminal** installed on iOS device (10.x users)
 - iOS 7 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb)
 - iOS 8 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-- A Linux install or live USB (Tested on Lubuntu **16.04**, Manjaro, and Arch Linux) (macOS may also work with dependencies installed)
+- A Linux install or live USB (Tested on Lubuntu 16.04, 18.04, Manjaro, and Arch Linux) (macOS may also work with dependencies installed)
 - For VirtualBox users, add a New USB Filter in the VM settings
 - For VMWare users, enable Autoconnect USB Devices
 - The computer and device must be on the same network (for SSH)
