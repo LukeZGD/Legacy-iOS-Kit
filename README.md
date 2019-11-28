@@ -9,21 +9,21 @@
 - This script only uses iBSS patches from bundles for entering pwnDFU mode, NOT for creating a custom IPSW
 
 ### Prerequisites:
-- **Any jailbroken 32-bit iOS device**
-- **iOS 8.4.1 or 6.1.3 IPSW for your device**
-- **OpenSSH** installed on iOS device
-- **MTerminal** installed on iOS device (10.x users only)
+- **Any jailbroken 32-bit iOS device** ([Phoenix](https://phoenixpwn.com/) for 9.3.5/9.3.6, [h3lix](https://h3lix.tihmstar.net/) for 10.3.3/10.3.4)
+- **iOS [8.4.1](https://ipsw.me/8.4.1) or [6.1.3](https://ipsw.me/6.1.3) IPSW for your device**
+- **A Linux install or live USB** (Tested on Lubuntu [16.04](http://cdimage.ubuntu.com/lubuntu/releases/16.04/release/), [18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/), [Manjaro](https://manjaro.org/download/), and [Arch Linux](https://www.archlinux.org/)) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
+- **[OpenSSH](https://cydia.saurik.com/openssh.html)** installed on iOS device (
+- **[MTerminal](http://cydia.saurik.com/package/com.officialscheduler.mterminal/)** installed on iOS device (10.x users only)
 - iOS 7 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb)
 - iOS 8 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-- A Linux install or live USB (Tested on Lubuntu 16.04, 18.04, Manjaro, and Arch Linux) (macOS may also work with dependencies installed)
 - For VirtualBox users, add a New USB Filter in the VM settings
 - For VMWare users, enable Autoconnect USB Devices
 - The computer and device must be on the same network (for SSH)
 
 ### How to use:
 - When the prerequisites are met, usage should be straightforward:
-1. Download or `git clone` this repo
-2. Open Terminal, cd to the directory where the scripts are located (eg. `cd /home/user/32bit-OTA-Downgrader`)
+1. [Download](https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/master.zip) or `git clone` this repo
+2. Open Terminal, cd to the directory where the scripts are located (example: `cd /home/user/32bit-OTA-Downgrader`)
 3. Run `chmod +x install.sh downgrader.sh`
 4. Run `./install.sh`
 5. Run `./downgrader.sh`
