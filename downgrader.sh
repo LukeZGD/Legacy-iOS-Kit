@@ -304,7 +304,7 @@ function pwnDFU {
         scp tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         echo
         echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
-        echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU (like on iPad2,3)"
+        echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU"
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS"
         echo
     fi

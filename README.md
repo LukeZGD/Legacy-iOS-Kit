@@ -1,12 +1,18 @@
 # 32bit-OTA-Downgrader
 - This script can be used to downgrade almost any supported 32-bit device to **iOS 8.4.1**
-- This can also be used to enter pwnDFU mode for all devices
-- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3** (UNTESTED) (iPad 2,3 users have to enter pwnDFU mode manually with tools like [kDFUApp](https://twitter.com/tihmstar/status/661302215928381441?lang=en))
+- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3** (UNTESTED)
+- This can also be used to enter pwnDFU mode for all supported devices
+
+### Some notes:
+- This script uses the futurerestore method for downgrading, NOT the Odysseus method nor modifying SystemVersion.plist
+- This script will use an unmodified IPSW to restore
+- This script only uses iBSS patches from bundles for entering pwnDFU mode, NOT for creating a custom IPSW
 
 ### Prerequisites:
 - **Any jailbroken 32-bit iOS device**
+- **iOS 8.4.1 or 6.1.3 IPSW for your device**
 - **OpenSSH** installed on iOS device
-- **MTerminal** installed on iOS device (10.x users)
+- **MTerminal** installed on iOS device (10.x users only)
 - iOS 7 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb)
 - iOS 8 Pangu users should install [this](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
 - A Linux install or live USB (Tested on Lubuntu 16.04, 18.04, Manjaro, and Arch Linux) (macOS may also work with dependencies installed)
@@ -36,8 +42,7 @@
 - [kloader5 (iOS 5)](http://www.pmbonneau.com/cydia/)
 - [kloader_hgsp (iOS 10)](https://twitter.com/nyan_satan/status/945203180522045440)
 
-
-- iBSS patches are from [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
+- iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
 
 ### Devices tested on:
 - iPad3,3
@@ -46,7 +51,6 @@
 ### Supported devices:
 
 - (*) Also supports iOS 6.1.3 downgrade
-- (**) Enter pwnDFU mode ONLY
 
 #### iPad 2
 - iPad2,1* 
@@ -79,7 +83,6 @@
 - iPhone5,1
 - iPhone5,2
 
-#### iPhone 5C
+#### iPhone 5C (**Enter pwnDFU mode ONLY, 8.4.1 OTA DOWNGRADING IS NOT SUPPORTED!)
 - iPhone5,3**
 - iPhone5,4**
-
