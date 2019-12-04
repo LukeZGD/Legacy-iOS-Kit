@@ -1,5 +1,10 @@
 #!/bin/bash
 
+clear
+echo "******* 32bit-OTA-Downgrader *******"
+echo "           - by LukeZGD             "
+echo
+
 if [[ $OSTYPE == "linux-gnu" ]]
 then
     platform="linux"
@@ -84,7 +89,7 @@ function Downgrade841 {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     DowngradeVersion="8.4.1"
     DowngradeBuildVer="12H321"
-    DowngradeBuildPre="12H143"
+    BuildManifest="BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
     Downgrade
@@ -96,7 +101,7 @@ function Downgrade613 {
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
         DowngradeBuildVer="10B329"
-        DowngradeBuildPre="10B146"
+        BuildManifest="BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
         Downgrade
@@ -120,20 +125,22 @@ function SaveOTABlobs {
         echo "Download/extract tsschecker failed. Please run the script again"
         exit
     fi
-
-    if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]
+    
+    if [ ! -e ota.json ]
     then
         echo "Downloading ota.json..."
-        curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "tmp/ota.json"
-        echo 'Copying ota.json to tmp...'
-        if [ $platform == macos ] 
-        then
-            cp tmp/ota.json $TMPDIR
-        else
-            cp tmp/ota.json /tmp
-        fi
-        echo
+        curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
     fi
+    
+    echo 'Copying ota.json to tmp...'
+    if [ $platform == macos ] 
+    then
+        cp ota.json $TMPDIR
+    else
+        cp ota.json /tmp
+    fi
+    echo
+    
     if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]
     then
         echo "Download ota.json failed. Please run the script again"
@@ -141,12 +148,10 @@ function SaveOTABlobs {
         exit
     fi
 
-    echo "Downloading OTA Firmware..."
-    curl -L -# "https://api.ipsw.me/v4/ota/download/${ProductType}/${DowngradeBuildVer}?prerequisite=${DowngradeBuildPre}" -o "tmp/otafirmware.zip"
     echo "Extracting BuildManifest.plist..."
-    unzip -j tmp/otafirmware.zip AssetData/boot/BuildManifest.plist -d "tmp/"
+    unzip -j BuildManifests.zip $BuildManifest -d "tmp/"
     echo
-    if [ ! -e tmp/BuildManifest.plist ]
+    if [ ! -e tmp/$BuildManifest ]
     then
         echo "Download/extract BuildManifest.plist failed. Please run the script again"
         rm -rf tmp/
@@ -154,21 +159,21 @@ function SaveOTABlobs {
     fi
 
     echo "Saving $DowngradeVersion blobs with tsschecker..."
-    env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/BuildManifest.plist
+    env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/$BuildManifest
     echo
     SHSH=$(ls *.shsh2)
     if [ ! -e $SHSH ]
     then
         echo "Saving $DowngradeVersion blobs failed. Please run the script again"
-        rm -rf tmp/ BuildManifest.plist
+        rm -rf tmp/
         exit
     fi
 }
 
 function Downgrade {
-    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
+    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore.ipsw"
     
-    if [ ! -e ${IPSW}.ipsw ]
+    if [ ! -e ${IPSW} ]
     then
         echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
         exit
@@ -198,7 +203,7 @@ function Downgrade {
     fi
     
     echo "Extracting $DowngradeVersion IPSW..."
-    unzip -q ${IPSW}.ipsw -d "$IPSW/"
+    unzip -q ${IPSW} -d "$IPSW/"
     cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     echo
     
@@ -211,10 +216,10 @@ function Downgrade {
     do
         if [[ ! $NoBaseband ]]
         then
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}
         else
             echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}
         fi
         
         echo
@@ -234,16 +239,16 @@ function Downgrade {
 
 function pwnDFUSelf {
     DowngradeVersion="8.4.1"
-    IPSW="${ProductType}_8.4.1_12H321_Restore"
+    IPSW="${ProductType}_8.4.1_12H321_Restore.ipsw"
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    if [ ! -e ${IPSW}.ipsw ]
+    if [ ! -e ${IPSW} ]
     then
         echo "Please provide an iOS 8.4.1 IPSW for your device to get to pwnDFU mode"
     else
         echo "Extracting iBSS from IPSW..."
-        unzip -j ${IPSW}.ipsw Firmware/dfu/$iBSS.dfu -d "tmp/"
+        unzip -j ${IPSW} Firmware/dfu/$iBSS.dfu -d "tmp/"
         pwnDFU
     fi
 }
@@ -332,12 +337,9 @@ UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
 function MainMenu {
     rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
     mkdir tmp
-
-    clear
-    echo "******* 32bit-OTA-Downgrader *******"
-    echo "           - by LukeZGD             "
-    echo
-
+    
+    echo "Main Menu"
+    
     if [ ! $HardwareModel ]
     then
         echo "Please plug the device in and trust this computer before proceeding"
@@ -352,16 +354,85 @@ function MainMenu {
     echo "ProductVersion: $ProductVersion"
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
-}
-
-MainMenu
-
-select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Exit"; do
+    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Exit"; do
     case $opt in
         "Downgrade device to iOS 8.4.1" ) Downgrade841; break;;
         "Downgrade device to iOS 6.1.3" ) Downgrade613; break;;
         "Just put device in pwnDFU mode" ) pwnDFUSelf; break;;
-        "Exit" ) break;;
+        "Exit" ) exit;;
         *) MainMenu;;
     esac
 done
+}
+
+function Ubuntu {
+    sudo apt update
+    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
+}
+
+function Ubuntu1804 {
+    sudo apt -y install binutils
+    mkdir tmp
+    cd tmp
+    apt download -o=dir::cache=. libcurl3
+    ar x libcurl3* data.tar.xz
+    tar xf data.tar.xz
+    sudo cp -L usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/libcurl.so.3
+    if [ $(uname -m) == 'x86_64' ]
+    then
+        mtype='amd64'
+    else
+        mtype='i386'
+    fi
+    curl -L -# http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
+    sudo dpkg -i libpng12.deb
+    cd ..
+    rm -rf tmp
+}
+
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ssh) ] || [ ! $(which scp) ]
+then
+    echo "Install dependencies"
+
+    . /etc/os-release 2> /dev/null
+    if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]
+    then
+        sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libimobiledevice libpng12 libzip openssh openssl-1.0 unzip usbmuxd usbutils
+        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
+    elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]
+    then
+        Ubuntu
+    elif [[ $(which apt) ]] || [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "18.04" ]] 
+    then
+        Ubuntu
+        Ubuntu1804
+    elif [[ $OSTYPE == "darwin"* ]]
+    then
+        if [[ ! $(which brew) ]]
+        then
+            xcode-select --install
+            /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+        fi
+        brew uninstall --ignore-dependencies usbmuxd
+        brew uninstall --ignore-dependencies libimobiledevice
+        brew install --HEAD usbmuxd
+        brew install --HEAD libimobiledevice
+        brew install libzip
+        brew install openssl
+    else
+        echo "Distro not detected/supported. Please select manually"
+        select opt in "Ubuntu 16.04" "Ubuntu 18.04" "Arch Linux" "macOS"; do
+        case $opt in
+            "Ubuntu 16.04" ) ubuntu; break;;
+            "Ubuntu 18.04" ) ubuntu; ubuntu1804; break;;
+            "Arch Linux" ) arch; break;;
+            "macOS" ) macos; break;;
+        esac
+    done
+    fi
+    echo "Install script done! Will now proceed to main menu..."
+    sleep 5
+    MainMenu
+else
+    MainMenu
+fi

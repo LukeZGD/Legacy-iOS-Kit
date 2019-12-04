@@ -13,7 +13,7 @@
 ### Prerequisites:
 - **A supported jailbroken A5 or A6 iOS device on iOS 5 to 10** ([Phoenix](https://phoenixpwn.com/) for 9.3.5/9.3.6, [h3lix](https://h3lix.tihmstar.net/) for 10.3.3/10.3.4) (supported devices are listed below)
 - **iOS [8.4.1](https://ipsw.me/8.4.1) or [6.1.3](https://ipsw.me/6.1.3) IPSW for your device**
-- **A Linux install or live USB** (Tested on Lubuntu [16.04](http://cdimage.ubuntu.com/lubuntu/releases/16.04/release/), [18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/), [Manjaro](https://manjaro.org/download/), and [Arch Linux](https://www.archlinux.org/)) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
+- A **macOS** or **Linux install/live USB** (Tested on Lubuntu [16.04](http://cdimage.ubuntu.com/lubuntu/releases/16.04/release/), [18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/), [Manjaro](https://manjaro.org/download/), and [Arch Linux](https://www.archlinux.org/)) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)) (macOS tested on 10.13 and 10.14)
 - **[OpenSSH](https://cydia.saurik.com/openssh.html)** installed on iOS device
 - **[MTerminal](http://cydia.saurik.com/package/com.officialscheduler.mterminal/)** installed on iOS device (10.x users only)
 - iOS 7 Pangu users should install the [latest Pangu 7.1.x Untether](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb)
@@ -26,10 +26,9 @@
 - When the prerequisites are met, usage should be straightforward:
 1. [Download](https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/master.zip) or `git clone` this repo
 2. Open Terminal, cd to the directory where the scripts are located (example: `cd /home/user/32bit-OTA-Downgrader`)
-3. Run `chmod +x install.sh downgrader.sh`
-4. Run `./install.sh`
-5. Run `./downgrader.sh`
-6. Select option to be used (8.4.1/6.1.3 downgrade or just enter pwnDFU mode)
+3. Run `chmod +x restore.sh`
+4. Run `./restore.sh`
+5. Select option to be used (8.4.1/6.1.3 downgrade or just enter pwnDFU mode)
 6. Follow instructions
 
 ### Tools used by this script:
