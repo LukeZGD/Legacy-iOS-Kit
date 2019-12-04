@@ -171,9 +171,9 @@ function SaveOTABlobs {
 }
 
 function Downgrade {
-    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore.ipsw"
+    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
     
-    if [ ! -e ${IPSW} ]
+    if [ ! -e ${IPSW}.ipsw ]
     then
         echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
         exit
@@ -203,7 +203,7 @@ function Downgrade {
     fi
     
     echo "Extracting $DowngradeVersion IPSW..."
-    unzip -q ${IPSW} -d "$IPSW/"
+    unzip -q ${IPSW}.ipsw -d "$IPSW/"
     cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     echo
     
@@ -216,10 +216,10 @@ function Downgrade {
     do
         if [[ ! $NoBaseband ]]
         then
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
             echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}
+            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
         fi
         
         echo
@@ -239,16 +239,16 @@ function Downgrade {
 
 function pwnDFUSelf {
     DowngradeVersion="8.4.1"
-    IPSW="${ProductType}_8.4.1_12H321_Restore.ipsw"
+    IPSW="${ProductType}_8.4.1_12H321_Restore"
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    if [ ! -e ${IPSW} ]
+    if [ ! -e ${IPSW}.ipsw ]
     then
         echo "Please provide an iOS 8.4.1 IPSW for your device to get to pwnDFU mode"
     else
         echo "Extracting iBSS from IPSW..."
-        unzip -j ${IPSW} Firmware/dfu/$iBSS.dfu -d "tmp/"
+        unzip -j ${IPSW}.ipsw Firmware/dfu/$iBSS.dfu -d "tmp/"
         pwnDFU
     fi
 }
@@ -390,7 +390,7 @@ function Ubuntu1804 {
     rm -rf tmp
 }
 
-if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ssh) ] || [ ! $(which scp) ]
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ssh) ] || [ ! $(which scp) ] || [ ! $(which lsusb) ]
 then
     echo "Install dependencies"
 
@@ -419,6 +419,7 @@ then
         brew install --HEAD libimobiledevice
         brew install libzip
         brew install openssl
+        brew install lsusb
     else
         echo "Distro not detected/supported. Please select manually"
         select opt in "Ubuntu 16.04" "Ubuntu 18.04" "Arch Linux" "macOS"; do
