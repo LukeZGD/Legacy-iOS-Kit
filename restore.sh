@@ -1,10 +1,5 @@
 #!/bin/bash
 
-clear
-echo "******* 32bit-OTA-Downgrader *******"
-echo "           - by LukeZGD             "
-echo
-
 if [[ $OSTYPE == "linux-gnu" ]]
 then
     platform="linux"
@@ -338,7 +333,10 @@ function MainMenu {
     rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
     mkdir tmp
     
-    echo "Main Menu"
+    clear
+    echo "******* 32bit-OTA-Downgrader *******"
+    echo "           - by LukeZGD             "
+    echo
     
     if [ ! $HardwareModel ]
     then
@@ -348,7 +346,9 @@ function MainMenu {
     then
         NoBaseband=1
     fi
-
+	
+    echo "Main Menu"
+    echo
     echo "HardwareModel: $HardwareModel"
     echo "ProductType: $ProductType"
     echo "ProductVersion: $ProductVersion"
@@ -392,6 +392,10 @@ function Ubuntu1804 {
 
 if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ssh) ] || [ ! $(which scp) ] || [ ! $(which lsusb) ]
 then
+    clear
+    echo "******* 32bit-OTA-Downgrader *******"
+    echo "           - by LukeZGD             "
+    echo
     echo "Install dependencies"
 
     . /etc/os-release 2> /dev/null
