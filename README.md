@@ -1,6 +1,6 @@
 # 32bit-OTA-Downgrader
 - This script can be used to downgrade almost any supported 32-bit device to **iOS 8.4.1**
-- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3** (UNTESTED)
+- iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3**
 - This can also be used to enter pwnDFU mode for all supported devices
 
 ### Some other notes:
@@ -42,6 +42,7 @@
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 (iOS 5)](http://www.pmbonneau.com/cydia/)
 - [kloader_hgsp (iOS 10)](https://twitter.com/nyan_satan/status/945203180522045440)
+- [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser) (used on buildmanifestsaver.sh)
 
 - iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
 

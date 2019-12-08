@@ -12,7 +12,7 @@ else
 fi
 
 iv_k93=781b9672a86ba1b41f8b7fa0af714c94
-key_k93=db03d63a767b5211d644fccd3e85ef4d5704c94d7589e0fa9ca475a353d8734b
+key_k93=bbd7bf676dbcc6ba93c76d496b7af39ae7772eaaad2ec9fb71dc1fd004827784
 
 iv_k94=883c92ed915e4d2481570a062583495b
 key_k94=ccfadf3732904885d38f963cce035d7e03b387b67212d526503c85773b58e52f
@@ -23,14 +23,14 @@ key_k95=7852f1fd93d9d49ebea44021081e8f1dffa336d0d3e9517374f8be451dd92eb7
 iv_k93a=976aa656929ac699fff36715de96876d
 key_k93a=5fe5c47b5620c2b40b1ca2bd1764a92d568901a24e1caf8faf0cf0f84ae11b4e
 
-iv_p101=b21abc8689b0dea8f6e613f9f970e241
-key_p101=b9ed63e4a31f5d9d4d7dddc527e65fd31d1ea48c70204e6b44551c1e6dfc52b5
+iv_p105=b21abc8689b0dea8f6e613f9f970e241
+key_p105=b9ed63e4a31f5d9d4d7dddc527e65fd31d1ea48c70204e6b44551c1e6dfc52b5
 
-iv_p102=56231fd62c6296ed0c8c411bcef602e0
-key_p102=cdb2142489e5e936fa8f3540bd036f62ed0f27ddb6fec96b9fbfec5a65bc5f17
+iv_p106=56231fd62c6296ed0c8c411bcef602e0
+key_p106=cdb2142489e5e936fa8f3540bd036f62ed0f27ddb6fec96b9fbfec5a65bc5f17
 
-iv_p103=fa39c596b6569e572d90f0820e4e4357
-key_p103=34b359fcc729a0f0d2853e786a78b245ed36a9212c8296aaab95dc0401cf07de
+iv_p107=fa39c596b6569e572d90f0820e4e4357
+key_p107=34b359fcc729a0f0d2853e786a78b245ed36a9212c8296aaab95dc0401cf07de
 
 iv_j1=c3ea87ed43788dfc3e268abdf1af27dd
 key_j1=cd3dd7eee07b9ce8b180d1526632cf86dc7fef7d52352d06af354598ab9cf2ef
@@ -41,14 +41,14 @@ key_j2=076720d5a07e8011bdda6f6eafaf4845b40a441615cd1d7c1a9cca438ce7db17
 iv_j2a=e6b041970cd611c8a1561a4c210bc476
 key_j2a=aec6a888d45bd26106ac620d7d4ec0c160ab80276deedc1b50ce8f5d99dcc9af
 
-iv_p105=a5892a58c90b6d3fb0e0b20db95070d7
-key_p105=75612774968009e3f85545ac0088d0d0bb9cb4e2c2970e8f88489be0b9dfe103
+iv_p101=a5892a58c90b6d3fb0e0b20db95070d7
+key_p101=75612774968009e3f85545ac0088d0d0bb9cb4e2c2970e8f88489be0b9dfe103
 
-iv_p106=fba6d9aaec7237891c80390e6ffa88bf
-key_p106=92909dca9bfdb9193131f9ad9b628b1a4971b1cbab52c0ddd114a6253fad96c0
+iv_p102=fba6d9aaec7237891c80390e6ffa88bf
+key_p102=92909dca9bfdb9193131f9ad9b628b1a4971b1cbab52c0ddd114a6253fad96c0
 
-iv_p107=1d99e780d96c32a25ca7e4b1c7fe14c0
-key_p107=4e2c14927693d61e1da375e340061521c9376007163f6ab55afbe1a03b901fd3
+iv_p103=1d99e780d96c32a25ca7e4b1c7fe14c0
+key_p103=4e2c14927693d61e1da375e340061521c9376007163f6ab55afbe1a03b901fd3
 
 iv_n78=e0175b03bc29817adc312638884e0898
 key_n78=0a0e0aedc8171669c9af6a229930a395959df55dcd8a3ee1fe0f4c009007df3c
@@ -77,8 +77,8 @@ key_k94_613=b1bd1dc5e6076054392be054d50711ae70e8fcf31a47899fb90ab0ff3111b687
 iv_k95_613=56f964ee19bfd31f06e43e9d8fe93902
 key_k95_613=0bb841b8f1922ae73d85ed9ed0d7a3583a10af909787857c15af2691b39bba30
 
-iv_n94_613=147cdef921ed14a5c10631c5e6e02d1e
-key_n94_613=6ea1eb62a9f403ee212c1f6b3039df093963b46739c6093407190fe3d750c69c
+iv_n94_613=d3fe01e99bd0967e80dccfc0739f93d5
+key_n94_613=35343d5139e0313c81ee59dbae292da26e739ed75b3da5db9da7d4d26046498c
 
 function Downgrade841 {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
@@ -87,11 +87,17 @@ function Downgrade841 {
     BuildManifest="BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    Downgrade
+    if [[ $JustSaveOTABlobs == 1 ]]
+    then
+        SaveOTABlobs
+        exit
+    else
+        Downgrade
+    fi
 }
 
 function Downgrade613 {
-    if [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,2 ] || [ $HardwareModel == iPad2,3 ] || [ $HardwareModel == iPhone4,1 ]
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]
     then
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
@@ -99,7 +105,13 @@ function Downgrade613 {
         BuildManifest="BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
-        Downgrade
+        if [[ $JustSaveOTABlobs == 1 ]]
+        then
+            SaveOTABlobs
+            exit
+        else
+            Downgrade
+        fi
     else
         echo "Your device does not support downgrading to 6.1.3 OTA"
     fi
@@ -342,7 +354,7 @@ function MainMenu {
     then
         echo "Please plug the device in and trust this computer before proceeding"
         exit
-    elif [ $HardwareModel == iPad2,1 ] || [ $HardwareModel == iPad2,4 ] || [ $HardwareModel == iPad2,5 ] || [ $HardwareModel == iPad3,1 ] || [ $HardwareModel == iPad3,4 ] || [ $HardwareModel == iPod5,1 ]
+    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]
     then
         NoBaseband=1
     fi
@@ -354,11 +366,13 @@ function MainMenu {
     echo "ProductVersion: $ProductVersion"
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
-    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Exit"; do
+    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Just save iOS 8.4.1 blobs" "Just save iOS 6.1.3 blobs" "Exit"; do
     case $opt in
         "Downgrade device to iOS 8.4.1" ) Downgrade841; break;;
         "Downgrade device to iOS 6.1.3" ) Downgrade613; break;;
         "Just put device in pwnDFU mode" ) pwnDFUSelf; break;;
+        "Just save iOS 8.4.1 blobs" ) JustSaveOTABlobs=1; Downgrade841; break;;
+        "Just save iOS 6.1.3 blobs" ) JustSaveOTABlobs=1; Downgrade613; break;;
         "Exit" ) exit;;
         *) MainMenu;;
     esac
