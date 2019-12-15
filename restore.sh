@@ -1,10 +1,8 @@
 #!/bin/bash
 
-if [[ $OSTYPE == "linux-gnu" ]]
-then
+if [[ $OSTYPE == "linux-gnu" ]]; then
     platform="linux"
-elif [[ $OSTYPE == "darwin"* ]]
-then
+elif [[ $OSTYPE == "darwin"* ]]; then
     platform="macos"
 else
     echo "OSTYPE unknown/not supported"
@@ -87,8 +85,7 @@ function Downgrade841 {
     BuildManifest="BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    if [[ $JustSaveOTABlobs == 1 ]]
-    then
+    if [[ $JustSaveOTABlobs == 1 ]]; then
         SaveOTABlobs
         exit
     else
@@ -97,16 +94,14 @@ function Downgrade841 {
 }
 
 function Downgrade613 {
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]
-    then
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
         DowngradeBuildVer="10B329"
         BuildManifest="BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
-        if [[ $JustSaveOTABlobs == 1 ]]
-        then
+        if [[ $JustSaveOTABlobs == 1 ]]; then
             SaveOTABlobs
             exit
         else
@@ -118,8 +113,7 @@ function Downgrade613 {
 }
 
 function SaveOTABlobs {
-    if [ ! -e tools/tsschecker_$platform ]
-    then
+    if [ ! -e tools/tsschecker_$platform ]; then
         echo "Downloading tsschecker..."
         curl -L -# "https://github.com/tihmstar/tsschecker/releases/download/v212/tsschecker_v212_mac_win_linux.zip" -o "tmp/tsschecker.zip"
         echo "Extracting tsschecker..."
@@ -127,29 +121,25 @@ function SaveOTABlobs {
         echo
     fi
     chmod +x tools/tsschecker_$platform
-    if [ ! -e tools/tsschecker_$platform ]
-    then
+    if [ ! -e tools/tsschecker_$platform ]; then
         echo "Download/extract tsschecker failed. Please run the script again"
         exit
     fi
     
-    if [ ! -e ota.json ]
-    then
+    if [ ! -e ota.json ]; then
         echo "Downloading ota.json..."
         curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
     fi
     
     echo 'Copying ota.json to tmp...'
-    if [ $platform == macos ] 
-    then
+    if [ $platform == macos ]; then
         cp ota.json $TMPDIR
     else
         cp ota.json /tmp
     fi
     echo
     
-    if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]
-    then
+    if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
         echo "Download ota.json failed. Please run the script again"
         rm -rf tmp/ 
         exit
@@ -158,8 +148,7 @@ function SaveOTABlobs {
     echo "Extracting BuildManifest.plist..."
     unzip -j BuildManifests.zip $BuildManifest -d "tmp/"
     echo
-    if [ ! -e tmp/$BuildManifest ]
-    then
+    if [ ! -e tmp/$BuildManifest ]; then
         echo "Download/extract BuildManifest.plist failed. Please run the script again"
         rm -rf tmp/
         exit
@@ -169,8 +158,7 @@ function SaveOTABlobs {
     env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/$BuildManifest
     echo
     SHSH=$(ls *.shsh2)
-    if [ ! -e $SHSH ]
-    then
+    if [ ! -e $SHSH ]; then
         echo "Saving $DowngradeVersion blobs failed. Please run the script again"
         rm -rf tmp/
         exit
@@ -180,14 +168,12 @@ function SaveOTABlobs {
 function Downgrade {
     IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
     
-    if [ ! -e ${IPSW}.ipsw ]
-    then
+    if [ ! -e ${IPSW}.ipsw ]; then
         echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
         exit
     fi
     
-    if [ ! -e tools/futurerestore_$platform ]
-    then
+    if [ ! -e tools/futurerestore_$platform ]; then
         echo "Downloading futurerestore..."
         curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -o "tmp/futurerestore.zip"
         echo "Extracting futurerestore..."
@@ -195,14 +181,12 @@ function Downgrade {
         echo 
     fi
     chmod +x tools/futurerestore_$platform
-    if [ ! -e tools/futurerestore_$platform ]
-    then
+    if [ ! -e tools/futurerestore_$platform ]; then
         echo "Download/extract futurerestore failed. Please run the script again"
         exit
     fi
     
-    if [ ! $NotOTADowngrade ]
-    then
+    if [ ! $NotOTADowngrade ]; then
         SaveOTABlobs
     else
         echo "Please provide the path and name to the SHSH blob:"
@@ -219,10 +203,8 @@ function Downgrade {
     echo "Will now proceed to futurerestore..."
     echo
 
-    while [[ $ScriptDone != 1 ]]
-    do
-        if [[ ! $NoBaseband ]]
-        then
+    while [[ $ScriptDone != 1 ]]; do
+        if [[ ! $NoBaseband ]]; then
             sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
             echo "Detected device has no baseband"
@@ -234,8 +216,7 @@ function Downgrade {
         echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
         echo "Retry? (y/n)"
         read retry
-        if [ retry != y ] && [ retry != Y ]
-        then
+        if [ retry != y ] && [ retry != Y ]; then
             ScriptDone=1
         fi
     done
@@ -250,8 +231,7 @@ function pwnDFUSelf {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    if [ ! -e ${IPSW}.ipsw ]
-    then
+    if [ ! -e ${IPSW}.ipsw ]; then
         echo "Please provide an iOS 8.4.1 IPSW for your device to get to pwnDFU mode"
     else
         echo "Extracting iBSS from IPSW..."
@@ -273,18 +253,15 @@ function pwnDFU {
     bspatch tmp/iBSS.dec2 tmp/pwnediBSS patches/$iBSS.patch
     echo
 
-    if [[ $VersionDetect == 1 ]]
-    then
+    if [[ $VersionDetect == 1 ]]; then
         kloader="kloader_hgsp"
-    elif [[ $VersionDetect == 5 ]]
-    then
+    elif [[ $VersionDetect == 5 ]]; then
         kloader="kloader5"
     else
         kloader="kloader"
     fi
 
-    if [[ $VersionDetect == 1 ]]
-    then
+    if [[ $VersionDetect == 1 ]]; then
         WifiAddr=$(ideviceinfo | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         mkdir tmp/mountdir
@@ -322,15 +299,16 @@ function pwnDFU {
     fi
 
     echo "Press home/power button once when screen goes black on the device"
-    echo "Finding device in pwnDFU mode..."
+    FindDFU
+}
 
-    while [[ $pwnDFUDevice != 1 ]]
-    do
-        pwnDFUDevice=$(lsusb | grep -c "1227")
+function FindDFU {
+    echo "Finding device in DFU mode..."
+    while [[ $DFUDevice != 1 ]]; do
+        DFUDevice=$(lsusb | grep -c "1227")
         sleep 2
     done
-
-    echo "Entering pwnDFU mode successful"
+    echo "Found device in DFU mode."
     echo
 }
 
@@ -391,7 +369,7 @@ function Ubuntu1804 {
     apt download -o=dir::cache=. libcurl3
     ar x libcurl3* data.tar.xz
     tar xf data.tar.xz
-    sudo cp -L usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/libcurl.so.3
+    sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
     if [ $(uname -m) == 'x86_64' ]
     then
         mtype='amd64'
@@ -404,7 +382,7 @@ function Ubuntu1804 {
     rm -rf tmp
 }
 
-if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ssh) ] || [ ! $(which scp) ] || [ ! $(which lsusb) ]
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ]
 then
     clear
     echo "******* 32bit-OTA-Downgrader *******"
@@ -449,9 +427,7 @@ then
         esac
     done
     fi
-    echo "Install script done! Will now proceed to main menu..."
-    sleep 5
-    MainMenu
+    echo "Install script done! Please run the script again to proceed"
 else
     MainMenu
 fi
