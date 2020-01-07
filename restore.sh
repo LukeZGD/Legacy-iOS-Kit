@@ -227,11 +227,15 @@ function pwnDFU {
     if [[ $VersionDetect == 1 ]]; then
         WifiAddr=$(ideviceinfo | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
+        echo '#!/bin/bash' > tmp/pwn.sh
+        echo "nvram wifiaddr=$WifiAddrDecr
+        chmod 755 kloader_hgsp
+        ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
         mkdir tmp/mountdir
         echo "Mounting device using ifuse..."
         ifuse tmp/mountdir
         echo "Copying stuff to device..."
-        cp "tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
+        cp "tmp/pwn.sh" "tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
         echo "Unmounting device..."
         sudo umount tmp/mountdir
         #rm -rf tmp/mountdir
@@ -240,10 +244,9 @@ function pwnDFU {
         echo
         echo '$ su'
         echo "(enter root password, default is 'alpine')"
-        echo "# nvram wifiaddr=$WifiAddrDecr"
         echo "# cd Media"
-        echo "# chmod 755 $kloader"
-        echo "# ./$kloader pwnediBSS"
+        echo "# chmod +x pwn.sh"
+        echo "# ./pwn.sh"
     else
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection:"
