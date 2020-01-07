@@ -85,12 +85,7 @@ function Downgrade841 {
     BuildManifest="BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
-    if [[ $JustSaveOTABlobs == 1 ]]; then
-        SaveOTABlobs
-        exit
-    else
-        Downgrade
-    fi
+    Downgrade
 }
 
 function Downgrade613 {
@@ -101,31 +96,13 @@ function Downgrade613 {
         BuildManifest="BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
-        if [[ $JustSaveOTABlobs == 1 ]]; then
-            SaveOTABlobs
-            exit
-        else
-            Downgrade
-        fi
+        Downgrade
     else
         echo "Your device does not support downgrading to 6.1.3 OTA"
     fi
 }
 
 function SaveOTABlobs {
-    if [ ! -e tools/tsschecker_$platform ]; then
-        echo "Downloading tsschecker..."
-        curl -L -# "https://github.com/tihmstar/tsschecker/releases/download/v212/tsschecker_v212_mac_win_linux.zip" -o "tmp/tsschecker.zip"
-        echo "Extracting tsschecker..."
-        unzip -j tmp/tsschecker.zip tsschecker_$platform -d "tools/"
-        echo
-    fi
-    chmod +x tools/tsschecker_$platform
-    if [ ! -e tools/tsschecker_$platform ]; then
-        echo "Download/extract tsschecker failed. Please run the script again"
-        exit
-    fi
-    
     if [ ! -e ota.json ]; then
         echo "Downloading ota.json..."
         curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
@@ -170,19 +147,6 @@ function Downgrade {
     
     if [ ! -e ${IPSW}.ipsw ]; then
         echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
-        exit
-    fi
-    
-    if [ ! -e tools/futurerestore_$platform ]; then
-        echo "Downloading futurerestore..."
-        curl -L -# "http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip" -o "tmp/futurerestore.zip"
-        echo "Extracting futurerestore..."
-        unzip -j tmp/futurerestore.zip futurerestore_$platform -d "tools/"
-        echo 
-    fi
-    chmod +x tools/futurerestore_$platform
-    if [ ! -e tools/futurerestore_$platform ]; then
-        echo "Download/extract futurerestore failed. Please run the script again"
         exit
     fi
     
@@ -244,7 +208,6 @@ function pwnDFU {
     echo "Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
-    chmod +x tools/xpwntool_$platform
     tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
@@ -275,13 +238,12 @@ function pwnDFU {
         echo
         echo "Enter MTerminal and run these commands:"
         echo
-        echo "su"
+        echo '$ su'
         echo "(enter root password, default is 'alpine')"
-        echo "nvram wifiaddr=$WifiAddrDecr"
-        echo "cd Media"
-        echo "chmod 755 kloader_hgsp"
-        echo "./kloader_hgsp pwnediBSS"
-        echo
+        echo "# nvram wifiaddr=$WifiAddrDecr"
+        echo "# cd Media"
+        echo "# chmod 755 $kloader"
+        echo "# ./$kloader pwnediBSS"
     else
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection:"
@@ -295,9 +257,8 @@ function pwnDFU {
         echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
         echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU"
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS"
-        echo
     fi
-
+    echo
     echo "Press home/power button once when screen goes black on the device"
     FindDFU
 }
@@ -344,68 +305,36 @@ function MainMenu {
     echo "ProductVersion: $ProductVersion"
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
-    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "Just save iOS 8.4.1 blobs" "Just save iOS 6.1.3 blobs" "Exit"; do
+    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "(Re-)Install Dependencies" "Exit"; do
     case $opt in
         "Downgrade device to iOS 8.4.1" ) Downgrade841; break;;
         "Downgrade device to iOS 6.1.3" ) Downgrade613; break;;
         "Just put device in pwnDFU mode" ) pwnDFUSelf; break;;
-        "Just save iOS 8.4.1 blobs" ) JustSaveOTABlobs=1; Downgrade841; break;;
-        "Just save iOS 6.1.3 blobs" ) JustSaveOTABlobs=1; Downgrade613; break;;
+        "(Re-)Install Dependencies" ) InstallDependencies; break;;
         "Exit" ) exit;;
         *) MainMenu;;
     esac
 done
 }
 
-function Ubuntu {
-    sudo apt update
-    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
-}
-
-function Ubuntu1804 {
-    sudo apt -y install binutils
-    mkdir tmp
-    cd tmp
-    apt download -o=dir::cache=. libcurl3
-    ar x libcurl3* data.tar.xz
-    tar xf data.tar.xz
-    sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-    if [ $(uname -m) == 'x86_64' ]
-    then
-        mtype='amd64'
-    else
-        mtype='i386'
-    fi
-    curl -L -# http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
-    sudo dpkg -i libpng12.deb
-    cd ..
-    rm -rf tmp
-}
-
-if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ]
-then
+function InstallDependencies {
     clear
     echo "******* 32bit-OTA-Downgrader *******"
     echo "           - by LukeZGD             "
     echo
-    echo "Install dependencies"
+    echo "Install Dependencies"
 
     . /etc/os-release 2> /dev/null
-    if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]
-    then
+    if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]; then
         sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libimobiledevice libpng12 libzip openssh openssl-1.0 unzip usbmuxd usbutils
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
-    elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]
-    then
+    elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]; then
         Ubuntu
-    elif [[ $(which apt) ]] || [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "18.04" ]] 
-    then
+    elif [[ $(which apt) ]] || [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "18.04" ]]; then
         Ubuntu
         Ubuntu1804
-    elif [[ $OSTYPE == "darwin"* ]]
-    then
-        if [[ ! $(which brew) ]]
-        then
+    elif [[ $OSTYPE == "darwin"* ]]; then
+        if [[ ! $(which brew) ]]; then
             xcode-select --install
             /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
         fi
@@ -428,6 +357,36 @@ then
     done
     fi
     echo "Install script done! Please run the script again to proceed"
+}
+
+function Ubuntu {
+    sudo apt update
+    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
+}
+
+function Ubuntu1804 {
+    if [ $(uname -m) == 'x86_64' ]; then
+        mtype='amd64'
+    else
+        mtype='i386'
+    fi
+    sudo apt -y install binutils
+    mkdir tmp
+    cd tmp
+    apt download -o=dir::cache=. libcurl3
+    ar x libcurl3* data.tar.xz
+    tar xf data.tar.xz
+    sudo cp usr/lib/${mtype}-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+    curl -L -# http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
+    sudo dpkg -i libpng12.deb
+    cd ..
+    rm -rf tmp
+}
+
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]
+then
+    InstallDependencies
 else
+    chmod +x tools/*
     MainMenu
 fi
