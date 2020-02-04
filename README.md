@@ -2,6 +2,7 @@
 - This script can be used to downgrade almost any supported 32-bit device to **iOS 8.4.1**
 - iPhone 4S and some iPad 2 devices also have the option to downgrade to **iOS 6.1.3**
 - This script will also restore your device to the latest baseband (N/A to devices with no baseband)
+- This script has a workaround for the activation error on iOS 10 devices
 - This can also be used to enter pwnDFU mode for all supported devices
 - **For iPhone 5C, 8.4.1 OTA DOWNGRADING IS NOT SUPPORTED!** Supports entering pwnDFU mode ONLY
 - **You do NOT need blobs to use this**, the script will get them for you

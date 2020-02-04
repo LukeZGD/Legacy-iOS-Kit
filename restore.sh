@@ -329,37 +329,45 @@ function InstallDependencies {
 
     . /etc/os-release 2> /dev/null
     if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]; then
-        sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libimobiledevice libpng12 libzip openssh openssl-1.0 unzip usbmuxd usbutils
-        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
+        Arch
     elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]; then
         Ubuntu
     elif [[ $(which apt) ]] || [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "18.04" ]]; then
         Ubuntu
         Ubuntu1804
     elif [[ $OSTYPE == "darwin"* ]]; then
-        if [[ ! $(which brew) ]]; then
-            xcode-select --install
-            /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-        fi
-        brew uninstall --ignore-dependencies usbmuxd
-        brew uninstall --ignore-dependencies libimobiledevice
-        brew install --HEAD usbmuxd
-        brew install --HEAD libimobiledevice
-        brew install libzip
-        brew install openssl
-        brew install lsusb
+        macOS
     else
         echo "Distro not detected/supported. Please select manually"
-        select opt in "Ubuntu 16.04" "Ubuntu 18.04" "Arch Linux" "macOS"; do
+        select opt in "Ubuntu Xenial" "Ubuntu Bionic" "Arch Linux" "macOS"; do
         case $opt in
-            "Ubuntu 16.04" ) ubuntu; break;;
-            "Ubuntu 18.04" ) ubuntu; ubuntu1804; break;;
-            "Arch Linux" ) arch; break;;
-            "macOS" ) macos; break;;
+            "Ubuntu Xenial" ) Ubuntu; break;;
+            "Ubuntu Bionic" ) Ubuntu; Ubuntu1804; break;;
+            "Arch Linux" ) Arch; break;;
+            "macOS" ) macOS; break;;
         esac
     done
     fi
     echo "Install script done! Please run the script again to proceed"
+}
+
+function Arch {
+    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libimobiledevice libpng12 libzip openssh openssl-1.0 unzip usbmuxd usbutils
+    sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
+}
+
+function macOS {
+    if [[ ! $(which brew) ]]; then
+        xcode-select --install
+        /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    fi
+    brew uninstall --ignore-dependencies usbmuxd
+    brew uninstall --ignore-dependencies libimobiledevice
+    brew install --HEAD usbmuxd
+    brew install --HEAD libimobiledevice
+    brew install libzip
+    brew install openssl
+    brew install lsusb
 }
 
 function Ubuntu {
@@ -385,6 +393,8 @@ function Ubuntu1804 {
     cd ..
     rm -rf tmp
 }
+
+# ----------------
 
 if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]
 then
