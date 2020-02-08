@@ -352,7 +352,8 @@ function InstallDependencies {
 }
 
 function Arch {
-    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libimobiledevice libpng12 libzip openssh openssl-1.0 unzip usbmuxd usbutils
+    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 unzip usbutils
+    sudo pacman -S --noconfirm libimobiledevice usbmuxd
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
 }
 
@@ -365,9 +366,7 @@ function macOS {
     brew uninstall --ignore-dependencies libimobiledevice
     brew install --HEAD usbmuxd
     brew install --HEAD libimobiledevice
-    brew install libzip
-    brew install openssl
-    brew install lsusb
+    brew install libzip openssl lsusb ifuse
 }
 
 function Ubuntu {
