@@ -1,14 +1,5 @@
 #!/bin/bash
 
-if [[ $OSTYPE == "linux-gnu" ]]; then
-    platform="linux"
-elif [[ $OSTYPE == "darwin"* ]]; then
-    platform="macos"
-else
-    echo "OSTYPE unknown/not supported"
-    exit
-fi
-
 iv_k93=781b9672a86ba1b41f8b7fa0af714c94
 key_k93=bbd7bf676dbcc6ba93c76d496b7af39ae7772eaaad2ec9fb71dc1fd004827784
 
@@ -276,21 +267,9 @@ function FindDFU {
     echo
 }
 
-HardwareModel=$(ideviceinfo | grep 'HardwareModel' | cut -c 16-)
-HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-ProductVersion=$(ideviceinfo | grep 'ProductVersion' | cut -c 17-)
-VersionDetect=$(echo $ProductVersion | cut -c 1)
-UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
-
 function MainMenu {
     rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
     mkdir tmp
-    
-    clear
-    echo "******* 32bit-OTA-Downgrader *******"
-    echo "           - by LukeZGD             "
-    echo
     
     if [ ! $HardwareModel ]
     then
@@ -321,10 +300,6 @@ done
 }
 
 function InstallDependencies {
-    clear
-    echo "******* 32bit-OTA-Downgrader *******"
-    echo "           - by LukeZGD             "
-    echo
     echo "Install Dependencies"
 
     . /etc/os-release 2> /dev/null
@@ -394,6 +369,28 @@ function Ubuntu1804 {
 }
 
 # ----------------
+
+clear
+echo "******* 32bit-OTA-Downgrader *******"
+echo "           - by LukeZGD             "
+echo
+
+if [[ $OSTYPE == "linux-gnu" ]]; then
+    platform="linux"
+elif [[ $OSTYPE == "darwin"* ]]; then
+    platform="macos"
+else
+    echo "OSTYPE unknown/not supported, sorry!"
+	echo "Supports macOS and Linux only"
+    exit
+fi
+
+HardwareModel=$(ideviceinfo | grep 'HardwareModel' | cut -c 16-)
+HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
+ProductVersion=$(ideviceinfo | grep 'ProductVersion' | cut -c 17-)
+VersionDetect=$(echo $ProductVersion | cut -c 1)
+UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
 
 if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]
 then
