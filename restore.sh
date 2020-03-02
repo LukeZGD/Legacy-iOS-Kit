@@ -114,9 +114,8 @@ function SaveOTABlobs {
     fi
 
     echo "Extracting BuildManifest.plist..."
-    unzip -j BuildManifests.zip $BuildManifest -d "tmp/"
     echo
-    if [ ! -e tmp/$BuildManifest ]; then
+    if [ ! -e $BuildManifest ]; then
         echo "Download/extract BuildManifest.plist failed. Please run the script again"
         rm -rf tmp/
         exit
@@ -154,7 +153,13 @@ function Downgrade {
     echo
     
     pwnDFU
-
+    
+    echo "Preparing for futurerestore..."
+    cd resources
+    sudo python3 -m http.server 80
+    pythonPID=$!
+    cd ..
+    
     echo "Will now proceed to futurerestore..."
     echo
 
@@ -175,7 +180,8 @@ function Downgrade {
             ScriptDone=1
         fi
     done
-
+    
+    kill $pythonPID    
     echo "Downgrade script done!"
     exit
 }
@@ -327,7 +333,7 @@ function InstallDependencies {
 }
 
 function Arch {
-    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 unzip usbutils
+    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
     sudo pacman -S --noconfirm libimobiledevice usbmuxd
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
 }
@@ -341,12 +347,12 @@ function macOS {
     brew uninstall --ignore-dependencies libimobiledevice
     brew install --HEAD usbmuxd
     brew install --HEAD libimobiledevice
-    brew install libzip openssl lsusb ifuse
+    brew install libzip openssl lsusb ifuse python3
 }
 
 function Ubuntu {
     sudo apt update
-    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 usbmuxd
+    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 python3 usbmuxd
 }
 
 function Ubuntu1804 {
