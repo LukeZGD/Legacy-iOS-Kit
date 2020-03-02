@@ -122,7 +122,7 @@ function SaveOTABlobs {
     fi
 
     echo "Saving $DowngradeVersion blobs with tsschecker..."
-    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/$BuildManifest
+    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m $BuildManifest
     echo
     SHSH=$(ls *.shsh2)
     if [ ! -e $SHSH ]; then
@@ -156,7 +156,7 @@ function Downgrade {
     
     echo "Preparing for futurerestore..."
     cd resources
-    sudo python3 -m http.server 80
+    sudo python3 -m http.server 80 &
     pythonPID=$!
     cd ..
     
@@ -181,7 +181,7 @@ function Downgrade {
         fi
     done
     
-    kill $pythonPID    
+    sudo kill $pythonPID    
     echo "Downgrade script done!"
     exit
 }

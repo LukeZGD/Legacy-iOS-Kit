@@ -1,3 +1,5 @@
 *.ipsw
 *.shsh2
 tmp/
+ota.json
+*Restore
