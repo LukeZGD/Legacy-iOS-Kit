@@ -277,7 +277,7 @@ function MainMenu {
     rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
     mkdir tmp
     
-    if [ ! $HardwareModel ]
+    if [ ! $ProductType ]
     then
         echo "Please plug the device in and trust this computer before proceeding"
         exit
@@ -394,6 +394,7 @@ fi
 HardwareModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16-)
 HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
 ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
+[ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
 ProductVersion=$(ideviceinfo -s | grep 'ProductVersion' | cut -c 17-)
 VersionDetect=$(echo $ProductVersion | cut -c 1)
 UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
