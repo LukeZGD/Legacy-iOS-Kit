@@ -216,7 +216,7 @@ function pwnDFU {
     fi
 
     if [[ $VersionDetect == 1 ]]; then
-        WifiAddr=$(ideviceinfo | grep 'WiFiAddress' | cut -c 14-)
+        WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
         echo "nvram wifiaddr=$WifiAddrDecr
@@ -385,12 +385,12 @@ else
     exit
 fi
 
-HardwareModel=$(ideviceinfo | grep 'HardwareModel' | cut -c 16-)
+HardwareModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16-)
 HardwareModelLower=$(echo $HardwareModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-ProductVersion=$(ideviceinfo | grep 'ProductVersion' | cut -c 17-)
+ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
+ProductVersion=$(ideviceinfo -s | grep 'ProductVersion' | cut -c 17-)
 VersionDetect=$(echo $ProductVersion | cut -c 1)
-UniqueChipID=$(ideviceinfo | grep 'UniqueChipID' | cut -c 15-)
+UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
 
 if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]
 then
