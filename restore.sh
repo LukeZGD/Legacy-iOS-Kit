@@ -73,7 +73,7 @@ function Downgrade841 {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     DowngradeVersion="8.4.1"
     DowngradeBuildVer="12H321"
-    BuildManifest="BuildManifest_${ProductType}.plist"
+    BuildManifest="resources/manifests/BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
     Downgrade
@@ -84,7 +84,7 @@ function Downgrade613 {
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
         DowngradeBuildVer="10B329"
-        BuildManifest="BuildManifest613_${ProductType}.plist"
+        BuildManifest="resources/manifests/BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
         Downgrade
@@ -123,7 +123,7 @@ function SaveOTABlobs {
     fi
 
     echo "Saving $DowngradeVersion blobs with tsschecker..."
-    env "LD_PRELOAD=libcurl.so.3" tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/$BuildManifest
+    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m tmp/$BuildManifest
     echo
     SHSH=$(ls *.shsh2)
     if [ ! -e $SHSH ]; then
@@ -160,10 +160,10 @@ function Downgrade {
 
     while [[ $ScriptDone != 1 ]]; do
         if [[ ! $NoBaseband ]]; then
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
             echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
         fi
         
         echo
@@ -199,12 +199,12 @@ function pwnDFU {
     echo "Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
-    tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
+    resources/tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
 
     echo "Patching iBSS..."
-    bspatch tmp/iBSS.dec2 tmp/pwnediBSS patches/$iBSS.patch
+    bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
     echo
 
     if [[ $VersionDetect == 1 ]]; then
@@ -226,7 +226,7 @@ function pwnDFU {
         echo "Mounting device using ifuse..."
         ifuse tmp/mountdir
         echo "Copying stuff to device..."
-        cp "tmp/pwn.sh" "tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
+        cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
         echo "Unmounting device..."
         sudo umount tmp/mountdir
         #rm -rf tmp/mountdir
@@ -246,11 +246,11 @@ function pwnDFU {
         echo "Please enter root password when prompted (default is 'alpine')"
         echo
         echo "Copying stuff to device..."
-        scp tools/$kloader tmp/pwnediBSS root@$IPAddress:/
+        scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         echo
-        echo "Entering pwnDFU mode... (press Ctrl+C after entering root password to continue)"
+        echo "Entering pwnDFU mode..."
         echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU"
-        ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS"
+        ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
     echo
     echo "Press home/power button once when screen goes black on the device"
@@ -396,6 +396,6 @@ if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] 
 then
     InstallDependencies
 else
-    chmod +x tools/*
+    chmod +x resources/tools/*
     MainMenu
 fi
