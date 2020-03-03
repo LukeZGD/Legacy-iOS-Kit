@@ -73,7 +73,6 @@ function Downgrade841 {
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     DowngradeVersion="8.4.1"
     DowngradeBuildVer="12H321"
-    BuildManifest="resources/manifests/BuildManifest_${ProductType}.plist"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
     Downgrade
@@ -84,7 +83,6 @@ function Downgrade613 {
         iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
         DowngradeVersion="6.1.3"
         DowngradeBuildVer="10B329"
-        BuildManifest="resources/manifests/BuildManifest613_${ProductType}.plist"
         iv=iv_${HardwareModelLower}_613
         key=key_${HardwareModelLower}_613
         Downgrade
@@ -94,6 +92,8 @@ function Downgrade613 {
 }
 
 function SaveOTABlobs {
+    BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVersion}.plist"
+    
     if [ ! -e ota.json ]; then
         echo "Downloading ota.json..."
         curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
@@ -110,14 +110,6 @@ function SaveOTABlobs {
     if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
         echo "Download ota.json failed. Please run the script again"
         rm -rf tmp/ 
-        exit
-    fi
-
-    echo "Extracting BuildManifest.plist..."
-    echo
-    if [ ! -e $BuildManifest ]; then
-        echo "Download/extract BuildManifest.plist failed. Please run the script again"
-        rm -rf tmp/
         exit
     fi
 
@@ -154,7 +146,7 @@ function Downgrade {
     
     pwnDFU
     
-    echo "Preparing for futurerestore..."
+    echo "Preparing for futurerestore (starting local server)..."
     cd resources
     sudo python3 -m http.server 80 &
     pythonPID=$!
@@ -174,13 +166,14 @@ function Downgrade {
         echo
         echo "futurerestore done!"
         echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
-        echo "Retry? (y/n)"
-        read retry
-        if [ retry != y ] && [ retry != Y ]; then
+        echo "Retry? (y/N)"
+        read Retry
+        if [[ Retry != y ]] && [[ Retry != Y ]]; then
             ScriptDone=1
         fi
     done
     
+    echo "Stopping local server..."
     sudo kill $pythonPID    
     echo "Downgrade script done!"
     exit
