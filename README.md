@@ -3,11 +3,11 @@
 - **Please see "Other notes" below to serve as answers for FAQs**
 
 ## Prerequisites:
-- **A supported 32-bit device jailbroken on any iOS version** (5 to 10)
-- **iOS [8.4.1](https://ipsw.me/8.4.1) or [6.1.3](https://ipsw.me/6.1.3) IPSW for your device**
-- A **Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [**balenaEtcher**](https://www.balena.io/etcher/) or [**Rufus**](https://rufus.ie/))
+- A supported 32-bit device **jailbroken** on any iOS version
+- **iOS [8.4.1](https://ipsw.me/8.4.1) or [6.1.3](https://ipsw.me/6.1.3) IPSW** for your device (the script can also download it for you)
+- A **Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
 - **macOS** (tested on 10.13 and 10.14 only) should also work, but I won't be able to provide support when the script breaks
-- iOS 7/8 Pangu users: install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
+- iOS 7/8 Pangu users: Install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
 - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/openssh.html); The computer and device must be on the same network for SSH to work
 - iOS 10 users: Install [MTerminal](http://cydia.saurik.com/package/com.officialscheduler.mterminal/)
 

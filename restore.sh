@@ -128,8 +128,8 @@ function Downgrade {
     IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
     
     if [ ! -e ${IPSW}.ipsw ]; then
-        echo "iOS $DowngradeVersion IPSW is missing! Please put the IPSW on the same directory of this script"
-        exit
+        echo "iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
+        curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
     fi
     
     if [ ! $NotOTADowngrade ]; then
