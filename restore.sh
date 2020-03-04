@@ -99,7 +99,7 @@ function SaveOTABlobs {
         curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
     fi
     
-    echo 'Copying ota.json to tmp...'
+    echo "Copying ota.json to tmp..."
     if [ $platform == macos ]; then
         cp ota.json $TMPDIR
     else
@@ -361,7 +361,7 @@ function Ubuntu1804 {
     ar x libcurl3* data.tar.xz
     tar xf data.tar.xz
     sudo cp usr/lib/${mtype}-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-    curl -L -# http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
+    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
     sudo dpkg -i libpng12.deb
     cd ..
     rm -rf tmp
@@ -381,6 +381,11 @@ elif [[ $OSTYPE == "darwin"* ]]; then
 else
     echo "OSTYPE unknown/not supported, sorry!"
 	echo "Supports macOS and Linux only"
+    exit
+fi
+
+if [[ ! $(ping -c1 google.com 2>/dev/null) ]]; then
+    echo "Please check your Internet connection before proceeding"
     exit
 fi
 
