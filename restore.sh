@@ -194,9 +194,9 @@ function SaveOTABlobs {
     
     echo "Copying ota.json to tmp..."
     if [ $platform == macos ]; then
-        cp ota.json $TMPDIR
+        cp resources/ota.json $TMPDIR
     else
-        cp ota.json /tmp
+        cp resources/ota.json /tmp
     fi
     echo
     
