@@ -390,7 +390,9 @@ function macOS {
     brew uninstall --ignore-dependencies libimobiledevice
     brew install --HEAD usbmuxd
     brew install --HEAD libimobiledevice
-    brew install libzip openssl lsusb ifuse python3
+    brew install libzip lsusb
+    brew cask install osxfuse
+    brew install ifuse
 }
 
 function Ubuntu {
