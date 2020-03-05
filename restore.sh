@@ -69,25 +69,118 @@ key_k95_613=0bb841b8f1922ae73d85ed9ed0d7a3583a10af909787857c15af2691b39bba30
 iv_n94_613=d3fe01e99bd0967e80dccfc0739f93d5
 key_n94_613=35343d5139e0313c81ee59dbae292da26e739ed75b3da5db9da7d4d26046498c
 
-function Downgrade841 {
+function MainMenu {
+    Clean
+    mkdir tmp
+    
+    if [ ! $ProductType ]; then
+        echo "Please plug the device in and trust this computer before proceeding"
+        exit
+    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
+        NoBaseband=1
+    fi
+	
+    echo "Main Menu"
+    echo
+    echo "HardwareModel: $HardwareModel"
+    echo "ProductType: $ProductType"
+    echo "ProductVersion: $ProductVersion"
+    echo "UniqueChipID (ECID): $UniqueChipID"
+    echo
+    select opt in "Downgrade device" "Save OTA blobs" "Just put device in kDFU mode" "(Re-)Install Dependencies" "Exit"; do
+        case $opt in
+            "Downgrade device" ) Mode='Downgrade'; SelectVersion; break;;
+            "Save OTA blobs" ) Mode='SaveOTABlobs'; SelectVersion; break;;
+            "Just put device in kDFU mode" ) Mode='kDFUOnly'; Select841; break;;
+            "(Re-)Install Dependencies" ) InstallDependencies; break;;
+            "Exit" ) exit;;
+            *) MainMenu;;
+        esac
+    done
+}
+
+function SelectVersion {
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
+        echo "Select iOS version:"
+        if [[ $Mode == 'Downgrade' ]]; then
+            select opt in "iOS 8.4.1" "iOS 6.1.3" "Other" "Back"; do
+                case $opt in
+                    "iOS 8.4.1" ) Select841; break;;
+                    "iOS 6.1.3" ) Select613; break;;
+                    "Other" ) SelectOther; break;;
+                    "Back" ) MainMenu; break;;
+                    *) SelectVersion;;
+                esac
+            done
+        else
+            select opt in "iOS 8.4.1" "iOS 6.1.3" "Back"; do
+                case $opt in
+                    "iOS 8.4.1" ) Select841; break;;
+                    "iOS 6.1.3" ) Select613; break;;
+                    "Back" ) MainMenu; break;;
+                    *) SelectVersion;;
+                esac
+            done
+        fi
+    elif [[ $Mode == 'Downgrade' ]]; then
+        echo "Select iOS version:"
+        select opt in "iOS 8.4.1" "Other" "Back"; do
+            case $opt in
+                "iOS 8.4.1" ) Select841; break;;
+                "Other" ) SelectOther; break;;
+                "Back" ) MainMenu; break;;
+                *) SelectVersion;;
+            esac
+        done
+    else
+        Select841
+    fi
+}
+
+function Select841 {
+    echo "iOS 8.4.1 $Mode"
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     DowngradeVersion="8.4.1"
     DowngradeBuildVer="12H321"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
+    Action
+}
+
+function Select613 {
+    echo "iOS 6.1.3 $Mode"
+    iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
+    DowngradeVersion="6.1.3"
+    DowngradeBuildVer="10B329"
+    iv=iv_${HardwareModelLower}_613
+    key=key_${HardwareModelLower}_613
+    Action
+}
+
+function SelectOther {
+    iBSS="iBSS.$HardwareModelLower.RELEASE"
+    iv=iv_$HardwareModelLower
+    key=key_$HardwareModelLower
+    NotOTA=1
+    echo "Downgrade to other version with SHSH blobs"
+    echo "Depends on partialZipBrowser! https://github.com/tihmstar/partialZipBrowser"
+    read -p "Path to IPSW (drag IPSW to terminal window):" IPSW
+    read -p "Path to SHSH (drag SHSH to terminal window):" SHSH
+    echo "Downloading iBSS..."
+    dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
+    pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
+    mv $iBSS.dfu tmp/
+    echo "Other $Mode"
     Downgrade
 }
 
-function Downgrade613 {
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
-        iBSS="iBSS.${HardwareModelLower}ap.RELEASE"
-        DowngradeVersion="6.1.3"
-        DowngradeBuildVer="10B329"
-        iv=iv_${HardwareModelLower}_613
-        key=key_${HardwareModelLower}_613
+function Action {
+    if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
-    else
-        echo "Your device does not support downgrading to 6.1.3 OTA"
+    elif [[ $Mode == 'SaveOTABlobs' ]]; then
+        SaveOTABlobs
+    elif [[ $Mode == 'kDFUOnly' ]]; then
+        kDFUOnly
     fi
 }
 
@@ -96,7 +189,7 @@ function SaveOTABlobs {
     
     if [ ! -e ota.json ]; then
         echo "Downloading ota.json..."
-        curl -L -# "https://api.ipsw.me/v2.1/ota.json/condensed" -o "ota.json"
+        curl -L "https://api.ipsw.me/v2.1/ota.json/condensed" -o "resources/ota.json"
     fi
     
     echo "Copying ota.json to tmp..."
@@ -109,7 +202,7 @@ function SaveOTABlobs {
     
     if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
         echo "Download ota.json failed. Please run the script again"
-        rm -rf tmp/ 
+        Clean
         exit
     fi
 
@@ -119,82 +212,20 @@ function SaveOTABlobs {
     SHSH=$(ls *.shsh2)
     if [ ! -e $SHSH ]; then
         echo "Saving $DowngradeVersion blobs failed. Please run the script again"
-        rm -rf tmp/
+        Clean
         exit
     fi
 }
 
-function Downgrade {
-    IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
-    
-    if [ ! -e ${IPSW}.ipsw ]; then
-        echo "iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
-        curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
-    fi
-    
-    if [ ! $NotOTADowngrade ]; then
-        SaveOTABlobs
-    else
-        echo "Please provide the path and name to the SHSH blob:"
-        read SHSH
-    fi
-    
-    echo "Extracting $DowngradeVersion IPSW..."
-    unzip -q ${IPSW}.ipsw -d "$IPSW/"
-    cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
-    echo
-    
-    pwnDFU
-    
-    echo "Preparing for futurerestore (starting local server)..."
-    cd resources
-    sudo python3 -m http.server 80 &
-    pythonPID=$!
-    cd ..
-    
-    echo "Will now proceed to futurerestore..."
-    echo
-
-    while [[ $ScriptDone != 1 ]]; do
-        if [[ ! $NoBaseband ]]; then
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
-        else
-            echo "Detected device has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
-        fi
-        
-        echo
-        echo "futurerestore done!"
-        echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
-        echo "Retry? (y/N)"
-        read Retry
-        if [[ Retry != y ]] && [[ Retry != Y ]]; then
-            ScriptDone=1
-        fi
-    done
-    
-    echo "Stopping local server..."
-    sudo kill $pythonPID    
-    echo "Downgrade script done!"
-    exit
+function kDFUOnly {
+    echo "Depends on partialZipBrowser! https://github.com/tihmstar/partialZipBrowser"
+    dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
+    pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
+    mv $iBSS.dfu tmp/
+    kDFU
 }
 
-function pwnDFUSelf {
-    DowngradeVersion="8.4.1"
-    IPSW="${ProductType}_8.4.1_12H321_Restore"
-    iBSS="iBSS.$HardwareModelLower.RELEASE"
-    iv=iv_$HardwareModelLower
-    key=key_$HardwareModelLower
-    if [ ! -e ${IPSW}.ipsw ]; then
-        echo "Please provide an iOS 8.4.1 IPSW for your device to get to pwnDFU mode"
-    else
-        echo "Extracting iBSS from IPSW..."
-        unzip -j ${IPSW}.ipsw Firmware/dfu/$iBSS.dfu -d "tmp/"
-        pwnDFU
-    fi
-}
-
-function pwnDFU {
+function kDFU {
     echo "Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
@@ -239,16 +270,15 @@ function pwnDFU {
         echo "# ./pwn.sh"
     else
         echo "Make sure SSH is installed and working on the device!"
-        echo "Please enter Wi-Fi IP address of device for SSH connection:"
-        read IPAddress
+        echo "Please enter Wi-Fi IP address of device for SSH connection"
+        read -p "IP Address: " IPAddress
         echo "Will now connect to device using SSH"
         echo "Please enter root password when prompted (default is 'alpine')"
         echo
         echo "Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         echo
-        echo "Entering pwnDFU mode..."
-        echo "Try using tools like kDFUApp if the script fails to put device to pwnDFU"
+        echo "Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
     echo
@@ -266,36 +296,57 @@ function FindDFU {
     echo
 }
 
-function MainMenu {
-    rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
-    mkdir tmp
-    
-    if [ ! $ProductType ]
-    then
-        echo "Please plug the device in and trust this computer before proceeding"
-        exit
-    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]
-    then
-        NoBaseband=1
+function Downgrade {
+    if [ ! $NotOTA ]; then
+        SaveOTABlobs
+        IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
+        if [ ! -e ${IPSW}.ipsw ]; then
+            echo "iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
+            curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
+        fi
     fi
-	
-    echo "Main Menu"
+    
+    echo "Extracting $DowngradeVersion IPSW..."
+    unzip -q ${IPSW}.ipsw -d "$IPSW/"
+    cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     echo
-    echo "HardwareModel: $HardwareModel"
-    echo "ProductType: $ProductType"
-    echo "ProductVersion: $ProductVersion"
-    echo "UniqueChipID (ECID): $UniqueChipID"
+    
+    kDFU
+    
+    echo "Preparing for futurerestore (starting local server)..."
+    cd resources
+    sudo python3 -m http.server 80 &
+    pythonPID=$!
+    cd ..
+    
+    echo "Will now proceed to futurerestore..."
     echo
-    select opt in "Downgrade device to iOS 8.4.1" "Downgrade device to iOS 6.1.3" "Just put device in pwnDFU mode" "(Re-)Install Dependencies" "Exit"; do
-    case $opt in
-        "Downgrade device to iOS 8.4.1" ) Downgrade841; break;;
-        "Downgrade device to iOS 6.1.3" ) Downgrade613; break;;
-        "Just put device in pwnDFU mode" ) pwnDFUSelf; break;;
-        "(Re-)Install Dependencies" ) InstallDependencies; break;;
-        "Exit" ) exit;;
-        *) MainMenu;;
-    esac
-done
+
+    while [[ $ScriptDone != 1 ]]; do
+        if [[ ! $NoBaseband ]]; then
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
+        else
+            echo "Detected device has no baseband"
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
+        fi
+        
+        echo
+        echo "futurerestore done!"
+        echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
+        read -p "Retry? (y/N)" Retry
+        if [[ Retry != y ]] && [[ Retry != Y ]]; then
+            ScriptDone=1
+        fi
+    done
+    
+    echo "Stopping local server..."
+    sudo kill $pythonPID    
+    echo "Downgrade script done!"
+    exit
+}
+
+function Clean {
+    rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
 }
 
 function InstallDependencies {
@@ -333,8 +384,7 @@ function Arch {
 
 function macOS {
     if [[ ! $(which brew) ]]; then
-        xcode-select --install
-        /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     fi
     brew uninstall --ignore-dependencies usbmuxd
     brew uninstall --ignore-dependencies libimobiledevice
@@ -364,14 +414,14 @@ function Ubuntu1804 {
     curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mtype}.deb -o libpng12.deb
     sudo dpkg -i libpng12.deb
     cd ..
-    rm -rf tmp
+    Clean
 }
 
 # ----------------
 
 clear
 echo "******* 32bit-OTA-Downgrader *******"
-echo "           - by LukeZGD             "
+echo "    Downgrade script by LukeZGD     "
 echo
 
 if [[ $OSTYPE == "linux-gnu" ]]; then
@@ -397,8 +447,7 @@ ProductVersion=$(ideviceinfo -s | grep 'ProductVersion' | cut -c 17-)
 VersionDetect=$(echo $ProductVersion | cut -c 1)
 UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
 
-if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]
-then
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]; then
     InstallDependencies
 else
     chmod +x resources/tools/*
