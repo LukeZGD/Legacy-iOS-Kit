@@ -22,20 +22,21 @@
 
 ## Supported devices (iOS 8.4.1 downgrade):
 
-- All A5, A5X, A6, and A6X devices **except iPhone 5C** are supported
+- All A5, A5X, A6, and A6X devices **except iPhone5,3 and 5,4 (iPhone 5C)** are supported
 
 ## Supported devices (iOS 6.1.3 downgrade):
 
-- Only iPhone 4S and iPad 2 devices except iPad2,4 are supported
+- Only iPhone 4S and iPad 2 devices except iPad2,4 (iPad 2 Rev A) are supported
 
 ## Other notes:
 - **You do NOT need blobs to use this**, the script will get them for you
-- This script can also be used to enter pwnDFU mode for all supported devices
 - This script will also restore your device to the latest baseband (N/A to devices with no baseband)
 - This script has a workaround for the activation error on iOS 10 devices
 - This script uses the futurerestore method for downgrading, NOT the Odysseus method nor modifying SystemVersion.plist
-- This script will use a vanilla/unmodified IPSW to restore
+- This script will use an unmodified IPSW to restore
 - This script only uses iBSS patches from bundles for entering pwnDFU mode, NOT for creating a custom IPSW
+- This script can also be used to enter kDFU mode for all supported devices
+- This script can also be used to futurerestore to other iOS versions when provided with SHSH blobs
 - This script should also work on virtual machines, but I won't provide support on them
 
 ## Linux distros tested on:

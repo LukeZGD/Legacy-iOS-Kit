@@ -187,7 +187,7 @@ function Action {
 function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVersion}.plist"
     
-    if [ ! -e ota.json ]; then
+    if [ ! -e resources/ota.json ]; then
         echo "Downloading ota.json..."
         curl -L "https://api.ipsw.me/v2.1/ota.json/condensed" -o "resources/ota.json"
     fi
@@ -326,7 +326,7 @@ function Downgrade {
         if [[ ! $NoBaseband ]]; then
             sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
         else
-            echo "Detected device has no baseband"
+            echo "Device $ProductType has no baseband"
             sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
         fi
         
