@@ -252,14 +252,14 @@ function kDFU {
         echo "nvram wifiaddr=$WifiAddrDecr
         chmod 755 kloader_hgsp
         ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
-        mkdir tmp/mountdir
+        mkdir mount
         echo "Mounting device using ifuse..."
-        ifuse tmp/mountdir
+        ifuse mount
         echo "Copying stuff to device..."
-        cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "tmp/mountdir/"
+        cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "mount/"
         echo "Unmounting device..."
-        sudo umount tmp/mountdir
-        #rm -rf tmp/mountdir
+        sudo umount mount
+        #rm -r mount
         echo
         echo "Enter MTerminal and run these commands:"
         echo
@@ -297,6 +297,15 @@ function FindDFU {
 }
 
 function Downgrade {
+    if [ ! -e resources/firmware ]; then
+        echo "Firmware keys missing, downloading firmware keys..."
+        curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
+        mkdir resources/firmware
+        unzip -q tmp/firmware.zip -d resources
+        mv resources/32bit-OTA-Downgrader-firmware/firmware/* resources/firmware
+        rm -r resources/32bit-OTA-Downgrader-firmware/
+    fi
+    
     if [ ! $NotOTA ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
@@ -346,7 +355,7 @@ function Downgrade {
 }
 
 function Clean {
-    rm -rf iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
+    rm -r iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
 }
 
 function InstallDependencies {
