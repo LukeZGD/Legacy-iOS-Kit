@@ -84,7 +84,7 @@ function MainMenu {
     mkdir tmp
     
     if [ $(lsusb | grep -c "1227") == 1 ]; then
-        echo "Device in DFU mode detected. Are you in kDFU mode? (y/N)"
+        echo "Device in DFU mode detected. Is your device in kDFU mode? (y/N)"
         read kDFUManual
         if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
             read -p "Enter ProductType (eg. iPad2,1): " ProductType
@@ -301,6 +301,10 @@ function kDFU {
         echo
         echo "Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
+        if [ $? == 1 ]; then
+            echo "Cannot connect to device via SSH! Please check your known_hosts file and try again"
+            exit
+        fi
         echo
         echo "Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
@@ -344,7 +348,9 @@ function Downgrade {
     cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     echo
     
-    kDFU
+    if [[ ! $kDFUManual ]]; then
+        kDFU
+    fi
     
     echo "Preparing for futurerestore (starting local server)..."
     cd resources
@@ -375,6 +381,7 @@ function Downgrade {
     echo "Stopping local server..."
     sudo kill $pythonPID    
     echo "Downgrade script done!"
+    Clean
     exit
 }
 
