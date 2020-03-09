@@ -1,5 +1,5 @@
 *.ipsw
+*.json
 *.shsh2
+iP*
 tmp/
-ota.json
-*Restore

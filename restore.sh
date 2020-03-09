@@ -69,16 +69,40 @@ key_k95_613=0bb841b8f1922ae73d85ed9ed0d7a3583a10af909787857c15af2691b39bba30
 iv_n94_613=d3fe01e99bd0967e80dccfc0739f93d5
 key_n94_613=35343d5139e0313c81ee59dbae292da26e739ed75b3da5db9da7d4d26046498c
 
+function BasebandDetect {
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
+        NoBaseband=1
+    fi
+}
+
+function Clean {
+    rm -r iP*/ tmp/ $(ls *.shsh2 2>/dev/null) 2>/dev/null
+}
+
 function MainMenu {
     Clean
     mkdir tmp
     
-    if [ ! $ProductType ]; then
+    if [ $(lsusb | grep -c "1227") == 1 ]; then
+        echo "Device in DFU mode detected. Are you in kDFU mode? (y/N)"
+        read kDFUManual
+        if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
+            read -p "Enter ProductType (eg. iPad2,1): " ProductType
+            read -p "Enter UniqueChipID (ECID): " UniqueChipID
+            BasebandDetect
+            echo "Will now downgrade device $ProductType in kDFU mode..."
+            Mode='Downgrade'
+            SelectVersion
+        else
+            echo "Please put your device in normal mode and jailbroken before proceeding"
+            exit
+        fi
+    elif [ ! $ProductType ]; then
         echo "Please plug the device in and trust this computer before proceeding"
         exit
-    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
-        NoBaseband=1
     fi
+	
+	BasebandDetect
 	
     echo "Main Menu"
     echo
@@ -354,14 +378,10 @@ function Downgrade {
     exit
 }
 
-function Clean {
-    rm -r iP*/ tmp/ $(ls *.shsh2 2>/dev/null)
-}
-
 function InstallDependencies {
     echo "Install Dependencies"
 
-    . /etc/os-release 2> /dev/null
+    . /etc/os-release 2>/dev/null
     if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]; then
         Arch
     elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]; then
