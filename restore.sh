@@ -341,7 +341,7 @@ function Downgrade {
             echo "[Log] iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
             curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
         fi
-        cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
+        unzip -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d tmp/
     fi
     
     if [ ! $kDFUManual ]; then
