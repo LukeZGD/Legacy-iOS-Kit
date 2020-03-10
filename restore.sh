@@ -239,13 +239,9 @@ function SaveOTABlobs {
 
 function kDFU {
     if [ ! -e tmp/$iBSS.dfu ]; then
-        if [ ! $(which pzb) ]; then
-            echo "[Error] pzb not found! Depends on partialZipBrowser: https://github.com/tihmstar/partialZipBrowser"
-            exit
-        fi
         echo "[Log] Downloading iBSS..."
         dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
-        pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
+        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
         mv $iBSS.dfu tmp/
     fi
     echo "[Log] Decrypting iBSS..."
@@ -288,7 +284,7 @@ function kDFU {
         sudo umount mount
         #rm -r mount
         echo
-        echo "Open MTerminal and run these commands:"
+        echo "[Log] Open MTerminal and run these commands:"
         echo
         echo '$ su'
         echo "(enter root password, default is 'alpine')"
@@ -298,9 +294,8 @@ function kDFU {
     else
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection"
-        read -p "IP Address: " IPAddress
-        echo "Will now connect to device using SSH"
-        echo "Please enter root password when prompted (default is 'alpine')"
+        read -p "[Input] IP Address: " IPAddress
+        echo "[Log] Will now connect to device using SSH, please enter root password when prompted (default is 'alpine')"
         echo
         echo "[Input] Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
@@ -352,7 +347,7 @@ function Downgrade {
     fi
     
     echo "[Log] Extracting IPSW..."
-    unzip -q "$IPSW.ipsw" -d $IPSW/
+    unzip -q "$IPSW.ipsw" -d "$IPSW/"
     
     echo "[Log] Preparing for futurerestore (starting local server)..."
     cd resources
@@ -375,12 +370,12 @@ function Downgrade {
         echo "futurerestore done!"
         echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
         read -p "[Input] Retry? (y/N) " Retry
-        if [[ Retry != y ]] && [[ Retry != Y ]]; then
+        if [[ $Retry != y ]] && [[ $Retry != Y ]]; then
             ScriptDone=1
         fi
     done
     
-    echo "[Log] Stopping local server..."
+    echo "[Log] Stopping local server (PID $pythonPID)..."
     sudo kill $pythonPID    
     echo "[Log] Downgrade script done!"
     exit
