@@ -70,7 +70,8 @@ iv_n94_613=d3fe01e99bd0967e80dccfc0739f93d5
 key_n94_613=35343d5139e0313c81ee59dbae292da26e739ed75b3da5db9da7d4d26046498c
 
 function BasebandDetect {
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] || [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] ||
+       [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
         NoBaseband=1
     fi
 }
@@ -84,26 +85,24 @@ function MainMenu {
     mkdir tmp
     
     if [ $(lsusb | grep -c "1227") == 1 ]; then
-        echo "Device in DFU mode detected. Is your device in kDFU mode? (y/N)"
-        read kDFUManual
+        read -p "[Input] Device in DFU mode detected. Is your device in kDFU mode? (y/N) " kDFUManual
         if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
-            read -p "Enter ProductType (eg. iPad2,1): " ProductType
-            read -p "Enter UniqueChipID (ECID): " UniqueChipID
+            read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+            read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
             BasebandDetect
-            echo "Will now downgrade device $ProductType in kDFU mode..."
+            echo "[Log] Will now downgrade device $ProductType in kDFU mode..."
             Mode='Downgrade'
             SelectVersion
         else
-            echo "Please put your device in normal mode and jailbroken before proceeding"
+            echo "[Error] Please put the device in normal mode and jailbroken before proceeding"
             exit
         fi
     elif [ ! $ProductType ]; then
-        echo "Please plug the device in and trust this computer before proceeding"
+        echo "[Error] Please plug the device in and trust this computer before proceeding"
         exit
     fi
-	
-	BasebandDetect
-	
+    BasebandDetect
+    
     echo "Main Menu"
     echo
     echo "HardwareModel: $HardwareModel"
@@ -111,11 +110,12 @@ function MainMenu {
     echo "ProductVersion: $ProductVersion"
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
+    echo "[Input] Select an option:"
     select opt in "Downgrade device" "Save OTA blobs" "Just put device in kDFU mode" "(Re-)Install Dependencies" "Exit"; do
         case $opt in
             "Downgrade device" ) Mode='Downgrade'; SelectVersion; break;;
             "Save OTA blobs" ) Mode='SaveOTABlobs'; SelectVersion; break;;
-            "Just put device in kDFU mode" ) Mode='kDFUOnly'; Select841; break;;
+            "Just put device in kDFU mode" ) Mode='kDFU'; Select841; break;;
             "(Re-)Install Dependencies" ) InstallDependencies; break;;
             "Exit" ) exit;;
             *) MainMenu;;
@@ -124,8 +124,9 @@ function MainMenu {
 }
 
 function SelectVersion {
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] || [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
-        echo "Select iOS version:"
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
+       [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
+        echo "[Input] Select iOS version:"
         if [[ $Mode == 'Downgrade' ]]; then
             select opt in "iOS 8.4.1" "iOS 6.1.3" "Other" "Back"; do
                 case $opt in
@@ -182,19 +183,13 @@ function Select613 {
 }
 
 function SelectOther {
+    echo "Other $Mode"
     iBSS="iBSS.$HardwareModelLower.RELEASE"
     iv=iv_$HardwareModelLower
     key=key_$HardwareModelLower
     NotOTA=1
-    echo "Downgrade to other version with SHSH blobs"
-    echo "Depends on partialZipBrowser! https://github.com/tihmstar/partialZipBrowser"
-    read -p "Path to IPSW (drag IPSW to terminal window):" IPSW
-    read -p "Path to SHSH (drag SHSH to terminal window):" SHSH
-    echo "Downloading iBSS..."
-    dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
-    pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
-    mv $iBSS.dfu tmp/
-    echo "Other $Mode"
+    read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
+    read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     Downgrade
 }
 
@@ -203,8 +198,8 @@ function Action {
         Downgrade
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
         SaveOTABlobs
-    elif [[ $Mode == 'kDFUOnly' ]]; then
-        kDFUOnly
+    elif [[ $Mode == 'kDFU' ]]; then
+        kDFU
     fi
 }
 
@@ -212,11 +207,11 @@ function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVersion}.plist"
     
     if [ ! -e resources/ota.json ]; then
-        echo "Downloading ota.json..."
+        echo "[Log] Downloading ota.json..."
         curl -L "https://api.ipsw.me/v2.1/ota.json/condensed" -o "resources/ota.json"
     fi
     
-    echo "Copying ota.json to tmp..."
+    echo "[Log] Copying ota.json to tmp..."
     if [ $platform == macos ]; then
         cp resources/ota.json $TMPDIR
     else
@@ -225,51 +220,56 @@ function SaveOTABlobs {
     echo
     
     if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
-        echo "Download ota.json failed. Please run the script again"
-        Clean
+        echo "[Error] Download ota.json failed. Please run the script again"
         exit
     fi
 
-    echo "Saving $DowngradeVersion blobs with tsschecker..."
+    echo "[Log] Saving $DowngradeVersion blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m $BuildManifest
     echo
     SHSH=$(ls *.shsh2)
     if [ ! -e $SHSH ]; then
-        echo "Saving $DowngradeVersion blobs failed. Please run the script again"
-        Clean
+        echo "[Error] Saving $DowngradeVersion blobs failed. Please run the script again"
         exit
     fi
 }
 
-function kDFUOnly {
-    echo "Depends on partialZipBrowser! https://github.com/tihmstar/partialZipBrowser"
-    dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
-    pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
-    mv $iBSS.dfu tmp/
-    kDFU
-}
-
 function kDFU {
-    echo "Decrypting iBSS..."
+    if [ ! -e tmp/$iBSS.dfu ]; then
+        if [ ! $(which pzb) ]; then
+            echo "[Error] pzb not found! Depends on partialZipBrowser: https://github.com/tihmstar/partialZipBrowser"
+            exit
+        fi
+        echo "[Log] Downloading iBSS..."
+        dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
+        pzb -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
+        mv $iBSS.dfu tmp/
+    fi
+    echo "[Log] Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
     resources/tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo
 
-    echo "Patching iBSS..."
+    echo "[Log] Patching iBSS..."
     bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
     echo
 
     if [[ $VersionDetect == 1 ]]; then
-        kloader="kloader_hgsp"
+        kloader='kloader_hgsp'
     elif [[ $VersionDetect == 5 ]]; then
-        kloader="kloader5"
+        kloader='kloader5'
     else
-        kloader="kloader"
+        kloader='kloader'
     fi
 
     if [[ $VersionDetect == 1 ]]; then
+        if [ ! $(which ifuse) ]; then
+            echo "[Error] ifuse not found. Please re-install dependencies and try again"
+            echo "For macOS systems, install osxfuse and ifuse using brew"
+            exit
+        fi
         WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
@@ -277,15 +277,15 @@ function kDFU {
         chmod 755 kloader_hgsp
         ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
         mkdir mount
-        echo "Mounting device using ifuse..."
+        echo "[Log] Mounting device using ifuse..."
         ifuse mount
-        echo "Copying stuff to device..."
+        echo "[Log] Copying stuff to device..."
         cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "mount/"
-        echo "Unmounting device..."
+        echo "[Log] Unmounting device..."
         sudo umount mount
         #rm -r mount
         echo
-        echo "Enter MTerminal and run these commands:"
+        echo "Open MTerminal and run these commands:"
         echo
         echo '$ su'
         echo "(enter root password, default is 'alpine')"
@@ -299,14 +299,14 @@ function kDFU {
         echo "Will now connect to device using SSH"
         echo "Please enter root password when prompted (default is 'alpine')"
         echo
-        echo "Copying stuff to device..."
+        echo "[Input] Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         if [ $? == 1 ]; then
-            echo "Cannot connect to device via SSH! Please check your known_hosts file and try again"
+            echo "[Error] Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again"
             exit
         fi
         echo
-        echo "Entering kDFU mode..."
+        echo "[Log] Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
     echo
@@ -315,18 +315,18 @@ function kDFU {
 }
 
 function FindDFU {
-    echo "Finding device in DFU mode..."
+    echo "[Log] Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
         DFUDevice=$(lsusb | grep -c "1227")
         sleep 2
     done
-    echo "Found device in DFU mode."
+    echo "[Log] Found device in DFU mode."
     echo
 }
 
 function Downgrade {
     if [ ! -e resources/firmware ]; then
-        echo "Firmware keys missing, downloading firmware keys..."
+        echo "[Log] Firmware keys missing, downloading firmware keys..."
         curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
         mkdir resources/firmware
         unzip -q tmp/firmware.zip -d resources
@@ -337,51 +337,49 @@ function Downgrade {
     if [ ! $NotOTA ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
-        if [ ! -e ${IPSW}.ipsw ]; then
-            echo "iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
+        if [ ! -e $IPSW.ipsw ]; then
+            echo "[Log] iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
             curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
         fi
+        cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
     fi
     
-    echo "Extracting $DowngradeVersion IPSW..."
-    unzip -q ${IPSW}.ipsw -d "$IPSW/"
-    cp $IPSW/Firmware/dfu/$iBSS.dfu tmp/
-    echo
-    
-    if [[ ! $kDFUManual ]]; then
+    if [ ! $kDFUManual ]; then
         kDFU
     fi
     
-    echo "Preparing for futurerestore (starting local server)..."
+    echo "[Log] Extracting IPSW..."
+    unzip -q $IPSW.ipsw -d "$IPSW/"
+    
+    echo "[Log] Preparing for futurerestore (starting local server)..."
     cd resources
     sudo python3 -m http.server 80 &
     pythonPID=$!
     cd ..
     
-    echo "Will now proceed to futurerestore..."
+    echo "[Log] Will now proceed to futurerestore..."
     echo
 
     while [[ $ScriptDone != 1 ]]; do
-        if [[ ! $NoBaseband ]]; then
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu ${IPSW}.ipsw
+        if [ ! $NoBaseband ]; then
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
         else
-            echo "Device $ProductType has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu ${IPSW}.ipsw
+            echo "[Log] Device $ProductType has no baseband"
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
         
         echo
         echo "futurerestore done!"
         echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
-        read -p "Retry? (y/N)" Retry
+        read -p "[Input] Retry? (y/N) " Retry
         if [[ Retry != y ]] && [[ Retry != Y ]]; then
             ScriptDone=1
         fi
     done
     
-    echo "Stopping local server..."
+    echo "[Log] Stopping local server..."
     sudo kill $pythonPID    
-    echo "Downgrade script done!"
-    Clean
+    echo "[Log] Downgrade script done!"
     exit
 }
 
@@ -399,7 +397,7 @@ function InstallDependencies {
     elif [[ $OSTYPE == "darwin"* ]]; then
         macOS
     else
-        echo "Distro not detected/supported. Please select manually"
+        echo "[Input] Distro not detected/supported. Please select manually"
         select opt in "Ubuntu Xenial" "Ubuntu Bionic" "Arch Linux" "macOS"; do
         case $opt in
             "Ubuntu Xenial" ) Ubuntu; break;;
@@ -409,7 +407,7 @@ function InstallDependencies {
         esac
     done
     fi
-    echo "Install script done! Please run the script again to proceed"
+    echo "[Log] Install script done! Please run the script again to proceed"
 }
 
 function Arch {
@@ -419,6 +417,12 @@ function Arch {
 }
 
 function macOS {
+    read -p "[Input] Warning: macOS dependency install script is not fully tested and supported. Continue anyway? (y/N) " Continue
+    if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
+        echo "Please install these dependencies manually using brew to proceed:"
+        echo "libimobiledevice, usbmuxd, libzip, lsusb, osxfuse, ifuse"
+        exit
+    fi
     if [[ ! $(which brew) ]]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     fi
@@ -450,32 +454,32 @@ function Ubuntu1804 {
     apt download -o=dir::cache=. libcurl3
     ar x libcurl3* data.tar.xz
     tar xf data.tar.xz
-    sudo cp usr/lib/${mname}-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_${mname}.deb -o libpng12.deb
+    sudo cp usr/lib/$mname-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_$mname.deb -o libpng12.deb
     sudo dpkg -i libpng12.deb
     cd ..
-    Clean
 }
 
 # ----------------
 
+trap Clean INT TERM EXIT
 clear
 echo "******* 32bit-OTA-Downgrader *******"
 echo "    Downgrade script by LukeZGD     "
 echo
 
 if [[ $OSTYPE == "linux-gnu" ]]; then
-    platform="linux"
+    platform='linux'
 elif [[ $OSTYPE == "darwin"* ]]; then
-    platform="macos"
+    platform='macos'
 else
-    echo "OSTYPE unknown/not supported, sorry!"
-	echo "Supports macOS and Linux only"
+    echo "[Error] OSTYPE unknown/not supported"
+    echo "Supports Linux and macOS only"
     exit
 fi
 
 if [[ ! $(ping -c1 google.com 2>/dev/null) ]]; then
-    echo "Please check your Internet connection before proceeding"
+    echo "[Error] Please check your Internet connection before proceeding"
     exit
 fi
 
@@ -487,7 +491,7 @@ ProductVersion=$(ideviceinfo -s | grep 'ProductVersion' | cut -c 17-)
 VersionDetect=$(echo $ProductVersion | cut -c 1)
 UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
 
-if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which ifuse) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ]; then
+if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
     InstallDependencies
 else
     chmod +x resources/tools/*

@@ -56,7 +56,7 @@
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 (iOS 5)](http://www.pmbonneau.com/cydia/)
 - [kloader_hgsp (iOS 10)](https://twitter.com/nyan_satan/status/945203180522045440)
-- [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser) (used on buildmanifestsaver.sh)
+- [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser)
 - python3 (http.server)
 
 - iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
