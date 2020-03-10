@@ -1,5 +1,6 @@
 *.ipsw
 *.json
+*.shsh
 *.shsh2
 iP*
 tmp/

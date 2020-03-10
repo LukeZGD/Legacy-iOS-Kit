@@ -77,7 +77,7 @@ function BasebandDetect {
 }
 
 function Clean {
-    rm -r iP*/ tmp/ $(ls *.shsh2 2>/dev/null) 2>/dev/null
+    rm -r iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2 2>/dev/null) 2>/dev/null
 }
 
 function MainMenu {
@@ -189,6 +189,7 @@ function SelectOther {
     key=key_$HardwareModelLower
     NotOTA=1
     read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
+    IPSW="$(basename "$IPSW" .ipsw)"
     read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     Downgrade
 }
@@ -228,10 +229,12 @@ function SaveOTABlobs {
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m $BuildManifest
     echo
     SHSH=$(ls *.shsh2)
-    if [ ! -e $SHSH ]; then
+    if [ ! -e "$SHSH" ]; then
         echo "[Error] Saving $DowngradeVersion blobs failed. Please run the script again"
         exit
     fi
+    mkdir output 2>/dev/null
+    cp "$SHSH" output
 }
 
 function kDFU {
@@ -337,11 +340,11 @@ function Downgrade {
     if [ ! $NotOTA ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
-        if [ ! -e $IPSW.ipsw ]; then
+        if [ ! -e "$IPSW.ipsw" ]; then
             echo "[Log] iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
-            curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o $IPSW.ipsw
+            curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o "$IPSW.ipsw"
         fi
-        unzip -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d tmp/
+        unzip -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d tmp/
     fi
     
     if [ ! $kDFUManual ]; then
@@ -349,7 +352,7 @@ function Downgrade {
     fi
     
     echo "[Log] Extracting IPSW..."
-    unzip -q $IPSW.ipsw -d "$IPSW/"
+    unzip -q "$IPSW.ipsw" -d $IPSW/
     
     echo "[Log] Preparing for futurerestore (starting local server)..."
     cd resources
@@ -362,10 +365,10 @@ function Downgrade {
 
     while [[ $ScriptDone != 1 ]]; do
         if [ ! $NoBaseband ]; then
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
         else
             echo "[Log] Device $ProductType has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
         fi
         
         echo
