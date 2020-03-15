@@ -1,19 +1,19 @@
 # 32bit-OTA-Downgrader
-### Downgrade 32-bit iOS devices to iOS 8.4.1 or iOS 6.1.3 (see supported devices below)
+### Downgrade/restore 32-bit iOS devices to iOS 8.4.1 or iOS 6.1.3 (see supported devices below)
 - **Please see "Other notes" below to serve as answers for FAQs**
 
-## Supported devices (iOS 8.4.1 downgrade):
+## Supported devices (iOS 8.4.1):
 
 - All A5, A5X, A6, and A6X devices **except iPhone5,3 and 5,4 (iPhone 5C)** are supported
 
-## Supported devices (iOS 6.1.3 downgrade):
+## Supported devices (iOS 6.1.3):
 
 - Only iPhone 4S and iPad 2 devices except iPad2,4 (iPad 2 Rev A) are supported
 
 ## Prerequisites:
 - A supported 32-bit iOS device **jailbroken** on any version
 - **iOS [8.4.1](https://ipsw.me/8.4.1) or [6.1.3](https://ipsw.me/6.1.3) IPSW** for your device (the script can also download it for you)
-- A **Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
+- A 64-bit **Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
 - **macOS** (tested on 10.13 and 10.14 only) should also work, but I won't be able to provide support when the script breaks
 - iOS 7/8 Pangu users: Install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
 - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/package/openssh/); The computer and iOS device must be on the same network for SSH to work
@@ -25,7 +25,7 @@
 3. Open Terminal, cd to the directory where the script is located (example: `cd /home/user/32bit-OTA-Downgrader`)
 4. Run `chmod +x restore.sh`
 5. Run `./restore.sh`
-6. Select option to be used (8.4.1/6.1.3 downgrade)
+6. Select option to be used
 7. Follow instructions
 
 ## Other notes:

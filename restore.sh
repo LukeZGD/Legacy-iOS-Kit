@@ -432,21 +432,14 @@ function Ubuntu {
 }
 
 function Ubuntu1804 {
-    mname=$(uname -m)
-    if [ $mname == 'x86_64' ]; then
-        mtype='amd64'
-    else
-        mtype='i386'
-        mname=$mtype
-    fi
     sudo apt -y install binutils
     mkdir tmp
     cd tmp
     apt download -o=dir::cache=. libcurl3
     ar x libcurl3* data.tar.xz
     tar xf data.tar.xz
-    sudo cp usr/lib/$mname-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_$mtype.deb -o libpng12.deb
+    sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -o libpng12.deb
     sudo dpkg -i libpng12.deb
     cd ..
 }
@@ -470,6 +463,10 @@ else
 fi
 if [[ ! $(ping -c1 google.com 2>/dev/null) ]]; then
     echo "[Error] Please check your Internet connection before proceeding"
+    exit
+fi
+if [[ $(uname -m) != 'x86_64' ]]; then
+    echo "[Error] Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     exit
 fi
 
