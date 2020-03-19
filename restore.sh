@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 8.4.1 IV and Keys
+# 8.4.1 iBSS IV and Keys
 iv_k93=781b9672a86ba1b41f8b7fa0af714c94 #iPad2,1
 key_k93=bbd7bf676dbcc6ba93c76d496b7af39ae7772eaaad2ec9fb71dc1fd004827784
 iv_k94=883c92ed915e4d2481570a062583495b #iPad2,2
@@ -40,7 +40,7 @@ key_n49=d0b49d366469ae2b1580d7d31b1bcf783d835e4fac13cfe9f9a160fa95010ac4
 iv_n78=e0175b03bc29817adc312638884e0898 #iPod5,1
 key_n78=0a0e0aedc8171669c9af6a229930a395959df55dcd8a3ee1fe0f4c009007df3c
 
-# 6.1.3 IV and Keys
+# 6.1.3 iBSS IV and Keys
 iv_k93_613=b69f753dccd09c9b98d345ec73bbf044 #iPad2,1
 key_k93_613=6e4cce9ea6f2ec346cba0b279beab1b43e44a0680f1fde789a00f66a1e68ffab
 iv_k94_613=bc3c9f168d7fb86aa219b7ad8039584b #iPad2,2
@@ -78,7 +78,7 @@ function MainMenu {
                 read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
             fi
             BasebandDetect
-            echo "[Log] Will now downgrade device $ProductType in kDFU mode..."
+            echo "[Log] Downgrading device $ProductType in kDFU mode..."
             Mode='Downgrade'
             SelectVersion
         else
@@ -196,7 +196,7 @@ function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVersion}.plist"
     
     # ota.json is being downloaded now so tsschecker doesn't have to
-    # this is because tsschecker has an unforgiving timeout when DL'ing ota.json
+    # this is because tsschecker has an unforgiving timeout when downloading ota.json
     if [ ! -e resources/ota.json ]; then
         echo "[Log] Downloading ota.json..."
         curl -L https://api.ipsw.me/v2.1/ota.json/condensed -o tmp/ota.json
@@ -208,7 +208,6 @@ function SaveOTABlobs {
     else
         cp resources/ota.json /tmp
     fi
-    echo
     if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
         echo "[Error] Downloading/copying ota.json failed. Please run the script again"
         exit
@@ -216,7 +215,6 @@ function SaveOTABlobs {
 
     echo "[Log] Saving $DowngradeVersion blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m $BuildManifest
-    echo
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2)
     if [ ! -e "$SHSH" ]; then
         echo "[Error] Saving $DowngradeVersion blobs failed. Please run the script again"
@@ -242,7 +240,6 @@ function kDFU {
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo "[Log] Patching iBSS..."
     bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
-    echo
     
     # Regular kloader only works on iOS 6 to 9, so other versions are provided for iOS 5 and 10
     if [[ $VersionDetect == 1 ]]; then
@@ -258,7 +255,7 @@ function kDFU {
         # It's less convenient, but it should work every time
         if [ ! $(which ifuse) ]; then
             echo "[Error] ifuse not found. Please re-install dependencies and try again"
-            echo "For macOS systems, install osxfuse and ifuse using brew"
+            echo "For macOS systems, install osxfuse and ifuse with brew"
             exit
         fi
         WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
@@ -267,7 +264,7 @@ function kDFU {
         echo "nvram wifiaddr=$WifiAddrDecr
         chmod 755 kloader_hgsp
         ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
-        echo "[Log] Mounting device using ifuse..."
+        echo "[Log] Mounting device with ifuse..."
         mkdir mount
         ifuse mount
         echo "[Log] Copying stuff to device..."
@@ -287,15 +284,13 @@ function kDFU {
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection"
         read -p "[Input] IP Address: " IPAddress
-        echo "[Log] Will now connect to device using SSH, please enter root password when prompted (default is 'alpine')"
-        echo
-        echo "[Input] Copying stuff to device..."
+        echo "[Log] Coonecting to device via SSH... Please enter root password when prompted (default is 'alpine')"
+        echo "[Log] Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         if [ $? == 1 ]; then
             echo "[Error] Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again"
             exit
         fi
-        echo
         echo "[Log] Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
@@ -311,7 +306,6 @@ function FindDFU {
         sleep 2
     done
     echo "[Log] Found device in DFU mode."
-    echo
 }
 
 function Downgrade {
@@ -333,6 +327,17 @@ function Downgrade {
             curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
+        echo "[Log] Verifying IPSW..."
+        SHA1IPSW=$(curl -L https://api.ipsw.me/v2.1/${ProductType}/${DowngradeBuildVer}/sha1sum)
+        SHA1IPSWL=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
+        if [ $SHA1IPSW != $SHA1IPSWL ]; then
+            echo "[Error] SHA1 of IPSW does not match!"
+            read -p "[Input] Continue anyway? (y/N)" Continue
+            if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
+                exit
+            fi
+        fi
+        echo "[Log] Extracting iBSS from IPSW..."
         unzip -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d tmp/
     fi
     
@@ -349,7 +354,7 @@ function Downgrade {
     pythonPID=$!
     cd ..
     
-    echo "[Log] Will now proceed to futurerestore..."
+    echo "[Log] Proceeding to futurerestore..."
     while [[ $ScriptDone != 1 ]]; do
         if [ ! $NoBaseband ]; then
             sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
@@ -359,9 +364,9 @@ function Downgrade {
         fi
         
         echo
-        echo "futurerestore done!"
-        # Downloading stuff sometimes fails causing futurerestore to halt, so I added the option to retry here
-        echo "If futurerestore failed to download baseband or for some reason, you can choose to retry"
+        echo "[Log] futurerestore done!"
+        # Downloading stuff sometimes fails causes futurerestore to halt, so I added the option to retry here
+        echo "You can choose to retry if futurerestore failed on downloading baseband or for some other reason"
         read -p "[Input] Retry? (y/N) " Retry
         if [[ $Retry != y ]] && [[ $Retry != Y ]]; then
             ScriptDone=1
@@ -402,6 +407,7 @@ function InstallDependencies {
 }
 
 function Arch {
+    echo "[Log] Installing dependencies for Arch with pacman..."
     sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
     sudo pacman -S --noconfirm libimobiledevice usbmuxd
     sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
@@ -410,13 +416,15 @@ function Arch {
 function macOS {
     read -p "[Input] Warning: macOS dependency install script is not fully tested and supported. Continue anyway? (y/N) " Continue
     if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
-        echo "Please install these dependencies manually using brew to proceed:"
+        echo "[Error] Please install these dependencies manually with brew to proceed:"
         echo "libimobiledevice, usbmuxd, libzip, lsusb, osxfuse, ifuse"
         exit
     fi
     if [[ ! $(which brew) ]]; then
+        echo "[Log] Homebrew is not detected/installed, installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     fi
+    echo "[Log] Installing dependencies for macOS with Homebrew..."
     brew uninstall --ignore-dependencies usbmuxd
     brew uninstall --ignore-dependencies libimobiledevice
     brew install --HEAD usbmuxd
@@ -427,11 +435,14 @@ function macOS {
 }
 
 function Ubuntu {
+    echo "[Log] Running APT update..." 
     sudo apt update
+    echo "[Log] Installing dependencies for Ubuntu with APT..."
     sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 python3 usbmuxd
 }
 
 function Ubuntu1804 {
+    echo "[Log] Installing dependencies for Ubuntu 18.04 with APT..."
     sudo apt -y install binutils
     mkdir tmp
     cd tmp
