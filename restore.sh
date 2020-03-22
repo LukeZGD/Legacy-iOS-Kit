@@ -309,15 +309,14 @@ function FindDFU {
 }
 
 function Downgrade {
-    # These firmware keys are essential for iPad2,4, 2,5, 2,6, 2,7, and iPod5,1
+    # These firmware keys are essential for some iPads and iPod5,1
     # 8.4.1 KBAG keys for those devices are missing in firmware-keys.ipsw.me
-    if [ ! -e resources/firmware ]; then
-        echo "[Log] Firmware keys missing, downloading firmware keys..."
-        curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
-        unzip -q tmp/firmware.zip -d tmp
-        mkdir resources/firmware
-        mv tmp/32bit-OTA-Downgrader-firmware/firmware/* resources/firmware
-    fi
+    rm -rf resources/firmware
+    echo "Downloading firmware keys..."
+    curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
+    unzip -q tmp/firmware.zip -d tmp
+    mkdir resources/firmware
+    mv tmp/32bit-OTA-Downgrader-firmware/firmware/* resources/firmware
     
     if [ ! $NotOTA ]; then
         SaveOTABlobs
