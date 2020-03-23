@@ -136,7 +136,7 @@ function SelectVersion {
             done
         fi
     elif [[ $Mode == 'Downgrade' ]]; then
-        echo "Select iOS version:"
+        echo "[Input] Select iOS version:"
         select opt in "iOS 8.4.1" "Other" "Back"; do
             case $opt in
                 "iOS 8.4.1" ) Select841; break;;
@@ -194,25 +194,6 @@ function Action {
 
 function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVersion}.plist"
-    
-    # ota.json is being downloaded now so tsschecker doesn't have to
-    # this is because tsschecker has an unforgiving timeout when downloading ota.json
-    if [ ! -e resources/ota.json ]; then
-        echo "[Log] Downloading ota.json..."
-        curl -L https://api.ipsw.me/v2.1/ota.json/condensed -o tmp/ota.json
-        mv tmp/ota.json resources/
-    fi
-    echo "[Log] Copying ota.json to tmp..."
-    if [ $platform == macos ]; then
-        cp resources/ota.json $TMPDIR
-    else
-        cp resources/ota.json /tmp
-    fi
-    if [ ! -e /tmp/ota.json ] && [ ! -e $TMPDIR/ota.json ]; then
-        echo "[Error] Downloading/copying ota.json failed. Please run the script again"
-        exit
-    fi
-
     echo "[Log] Saving $DowngradeVersion blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVersion -o -s -e $UniqueChipID -m $BuildManifest
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2)
@@ -312,7 +293,7 @@ function Downgrade {
     # These firmware keys are essential for some iPads and iPod5,1
     # 8.4.1 KBAG keys for those devices are missing in firmware-keys.ipsw.me
     rm -rf resources/firmware
-    echo "Downloading firmware keys..."
+    echo "[Log] Downloading firmware keys..."
     curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
     unzip -q tmp/firmware.zip -d tmp
     mkdir resources/firmware
