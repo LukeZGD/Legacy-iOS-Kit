@@ -16,6 +16,7 @@ do
     pzb -g AssetData/boot/BuildManifest.plist -o manifests/BuildManifest_$ProductType.plist $dllink
     mkdir -p firmware/$ProductType/12H321
     curl -L https://firmware-keys.ipsw.me/firmware/$ProductType/12H321 -o firmware/$ProductType/12H321/index.html
+    curl -L https://api.ipsw.me/v2.1/${ProductType}/12H321/sha1sum -o firmware/$ProductType/12H321/sha1sum
 done
 
 for ProductType in "${devices613[@]}"
@@ -24,4 +25,5 @@ do
     pzb -g AssetData/boot/BuildManifest.plist -o manifests/BuildManifest613_$ProductType.plist $dllink
     mkdir -p firmware/$ProductType/10B329
     curl -L https://firmware-keys.ipsw.me/firmware/$ProductType/10B329 -o firmware/$ProductType/10B329/index.html
+    curl -L https://api.ipsw.me/v2.1/${ProductType}/10B329/sha1sum -o firmware/$ProductType/10B329/sha1sum
 done

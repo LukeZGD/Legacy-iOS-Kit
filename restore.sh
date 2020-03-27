@@ -199,6 +199,7 @@ function SaveOTABlobs {
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2)
     if [ ! -e "$SHSH" ]; then
         echo "[Error] Saving $DowngradeVersion blobs failed. Please run the script again"
+        echo "It is also possible that $DowngradeVersion for $ProductType is no longer being signed"
         exit
     fi
     mkdir output 2>/dev/null
@@ -308,7 +309,7 @@ function Downgrade {
             mv tmp/$IPSW.ipsw .
         fi
         echo "[Log] Verifying IPSW..."
-        SHA1IPSW=$(curl -L https://api.ipsw.me/v2.1/${ProductType}/${DowngradeBuildVer}/sha1sum)
+        SHA1IPSW=$(cat resources/firmware/${ProductType}/${DowngradeBuildVer}/sha1sum)
         SHA1IPSWL=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
         if [ $SHA1IPSW != $SHA1IPSWL ]; then
             echo "[Error] SHA1 of IPSW does not match!"
