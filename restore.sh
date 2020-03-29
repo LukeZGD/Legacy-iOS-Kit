@@ -233,7 +233,7 @@ function SaveOTABlobs {
 }
 
 function kDFU {
-    if [ ! -e saved/$iBSS.dfu ]; then
+    if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         # Downloading 8.4.1 iBSS for "other" downgrades
         # This is because this script only provides 8.4.1 iBSS IV and Keys
         echo "[Log] Downloading iBSS..."
@@ -346,7 +346,7 @@ function Downgrade {
         fi
         echo "[Log] Extracting iBSS from IPSW..."
         mkdir -p saved/$ProductType 2>/dev/null
-        unzip -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
+        unzip -o -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
     fi
     
     if [ ! $kDFUManual ]; then
@@ -358,7 +358,7 @@ function Downgrade {
     
     echo "[Log] Preparing for futurerestore (starting local server)..."
     cd resources
-    sudo python3 -m http.server 80 &
+    sudo bash -c "python3 -m http.server 80 &"
     cd ..
     
     if [ $Baseband == 0 ]; then
@@ -396,7 +396,7 @@ function Downgrade {
     echo
     echo "[Log] futurerestore done!"    
     echo "[Log] Stopping local server..."
-    (ps aux | awk '/python3/ {print "sudo kill -9 "$2}' | bash) 2>/dev/null
+    ps aux | awk '/python3/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     echo "[Log] Downgrade script done!"
     exit
 }
