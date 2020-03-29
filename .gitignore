@@ -1,6 +1,9 @@
+*.bbfw
 *.ipsw
 *.json
+*.plist
 *.shsh
 *.shsh2
 iP*
+saved/
 tmp/

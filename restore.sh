@@ -51,16 +51,41 @@ iv_n94_613=d3fe01e99bd0967e80dccfc0739f93d5 #iPhone4,1
 key_n94_613=35343d5139e0313c81ee59dbae292da26e739ed75b3da5db9da7d4d26046498c
 
 function BasebandDetect {
-    # For Wi-Fi only devices
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,4 ] || [ $ProductType == iPad2,5 ] ||
-       [ $ProductType == iPad3,1 ] || [ $ProductType == iPad3,4 ] || [ $ProductType == iPod5,1 ]; then
-        NoBaseband=1
+    if [ $ProductType == iPad2,2 ]; then
+        BasebandURL=http://appldnld.apple.com/iOS9.3.5/031-74153-20160825-1250B23E-6717-11E6-AB83-973F34D2D062/iPad2,2_9.3.5_13G36_Restore.ipsw
+        Baseband=Firmware/ICE3_04.12.09_BOOT_02.13.Release.bbfw
+    elif [ $ProductType == iPad2,3 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80042-20190722-68F07B91-8EA1-4A3B-A930-35314A006ECB/iPad2,3_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Phoenix-3.6.03.Release.bbfw
+    elif [ $ProductType == iPad2,6 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80040-20190722-B1E89CC8-5209-40C3-AEE9-63C29D38BDEB/iPad2,6_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Mav5-11.80.00.Release.bbfw
+    elif [ $ProductType == iPad2,7 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80041-20190722-673B8756-0A63-4BB6-9855-ACE2381695AF/iPad2,7_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Mav5-11.80.00.Release.bbfw
+    elif [ $ProductType == iPad3,2 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80039-20190722-E632D5D2-2F3C-498F-B83F-7067D9D90B33/iPad3,2_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Mav4-6.7.00.Release.bbfw
+    elif [ $ProductType == iPad3,3 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80044-20190722-6C65AD27-69D8-499C-BC15-DE7AC74DE2BD/iPad3,3_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Mav4-6.7.00.Release.bbfw
+    elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/091-25014-20190722-0C1B95A6-992C-11E9-A2EE-E1C9A77C2E40/iPad_32bit_10.3.4_14G61_Restore.ipsw 
+        Baseband=Firmware/Mav5-11.80.00.Release.bbfw
+    elif [ $ProductType == iPhone4,1 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/041-80043-20190722-6C65AD27-69D8-499C-BC15-DE7AC74DE2BD/iPhone4,1_9.3.6_13G37_Restore.ipsw
+        Baseband=Firmware/Trek-6.7.00.Release.bbfw
+    elif [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
+        BasebandURL=http://updates-http.cdn-apple.com/2019/ios/091-25277-20190722-0C1B94DE-992C-11E9-A2EE-E2C9A77C2E40/iPhone_4.0_32bit_10.3.4_14G61_Restore.ipsw
+        Baseband=Firmware/Mav5-11.80.00.Release.bbfw
+    else # For Wi-Fi only devices
+        Baseband=0
     fi
 }
 
 function Clean {
     # Clean up files (called on MainMenu and trap dependency)
-    rm -r iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2 2>/dev/null) 2>/dev/null
+    rm -rf iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
 function MainMenu {
@@ -73,6 +98,7 @@ function MainMenu {
             read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
             if [ $(which irecovery) ]; then
                 # Get ECID with irecovery (optional)
+                echo "[Log] Getting UniqueChipID (ECID) with irecovery..."
                 UniqueChipID=$(sudo irecovery -q | grep 'ECID:' | cut -c 7-)
             else
                 read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
@@ -199,26 +225,27 @@ function SaveOTABlobs {
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVersion}-*.shsh2)
     if [ ! -e "$SHSH" ]; then
         echo "[Error] Saving $DowngradeVersion blobs failed. Please run the script again"
-        echo "It is also possible that $DowngradeVersion for $ProductType is no longer being signed"
+        echo "It is also possible that $DowngradeVersion for $ProductType is no longer signed"
         exit
     fi
-    mkdir output 2>/dev/null
-    cp "$SHSH" output
+    mkdir -p saved/shsh 2>/dev/null
+    cp "$SHSH" saved/shsh
 }
 
 function kDFU {
-    if [ ! -e tmp/$iBSS.dfu ]; then
+    if [ ! -e saved/$iBSS.dfu ]; then
         # Downloading 8.4.1 iBSS for "other" downgrades
         # This is because this script only provides 8.4.1 iBSS IV and Keys
         echo "[Log] Downloading iBSS..."
-        dllink=$(curl -I -Ls -o /dev/null -w %{url_effective} https://api.ipsw.me/v4/ipsw/download/${ProductType}/12H321)
+        dllink=$(cat resources/firmware/${ProductType}/${DowngradeBuildVer}/url)
         resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $dllink
-        mv $iBSS.dfu tmp/
+        mkdir -p saved/$ProductType 2>/dev/null
+        mv $iBSS.dfu saved/$ProductType
     fi
     echo "[Log] Decrypting iBSS..."
     echo "IV = ${!iv}"
     echo "Key = ${!key}"
-    resources/tools/xpwntool_$platform "tmp/${iBSS}.dfu" tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
+    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k ${!key} -iv ${!iv} -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo "[Log] Patching iBSS..."
     bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
@@ -291,8 +318,7 @@ function FindDFU {
 }
 
 function Downgrade {
-    # These firmware keys are essential for some iPads and iPod5,1
-    # 8.4.1 KBAG keys for those devices are missing in firmware-keys.ipsw.me
+    # Firmware keys for 8.4.1 and 6.1.3
     rm -rf resources/firmware
     echo "[Log] Downloading firmware keys..."
     curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
@@ -305,7 +331,7 @@ function Downgrade {
         IPSW="${ProductType}_${DowngradeVersion}_${DowngradeBuildVer}_Restore"
         if [ ! -e "$IPSW.ipsw" ]; then
             echo "[Log] iOS $DowngradeVersion IPSW is missing, downloading IPSW..."
-            curl -L https://api.ipsw.me/v4/ipsw/download/$ProductType/$DowngradeBuildVer -o tmp/$IPSW.ipsw
+            curl -L $(cat resources/firmware/${ProductType}/${DowngradeBuildVer}/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
         echo "[Log] Verifying IPSW..."
@@ -319,7 +345,8 @@ function Downgrade {
             fi
         fi
         echo "[Log] Extracting iBSS from IPSW..."
-        unzip -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d tmp/
+        mkdir -p saved/$ProductType 2>/dev/null
+        unzip -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
     fi
     
     if [ ! $kDFUManual ]; then
@@ -332,30 +359,44 @@ function Downgrade {
     echo "[Log] Preparing for futurerestore (starting local server)..."
     cd resources
     sudo python3 -m http.server 80 &
-    pythonPID=$!
     cd ..
     
-    echo "[Log] Proceeding to futurerestore..."
-    while [[ $ScriptDone != 1 ]]; do
-        if [ ! $NoBaseband ]; then
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+    if [ $Baseband == 0 ]; then
+        echo "[Log] Device $ProductType has no baseband"
+        echo "[Log] Proceeding to futurerestore..."
+        sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+    else
+        if [ ! -e saved/$ProductType/*.bbfw ]; then
+            echo "[Log] Downloading baseband..."
+            resources/tools/pzb_$platform -g $Baseband -o $Baseband $BasebandURL
+            resources/tools/pzb_$platform -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
+            mkdir -p saved/$ProductType 2>/dev/null
+            cp $(ls *.bbfw) BuildManifest.plist saved/$ProductType
         else
-            echo "[Log] Device $ProductType has no baseband"
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+            cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
+        if [ ! -e *.bbfw ]; then
+            echo "[Error] Downloading baseband failed!"
+            echo "Your device is still in kDFU mode, you may run the script again"
+            echo "If you continue, futurerestore can attempt to download the baseband again"
+            read -p "[Input] Continue anyway? (y/N)" Continue
+            if [[ $Continue == y ]] || [[ $Continue == Y ]]; then
+                echo "[Log] Proceeding to futurerestore..."
+                sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+            else
+                exit
+            fi
+        fi
+        if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
+            echo "[Log] Proceeding to futurerestore..."
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
+        fi
+    fi
         
-        echo
-        echo "[Log] futurerestore done!"
-        # Downloading stuff sometimes fails causes futurerestore to halt, so I added the option to retry here
-        echo "You can choose to retry if futurerestore failed on downloading baseband or for some other reason"
-        read -p "[Input] Retry? (y/N) " Retry
-        if [[ $Retry != y ]] && [[ $Retry != Y ]]; then
-            ScriptDone=1
-        fi
-    done
-    
-    echo "[Log] Stopping local server (PID $pythonPID)..."
-    sudo kill $pythonPID    
+    echo
+    echo "[Log] futurerestore done!"    
+    echo "[Log] Stopping local server..."
+    (ps aux | awk '/python3/ {print "sudo kill -9 "$2}' | bash) 2>/dev/null
     echo "[Log] Downgrade script done!"
     exit
 }

@@ -17,6 +17,7 @@ do
     mkdir -p firmware/$ProductType/12H321
     curl -L https://firmware-keys.ipsw.me/firmware/$ProductType/12H321 -o firmware/$ProductType/12H321/index.html
     curl -L https://api.ipsw.me/v2.1/${ProductType}/12H321/sha1sum -o firmware/$ProductType/12H321/sha1sum
+    curl -L https://api.ipsw.me/v2.1/${ProductType}/12H321/url -o firmware/$ProductType/12H321/url
 done
 
 for ProductType in "${devices613[@]}"
@@ -26,4 +27,5 @@ do
     mkdir -p firmware/$ProductType/10B329
     curl -L https://firmware-keys.ipsw.me/firmware/$ProductType/10B329 -o firmware/$ProductType/10B329/index.html
     curl -L https://api.ipsw.me/v2.1/${ProductType}/10B329/sha1sum -o firmware/$ProductType/10B329/sha1sum
+    curl -L https://api.ipsw.me/v2.1/${ProductType}/10B329/url -o firmware/$ProductType/10B329/url
 done
