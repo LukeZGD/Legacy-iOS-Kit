@@ -188,9 +188,9 @@ function kDFU {
         mv $iBSS.dfu saved/$ProductType
     fi
     echo "[Log] Decrypting iBSS..."
-    echo "IV = ${!IV}"
-    echo "Key = ${!Key}"
-    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k ${!Key} -iv ${!IV} -decrypt
+    echo "IV = $IV"
+    echo "Key = $Key"
+    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV -decrypt
     dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
     echo "[Log] Patching iBSS..."
     bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
