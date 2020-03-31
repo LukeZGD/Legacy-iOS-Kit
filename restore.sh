@@ -413,7 +413,7 @@ function Ubuntu1804 {
 
 # --- MAIN SCRIPT STARTS HERE ---
 
-trap Clean INT TERM EXIT
+trap 'Clean; exit' INT TERM EXIT
 clear
 echo "******* 32bit-OTA-Downgrader *******"
 echo "    Downgrade script by LukeZGD     "
