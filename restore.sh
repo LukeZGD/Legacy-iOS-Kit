@@ -370,12 +370,6 @@ function Arch {
 }
 
 function macOS {
-    read -p "[Input] Warning: macOS dependency install script is not fully tested and supported. Continue anyway? (y/N) " Continue
-    if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
-        echo "[Error] Please install these dependencies manually with brew to proceed:"
-        echo "libimobiledevice, usbmuxd, libzip, lsusb, osxfuse, ifuse"
-        exit
-    fi
     if [[ ! $(which brew) ]]; then
         echo "[Log] Homebrew is not detected/installed, installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
