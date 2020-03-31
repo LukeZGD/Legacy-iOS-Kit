@@ -30,6 +30,12 @@ function Clean {
 function MainMenu {
     Clean
     mkdir tmp
+    # Firmware keys for 8.4.1 and 6.1.3
+    rm -rf resources/firmware
+    curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
+    unzip -q tmp/firmware.zip -d tmp
+    mkdir resources/firmware
+    mv tmp/32bit-OTA-Downgrader-firmware/* resources/firmware
     
     if [ $(lsusb | grep -c '1227') == 1 ]; then
         read -p "[Input] Device in DFU mode detected. Is the device in kDFU mode? (y/N) " kDFUManual
@@ -58,7 +64,7 @@ function MainMenu {
     
     echo "Main Menu"
     echo
-    echo "HardwareModel: $HWModel"
+    echo "HardwareModel: ${HWModel}ap"
     echo "ProductType: $ProductType"
     echo "ProductVersion: $ProductVer"
     echo "UniqueChipID (ECID): $UniqueChipID"
@@ -120,7 +126,7 @@ function SelectVersion {
 
 function Select841 {
     echo "iOS 8.4.1 $Mode"
-    iBSS="iBSS.$HWModelLower.RELEASE"
+    iBSS="iBSS.$HWModel.RELEASE"
     DowngradeVer="8.4.1"
     DowngradeBuildVer="12H321"
     Action
@@ -128,7 +134,7 @@ function Select841 {
 
 function Select613 {
     echo "iOS 6.1.3 $Mode"
-    iBSS="iBSS.${HWModelLower}ap.RELEASE"
+    iBSS="iBSS.${HWModel}ap.RELEASE"
     DowngradeVer="6.1.3"
     DowngradeBuildVer="10B329"
     Action
@@ -136,7 +142,7 @@ function Select613 {
 
 function SelectOther {
     echo "Other $Mode"
-    iBSS="iBSS.$HWModelLower.RELEASE"
+    iBSS="iBSS.$HWModel.RELEASE"
     NotOTA=1
     read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
     IPSW="$(basename "$IPSW" .ipsw)"
@@ -256,15 +262,7 @@ function FindDFU {
     echo "[Log] Found device in DFU mode."
 }
 
-function Downgrade {
-    # Firmware keys for 8.4.1 and 6.1.3
-    rm -rf resources/firmware
-    echo "[Log] Downloading firmware keys..."
-    curl -L https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
-    unzip -q tmp/firmware.zip -d tmp
-    mkdir resources/firmware
-    mv tmp/32bit-OTA-Downgrader-firmware/* resources/firmware
-    
+function Downgrade {    
     if [ ! $NotOTA ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${DowngradeVer}_${DowngradeBuildVer}_Restore"
@@ -439,8 +437,7 @@ if [[ $(uname -m) != 'x86_64' ]]; then
     exit
 fi
 
-HWModel=$(ideviceinfo -s | grep 'HWModel' | cut -c 16-)
-HWModelLower=$(echo $HWModel | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
 ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
 [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
 ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)

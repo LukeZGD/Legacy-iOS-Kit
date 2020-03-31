@@ -140,7 +140,7 @@ done
 mkdir -p firmware/iPad2,2/13G36
 curl -L https://api.ipsw.me/v2.1/iPad2,2/13G36/url -o firmware/iPad2,2/13G36/url
 
-for ProductType in iPad2,3 iPad2,6 iPad2,7 iPhone4,1
+for ProductType in iPad2,3 iPad2,6 iPad2,7 iPad3,2 iPad3,3 iPhone4,1
 do
     mkdir -p firmware/$ProductType/13G37
     curl -L https://api.ipsw.me/v2.1/${ProductType}/13G37/url -o firmware/$ProductType/13G37/url
