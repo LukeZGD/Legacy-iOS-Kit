@@ -32,7 +32,7 @@
 - This script does not modify the IPSW and will verify it with SHA1sum before restoring
 - This script only uses iBSS patches for entering kDFU mode
 - This script can also be used to just enter kDFU mode for all supported devices
-- This script can also be used to uturerestore to other iOS versions with provided SHSH blobs
+- This script can also be used to futurerestore to other iOS versions with provided SHSH blobs
 - This script can also work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
