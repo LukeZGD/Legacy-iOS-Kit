@@ -4,6 +4,7 @@
 *.plist
 *.shsh
 *.shsh2
+*.txt
 iP*
 saved/
 tmp/
