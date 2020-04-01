@@ -1,9 +1,10 @@
 #!/bin/bash
 
 function BasebandDetect {
-    BasebandURL=$(cat resources/firmware/${ProductType}/13G37/url 2>/dev/null)
+    Firmware=resources/firmware/$ProductType
+    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
     if [ $ProductType == iPad2,2 ]; then
-        BasebandURL=$(cat resources/firmware/${ProductType}/13G36/url)
+        BasebandURL=$(cat $Firmware/13G36/url)
         Baseband=ICE3_04.12.09_BOOT_02.13.Release.bbfw
     elif [ $ProductType == iPad2,3 ]; then
         Baseband=Phoenix-3.6.03.Release.bbfw
@@ -15,7 +16,7 @@ function BasebandDetect {
         Baseband=Trek-6.7.00.Release.bbfw
     elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
          [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
-        BasebandURL=$(cat resources/firmware/${ProductType}/14G61/url)
+        BasebandURL=$(cat $Firmware/14G61/url)
         Baseband=Mav5-11.80.00.Release.bbfw
     else # For Wi-Fi only devices
         Baseband=0
@@ -27,16 +28,7 @@ function Clean {
     rm -rf iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
-function MainMenu {
-    Clean
-    mkdir tmp
-    # Firmware keys for 8.4.1 and 6.1.3
-    rm -rf resources/firmware
-    curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
-    unzip -q tmp/firmware.zip -d tmp
-    mkdir resources/firmware
-    mv tmp/32bit-OTA-Downgrader-firmware/* resources/firmware
-    
+function MainMenu {    
     if [ $(lsusb | grep -c '1227') == 1 ]; then
         read -p "[Input] Device in DFU mode detected. Is the device in kDFU mode? (y/N) " kDFUManual
         if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
@@ -84,44 +76,25 @@ function MainMenu {
 }
 
 function SelectVersion {
-    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
-       [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
-        echo "[Input] Select iOS version:"
-        if [[ $Mode == 'Downgrade' ]]; then
-            select opt in "iOS 8.4.1" "iOS 6.1.3" "Other" "Back"; do
-                case $opt in
-                    "iOS 8.4.1" ) Select841; break;;
-                    "iOS 6.1.3" ) Select613; break;;
-                    "Other" ) SelectOther; break;;
-                    "Back" ) MainMenu; break;;
-                    *) SelectVersion;;
-                esac
-            done
-        elif [[ $Mode != 'kDFU' ]]; then
-            select opt in "iOS 8.4.1" "iOS 6.1.3" "Back"; do
-                case $opt in
-                    "iOS 8.4.1" ) Select841; break;;
-                    "iOS 6.1.3" ) Select613; break;;
-                    "Back" ) MainMenu; break;;
-                    *) SelectVersion;;
-                esac
-            done
-        else
-            Select841
-        fi
-    elif [[ $Mode == 'Downgrade' ]]; then
-        echo "[Input] Select iOS version:"
-        select opt in "iOS 8.4.1" "Other" "Back"; do
-            case $opt in
-                "iOS 8.4.1" ) Select841; break;;
-                "Other" ) SelectOther; break;;
-                "Back" ) MainMenu; break;;
-                *) SelectVersion;;
-            esac
-        done
-    else
+    Selection=("iOS 8.4.1")
+    if [[ $Mode == 'kDFU' ]]; then
         Select841
+    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
+         [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
+        Selection+=("iOS 6.1.3")
     fi
+    [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
+    Selection+=("Back")
+    echo "[Input] Select iOS version:"
+    select opt in "${Selection[@]}"; do
+        case $opt in
+            "iOS 8.4.1" ) Select841; break;;
+            "iOS 6.1.3" ) Select613; break;;
+            "Other" ) SelectOther; break;;
+            "Back" ) MainMenu; break;;
+            *) SelectVersion;;
+        esac
+    done
 }
 
 function Select841 {
@@ -143,6 +116,7 @@ function Select613 {
 function SelectOther {
     echo "Other $Mode"
     iBSS="iBSS.$HWModel.RELEASE"
+    DowngradeBuildVer="12H321"
     NotOTA=1
     read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
     IPSW="$(basename "$IPSW" .ipsw)"
@@ -151,7 +125,7 @@ function SelectOther {
 }
 
 function Action {
-    Firmware=resources/firmware/${ProductType}/${DowngradeBuildVer}
+    Firmware=$Firmware/$DowngradeBuildVer
     IV=$(cat $Firmware/iv)
     Key=$(cat $Firmware/key)
     
@@ -160,7 +134,7 @@ function Action {
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
         SaveOTABlobs
     elif [[ $Mode == 'kDFU' ]]; then
-        kDFU
+        kDFU; exit
     fi
 }
 
@@ -283,9 +257,7 @@ function Downgrade {
         unzip -o -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
     fi
     
-    if [ ! $kDFUManual ]; then
-        kDFU
-    fi
+    [ ! $kDFUManual ] && kDFU
     
     echo "[Log] Extracting IPSW..."
     unzip -q "$IPSW.ipsw" -d "$IPSW/"
@@ -339,25 +311,19 @@ function InstallDependencies {
     echo "Install Dependencies"
 
     . /etc/os-release 2>/dev/null
-    if [[ $(which pacman) ]] || [[ $NAME == "Arch Linux" ]]; then
+    if [[ $(which pacman) ]]; then
         Arch
-    elif [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "16.04" ]]; then
+    elif [[ $VERSION_ID == "16.04" ]]; then
         Ubuntu
-    elif [[ $(which apt) ]] || [[ $NAME == "Ubuntu" ]] && [[ $VERSION_ID == "18.04" ]]; then
+    elif [[ $VERSION_ID == "18.04" ]]; then
         Ubuntu
         Ubuntu1804
     elif [[ $OSTYPE == "darwin"* ]]; then
         macOS
     else
-        echo "[Input] Distro not detected/supported. Please select manually"
-        select opt in "Ubuntu Xenial" "Ubuntu Bionic" "Arch Linux" "macOS"; do
-        case $opt in
-            "Ubuntu Xenial" ) Ubuntu; break;;
-            "Ubuntu Bionic" ) Ubuntu; Ubuntu1804; break;;
-            "Arch Linux" ) Arch; break;;
-            "macOS" ) macOS; break;;
-        esac
-    done
+        echo "[Error] Distro not detected/supported by install script."
+        echo "See the repo README for Linux distros tested on"
+        exit
     fi
     echo "[Log] Install script done! Please run the script again to proceed"
 }
@@ -442,5 +408,12 @@ if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] 
     InstallDependencies
 else
     chmod +x resources/tools/*
+    Clean
+    mkdir tmp
+    rm -rf resources/firmware
+    curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/firmware.zip -o tmp/firmware.zip
+    unzip -q tmp/firmware.zip -d tmp
+    mkdir resources/firmware
+    mv tmp/32bit-OTA-Downgrader-firmware/* resources/firmware
     MainMenu
 fi

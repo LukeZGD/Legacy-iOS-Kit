@@ -118,8 +118,8 @@ do
     HWModel
     IV=IV_$HWModelLower
     Key=Key_$HWModelLower
-    echo ${!Key} | tee firmware/$ProductType/12H321/key
-    echo ${!IV} | tee firmware/$ProductType/12H321/iv
+    echo $Key | tee firmware/$ProductType/12H321/key
+    echo $IV | tee firmware/$ProductType/12H321/iv
 done
 
 for ProductType in "${devices613[@]}"
@@ -133,8 +133,8 @@ do
     HWModel
     IV=IV_${HWModelLower}_613
     Key=Key_${HWModelLower}_613
-    echo ${!Key} | tee firmware/$ProductType/10B329/key
-    echo ${!IV} | tee firmware/$ProductType/10B329/iv
+    echo $Key | tee firmware/$ProductType/10B329/key
+    echo $IV | tee firmware/$ProductType/10B329/iv
 done
 
 mkdir -p firmware/iPad2,2/13G36
