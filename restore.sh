@@ -34,8 +34,7 @@ function Log {
 
 function Error {
     echo "[Error] $1" | tee -a restore_log.txt
-    if [[ ! -z $2 ]]; then
-        echo $2 | tee -a restore_log.txt
+    [[ ! -z $2 ]] && echo $2 | tee -a restore_log.txt
     exit
 }
 
@@ -141,10 +140,11 @@ function Action {
     if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
-        SaveOTABlobs; exit
+        SaveOTABlobs
     elif [[ $Mode == 'kDFU' ]]; then
-        kDFU; exit
+        kDFU
     fi
+    exit
 }
 
 function SaveOTABlobs {
@@ -154,7 +154,6 @@ function SaveOTABlobs {
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2)
     if [ ! -e "$SHSH" ]; then
         Error "Saving $DowngradeVer blobs failed. Please run the script again" "It is also possible that $DowngradeVer for $ProductType is no longer signed"
-        exit
     fi
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
@@ -309,7 +308,6 @@ function Downgrade {
     Log "Stopping local server..."
     ps aux | awk '/python3/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     Log "Downgrade script done!"
-    exit
 }
 
 function InstallDependencies {
