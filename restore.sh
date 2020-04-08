@@ -43,13 +43,7 @@ function MainMenu {
         read -p "[Input] Device in DFU mode detected. Is the device in kDFU mode? (y/N) " kDFUManual
         if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
             read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-            if [ $(which irecovery) ]; then
-                # Get ECID with irecovery (optional)
-                Log "Getting UniqueChipID (ECID) with irecovery..."
-                UniqueChipID=$(sudo irecovery -q | grep 'ECID:' | cut -c 7-)
-            else
-                read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
-            fi
+            read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
             BasebandDetect
             Log "Downgrading device $ProductType in kDFU mode..."
             Mode='Downgrade'
@@ -256,9 +250,11 @@ function Downgrade {
         if [ $SHA1IPSW != $SHA1IPSWL ]; then
             Error "SHA1 of IPSW does not match. Please run the script again"
         fi
-        Log "Extracting iBSS from IPSW..."
-        mkdir -p saved/$ProductType 2>/dev/null
-        unzip -o -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
+        if [ ! $kDFUManual ]; then
+            Log "Extracting iBSS from IPSW..."
+            mkdir -p saved/$ProductType 2>/dev/null
+            unzip -o -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
+        fi
     fi
     
     [ ! $kDFUManual ] && kDFU
