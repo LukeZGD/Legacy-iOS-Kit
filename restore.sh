@@ -24,17 +24,16 @@ function BasebandDetect {
 }
 
 function Clean {
-    # Clean up files (called on MainMenu and trap dependency)
     rm -rf iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
 function Log {
-    echo "[Log] $1" | tee -a restore_log.txt
+    echo "[Log] $1"
 }
 
 function Error {
-    echo "[Error] $1" | tee -a restore_log.txt
-    [[ ! -z $2 ]] && echo $2 | tee -a restore_log.txt
+    echo "[Error] $1"
+    [[ ! -z $2 ]] && echo $2
     exit
 }
 
@@ -59,8 +58,8 @@ function MainMenu {
     echo "Main Menu"
     echo
     echo "HardwareModel: ${HWModel}ap"
-    echo "ProductType: $ProductType" | tee -a restore_log.txt
-    echo "ProductVersion: $ProductVer" | tee -a restore_log.txt
+    echo "ProductType: $ProductType"
+    echo "ProductVersion: $ProductVer"
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
     echo "[Input] Select an option:"
@@ -100,7 +99,7 @@ function SelectVersion {
 }
 
 function Select841 {
-    echo "iOS 8.4.1 $Mode" | tee -a restore_log.txt
+    echo "iOS 8.4.1 $Mode"
     iBSS="iBSS.$HWModel.RELEASE"
     DowngradeVer="8.4.1"
     DowngradeBuildVer="12H321"
@@ -108,7 +107,7 @@ function Select841 {
 }
 
 function Select613 {
-    echo "iOS 6.1.3 $Mode" | tee -a restore_log.txt
+    echo "iOS 6.1.3 $Mode"
     iBSS="iBSS.${HWModel}ap.RELEASE"
     DowngradeVer="6.1.3"
     DowngradeBuildVer="10B329"
@@ -116,7 +115,7 @@ function Select613 {
 }
 
 function SelectOther {
-    echo "Other $Mode" | tee -a restore_log.txt
+    echo "Other $Mode"
     iBSS="iBSS.$HWModel.RELEASE"
     DowngradeBuildVer="12H321"
     NotOTA=1
@@ -146,9 +145,7 @@ function SaveOTABlobs {
     Log "Saving $DowngradeVer blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVer -o -s -e $UniqueChipID -m $BuildManifest
     SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2)
-    if [ ! -e "$SHSH" ]; then
-        Error "Saving $DowngradeVer blobs failed. Please run the script again" "It is also possible that $DowngradeVer for $ProductType is no longer signed"
-    fi
+    [ ! -e "$SHSH" ] && Error "Saving $DowngradeVer blobs failed. Please run the script again" "It is also possible that $DowngradeVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
     Log "Successfully saved $DowngradeVer blobs."
@@ -157,7 +154,6 @@ function SaveOTABlobs {
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         # Downloading 8.4.1 iBSS for "other" downgrades
-        # This is because this script only provides 8.4.1 iBSS IV and Keys
         Log "Downloading iBSS..."
         resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/url)
         mkdir -p saved/$ProductType 2>/dev/null
@@ -181,11 +177,8 @@ function kDFU {
     fi
 
     if [[ $VersionDetect == 1 ]]; then
-        # SSH is unreliable/not working on iOS 10 devices, so ifuse+MTerminal is used instead
-        # It's less convenient, but it should work every time
-        if [ ! $(which ifuse) ]; then
-            Error "ifuse not found. Please re-install dependencies and try again" "For macOS systems, install osxfuse and ifuse with brew"
-        fi
+        # ifuse+MTerminal is used instead of SSH for devices on iOS 10
+        [ ! $(which ifuse) ] && Error "ifuse not found. Please re-install dependencies and try again" "For macOS systems, install osxfuse and ifuse with brew"
         WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
@@ -208,16 +201,14 @@ function kDFU {
         echo "# chmod +x pwn.sh"
         echo "# ./pwn.sh"
     else
-        # SSH: Send kloader and pwnediBSS to device root and run kloader as root
+        # SSH kloader and pwnediBSS
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection"
         read -p "[Input] IP Address: " IPAddress
         Log "Coonecting to device via SSH... Please enter root password when prompted (default is 'alpine')"
         Log "Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
-        if [ $? == 1 ]; then
-            Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
-        fi
+        [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
         Log "Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
@@ -247,9 +238,7 @@ function Downgrade {
         Log "Verifying IPSW..."
         SHA1IPSW=$(cat $Firmware/sha1sum)
         SHA1IPSWL=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
-        if [ $SHA1IPSW != $SHA1IPSWL ]; then
-            Error "SHA1 of IPSW does not match. Please run the script again"
-        fi
+        [ $SHA1IPSW != $SHA1IPSWL ] && Error "SHA1 of IPSW does not match. Please run the script again"
         if [ ! $kDFUManual ]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
@@ -372,8 +361,8 @@ function Ubuntu1804 {
 
 trap 'Clean; exit' INT TERM EXIT
 clear
-echo "******* 32bit-OTA-Downgrader *******" | tee restore_log.txt
-echo "    Downgrade script by LukeZGD     " | tee -a restore_log.txt
+echo "******* 32bit-OTA-Downgrader *******"
+echo "    Downgrade script by LukeZGD     "
 echo
 if [[ $OSTYPE == "linux-gnu" ]]; then
     platform='linux'
@@ -382,12 +371,8 @@ elif [[ $OSTYPE == "darwin"* ]]; then
 else
     Error "OSTYPE unknown/not supported" "Supports Linux and macOS only"
 fi
-if [[ ! $(ping -c1 google.com 2>/dev/null) ]]; then
-    Error "Please check your Internet connection before proceeding"
-fi
-if [[ $(uname -m) != 'x86_64' ]]; then
-    Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
-fi
+[[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding"
+[[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
 
 HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
 ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
