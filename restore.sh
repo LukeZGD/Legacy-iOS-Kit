@@ -309,7 +309,7 @@ function InstallDependencies {
     elif [[ $OSTYPE == "darwin"* ]]; then
         macOS
     else
-        Error "Distro not detected/supported by install script." "See the repo README for Linux distros tested on"
+        Error "Distro not detected/supported by install script." "See the repo README for OS versions/distros tested on"
     fi
     Log "Install script done! Please run the script again to proceed"
 }
@@ -331,7 +331,7 @@ function macOS {
     brew uninstall --ignore-dependencies libimobiledevice
     brew install --HEAD usbmuxd
     brew install --HEAD libimobiledevice
-    brew install libzip lsusb
+    brew install libzip lsusb python3
     brew cask install osxfuse
     brew install ifuse
 }
