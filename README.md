@@ -40,7 +40,7 @@
 - [Lubuntu 18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/) live USB
 - [Arch Linux](https://www.archlinux.org/) full install
 - [Manjaro](https://manjaro.org/) live USB and full install
-- macOS 10.13.6 High Sierra and 10.14.6 Mojave (Catalina is not supported)
+- macOS 10.13.6 High Sierra and 10.14.6 Mojave
 
 ## Tools and other stuff used by this script:
 - cURL
