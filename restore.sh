@@ -350,8 +350,8 @@ function Ubuntu {
             URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
             curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
             sudo dpkg -i libzip4.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/o/openssl1.0/openssl1.0_1.0.2n-1ubuntu5.3_amd64.deb -o openssl1.0.deb
-            sudo dpkg -i openssl1.0.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
+            sudo dpkg -i libssl1.0.0.deb
         else
             URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
             sudo apt -y install libzip4
