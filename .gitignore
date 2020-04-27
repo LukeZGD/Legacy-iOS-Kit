@@ -7,4 +7,5 @@
 *.txt
 iP*
 saved/
+resources/firmware/
 tmp/

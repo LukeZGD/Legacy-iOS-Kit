@@ -301,11 +301,8 @@ function InstallDependencies {
     . /etc/os-release 2>/dev/null
     if [[ $(which pacman) ]]; then
         Arch
-    elif [[ $VERSION_ID == "16.04" ]]; then
+    elif [[ $VERSION_ID == "16.04" ]] || [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         Ubuntu
-    elif [[ $VERSION_ID == "18.04" ]]; then
-        Ubuntu
-        Ubuntu1804
     elif [[ $OSTYPE == "darwin"* ]]; then
         macOS
     else
@@ -339,22 +336,21 @@ function macOS {
 function Ubuntu {
     Log "Running APT update..." 
     sudo apt update
-    Log "Installing dependencies for Ubuntu with APT..."
-    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils libzip4 python3 usbmuxd
-}
-
-function Ubuntu1804 {
-    Log "Installing dependencies for Ubuntu 18.04 with APT..."
-    sudo apt -y install binutils
-    mkdir tmp
-    cd tmp
-    apt download -o=dir::cache=. libcurl3
-    ar x libcurl3* data.tar.xz
-    tar xf data.tar.xz
-    sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-    curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -o libpng12.deb
-    sudo dpkg -i libpng12.deb
-    cd ..
+    Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
+    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
+    if [[ $VERSION_ID ~= "16.04" ]]; then
+        sudo apt -y install binutils
+        mkdir tmp
+        cd tmp
+        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
+        ar x libcurl3.deb data.tar.xz
+        tar xf data.tar.xz
+        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+        curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -o libpng12.deb
+        sudo dpkg -i libpng12.deb
+    else
+        sudo apt -y install libzip4
+    fi
 }
 
 # --- MAIN SCRIPT STARTS HERE ---
