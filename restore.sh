@@ -346,10 +346,18 @@ function Ubuntu {
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -o libpng12.deb
+        if [[ $VERSION_ID == "20.04" ]]; then
+            URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+            sudo dpkg -i libzip4.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/o/openssl1.0/openssl1.0_1.0.2n-1ubuntu5.3_amd64.deb -o openssl1.0.deb
+            sudo dpkg -i openssl1.0.deb
+        else
+            URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
+            sudo apt -y install libzip4
+        fi
+        curl -L $URLlibpng12 -o libpng12.deb
         sudo dpkg -i libpng12.deb
-        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-        sudo dpkg -i libzip4.deb
     else
         sudo apt -y install libzip4
     fi
