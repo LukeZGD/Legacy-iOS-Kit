@@ -338,7 +338,7 @@ function Ubuntu {
     sudo apt update
     Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
     sudo apt -y install bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
-    if [[ $VERSION_ID ~= "16.04" ]]; then
+    if [[ $VERSION_ID != "16.04" ]]; then
         sudo apt -y install binutils
         mkdir tmp
         cd tmp
@@ -348,6 +348,8 @@ function Ubuntu {
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
         curl -L http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb -o libpng12.deb
         sudo dpkg -i libpng12.deb
+        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+        sudo dpkg -i libzip4.deb
     else
         sudo apt -y install libzip4
     fi
