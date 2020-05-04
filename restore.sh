@@ -24,7 +24,7 @@ function BasebandDetect {
 }
 
 function Clean {
-    rm -rf iP*/ tmp/ $(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
+    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${DowngradeVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
 function Log {
@@ -144,7 +144,7 @@ function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVer}.plist"
     Log "Saving $DowngradeVer blobs with tsschecker..."
     env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVer -o -s -e $UniqueChipID -m $BuildManifest
-    SHSH=$(ls ${UniqueChipID}_${ProductType}_${DowngradeVer}-*.shsh2)
+    SHSH=$(ls *_${ProductType}_${DowngradeVer}-*.shsh2)
     [ ! -e "$SHSH" ] && Error "Saving $DowngradeVer blobs failed. Please run the script again" "It is also possible that $DowngradeVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
