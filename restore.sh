@@ -236,9 +236,9 @@ function Downgrade {
             mv tmp/$IPSW.ipsw .
         fi
         Log "Verifying IPSW..."
-        SHA1IPSW=$(cat $Firmware/$BuildVer/sha1sum)
-        SHA1IPSWL=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
-        [ $SHA1IPSW != $SHA1IPSWL ] && Error "SHA1 of IPSW does not match. Please run the script again"
+        IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
+        IPSWSHA1L=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
+        [ $IPSWSHA1L != $IPSWSHA1 ] && Error "SHA1 of IPSW does not match. Please run the script again"
         if [ ! $kDFUManual ]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
@@ -270,7 +270,9 @@ function Downgrade {
         else
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
-        if [ ! -e *.bbfw ] && [ $(sha1sum $Baseband | awk '{print $1}') != $BasebandSHA1 ]; then
+        BasebandSHA1L=$(sha1sum $(ls *.bbfw) | awk '{print $1}')
+        if [ ! -e *.bbfw ] && [ $BasebandSHA1L != $BasebandSHA1 ]; then
+            rm saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed!"
             echo "Your device is still in kDFU mode, you may run the script again"
             echo "If you continue, futurerestore can attempt to download the baseband again"
