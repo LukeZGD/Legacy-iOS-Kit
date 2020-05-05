@@ -6,25 +6,31 @@ function BasebandDetect {
     if [ $ProductType == iPad2,2 ]; then
         BasebandURL=$(cat $Firmware/13G36/url)
         Baseband=ICE3_04.12.09_BOOT_02.13.Release.bbfw
+        BasebandSHA1=e6f54acc5d5652d39a0ef9af5589681df39e0aca
     elif [ $ProductType == iPad2,3 ]; then
         Baseband=Phoenix-3.6.03.Release.bbfw
+        BasebandSHA1=8d4efb2214344ea8e7c9305392068ab0a7168ba4
     elif [ $ProductType == iPad2,6 ] || [ $ProductType == iPad2,7 ]; then
         Baseband=Mav5-11.80.00.Release.bbfw
+        BasebandSHA1=aa52cf75b82fc686f94772e216008345b6a2a750
     elif [ $ProductType == iPad3,2 ] || [ $ProductType == iPad3,3 ]; then
         Baseband=Mav4-6.7.00.Release.bbfw
+        BasebandSHA1=a5d6978ecead8d9c056250ad4622db4d6c71d15e
     elif [ $ProductType == iPhone4,1 ]; then
         Baseband=Trek-6.7.00.Release.bbfw
+        BasebandSHA1=22a35425a3cdf8fa1458b5116cfb199448eecf49
     elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
          [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
         BasebandURL=$(cat $Firmware/14G61/url)
         Baseband=Mav5-11.80.00.Release.bbfw
+        BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
     else # For Wi-Fi only devices
         Baseband=0
     fi
 }
 
 function Clean {
-    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${DowngradeVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
+    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
 function Log {
@@ -100,24 +106,20 @@ function SelectVersion {
 
 function Select841 {
     echo "iOS 8.4.1 $Mode"
-    iBSS="iBSS.$HWModel.RELEASE"
-    DowngradeVer="8.4.1"
-    DowngradeBuildVer="12H321"
+    OSVer="8.4.1"
+    BuildVer="12H321"
     Action
 }
 
 function Select613 {
     echo "iOS 6.1.3 $Mode"
-    iBSS="iBSS.${HWModel}ap.RELEASE"
-    DowngradeVer="6.1.3"
-    DowngradeBuildVer="10B329"
+    OSVer="6.1.3"
+    BuildVer="10B329"
     Action
 }
 
 function SelectOther {
     echo "Other $Mode"
-    iBSS="iBSS.$HWModel.RELEASE"
-    DowngradeBuildVer="12H321"
     NotOTA=1
     read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
     IPSW="$(basename "$IPSW" .ipsw)"
@@ -126,10 +128,9 @@ function SelectOther {
 }
 
 function Action {
-    Firmware=$Firmware/$DowngradeBuildVer
-    IV=$(cat $Firmware/iv)
-    Key=$(cat $Firmware/key)
-    
+    iBSS="iBSS.$HWModel.RELEASE"
+    IV=$(cat $Firmware/12H321/iv)
+    Key=$(cat $Firmware/12H321/key)    
     if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
@@ -141,21 +142,20 @@ function Action {
 }
 
 function SaveOTABlobs {
-    BuildManifest="resources/manifests/BuildManifest_${ProductType}_${DowngradeVer}.plist"
-    Log "Saving $DowngradeVer blobs with tsschecker..."
-    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $DowngradeVer -o -s -e $UniqueChipID -m $BuildManifest
-    SHSH=$(ls *_${ProductType}_${DowngradeVer}-*.shsh2)
-    [ ! -e "$SHSH" ] && Error "Saving $DowngradeVer blobs failed. Please run the script again" "It is also possible that $DowngradeVer for $ProductType is no longer signed"
+    BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
+    Log "Saving $OSVer blobs with tsschecker..."
+    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
+    SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
+    [ ! -e "$SHSH" ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
-    Log "Successfully saved $DowngradeVer blobs."
+    Log "Successfully saved $OSVer blobs."
 }
 
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
-        # Downloading 8.4.1 iBSS for "other" downgrades
         Log "Downloading iBSS..."
-        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/url)
+        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/12H321/url)
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
@@ -229,14 +229,14 @@ function FindDFU {
 function Downgrade {    
     if [ ! $NotOTA ]; then
         SaveOTABlobs
-        IPSW="${ProductType}_${DowngradeVer}_${DowngradeBuildVer}_Restore"
+        IPSW="${ProductType}_${OSVer}_${BuildVer}_Restore"
         if [ ! -e "$IPSW.ipsw" ]; then
-            Log "iOS $DowngradeVer IPSW is missing, downloading IPSW..."
-            curl -L $(cat $Firmware/url) -o tmp/$IPSW.ipsw
+            Log "iOS $OSVer IPSW is missing, downloading IPSW..."
+            curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
         Log "Verifying IPSW..."
-        SHA1IPSW=$(cat $Firmware/sha1sum)
+        SHA1IPSW=$(cat $Firmware/$BuildVer/sha1sum)
         SHA1IPSWL=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
         [ $SHA1IPSW != $SHA1IPSWL ] && Error "SHA1 of IPSW does not match. Please run the script again"
         if [ ! $kDFUManual ]; then
@@ -270,8 +270,8 @@ function Downgrade {
         else
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
-        if [ ! -e *.bbfw ]; then
-            echo "[Error] Downloading baseband failed!"
+        if [ ! -e *.bbfw ] && [ $(sha1sum $Baseband | awk '{print $1}') != $BasebandSHA1 ]; then
+            echo "[Error] Downloading/verifying baseband failed!"
             echo "Your device is still in kDFU mode, you may run the script again"
             echo "If you continue, futurerestore can attempt to download the baseband again"
             read -p "[Input] Continue anyway? (y/N)" Continue
