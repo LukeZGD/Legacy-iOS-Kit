@@ -2,9 +2,9 @@
 
 function BasebandDetect {
     Firmware=resources/firmware/$ProductType
-    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
+    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
     if [ $ProductType == iPad2,2 ]; then
-        BasebandURL=$(cat $Firmware/13G36/url)
+        BasebandURL=$(cat $Firmware/13G36/url) # iOS 9.3.5
         Baseband=ICE3_04.12.09_BOOT_02.13.Release.bbfw
         BasebandSHA1=e6f54acc5d5652d39a0ef9af5589681df39e0aca
     elif [ $ProductType == iPad2,3 ]; then
@@ -21,7 +21,7 @@ function BasebandDetect {
         BasebandSHA1=22a35425a3cdf8fa1458b5116cfb199448eecf49
     elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
          [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
-        BasebandURL=$(cat $Firmware/14G61/url)
+        BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
         Baseband=Mav5-11.80.00.Release.bbfw
         BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
     else # For Wi-Fi only devices
@@ -54,10 +54,10 @@ function MainMenu {
             Mode='Downgrade'
             SelectVersion
         else
-            Error "Please put the device in normal mode and jailbroken before proceeding"
+            Error "Please put the device in normal mode and jailbroken before proceeding."
         fi
     elif [ ! $ProductType ]; then
-        Error "Please plug the device in and trust this computer before proceeding"
+        Error "Please plug the device in and trust this computer before proceeding."
     fi
     BasebandDetect
     
@@ -69,14 +69,13 @@ function MainMenu {
     echo "UniqueChipID (ECID): $UniqueChipID"
     echo
     echo "[Input] Select an option:"
-    select opt in "Downgrade device" "Save OTA blobs" "Just put device in kDFU mode" "(Re-)Install Dependencies" "Exit"; do
+    select opt in "Downgrade device" "Save OTA blobs" "Just put device in kDFU mode" "(Re-)Install Dependencies" "(Any other key to exit)"; do
         case $opt in
             "Downgrade device" ) Mode='Downgrade'; break;;
             "Save OTA blobs" ) Mode='SaveOTABlobs'; break;;
             "Just put device in kDFU mode" ) Mode='kDFU'; break;;
-            "(Re-)Install Dependencies" ) InstallDependencies;;
-            "Exit" ) exit;;
-            *) MainMenu;;
+            "(Re-)Install Dependencies" ) InstallDependencies; exit;;
+            * ) exit;;
         esac
     done
     SelectVersion
@@ -120,7 +119,7 @@ function Select613 {
 
 function SelectOther {
     echo "Other $Mode"
-    NotOTA=1
+    OSVer=0
     read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
     IPSW="$(basename "$IPSW" .ipsw)"
     read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
@@ -178,7 +177,7 @@ function kDFU {
 
     if [[ $VersionDetect == 1 ]]; then
         # ifuse+MTerminal is used instead of SSH for devices on iOS 10
-        [ ! $(which ifuse) ] && Error "ifuse not found. Please re-install dependencies and try again" "For macOS systems, install osxfuse and ifuse with brew"
+        [ ! $(which ifuse) ] && Error "One of the dependencies (ifuse) cannot be found. Please re-install dependencies and try again" "For macOS systems, install osxfuse and ifuse with brew"
         WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
@@ -214,10 +213,7 @@ function kDFU {
     fi
     echo
     echo "Press home/power button once when screen goes black on the device"
-    FindDFU
-}
-
-function FindDFU {
+    
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
         DFUDevice=$(lsusb | grep -c "1227")
@@ -227,18 +223,18 @@ function FindDFU {
 }
 
 function Downgrade {    
-    if [ ! $NotOTA ]; then
+    if [ $OSVer != 0 ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${OSVer}_${BuildVer}_Restore"
         if [ ! -e "$IPSW.ipsw" ]; then
-            Log "iOS $OSVer IPSW is missing, downloading IPSW..."
+            Log "iOS $OSVer IPSW cannot be found. Downloading IPSW..."
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
         Log "Verifying IPSW..."
         IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
         IPSWSHA1L=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
-        [ $IPSWSHA1L != $IPSWSHA1 ] && Error "SHA1 of IPSW does not match. Please run the script again"
+        [ $IPSWSHA1L != $IPSWSHA1 ] && Error "Verifying IPSW failed. Delete/replace the IPSW and run the script again"
         if [ ! $kDFUManual ]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
@@ -271,11 +267,11 @@ function Downgrade {
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
         BasebandSHA1L=$(sha1sum $(ls *.bbfw) | awk '{print $1}')
-        if [ ! -e *.bbfw ] && [ $BasebandSHA1L != $BasebandSHA1 ]; then
+        if [ ! -e *.bbfw ] || [ $BasebandSHA1L != $BasebandSHA1 ]; then
             rm saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
-            echo "[Error] Downloading/verifying baseband failed!"
-            echo "Your device is still in kDFU mode, you may run the script again"
-            echo "If you continue, futurerestore can attempt to download the baseband again"
+            echo "[Error] Downloading/verifying baseband failed."
+            echo "Your device is still in kDFU mode and you may run the script again"
+            echo "You can also continue and futurerestore can attempt to download the baseband again"
             read -p "[Input] Continue anyway? (y/N)" Continue
             if [[ $Continue == y ]] || [[ $Continue == Y ]]; then
                 Log "Proceeding to futurerestore..."
@@ -299,70 +295,63 @@ function Downgrade {
 
 function InstallDependencies {
     echo "Install Dependencies"
-
     . /etc/os-release 2>/dev/null
+    
     if [[ $(which pacman) ]]; then
-        Arch
+        # Arch Linux
+        Log "Installing dependencies for Arch with pacman..."
+        sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
+        sudo pacman -S --noconfirm libimobiledevice usbmuxd
+        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
     elif [[ $VERSION_ID == "16.04" ]] || [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
-        Ubuntu
-    elif [[ $OSTYPE == "darwin"* ]]; then
-        macOS
-    else
-        Error "Distro not detected/supported by install script." "See the repo README for OS versions/distros tested on"
-    fi
-    Log "Install script done! Please run the script again to proceed"
-}
-
-function Arch {
-    Log "Installing dependencies for Arch with pacman..."
-    sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
-    sudo pacman -S --noconfirm libimobiledevice usbmuxd
-    sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
-}
-
-function macOS {
-    if [[ ! $(which brew) ]]; then
-        Log "Homebrew is not detected/installed, installing Homebrew..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-    fi
-    Log "Installing dependencies for macOS with Homebrew..."
-    brew uninstall --ignore-dependencies usbmuxd
-    brew uninstall --ignore-dependencies libimobiledevice
-    brew install --HEAD usbmuxd
-    brew install --HEAD libimobiledevice
-    brew install libzip lsusb python3
-    brew cask install osxfuse
-    brew install ifuse
-}
-
-function Ubuntu {
-    Log "Running APT update..." 
-    sudo apt update
-    Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
-    sudo apt -y install bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
-    if [[ $VERSION_ID != "16.04" ]]; then
-        sudo apt -y install binutils
-        mkdir tmp
-        cd tmp
-        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
-        ar x libcurl3.deb data.tar.xz
-        tar xf data.tar.xz
-        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        if [[ $VERSION_ID == "20.04" ]]; then
-            URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-            sudo dpkg -i libzip4.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
-            sudo dpkg -i libssl1.0.0.deb
+        # Ubuntu Xenial, Bionic, Focal
+        Log "Running APT update..." 
+        sudo apt update
+        Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
+        sudo apt -y install bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
+        if [[ $VERSION_ID != "16.04" ]]; then
+            sudo apt -y install binutils
+            mkdir tmp
+            cd tmp
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
+            ar x libcurl3.deb data.tar.xz
+            tar xf data.tar.xz
+            sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+            if [[ $VERSION_ID == "20.04" ]]; then
+                URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
+                curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+                sudo dpkg -i libzip4.deb
+                curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
+                sudo dpkg -i libssl1.0.0.deb
+            else
+                URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
+                sudo apt -y install libzip4
+            fi
+            curl -L $URLlibpng12 -o libpng12.deb
+            sudo dpkg -i libpng12.deb
         else
-            URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
             sudo apt -y install libzip4
         fi
-        curl -L $URLlibpng12 -o libpng12.deb
-        sudo dpkg -i libpng12.deb
+        
+    elif [[ $OSTYPE == "darwin"* ]]; then
+        # macOS
+        if [[ ! $(which brew) ]]; then
+            Log "Homebrew is not detected/installed, installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+        fi
+        Log "Installing dependencies for macOS with Homebrew..."
+        brew uninstall --ignore-dependencies usbmuxd
+        brew uninstall --ignore-dependencies libimobiledevice
+        brew install --HEAD usbmuxd
+        brew install --HEAD libimobiledevice
+        brew install libzip lsusb python3
+        brew cask install osxfuse
+        brew install ifuse
+        
     else
-        sudo apt -y install libzip4
+        Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
+    Log "Install script done! Please run the script again to proceed"
 }
 
 # --- MAIN SCRIPT STARTS HERE ---
@@ -377,9 +366,9 @@ if [[ $OSTYPE == "linux-gnu" ]]; then
 elif [[ $OSTYPE == "darwin"* ]]; then
     platform='macos'
 else
-    Error "OSTYPE unknown/not supported" "Supports Linux and macOS only"
+    Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
 fi
-[[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding"
+[[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
 [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
 
 HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
