@@ -4,8 +4,8 @@
 
 ## Supported devices:
 
-- **iOS 8.4.1**: All A5, A5X, A6, and A6X devices are supported **except iPhone5,3 and 5,4 (iPhone 5C)**
-- **iOS 6.1.3**: Only iPhone 4S and iPad 2 devices are supported **except iPad2,4 (iPad 2 Rev A)**
+- **iOS 8.4.1**: All A5, A5X, A6, and A6X devices are supported **except iPad2,2 (iPad 2 GSM), iPhone5,3 and 5,4 (iPhone 5C)**
+- **iOS 6.1.3**: Only iPhone 4S and iPad 2 devices are supported **except iPad2,2 (iPad 2 GSM) and iPad2,4 (iPad 2 Rev A)**
 
 ## Prerequisites:
 - A supported 32-bit iOS device **jailbroken** on any version
