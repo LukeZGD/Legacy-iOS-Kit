@@ -300,8 +300,13 @@ function InstallDependencies {
     if [[ $(which pacman) ]]; then
         # Arch Linux
         Log "Installing dependencies for Arch with pacman..."
-        sudo pacman -Sy --noconfirm bsdiff curl ifuse libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
+        sudo pacman -Sy --noconfirm bsdiff curl libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
         sudo pacman -S --noconfirm libimobiledevice usbmuxd
+        git clone https://aur.archlinux.org/ifuse.git
+        cd ifuse
+        makepkg -si
+        cd ..
+        rm -rf ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
     elif [[ $VERSION_ID == "16.04" ]] || [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Xenial, Bionic, Focal
