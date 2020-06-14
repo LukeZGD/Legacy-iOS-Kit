@@ -107,7 +107,6 @@ function SelectVersion {
 function Action {    
     Log "iOS $OSVer $Mode"
     if [ $OSVer == 'Other' ]; then
-        OSVer=0
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename "$IPSW" .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
