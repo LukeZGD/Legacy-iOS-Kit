@@ -84,7 +84,7 @@ function MainMenu {
 function SelectVersion {
     Selection=("iOS 8.4.1")
     if [[ $Mode == 'kDFU' ]]; then
-        Select841
+        Action
     elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
          [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         Selection+=("iOS 6.1.3")
@@ -94,39 +94,25 @@ function SelectVersion {
     echo "[Input] Select iOS version:"
     select opt in "${Selection[@]}"; do
         case $opt in
-            "iOS 8.4.1" ) Select841; break;;
-            "iOS 6.1.3" ) Select613; break;;
-            "Other" ) SelectOther; break;;
+            "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
+            "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
+            "Other" ) OSVer='Other'; break;;
             "Back" ) MainMenu; break;;
             *) SelectVersion;;
         esac
     done
-}
-
-function Select841 {
-    echo "iOS 8.4.1 $Mode"
-    OSVer="8.4.1"
-    BuildVer="12H321"
     Action
 }
 
-function Select613 {
-    echo "iOS 6.1.3 $Mode"
-    OSVer="6.1.3"
-    BuildVer="10B329"
-    Action
-}
-
-function SelectOther {
-    echo "Other $Mode"
-    OSVer=0
-    read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
-    IPSW="$(basename "$IPSW" .ipsw)"
-    read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
-    Action
-}
-
-function Action {
+function Action {    
+    Log "iOS $OSVer $Mode"
+    if [ $OSVer == 'Other' ]; then
+        OSVer=0
+        read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
+        IPSW="$(basename "$IPSW" .ipsw)"
+        read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
+    fi
+    
     iBSS="iBSS.$HWModel.RELEASE"
     IV=$(cat $Firmware/12H321/iv)
     Key=$(cat $Firmware/12H321/key)    
@@ -189,13 +175,13 @@ function kDFU {
         ifuse mount
         Log "Copying stuff to device..."
         cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "mount/"
-        Log "Unmounting device..."
+        Log "Unmounting device... (Enter root password of your PC/Mac when prompted)"
         sudo umount mount
         echo
         Log "Open MTerminal and run these commands:"
         echo
         echo '$ su'
-        echo "(enter root password, default is 'alpine')"
+        echo "(Enter root password of your iOS device, default is 'alpine')"
         echo "# cd Media"
         echo "# chmod +x pwn.sh"
         echo "# ./pwn.sh"
@@ -204,7 +190,7 @@ function kDFU {
         echo "Make sure SSH is installed and working on the device!"
         echo "Please enter Wi-Fi IP address of device for SSH connection"
         read -p "[Input] IP Address: " IPAddress
-        Log "Coonecting to device via SSH... Please enter root password when prompted (default is 'alpine')"
+        Log "Connecting to device via SSH... (Enter root password of your iOS device, default is 'alpine')"
         Log "Copying stuff to device..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
@@ -223,7 +209,7 @@ function kDFU {
 }
 
 function Downgrade {    
-    if [ $OSVer != 0 ]; then
+    if [ $OSVer != 'Other' ]; then
         SaveOTABlobs
         IPSW="${ProductType}_${OSVer}_${BuildVer}_Restore"
         if [ ! -e "$IPSW.ipsw" ]; then
@@ -247,7 +233,7 @@ function Downgrade {
     Log "Extracting IPSW..."
     unzip -q "$IPSW.ipsw" -d "$IPSW/"
     
-    Log "Preparing for futurerestore (starting local server)..."
+    Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
     sudo bash -c "python3 -m http.server 80 &"
     cd ..
@@ -272,15 +258,11 @@ function Downgrade {
             echo "[Error] Downloading/verifying baseband failed."
             echo "Your device is still in kDFU mode and you may run the script again"
             echo "You can also continue and futurerestore can attempt to download the baseband again"
-            read -p "[Input] Continue anyway? (y/N)" Continue
-            if [[ $Continue == y ]] || [[ $Continue == Y ]]; then
-                Log "Proceeding to futurerestore..."
-                sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
-            else
-                exit
-            fi
-        fi
-        if [[ $Continue != y ]] && [[ $Continue != Y ]]; then
+            echo "Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
+            sleep 10
+            Log "Proceeding to futurerestore..."
+            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+        else
             Log "Proceeding to futurerestore..."
             sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
         fi
@@ -288,7 +270,7 @@ function Downgrade {
         
     echo
     Log "futurerestore done!"    
-    Log "Stopping local server..."
+    Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
     ps aux | awk '/python3/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     Log "Downgrade script done!"
 }
@@ -300,11 +282,11 @@ function InstallDependencies {
     if [[ $(which pacman) ]]; then
         # Arch Linux
         Log "Installing dependencies for Arch with pacman..."
-        sudo pacman -Sy --noconfirm bsdiff curl libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
+        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
         sudo pacman -S --noconfirm libimobiledevice usbmuxd
         git clone https://aur.archlinux.org/ifuse.git
         cd ifuse
-        makepkg -si
+        makepkg -sic --noconfirm
         cd ..
         rm -rf ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
