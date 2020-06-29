@@ -36,7 +36,6 @@
 - This script can also work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
-- [Lubuntu 16.04](http://cdimage.ubuntu.com/lubuntu/releases/16.04/release/) live USB
 - [Lubuntu 18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/) live USB
 - [Xubuntu 20.04](http://cdimage.ubuntu.com/xubuntu/releases/20.04/release/) live USB
 - [Arch Linux](https://www.archlinux.org/) full install

@@ -289,35 +289,30 @@ function InstallDependencies {
         cd ..
         rm -rf ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
-    elif [[ $VERSION_ID == "16.04" ]] || [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
-        # Ubuntu Xenial, Bionic, Focal
+    elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
+        # Ubuntu Bionic, Focal
         Log "Running APT update..." 
         sudo apt update
         Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
-        sudo apt -y install bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
-        if [[ $VERSION_ID != "16.04" ]]; then
-            sudo apt -y install binutils
-            mkdir tmp
-            cd tmp
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
-            ar x libcurl3.deb data.tar.xz
-            tar xf data.tar.xz
-            sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-            if [[ $VERSION_ID == "20.04" ]]; then
-                URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
-                curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-                sudo dpkg -i libzip4.deb
-                curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
-                sudo dpkg -i libssl1.0.0.deb
-            else
-                URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
-                sudo apt -y install libzip4
-            fi
-            curl -L $URLlibpng12 -o libpng12.deb
-            sudo dpkg -i libpng12.deb
+        sudo apt -y install binutils bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
+        mkdir tmp
+        cd tmp
+        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
+        ar x libcurl3.deb data.tar.xz
+        tar xf data.tar.xz
+        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+        if [[ $VERSION_ID == "20.04" ]]; then
+            URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+            sudo dpkg -i libzip4.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
+            sudo dpkg -i libssl1.0.0.deb
         else
+            URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
             sudo apt -y install libzip4
         fi
+        curl -L $URLlibpng12 -o libpng12.deb
+        sudo dpkg -i libpng12.deb
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
