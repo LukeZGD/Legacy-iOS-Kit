@@ -40,7 +40,7 @@
 - [Xubuntu 20.04](http://cdimage.ubuntu.com/xubuntu/releases/20.04/release/) live USB
 - [Arch Linux](https://www.archlinux.org/) full install
 - [Manjaro](https://manjaro.org/) live USB and full install
-- macOS 10.13.6 High Sierra and 10.14.6 Mojave
+- macOS 10.13.6 High Sierra, 10.14.6 Mojave 10.15.5 Catalina
 
 ## Tools and other stuff used by this script:
 - cURL
