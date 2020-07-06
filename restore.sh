@@ -112,9 +112,16 @@ function Action {
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     fi
     
-    iBSS="iBSS.$HWModel.RELEASE"
-    IV=$(cat $Firmware/12H321/iv)
-    Key=$(cat $Firmware/12H321/key)    
+    if [[ $ProductVer == iPod5,1 ]]; then
+        iBSS="iBSS.${HWModel}ap.RELEASE"
+        IV=$(cat $Firmware/10B329/iv)
+        Key=$(cat $Firmware/10B329/key)
+    else
+        iBSS="iBSS.$HWModel.RELEASE"
+        IV=$(cat $Firmware/12H321/iv)
+        Key=$(cat $Firmware/12H321/key)
+    fi
+    
     if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
@@ -139,7 +146,11 @@ function SaveOTABlobs {
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
-        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/12H321/url)
+        if [[ $ProductType == iPod5,1 ]]; then
+            resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/10B329/url)
+        else
+            resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/12H321/url)
+        fi
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
