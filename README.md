@@ -36,10 +36,11 @@
 - This script can also work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
-- [Lubuntu 18.04](http://cdimage.ubuntu.com/lubuntu/releases/18.04/release/) live USB
-- [Xubuntu 20.04](http://cdimage.ubuntu.com/xubuntu/releases/20.04/release/) live USB
-- [Arch Linux](https://www.archlinux.org/) full install
-- [Manjaro](https://manjaro.org/) live USB and full install
+- [Ubuntu 18.04](http://cdimage.ubuntu.com/ubuntu/releases/18.04/release/)
+- [Ubuntu 20.04](http://cdimage.ubuntu.com/ubuntu/releases/20.04/release/)
+- [Arch Linux](https://www.archlinux.org/)
+- [Manjaro](https://manjaro.org/)
+- [Fedora 32](https://getfedora.org/)
 - macOS 10.13.6 High Sierra, 10.14.6 Mojave, 10.15.5 Catalina
 
 ## Tools and other stuff used by this script:

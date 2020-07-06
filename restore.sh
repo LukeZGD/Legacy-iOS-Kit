@@ -277,25 +277,25 @@ function Downgrade {
 function InstallDependencies {
     echo "Install Dependencies"
     . /etc/os-release 2>/dev/null
+    mkdir tmp
     
     if [[ $(which pacman) ]]; then
         # Arch Linux
         Log "Installing dependencies for Arch with pacman..."
         sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
         sudo pacman -S --noconfirm libimobiledevice usbmuxd
+        cd tmp
         git clone https://aur.archlinux.org/ifuse.git
         cd ifuse
         makepkg -sic --noconfirm
-        cd ..
-        rm -rf ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
+        
     elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
         Log "Running APT update..." 
         sudo apt update
         Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
         sudo apt -y install binutils bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
-        mkdir tmp
         cd tmp
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
@@ -313,6 +313,14 @@ function InstallDependencies {
         fi
         curl -L $URLlibpng12 -o libpng12.deb
         sudo dpkg -i libpng12.deb
+    
+    elif [[ $(which dnf) ]]; then
+        sudo dnf install -y bsdiff ifuse libimobiledevice-utils libpng12 libzip
+        cd tmp
+        curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
+        rpm2cpio openssl-1.0.0.rpm | cpio -idmv
+        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
+        sudo ln -sf libzip.so.5 libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
