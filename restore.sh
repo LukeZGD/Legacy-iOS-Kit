@@ -112,15 +112,18 @@ function Action {
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     fi
     
-    if [[ $ProductType == iPod5,1 ]]; then
+    if [[ $ProductType == iPhone4,1 ]] || [[ $ProductType == iPod5,1 ]]; then
         iBSS="iBSS.${HWModel}ap.RELEASE"
-        IV=$(cat $Firmware/10B329/iv)
-        Key=$(cat $Firmware/10B329/key)
+        iBSSBuildVer='10B329'
+    elif [[ $ProductType == iPad3,1 ]]; then
+        iBSS="iBSS.${HWModel}ap.RELEASE"
+        iBSSBuildVer='11D257'
     else
         iBSS="iBSS.$HWModel.RELEASE"
-        IV=$(cat $Firmware/12H321/iv)
-        Key=$(cat $Firmware/12H321/key)
+        iBSSBuildVer='12H321'
     fi
+    IV=$(cat $Firmware/$iBSSBuildVer/iv)
+    Key=$(cat $Firmware/$iBSSBuildVer/key)
     
     if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
@@ -146,11 +149,7 @@ function SaveOTABlobs {
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
-        if [[ $ProductType == iPod5,1 ]]; then
-            resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/10B329/url)
-        else
-            resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/12H321/url)
-        fi
+        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/$iBSSBuildVer/url)
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
