@@ -112,7 +112,7 @@ function Action {
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     fi
     
-    if [[ $ProductVer == iPod5,1 ]]; then
+    if [[ $ProductType == iPod5,1 ]]; then
         iBSS="iBSS.${HWModel}ap.RELEASE"
         IV=$(cat $Firmware/10B329/iv)
         Key=$(cat $Firmware/10B329/key)
