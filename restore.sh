@@ -105,14 +105,14 @@ function SelectVersion {
 }
 
 function Action {    
-    Log "iOS $OSVer $Mode"
-    if [ $OSVer == 'Other' ]; then
+    Log "Option: $Mode"
+    if [[ $OSVer == 'Other' ]]; then
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename "$IPSW" .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     fi
     
-    if [[ $ProductType == iPhone4,1 ]] || [[ $ProductType == iPod5,1 ]]; then
+    if [[ $ProductType == iPod5,1 ]]; then
         iBSS="iBSS.${HWModel}ap.RELEASE"
         iBSSBuildVer='10B329'
     elif [[ $ProductType == iPad3,1 ]]; then
@@ -156,10 +156,9 @@ function kDFU {
     Log "Decrypting iBSS..."
     Log "IV = $IV"
     Log "Key = $Key"
-    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV -decrypt
-    dd bs=64 skip=1 if=tmp/iBSS.dec of=tmp/iBSS.dec2
+    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV
     Log "Patching iBSS..."
-    bspatch tmp/iBSS.dec2 tmp/pwnediBSS resources/patches/$iBSS.patch
+    bspatch tmp/iBSS.dec tmp/pwnediBSS resources/patches/$iBSS.patch
     
     # Regular kloader only works on iOS 6 to 9, so other versions are provided for iOS 5 and 10
     if [[ $VersionDetect == 1 ]]; then
@@ -373,6 +372,7 @@ fi
 HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
 ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
 [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
+# ProductType=iPhone5,2; HWModel=n42 # Test mode
 ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
 VersionDetect=$(echo $ProductVer | cut -c 1)
 UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
