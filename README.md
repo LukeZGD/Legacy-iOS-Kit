@@ -36,8 +36,8 @@
 - This script can also work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
-- [Ubuntu 18.04](http://cdimage.ubuntu.com/ubuntu/releases/18.04/release/)
-- [Ubuntu 20.04](http://cdimage.ubuntu.com/ubuntu/releases/20.04/release/)
+- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/)
+- [Ubuntu 20.04](http://releases.ubuntu.com/focal/)
 - [Arch Linux](https://www.archlinux.org/)
 - [Manjaro](https://manjaro.org/)
 - [Fedora 32](https://getfedora.org/)
