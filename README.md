@@ -39,7 +39,7 @@
 - [Ubuntu 18.04](http://releases.ubuntu.com/bionic/)
 - [Ubuntu 20.04](http://releases.ubuntu.com/focal/)
 - [Arch Linux](https://www.archlinux.org/)
-- [Manjaro](https://manjaro.org/)
+- [Manjaro](https://manjaro.org/) ([Testing branch](https://wiki.manjaro.org/index.php?title=Switching_Branches))
 - [Fedora 32](https://getfedora.org/)
 - macOS 10.13.6 High Sierra, 10.14.6 Mojave, 10.15.5 Catalina
 
