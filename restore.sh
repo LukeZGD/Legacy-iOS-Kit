@@ -107,8 +107,9 @@ function SelectVersion {
 function Action {    
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
+        echo "Move/copy the IPSW and SHSH to the directory where the script is located"
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
-        IPSW="$(basename "$IPSW" .ipsw)"
+        IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     fi
     
