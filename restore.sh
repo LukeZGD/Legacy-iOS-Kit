@@ -1,6 +1,20 @@
 #!/bin/bash
 trap 'Clean; exit' INT TERM EXIT
 
+function Clean {
+    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *.im4p 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
+}
+
+function Error {
+    echo "[Error] $1"
+    [[ ! -z $2 ]] && echo $2
+    exit
+}
+
+function Log {
+    echo "[Log] $1"
+}
+
 function Main {
     clear
     echo "******* iOS-OTA-Downgrader *******"
@@ -16,66 +30,60 @@ function Main {
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
 
-    HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-    ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
-    [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-    # ProductType=iPhone5,2; HWModel=n42 # Test mode
-    ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
-    VersionDetect=$(echo $ProductVer | cut -c 1)
-    UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
-    UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
-
+    DFUDevice=$(lsusb | grep -c '1227')
+    RecoveryDevice=$(lsusb | grep -c '1281')
+    if [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
+        CPU=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'CPID' | cut -c 9-)
+        UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 9-)
+        if [[ $CPU == 8960 ]] || [[ $CPU == 8965 ]]; then
+            A7Device=1
+        fi
+    else
+        HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+        ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
+        [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
+        # ProductType=iPhone5,2; HWModel=n42 # Test mode
+        ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
+        VersionDetect=$(echo $ProductVer | cut -c 1)
+        UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
+        UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
+    fi
+    
+    mkdir tmp
     if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     else
         chmod +x resources/tools/*
         Clean
-        mkdir tmp
-        rm -rf resources/firmware
         SaveExternal firmware
         SaveExternal ipwndfu
         MainMenu
     fi
 }
 
-function Clean {
-    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
-}
-
-function Error {
-    echo "[Error] $1"
-    [[ ! -z $2 ]] && echo $2
-    exit
-}
-
-function Log {
-    echo "[Log] $1"
-}
-
 function MainMenu {    
-    if [ $(lsusb | grep -c '1227') == 1 ]; then
+    if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
-        CPU=$(sudo irecovery -q | grep 'CPID' | cut -c 9-)
-        if [[ $CPU == 8960 ]] || [[ $CPU == 8965 ]]; then           
+        read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+        BasebandDetect
+        if [ $A7Device == 1 ]; then
             CheckM8
         fi
         read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
         if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
-            read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-            UniqueChipID=$(sudo irecovery -q | grep 'ECID' | cut -c 9-)
-            BasebandDetect
             Log "Downgrading device $ProductType in kDFU mode..."
             Mode='Downgrade'
             SelectVersion
         else
             Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery and DFU modes are also applicable for A7 devices"
         fi
-    elif [ $(lsusb | grep -c '1281') == 1 ]; then
-        CPU=$(sudo irecovery -q | grep 'CPID' | cut -c 9-)
-        if [[ $CPU == 8960 ]] || [[ $CPU == 8965 ]]; then
+    elif [ $RecoveryDevice == 1 ]; then
+        if [ $A7Device == 1 ]; then
+            read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+            BasebandDetect
             Recovery
         else
-            Error "Non-A7 device detected. Please put the device in normal mode and jailbroken before proceeding" 
+            Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" 
         fi
     elif [ ! $ProductType ]; then
         Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery and DFU modes are also applicable for A7 devices"
@@ -102,6 +110,11 @@ function MainMenu {
 }
 
 function SelectVersion {
+    if [[ $ProductType == iPad4* ]] || [[ $ProductType == iPhone6* ]]; then
+        OSVer='10.3.3'
+        BuildVer='14G60'
+        Action
+    fi
     Selection=("iOS 8.4.1")
     if [[ $Mode == 'kDFU' ]]; then
         Action
@@ -118,7 +131,7 @@ function SelectVersion {
             "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
             "Other" ) OSVer='Other'; break;;
             "Back" ) MainMenu; break;;
-            *) SelectVersion;;
+            *) exit;;
         esac
     done
     Action
@@ -126,13 +139,12 @@ function SelectVersion {
 
 function Action {    
     Log "Option: $Mode"
-    Recovery
     if [[ $OSVer == 'Other' ]]; then
         echo "Move/copy the IPSW and SHSH to the directory where the script is located"
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
-    elif [[ $OSVer == '10.3.3' ]]; then
+    elif [[ $OSVer == '10.3.3' ]] && [[ $Mode == 'Downgrade' ]]; then
         Recovery
     fi
     
@@ -264,30 +276,31 @@ function Recovery {
             if [[ $DFUDevice == 1 ]]; then
                 echo -e "\n[Log] Device in DFU mode detected."
                 CheckM8
-                break
             fi
         done
         echo -e "\n[Error] Entering DFU mode failed. Please run the script again"
         exit
     else
         Log "Exiting recovery mode."
-        sudo irecovery -n
+        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -n
         exit
     fi
 }
 
 function CheckM8 {
     DFUManual=0
+    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 | grep -c 'checkm8')
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo python2 ipwndfu -p
-    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 | grep -c 'checkm8' 2>/dev/null)
-    if [[ $pwnDFUDevice == 1 ]]; then
+    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 | grep -c 'checkm8')
+    if [ $pwnDFUDevice == 1 ]; then
         Log "Detected device in pwnDFU mode. Running rmsigchks.py..."
         sudo python2 rmsigchks.py
         cd ../..
-        #Downgrade
-        exit
+        Log "Downgrading device $ProductType in kDFU mode..."
+        Mode='Downgrade'
+        SelectVersion
     else
         Error "Entering pwnDFU failed. Please run the script again"
     fi    
@@ -317,16 +330,21 @@ function Downgrade {
     
     Log "Extracting IPSW..."
     unzip -q "$IPSW.ipsw" -d "$IPSW/"
+    [ $A7Device == 1 ] && cp $IPSW/firmware/all_flash/$SEP .
     
     Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
     sudo bash -c "python3 -m http.server 80 &"
-    cd ..
+    cd ..    
     
     if [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
-        sudo resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+        if [ $A7Device == 1 ]; then
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSW.ipsw"
+        else
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+        fi
     else
         if [ ! saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
@@ -346,7 +364,14 @@ function Downgrade {
             echo "Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
             Log "Proceeding to futurerestore..."
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+            if [ $A7Device == 1 ]; then
+                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSW.ipsw"
+            else
+                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+            fi
+        elif [ $A7Device == 1 ]; then
+            Log "Proceeding to futurerestore..."
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSW.ipsw"
         else
             Log "Proceeding to futurerestore..."
             sudo resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
@@ -363,13 +388,12 @@ function Downgrade {
 function InstallDependencies {
     echo "Install Dependencies"
     . /etc/os-release 2>/dev/null
-    mkdir tmp
+    cd tmp
     
     if [[ $(which pacman) ]]; then
         # Arch Linux
         Log "Installing dependencies for Arch with pacman..."
         sudo pacman -Sy --noconfirm --needed bsdiff curl libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
-        cd tmp
         git clone https://aur.archlinux.org/ifuse.git
         cd ifuse
         makepkg -sic --noconfirm
@@ -380,7 +404,6 @@ function InstallDependencies {
         sudo apt update
         Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
         sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python2 python3 usbmuxd
-        cd tmp
         if [[ $VERSION_ID == "20.04" ]]; then
             URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
             curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
@@ -394,11 +417,12 @@ function InstallDependencies {
         git clone https://github.com/libimobiledevice/libirecovery
         cd libirecovery
         ./autogen.sh
-        sudo make install        
+        sudo make install
+        cd ..
+        sudo rm -rf libirecovery
     
     elif [[ $(which dnf) ]]; then
         sudo dnf install -y bsdiff ifuse libimobiledevice-utils libpng12 libzip python2
-        cd tmp
         curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
         sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/local/lib
@@ -422,12 +446,12 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
     
-    [[ $platform == linux ]] && sudo cp resources/lib/* /usr/local/lib    
+    [[ $platform == linux ]] && sudo cp ../resources/lib/* /usr/local/lib
     Log "Install script done! Please run the script again to proceed"
 }
 
 function SaveExternal {
-    if [ ! resources/$1 ]; then
+    if [ -z resources/$1 ]; then
         Log "Downloading $1..."
         curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip -o tmp/$1.zip
         unzip -q tmp/$1.zip -d tmp
@@ -460,8 +484,31 @@ function BasebandDetect {
         BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
         Baseband=Mav5-11.80.00.Release.bbfw
         BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
+    elif [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ] ||
+         [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
+        BasebandURL=$(cat $Firmware/16G201/url) # iOS 12.4.8
+        Baseband=Mav7Mav8-10.80.02.Release.bbfw
+        BasebandSHA1=
     else # For Wi-Fi only devices
         Baseband=0
+    fi
+    SEP=sep-firmware
+    if [ $ProductType == iPhone6,1 ]; then
+        SEP=$SEP.n51.RELEASE.im4p
+    elif [ $ProductType == iPhone6,2 ]; then
+        SEP=$SEP.n53.RELEASE.im4p
+    elif [ $ProductType == iPad4,1 ]; then
+        SEP=$SEP.j71.RELEASE.im4p
+    elif [ $ProductType == iPad4,2 ]; then
+        SEP=$SEP.j72.RELEASE.im4p
+    elif [ $ProductType == iPad4,3 ]; then
+        SEP=$SEP.j73.RELEASE.im4p
+    elif [ $ProductType == iPad4,4 ]; then
+        SEP=$SEP.j85.RELEASE.im4p
+    elif [ $ProductTYpe == iPad4,5 ]; then
+        SEP=$SEP.j86.RELEASE.im4p
+    elif [ $ProductTYpe == iPad4,6 ]; then
+        SEP=$SEP.j87.RELEASE.im4p
     fi
 }
 

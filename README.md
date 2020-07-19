@@ -1,10 +1,11 @@
 # iOS-OTA-Downgrader
+### (formerly 32bit-OTA-Downgrader)
 ### Downgrade/restore iOS devices to signed OTA firmwares
 - **Please see "Other notes" below to serve as answers for FAQs**
 
 ## Supported devices:
 
-- **iOS 10.3.3**: (Linux only) All A7 devices are supported **except iPad4,7 iPad,4,8 and iPad4,9 (iPad mini 3)**
+- **iOS 10.3.3**: (Linux only) All A7 devices are supported **except iPad4,7 iPad4,8 and iPad4,9 (iPad mini 3)**
 - **iOS 8.4.1**: All A5, A5X, A6, and A6X devices are supported **except iPad2,2 (iPad 2 GSM), iPhone5,3 and 5,4 (iPhone 5C)**
 - **iOS 6.1.3**: Only iPhone 4S and iPad 2 devices are supported **except iPad2,2 (iPad 2 GSM) and iPad2,4 (iPad 2 Rev A)**
 
