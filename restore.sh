@@ -45,7 +45,13 @@ function Error {
 
 function MainMenu {    
     if [ $(lsusb | grep -c '1227') == 1 ]; then
-        read -p "[Input] Device in DFU mode detected. Is the device in kDFU mode? (y/N) " kDFUManual
+        Log "Device in DFU mode detected."
+        read -p "[Input] Is this an A7 device in kDFU mode? (y/N) " A7Downgrade
+        if [[ $A7Downgrade == y ]] || [[ $A7Downgrade == Y ]]; then
+            kDFUManual=0
+            CheckM8
+        fi
+        read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " kDFUManual
         if [[ $kDFUManual == y ]] || [[ $kDFUManual == Y ]]; then
             read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
             read -p "[Input] Enter UniqueChipID (ECID): " UniqueChipID
@@ -54,7 +60,7 @@ function MainMenu {
             Mode='Downgrade'
             SelectVersion
         else
-            Error "Please put the device in normal mode and jailbroken before proceeding."
+            Error "Please put the device in normal mode and jailbroken before proceeding. (32-bit)" "Please put the device in DFU mode before proceeding. (A7)"
         fi
     elif [ ! $ProductType ]; then
         Error "Please plug the device in and trust this computer before proceeding."
@@ -139,7 +145,7 @@ function Action {
 function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     Log "Saving $OSVer blobs with tsschecker..."
-    env "LD_PRELOAD=libcurl.so.3" resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
+     resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
     SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     [ ! -e "$SHSH" ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
@@ -250,7 +256,7 @@ function Downgrade {
     if [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
-        sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+        sudo resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
     else
         if [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
@@ -270,10 +276,10 @@ function Downgrade {
             echo "Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
             Log "Proceeding to futurerestore..."
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
         else
             Log "Proceeding to futurerestore..."
-            sudo env "LD_PRELOAD=libcurl.so.3" resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
         fi
     fi
         
@@ -292,45 +298,40 @@ function InstallDependencies {
     if [[ $(which pacman) ]]; then
         # Arch Linux
         Log "Installing dependencies for Arch with pacman..."
-        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libzip openssh openssl-1.0 python unzip usbutils
-        sudo pacman -S --noconfirm libimobiledevice usbmuxd
+        sudo pacman -Sy --noconfirm --needed bsdiff curl libpng12 libimobiledevice libzip openssh openssl-1.0 python unzip usbmuxd usbutils
         cd tmp
         git clone https://aur.archlinux.org/ifuse.git
         cd ifuse
         makepkg -sic --noconfirm
-        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
         Log "Running APT update..." 
         sudo apt update
         Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
-        sudo apt -y install binutils bsdiff curl ifuse libimobiledevice-utils python3 usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python3 usbmuxd
         cd tmp
-        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
-        ar x libcurl3.deb data.tar.xz
-        tar xf data.tar.xz
-        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
         if [[ $VERSION_ID == "20.04" ]]; then
             URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-            sudo dpkg -i libzip4.deb
             curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
             sudo dpkg -i libssl1.0.0.deb
         else
             URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
-            sudo apt -y install libzip4
         fi
         curl -L $URLlibpng12 -o libpng12.deb
         sudo dpkg -i libpng12.deb
+        sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/lib/x86_64-linux-gnu/libimobiledevice-1.0.so.6
+        git clone https://github.com/libimobiledevice/libirecovery
+        cd libirecovery
+        ./autogen.sh
+        sudo make install        
     
     elif [[ $(which dnf) ]]; then
         sudo dnf install -y bsdiff ifuse libimobiledevice-utils libpng12 libzip
         cd tmp
         curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
-        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
-        sudo ln -sf libzip.so.5 libzip.so.4
+        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/local/lib
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
@@ -350,6 +351,8 @@ function InstallDependencies {
     else
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
+    
+    [[ $platform == linux ]] && sudo cp resources/lib/* /usr/local/lib    
     Log "Install script done! Please run the script again to proceed"
 }
 
@@ -357,8 +360,8 @@ function InstallDependencies {
 
 trap 'Clean; exit' INT TERM EXIT
 clear
-echo "******* 32bit-OTA-Downgrader *******"
-echo "    Downgrade script by LukeZGD     "
+echo "******* iOS-OTA-Downgrader *******"
+echo "   Downgrader script by LukeZGD   "
 echo
 if [[ $OSTYPE == "linux-gnu" ]]; then
     platform='linux'
