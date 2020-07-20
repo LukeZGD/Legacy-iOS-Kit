@@ -2,7 +2,7 @@
 trap 'Clean; exit' INT TERM EXIT
 
 function Clean {
-    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *.im4p 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
+    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *_${ProductType}_${OSVer}-*.shsh 2>/dev/null) $(ls *.im4p 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
 }
 
 function Error {
@@ -36,6 +36,8 @@ function Main {
     RecoveryDevice=$(lsusb | grep -c '1281')
     if [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
         UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 9-)
+    elif [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
+        InstallDependencies
     else
         HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
@@ -47,13 +49,9 @@ function Main {
         rm -f resources/ProductType
     fi
     
-    if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
-        InstallDependencies
-    else
-        chmod +x resources/tools/*
-        SaveExternal firmware
-        SaveExternal ipwndfu
-    fi
+    chmod +x resources/tools/*
+    SaveExternal firmware
+    SaveExternal ipwndfu
     
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
@@ -71,9 +69,9 @@ function Main {
             Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
     elif [ $RecoveryDevice == 1 ]; then
+        GetProductType
+        BasebandDetect
         if [ $A7Device == 1 ]; then
-            GetProductType
-            BasebandDetect
             Recovery
         else
             Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" 
@@ -133,7 +131,7 @@ function Action {
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
-    elif [ $A7Device == 1 ] && [ $pwnDFUDevice != 1 ] && [[ $Mode == 'Downgrade' ]]; then
+    elif [ $A7Device == 1 ] && [[ $pwnDFUDevice != 1 ]] && [[ $Mode == 'Downgrade' ]]; then
         Recovery
     fi
     
@@ -156,8 +154,8 @@ function Action {
         iBSS="iBSS.$HWModel.RELEASE"
         iBSSBuildVer='12H321'
     fi
-    IV=$(cat $Firmware/$iBSSBuildVer/iv)
-    Key=$(cat $Firmware/$iBSSBuildVer/key)
+    IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
+    Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
     
     if [[ $Mode == 'Downgrade' ]]; then
         Downgrade
@@ -180,9 +178,10 @@ function SaveOTABlobs {
         resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest --apnonce $APNonce
     else
         resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
+        SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
-    SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
-    [ ! "$SHSH" ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
+    [ ! -e $SHSH ] && SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh)    
+    [ ! -e $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
     Log "Successfully saved $OSVer blobs."
@@ -297,26 +296,25 @@ function Recovery {
 
 function CheckM8 {
     DFUManual=0
-    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 | grep -c 'checkm8')
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo python2 ipwndfu -p
-    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 | grep -c 'checkm8')
+    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
     if [ $pwnDFUDevice == 1 ]; then
         Log "Detected device in pwnDFU mode. Running rmsigchks.py..."
         sudo python2 rmsigchks.py
         cd ../..
-        Log "Downgrading device $ProductType in kDFU mode..."
+        Log "Downgrading device $ProductType in pwnDFU mode..."
         Mode='Downgrade'
         SelectVersion
     else
-        echo $ProductType > resources/ProductType
+        echo $ProductType | tee resources/ProductType
         Error "Entering pwnDFU failed. Please run the script again"
     fi    
 }
 
 function Downgrade {    
-    if [ $OSVer != 'Other' ]; then
+    if [[ $OSVer != 'Other' ]]; then
         if [[ $ProductType == iPad4* ]]; then
             IPSW="iPad_64bit"
         elif [[ $ProductType == iPhone6* ]]; then
@@ -326,54 +324,71 @@ function Downgrade {
             SaveOTABlobs
         fi
         IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
-        if [ ! "$IPSW.ipsw" ]; then
+        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
+        if [ ! -e $IPSW.ipsw ]; then
             Log "iOS $OSVer IPSW cannot be found. Downloading IPSW..."
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
-        Log "Verifying IPSW..."
-        IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
-        IPSWSHA1L=$(sha1sum "$IPSW.ipsw" | awk '{print $1}')
-        [ $IPSWSHA1L != $IPSWSHA1 ] && Error "Verifying IPSW failed. Delete/replace the IPSW and run the script again"
+        if [ ! -e $IPSWCustom.ipsw ]; then
+            Log "Verifying IPSW..."
+            IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
+            IPSWSHA1L=$(sha1sum $IPSW.ipsw | awk '{print $1}')
+            [[ $IPSWSHA1L != $IPSWSHA1 ]] && Error "Verifying IPSW failed. Delete/replace the IPSW and run the script again"
+        else
+            IPSW=$IPSWCustom
+        fi
         if [ ! $DFUManual ]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
-            unzip -o -j "$IPSW.ipsw" Firmware/dfu/$iBSS.dfu -d saved/$ProductType
+            unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
         fi
     fi
     
     [ ! $DFUManual ] && kDFU
     
     Log "Extracting IPSW..."
-    unzip -q "$IPSW.ipsw" -d "$IPSW/"
+    unzip -q $IPSW.ipsw -d $IPSW/
+    
     if [ $A7Device == 1 ]; then
-        Log "Preparing custom IPSW..."
-        cp $IPSW/firmware/all_flash/$SEP .
-        bspatch $IPSW/firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
-        bspatch $IPSW/firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
-        cp -f $iBSS.im4p $iBEC.im4p $IPSW/firmware/dfu
-        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom.ipsw"
-        zip $IPSWCustom -r0 $IPSW/*
+        if [ ! -e $IPSWCustom.ipsw ]; then
+            Log "Preparing custom IPSW..."
+            cp $IPSW/Firmware/all_flash/$SEP .
+            bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+            bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+            cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+            cd $IPSW
+            zip ../$IPSWCustom.ipsw -r0 *
+            IPSW=$IPSWCustom
+        else
+            unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.im4p -d .
+            unzip -o -j $IPSW.ipsw Firmware/dfu/$iBEC.im4p -d .
+            unzip -o -j $IPSW.ipsw Firmware/all_flash/$SEP -d .
+        fi
         Log "Entering PWNREC mode..."
-        sudo irecovery -f $iBSS.im4p
+        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -f $iBSS.im4p
+        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -f $iBEC.im4p
         sleep 5
-        sudo irecovery -f $iBEC.im4p
-        sleep 5
+        RecoveryDevice=$(lsusb | grep -c '1281')
+        if [[ $RecoveryDevice != 1 ]]; then
+            echo -e "\n[Error] Failed to send iBSS/iBEC. Please try again"
+            exit
+        fi
         SaveOTABlobs
     fi
     
     Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
     sudo bash -c "python3 -m http.server 80 &"
-    cd ..    
+    cd ..
     
     if [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [ $A7Device == 1 ]; then
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSWCustom"
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
-            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
         if [ ! saved/$ProductType/*.bbfw ]; then
@@ -381,30 +396,30 @@ function Downgrade {
             resources/tools/pzb_$platform -g Firmware/$Baseband -o $Baseband $BasebandURL
             resources/tools/pzb_$platform -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
             mkdir -p saved/$ProductType 2>/dev/null
-            cp $(ls *.bbfw) BuildManifest.plist saved/$ProductType
+            cp $Baseband BuildManifest.plist saved/$ProductType
         else
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
-        BasebandSHA1L=$(sha1sum $(ls *.bbfw) | awk '{print $1}')
-        if [ ! *.bbfw ] || [ $BasebandSHA1L != $BasebandSHA1 ]; then
+        BasebandSHA1L=$(sha1sum $Baseband | awk '{print $1}')
+        if [ ! *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed."
-            echo "Your device is still in kDFU mode and you may run the script again"
-            echo "You can also continue and futurerestore can attempt to download the baseband again"
-            echo "Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
+            echo "* Your device is still in kDFU mode and you may run the script again"
+            echo "* You can also continue and futurerestore can attempt to download the baseband again"
+            echo "* Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
             Log "Proceeding to futurerestore..."
             if [ $A7Device == 1 ]; then
-                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSWCustom"
+                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH --latest-sep --latest-baseband $IPSW.ipsw
             else
-                sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+                sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
             fi
         elif [ $A7Device == 1 ]; then
             Log "Proceeding to futurerestore..."
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSWCustom"
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
             Log "Proceeding to futurerestore..."
-            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
+            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
         fi
     fi
         
@@ -486,10 +501,11 @@ function InstallDependencies {
     fi
     
     Log "Install script done! Please run the script again to proceed"
+    exit
 }
 
 function Compile {
-    git clone $1/$2
+    git clone https://github.com/$1/$2
     cd $2
     ./autogen.sh
     sudo make install
@@ -498,7 +514,7 @@ function Compile {
 }
 
 function SaveExternal {
-    if [[ ! $(ls resources/$1) 2>/dev/null ]]; then
+    if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
         Log "Downloading $1..."
         curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip -o tmp/$1.zip
         unzip -q tmp/$1.zip -d tmp
@@ -508,7 +524,7 @@ function SaveExternal {
 }
 
 function GetProductType {
-    ProductType=$(sudo resources/tools/igetnonce_$platform)
+    ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
     if [ ! $ProductType ] && [ -e resources/ProductType ]; then
         read -p "[Input] Confirm ProductType $(cat resources/ProductType) (Y/n) " ConfirmPType
         if [ $ConfirmPType == n ] || [ $ConfirmPType == N ]; then
