@@ -7,7 +7,7 @@ function Clean {
 
 function Error {
     echo "[Error] $1"
-    [[ ! -z $2 ]] && echo $2
+    [[ ! -z $2 ]] && echo "* $2"
     exit
 }
 
@@ -29,15 +29,13 @@ function Main {
     fi
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+    Clean
+    mkdir tmp
 
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
     if [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        CPU=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'CPID' | cut -c 9-)
         UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 9-)
-        if [[ $CPU == 8960 ]] || [[ $CPU == 8965 ]]; then
-            A7Device=1
-        fi
     else
         HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
@@ -47,14 +45,13 @@ function Main {
         VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
         UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
+        rm -f resources/ProductType
     fi
     
-    mkdir tmp
     if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     else
         chmod +x resources/tools/*
-        Clean
         SaveExternal firmware
         SaveExternal ipwndfu
         MainMenu
@@ -64,7 +61,7 @@ function Main {
 function MainMenu {    
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
-        read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+        GetProductType
         BasebandDetect
         if [ $A7Device == 1 ]; then
             CheckM8
@@ -75,11 +72,11 @@ function MainMenu {
             Mode='Downgrade'
             SelectVersion
         else
-            Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery and DFU modes are also applicable for A7 devices"
+            Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
     elif [ $RecoveryDevice == 1 ]; then
         if [ $A7Device == 1 ]; then
-            read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+            GetProductType
             BasebandDetect
             Recovery
         else
@@ -144,16 +141,25 @@ function Action {
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
-    elif [[ $OSVer == '10.3.3' ]] && [[ $Mode == 'Downgrade' ]]; then
+    elif [ $A7Device == 1 ] && [ $pwnDFUDevice != 1 ] && [[ $Mode == 'Downgrade' ]]; then
         Recovery
     fi
     
-    if [[ $ProductType == iPod5,1 ]]; then
+    if [ $ProductType == iPod5,1 ]; then
         iBSS="iBSS.${HWModel}ap.RELEASE"
         iBSSBuildVer='10B329'
-    elif [[ $ProductType == iPad3,1 ]]; then
+    elif [ $ProductType == iPad3,1 ]; then
         iBSS="iBSS.${HWModel}ap.RELEASE"
         iBSSBuildVer='11D257'
+    elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
+        iBSS="iBSS.iphone6.RELEASE"
+        iBEC="iBEC.iphone6.RELEASE"
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
+        iBSS="iBSS.ipad4.RELEASE"
+        iBEC="iBEC.ipad4.RELEASE"
+    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ]; then
+        iBSS="iBSS.ipad4b.RELEASE"
+        iBEC="iBEC.ipad4b.RELEASE"
     else
         iBSS="iBSS.$HWModel.RELEASE"
         iBSSBuildVer='12H321'
@@ -170,9 +176,19 @@ function Action {
 }
 
 function SaveOTABlobs {
-    BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     Log "Saving $OSVer blobs with tsschecker..."
-    resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s $UniqueChipID -m $BuildManifest
+    BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
+    if [ $A7Device == 1 ]; then
+        APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 9-)
+        Log "APNonce: $APNonce"
+    fi
+    if [ $ProductType == iPad4,3 ]; then
+        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -o -s $UniqueChipID -m $BuildManifest --apnonce $APNonce
+    elif [ $A7Device == 1 ]; then
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s $UniqueChipID -m $BuildManifest --apnonce $APNonce
+    else
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s $UniqueChipID -m $BuildManifest
+    fi
     SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     [ ! "$SHSH" ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
@@ -302,13 +318,14 @@ function CheckM8 {
         Mode='Downgrade'
         SelectVersion
     else
+        echo $ProductType > resources/ProductType
         Error "Entering pwnDFU failed. Please run the script again"
     fi    
 }
 
 function Downgrade {    
     if [ $OSVer != 'Other' ]; then
-        SaveOTABlobs
+        [ $A7Device != 1 ] && SaveOTABlobs
         IPSW="${ProductType}_${OSVer}_${BuildVer}_Restore"
         if [ ! "$IPSW.ipsw" ]; then
             Log "iOS $OSVer IPSW cannot be found. Downloading IPSW..."
@@ -330,7 +347,21 @@ function Downgrade {
     
     Log "Extracting IPSW..."
     unzip -q "$IPSW.ipsw" -d "$IPSW/"
-    [ $A7Device == 1 ] && cp $IPSW/firmware/all_flash/$SEP .
+    if [ $A7Device == 1 ]; then
+        Log "Preparing custom IPSW..."
+        cp $IPSW/firmware/all_flash/$SEP .
+        bspatch $IPSW/firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+        bspatch $IPSW/firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+        cp -f $iBSS.im4p $iBEC.im4p $IPSW/firmware/dfu
+        #IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom.ipsw"
+        #zip -0 IPSW/* $IPSWCustom
+        Log "Entering PWNREC mode..."
+        sudo irecovery -f $iBSS.im4p
+        sleep 5
+        sudo irecovery -f $iBEC.im4p
+        sleep 5
+        SaveOTABlobs
+    fi
     
     Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
@@ -341,7 +372,7 @@ function Downgrade {
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [ $A7Device == 1 ]; then
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSW.ipsw"
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSWCustom"
         else
             sudo resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
         fi
@@ -365,13 +396,13 @@ function Downgrade {
             sleep 10
             Log "Proceeding to futurerestore..."
             if [ $A7Device == 1 ]; then
-                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSW.ipsw"
+                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSWCustom"
             else
                 sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
             fi
         elif [ $A7Device == 1 ]; then
             Log "Proceeding to futurerestore..."
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSW.ipsw"
+            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSWCustom"
         else
             Log "Proceeding to futurerestore..."
             sudo resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
@@ -451,12 +482,25 @@ function InstallDependencies {
 }
 
 function SaveExternal {
-    if [ -z resources/$1 ]; then
+    if [[ ! $(ls resources/$1) 2>/dev/null ]]; then
         Log "Downloading $1..."
         curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip -o tmp/$1.zip
         unzip -q tmp/$1.zip -d tmp
         mkdir resources/$1
         mv tmp/32bit-OTA-Downgrader-$1/* resources/$1
+    fi
+}
+
+function GetProductType {
+    ProductType=$(resources/tools/igetnonce_$platform)
+    if [ ! $ProductType ] && [ -e resources/ProductType ]; then
+        read -p "[Input] Confirm ProductType $(cat resources/ProductType) (Y/n) " ConfirmPType
+        if [ $ConfirmPType == n ] || [ $ConfirmPType == N ]; then
+            rm -f resources/ProductType
+            exit
+        fi
+    elif [ ! $ProductType ]; then
+        read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
     fi
 }
 
@@ -484,11 +528,16 @@ function BasebandDetect {
         BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
         Baseband=Mav5-11.80.00.Release.bbfw
         BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
-    elif [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ] ||
+    elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
+         [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ] ||
          [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
         BasebandURL=$(cat $Firmware/16G201/url) # iOS 12.4.8
         Baseband=Mav7Mav8-10.80.02.Release.bbfw
-        BasebandSHA1=
+        BasebandSHA1=f5db17f72a78d807a791138cd5ca87d2f5e859f0
+        A7Device=1
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
+        Baseband=0
+        A7Device=1
     else # For Wi-Fi only devices
         Baseband=0
     fi
@@ -505,9 +554,9 @@ function BasebandDetect {
         SEP=$SEP.j73.RELEASE.im4p
     elif [ $ProductType == iPad4,4 ]; then
         SEP=$SEP.j85.RELEASE.im4p
-    elif [ $ProductTYpe == iPad4,5 ]; then
+    elif [ $ProductType == iPad4,5 ]; then
         SEP=$SEP.j86.RELEASE.im4p
-    elif [ $ProductTYpe == iPad4,6 ]; then
+    elif [ $ProductType == iPad4,6 ]; then
         SEP=$SEP.j87.RELEASE.im4p
     fi
 }
