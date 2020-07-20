@@ -35,7 +35,7 @@ function Main {
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
     if [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 9-)
+        UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 7-)
     elif [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     else
@@ -46,7 +46,6 @@ function Main {
         VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
         UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
-        rm -f resources/ProductType
     fi
     
     chmod +x resources/tools/*
@@ -173,15 +172,15 @@ function SaveOTABlobs {
         Log "APNonce: $APNonce"
     fi
     if [ $ProductType == iPad4,3 ]; then
-        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest --apnonce $APNonce
+        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     elif [ $A7Device == 1 ]; then
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest --apnonce $APNonce
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
-    [ ! -e $SHSH ] && SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh)    
-    [ ! -e $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
+    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh)    
+    [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
     Log "Successfully saved $OSVer blobs."
@@ -268,30 +267,29 @@ function Recovery {
         done
     fi
     Log "A7 device in recovery mode detected. Get ready to enter DFU mode"
-    read -p "[Input] Select Y to continue, N to exit recovery (y/N) " RecoveryDFU
-    if [[ $RecoveryDFU == y ]] || [[ $RecoveryDFU == Y ]]; then
-        echo "* Hold POWER and HOME button for 10 seconds."
-        for i in {10..01}; do
-            echo -n "$i "
-            sleep 1
-        done
-        echo -e "\n* Release POWER and hold HOME button for 10 seconds."
-        for i in {10..01}; do
-            echo -n "$i "
-            DFUDevice=$(lsusb | grep -c '1227')
-            sleep 1
-            if [[ $DFUDevice == 1 ]]; then
-                echo -e "\n[Log] Device in DFU mode detected."
-                CheckM8
-            fi
-        done
-        echo -e "\n[Error] Entering DFU mode failed. Please run the script again"
-        exit
-    else
+    read -p "[Input] Select Y to continue, N to exit recovery (Y/n) " RecoveryDFU
+    if [[ $RecoveryDFU == n ]] || [[ $RecoveryDFU == N ]]; then
         Log "Exiting recovery mode."
         sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -n
         exit
     fi
+    echo "* Hold POWER and HOME button for 10 seconds."
+    for i in {10..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n* Release POWER and hold HOME button for 10 seconds."
+    for i in {10..01}; do
+        echo -n "$i "
+        DFUDevice=$(lsusb | grep -c '1227')
+        sleep 1
+        if [[ $DFUDevice == 1 ]]; then
+            echo -e "\n[Log] Device in DFU mode detected."
+            CheckM8
+        fi
+    done
+    echo -e "\n[Error] Entering DFU mode failed. Please run the script again"
+    exit
 }
 
 function CheckM8 {
@@ -308,7 +306,6 @@ function CheckM8 {
         Mode='Downgrade'
         SelectVersion
     else
-        echo $ProductType | tee resources/ProductType
         Error "Entering pwnDFU failed. Please run the script again"
     fi    
 }
@@ -359,11 +356,12 @@ function Downgrade {
             cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
             cd $IPSW
             zip ../$IPSWCustom.ipsw -r0 *
+            cd ..
             IPSW=$IPSWCustom
         else
-            unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.im4p -d .
-            unzip -o -j $IPSW.ipsw Firmware/dfu/$iBEC.im4p -d .
-            unzip -o -j $IPSW.ipsw Firmware/all_flash/$SEP -d .
+            cp $IPSW/Firmware/dfu/$iBSS.im4p .
+            cp $IPSW/Firmware/dfu/$iBEC.im4p .
+            cp $IPSW/Firmware/all_flash/$SEP .
         fi
         Log "Entering PWNREC mode..."
         sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -f $iBSS.im4p
@@ -391,7 +389,9 @@ function Downgrade {
             sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
-        if [ ! saved/$ProductType/*.bbfw ]; then
+        if [ $A7Device == 1 ]; then
+            cp $IPSW/Firmware/$Baseband .
+        elif [ ! saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
             resources/tools/pzb_$platform -g Firmware/$Baseband -o $Baseband $BasebandURL
             resources/tools/pzb_$platform -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
@@ -525,15 +525,7 @@ function SaveExternal {
 
 function GetProductType {
     ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
-    if [ ! $ProductType ] && [ -e resources/ProductType ]; then
-        read -p "[Input] Confirm ProductType $(cat resources/ProductType) (Y/n) " ConfirmPType
-        if [ $ConfirmPType == n ] || [ $ConfirmPType == N ]; then
-            rm -f resources/ProductType
-            exit
-        fi
-    elif [ ! $ProductType ]; then
-        read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-    fi
+    [ ! $ProductType ] && "[Input] Enter ProductType (eg. iPad2,1): " ProductType
     echo "* ProductType: $ProductType"
     echo "* UniqueChipID: $UniqueChipID"
 }
@@ -565,15 +557,15 @@ function BasebandDetect {
     elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
          [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ] ||
          [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        BasebandURL=$(cat $Firmware/16G201/url) # iOS 12.4.8
-        Baseband=Mav7Mav8-10.80.02.Release.bbfw
-        BasebandSHA1=f5db17f72a78d807a791138cd5ca87d2f5e859f0
-        A7Device=1
-    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
-        Baseband=0
+        BasebandURL=$(cat $Firmware/14G60/url)
+        Baseband=Mav7Mav8-7.60.00.Release.bbfw
+        BasebandSHA1=f397724367f6bed459cf8f3d523553c13e8ae12c
         A7Device=1
     else # For Wi-Fi only devices
         Baseband=0
+        if [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
+            A7Device=1
+        fi
     fi
     SEP=sep-firmware
     if [ $ProductType == iPhone6,1 ]; then
