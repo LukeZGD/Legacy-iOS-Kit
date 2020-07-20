@@ -65,7 +65,7 @@ function Main {
             Mode='Downgrade'
             SelectVersion
         else
-            Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
+            Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
     elif [ $RecoveryDevice == 1 ]; then
         GetProductType
@@ -76,7 +76,7 @@ function Main {
             Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" 
         fi
     elif [ ! $ProductType ]; then
-        Error "Please put the device in normal mode (and jailbroken, 32-bit only) before proceeding." "Recovery and DFU modes are also applicable for A7 devices"
+        Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
     fi
     BasebandDetect
     
@@ -169,10 +169,10 @@ function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [ $A7Device == 1 ]; then
         APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
-        Log "APNonce: $APNonce"
+        echo "* APNonce: $APNonce"
     fi
     if [ $ProductType == iPad4,3 ]; then
-        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
+        resources/tools/tsschecker_$platform -d iPad4,3 -B j73AP -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     elif [ $A7Device == 1 ]; then
         resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
@@ -187,7 +187,7 @@ function SaveOTABlobs {
 }
 
 function kDFU {
-    if [ ! saved/$ProductType/$iBSS.dfu ]; then
+    if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
         resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/$iBSSBuildVer/url)
         mkdir -p saved/$ProductType 2>/dev/null
@@ -226,7 +226,7 @@ function kDFU {
         Log "Unmounting device... (Enter root password of your PC/Mac when prompted)"
         sudo umount mount
         echo
-        Log "Open MTerminal and run these commands:"
+        echo "* Open MTerminal and run these commands:"
         echo
         echo '$ su'
         echo "(Enter root password of your iOS device, default is 'alpine')"
@@ -235,8 +235,8 @@ function kDFU {
         echo "# ./pwn.sh"
     else
         # SSH kloader and pwnediBSS
-        echo "Make sure SSH is installed and working on the device!"
-        echo "Please enter Wi-Fi IP address of device for SSH connection"
+        echo "* Make sure SSH is installed and working on the device!"
+        echo "* Please enter Wi-Fi IP address of device for SSH connection"
         read -p "[Input] IP Address: " IPAddress
         Log "Connecting to device via SSH... (Enter root password of your iOS device, default is 'alpine')"
         Log "Copying stuff to device..."
@@ -246,7 +246,7 @@ function kDFU {
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
     echo
-    echo "Press home/power button once when screen goes black on the device"
+    echo "* Press home/power button once when screen goes black on the device"
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
@@ -260,7 +260,7 @@ function Recovery {
     RecoveryDevice=$(lsusb | grep -c '1281')
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
-        ideviceenterrecovery $UniqueDeviceID 2>/dev/null
+        ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
             RecoveryDevice=$(lsusb | grep -c '1281')
             sleep 2
@@ -357,6 +357,7 @@ function Downgrade {
             cd $IPSW
             zip ../$IPSWCustom.ipsw -r0 *
             cd ..
+            mv $IPSW $IPSWCustom
             IPSW=$IPSWCustom
         else
             cp $IPSW/Firmware/dfu/$iBSS.im4p .
@@ -435,9 +436,9 @@ function InstallDependencies {
     . /etc/os-release 2>/dev/null
     cd tmp
     
+    Log "Installing dependencies..."
     if [[ $(which pacman) ]]; then
         # Arch Linux
-        Log "Installing dependencies for Arch with pacman..."
         sudo pacman -Sy --noconfirm --needed bsdiff curl libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
         git clone https://aur.archlinux.org/ifuse.git
         cd ifuse
@@ -445,9 +446,7 @@ function InstallDependencies {
         
     elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
-        Log "Running APT update..." 
         sudo apt update
-        Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
         sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python2 python3 usbmuxd
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
@@ -482,7 +481,6 @@ function InstallDependencies {
             Log "Homebrew is not detected/installed, installing Homebrew..."
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
         fi
-        Log "Installing dependencies for macOS with Homebrew..."
         brew uninstall --ignore-dependencies usbmuxd
         brew uninstall --ignore-dependencies libimobiledevice
         brew install --HEAD usbmuxd
@@ -567,24 +565,15 @@ function BasebandDetect {
             A7Device=1
         fi
     fi
-    SEP=sep-firmware
-    if [ $ProductType == iPhone6,1 ]; then
-        SEP=$SEP.n51.RELEASE.im4p
-    elif [ $ProductType == iPhone6,2 ]; then
-        SEP=$SEP.n53.RELEASE.im4p
-    elif [ $ProductType == iPad4,1 ]; then
-        SEP=$SEP.j71.RELEASE.im4p
-    elif [ $ProductType == iPad4,2 ]; then
-        SEP=$SEP.j72.RELEASE.im4p
-    elif [ $ProductType == iPad4,3 ]; then
-        SEP=$SEP.j73.RELEASE.im4p
-    elif [ $ProductType == iPad4,4 ]; then
-        SEP=$SEP.j85.RELEASE.im4p
-    elif [ $ProductType == iPad4,5 ]; then
-        SEP=$SEP.j86.RELEASE.im4p
-    elif [ $ProductType == iPad4,6 ]; then
-        SEP=$SEP.j87.RELEASE.im4p
-    fi
+    [ $ProductType == iPhone6,1 ] && SEP=n51
+    [ $ProductType == iPhone6,2 ] && SEP=n53
+    [ $ProductType == iPad4,1 ] && SEP=j71
+    [ $ProductType == iPad4,2 ] && SEP=j72
+    [ $ProductType == iPad4,3 ] && SEP=j73
+    [ $ProductType == iPad4,4 ] && SEP=j85
+    [ $ProductType == iPad4,5 ] && SEP=j86
+    [ $ProductType == iPad4,6 ] && SEP=j87
+    SEP=sep-firmware.$SEP.RELEASE.im4p
 }
 
 Main
