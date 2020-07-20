@@ -40,7 +40,6 @@ function Main {
         HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-        # ProductType=iPhone5,2; HWModel=n42 # Test mode
         ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
         VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
@@ -54,11 +53,8 @@ function Main {
         chmod +x resources/tools/*
         SaveExternal firmware
         SaveExternal ipwndfu
-        MainMenu
     fi
-}
-
-function MainMenu {    
+    
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
         GetProductType
@@ -87,12 +83,12 @@ function MainMenu {
     fi
     BasebandDetect
     
-    echo "Main Menu"
+    echo "*** Main Menu ***"
     echo
-    echo "HardwareModel: ${HWModel}ap"
-    echo "ProductType: $ProductType"
-    echo "ProductVersion: $ProductVer"
-    echo "UniqueChipID (ECID): $UniqueChipID"
+    echo "* HardwareModel: ${HWModel}ap"
+    echo "* ProductType: $ProductType"
+    echo "* ProductVersion: $ProductVer"
+    echo "* UniqueChipID (ECID): $UniqueChipID"
     echo
     echo "[Input] Select an option:"
     select opt in "Downgrade device" "Save OTA blobs" "(Re-)Install Dependencies" "(Any other key to exit)"; do
@@ -113,21 +109,17 @@ function SelectVersion {
         Action
     fi
     Selection=("iOS 8.4.1")
-    if [[ $Mode == 'kDFU' ]]; then
-        Action
-    elif [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
-         [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
+    if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
+       [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         Selection+=("iOS 6.1.3")
     fi
     [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
-    Selection+=("Back")
     echo "[Input] Select iOS version:"
     select opt in "${Selection[@]}"; do
         case $opt in
             "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
             "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
             "Other" ) OSVer='Other'; break;;
-            "Back" ) MainMenu; break;;
             *) exit;;
         esac
     done
@@ -137,7 +129,7 @@ function SelectVersion {
 function Action {    
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
-        echo "Move/copy the IPSW and SHSH to the directory where the script is located"
+        echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
@@ -179,15 +171,15 @@ function SaveOTABlobs {
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [ $A7Device == 1 ]; then
-        APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 9-)
+        APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
         Log "APNonce: $APNonce"
     fi
     if [ $ProductType == iPad4,3 ]; then
-        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -o -s $UniqueChipID -m $BuildManifest --apnonce $APNonce
+        resources/tools/tsschecker_$platform -d iPad4,3 --boardconfig j73AP -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest --apnonce $APNonce
     elif [ $A7Device == 1 ]; then
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s $UniqueChipID -m $BuildManifest --apnonce $APNonce
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest --apnonce $APNonce
     else
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s $UniqueChipID -m $BuildManifest
+        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -o -s -e $UniqueChipID -m $BuildManifest
     fi
     SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     [ ! "$SHSH" ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
@@ -278,7 +270,7 @@ function Recovery {
     fi
     Log "A7 device in recovery mode detected. Get ready to enter DFU mode"
     read -p "[Input] Select Y to continue, N to exit recovery (y/N) " RecoveryDFU
-    if [[ $RecoveryDFU == y ]] || [[ $RecoveryDFU == y ]]; then
+    if [[ $RecoveryDFU == y ]] || [[ $RecoveryDFU == Y ]]; then
         echo "* Hold POWER and HOME button for 10 seconds."
         for i in {10..01}; do
             echo -n "$i "
@@ -325,8 +317,15 @@ function CheckM8 {
 
 function Downgrade {    
     if [ $OSVer != 'Other' ]; then
-        [ $A7Device != 1 ] && SaveOTABlobs
-        IPSW="${ProductType}_${OSVer}_${BuildVer}_Restore"
+        if [[ $ProductType == iPad4* ]]; then
+            IPSW="iPad_64bit"
+        elif [[ $ProductType == iPhone6* ]]; then
+            IPSW="iPhone_64bit"
+        else
+            IPSW="${ProductType}"
+            SaveOTABlobs
+        fi
+        IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
         if [ ! "$IPSW.ipsw" ]; then
             Log "iOS $OSVer IPSW cannot be found. Downloading IPSW..."
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
@@ -353,8 +352,8 @@ function Downgrade {
         bspatch $IPSW/firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
         bspatch $IPSW/firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
         cp -f $iBSS.im4p $iBEC.im4p $IPSW/firmware/dfu
-        #IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom.ipsw"
-        #zip -0 IPSW/* $IPSWCustom
+        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom.ipsw"
+        zip $IPSWCustom -r0 $IPSW/*
         Log "Entering PWNREC mode..."
         sudo irecovery -f $iBSS.im4p
         sleep 5
@@ -372,9 +371,9 @@ function Downgrade {
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [ $A7Device == 1 ]; then
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSWCustom"
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest --no-baseband --use-pwndfu "$IPSWCustom"
         else
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
+            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" --no-baseband --use-pwndfu "$IPSW.ipsw"
         fi
     else
         if [ ! saved/$ProductType/*.bbfw ]; then
@@ -396,16 +395,16 @@ function Downgrade {
             sleep 10
             Log "Proceeding to futurerestore..."
             if [ $A7Device == 1 ]; then
-                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSWCustom"
+                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" --latest-sep --latest-baseband --use-pwndfu "$IPSWCustom"
             else
-                sudo resources/tools/futurerestore_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
+                sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" --latest-baseband --use-pwndfu "$IPSW.ipsw"
             fi
         elif [ $A7Device == 1 ]; then
             Log "Proceeding to futurerestore..."
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSWCustom"
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t "$SHSH" -s $(ls *.im4p) -m $BuildManifest -b $(ls *.bbfw) -p $BuildManifest --use-pwndfu "$IPSWCustom"
         else
             Log "Proceeding to futurerestore..."
-            sudo resources/tools/futurerestore_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
+            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t "$SHSH" -b $(ls *.bbfw) -p BuildManifest.plist --use-pwndfu "$IPSW.ipsw"
         fi
     fi
         
@@ -434,29 +433,33 @@ function InstallDependencies {
         Log "Running APT update..." 
         sudo apt update
         Log "Installing dependencies for Ubuntu $VERSION_ID with APT..."
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python2 python3 usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python2 python3 usbmuxd
+        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
+        ar x libcurl3.deb data.tar.xz
+        tar xf data.tar.xz
+        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
         if [[ $VERSION_ID == "20.04" ]]; then
+            sudo apt -y install libusbmuxd6
             URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+            sudo dpkg -i libzip4.deb
             curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
             sudo dpkg -i libssl1.0.0.deb
+            sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         else
             URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
         fi
         curl -L $URLlibpng12 -o libpng12.deb
         sudo dpkg -i libpng12.deb
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/lib/x86_64-linux-gnu/libimobiledevice-1.0.so.6
-        git clone https://github.com/libimobiledevice/libirecovery
-        cd libirecovery
-        ./autogen.sh
-        sudo make install
-        cd ..
-        sudo rm -rf libirecovery
+        sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
+        sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
     
     elif [[ $(which dnf) ]]; then
         sudo dnf install -y bsdiff ifuse libimobiledevice-utils libpng12 libzip python2
         curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
         sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/local/lib
+        sudo ln -sf usr/lib64/libzip.so.5 usr/lib64/libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
@@ -477,8 +480,21 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
     
-    [[ $platform == linux ]] && sudo cp ../resources/lib/* /usr/local/lib
+    if [[ $platform == linux ]]; then
+        Compile libimobiledevice libirecovery
+        sudo cp ../resources/lib/* /usr/local/lib
+    fi
+    
     Log "Install script done! Please run the script again to proceed"
+}
+
+function Compile {
+    git clone $1/$2
+    cd $2
+    ./autogen.sh
+    sudo make install
+    cd ..
+    sudo rm -rf $2
 }
 
 function SaveExternal {
@@ -492,7 +508,7 @@ function SaveExternal {
 }
 
 function GetProductType {
-    ProductType=$(resources/tools/igetnonce_$platform)
+    ProductType=$(sudo resources/tools/igetnonce_$platform)
     if [ ! $ProductType ] && [ -e resources/ProductType ]; then
         read -p "[Input] Confirm ProductType $(cat resources/ProductType) (Y/n) " ConfirmPType
         if [ $ConfirmPType == n ] || [ $ConfirmPType == N ]; then
@@ -502,6 +518,8 @@ function GetProductType {
     elif [ ! $ProductType ]; then
         read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
     fi
+    echo "* ProductType: $ProductType"
+    echo "* UniqueChipID: $UniqueChipID"
 }
 
 function BasebandDetect {
