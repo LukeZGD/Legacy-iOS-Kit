@@ -171,15 +171,13 @@ function SaveOTABlobs {
         APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
     fi
-    if [ $ProductType == iPad4,3 ]; then
-        resources/tools/tsschecker_$platform -d iPad4,3 -B j73AP -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
-    elif [ $A7Device == 1 ]; then
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
+    if [ $A7Device == 1 ]; then
+        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m BuildManifest.plist --apnonce $APNonce -o -s
     else
-        resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
+        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
-    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh)    
+    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)    
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
@@ -288,7 +286,7 @@ function Recovery {
             CheckM8
         fi
     done
-    echo -e "\n[Error] Entering DFU mode failed. Please run the script again"
+    echo -e "\n[Error] Failed to detect device in DFU mode. Please run the script again"
     exit
 }
 
@@ -486,6 +484,7 @@ function InstallDependencies {
         brew install --HEAD usbmuxd
         brew install --HEAD libimobiledevice
         brew install libzip lsusb python3
+        brew install make automake autoconf libtool pkg-config gcc
         brew cask install osxfuse
         brew install ifuse
         
@@ -493,10 +492,8 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
     
-    if [[ $platform == linux ]]; then
-        Compile libimobiledevice libirecovery
-        sudo cp ../resources/lib/* /usr/local/lib
-    fi
+    Compile libirecovery
+    [[ $platform == linux ]] && sudo cp ../resources/lib/* /usr/local/lib
     
     Log "Install script done! Please run the script again to proceed"
     exit
@@ -513,11 +510,18 @@ function Compile {
 
 function SaveExternal {
     if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
+        if [[ $1 == 'ipwndfu' ]]; then
+            ExternalURL="https://github.com/LukeZGD/ipwndfu/archive/master.zip"
+            ExternalFile="ipwndfu-master"
+        else
+            ExternalURL="https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip"
+            ExternalFile="32bit-OTA-Downgrader-$1"
+        fi
         Log "Downloading $1..."
-        curl -Ls https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip -o tmp/$1.zip
-        unzip -q tmp/$1.zip -d tmp
+        curl -Ls $ExternalURL -o tmp/$ExternalFile.zip
+        unzip -q tmp/$ExternalFile.zip -d tmp
         mkdir resources/$1
-        mv tmp/32bit-OTA-Downgrader-$1/* resources/$1
+        mv tmp/$ExternalFile/* resources/$1
     fi
 }
 
@@ -565,15 +569,15 @@ function BasebandDetect {
             A7Device=1
         fi
     fi
-    [ $ProductType == iPhone6,1 ] && SEP=n51
-    [ $ProductType == iPhone6,2 ] && SEP=n53
-    [ $ProductType == iPad4,1 ] && SEP=j71
-    [ $ProductType == iPad4,2 ] && SEP=j72
-    [ $ProductType == iPad4,3 ] && SEP=j73
-    [ $ProductType == iPad4,4 ] && SEP=j85
-    [ $ProductType == iPad4,5 ] && SEP=j86
-    [ $ProductType == iPad4,6 ] && SEP=j87
-    SEP=sep-firmware.$SEP.RELEASE.im4p
+    [ $ProductType == iPhone6,1 ] && HWModel=n51
+    [ $ProductType == iPhone6,2 ] && HWModel=n53
+    [ $ProductType == iPad4,1 ] && HWModel=j71
+    [ $ProductType == iPad4,2 ] && HWModel=j72
+    [ $ProductType == iPad4,3 ] && HWModel=j73
+    [ $ProductType == iPad4,4 ] && HWModel=j85
+    [ $ProductType == iPad4,5 ] && HWModel=j86
+    [ $ProductType == iPad4,6 ] && HWModel=j87
+    SEP=sep-firmware.$HWModel.RELEASE.im4p
 }
 
 Main
