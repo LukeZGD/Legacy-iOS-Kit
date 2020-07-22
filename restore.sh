@@ -150,7 +150,7 @@ function Action {
     elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
         iBSS="iBSS.ipad4.RELEASE"
         iBEC="iBEC.ipad4.RELEASE"
-    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ]; then
+    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
         iBSS="iBSS.ipad4b.RELEASE"
         iBEC="iBEC.ipad4b.RELEASE"
     else
@@ -448,32 +448,38 @@ function InstallDependencies {
     elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
         sudo apt update
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libzip5 python2 python3 usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev python2 python3 usbmuxd
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
         if [[ $VERSION_ID == "20.04" ]]; then
-            sudo apt -y install libusbmuxd6
             URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-            sudo dpkg -i libzip4.deb
+            sudo apt -y install libusbmuxd6 libzip5
             curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
-            sudo dpkg -i libssl1.0.0.deb
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+            sudo dpkg -i libssl1.0.0.deb libzip4.deb
         else
             URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
+            sudo apt -y install libzip4
+            curl -L http://archive.ubuntu.com/ubuntu/pool/main/libu/libusbmuxd/libusbmuxd6_2.0.2-3_amd64.deb -o libusbmuxd6.deb
+            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip5_1.5.1-0ubuntu1_amd64.deb -o libzip5.deb
+            sudo dpkg -i libusbmuxd6.deb libzip5.deb
         fi
         curl -L $URLlibpng12 -o libpng12.deb
         sudo dpkg -i libpng12.deb
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
-    
+        sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
+        
     elif [[ $(which dnf) ]]; then
-        sudo dnf install -y bsdiff ifuse libimobiledevice-utils libpng12 libzip python2
+        sudo dnf install -y automake bsdiff ifuse libimobiledevice-utils libpng12 libtool libusb-devel libzip make python2 readline-devel
         curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
-        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/local/lib
+        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
+        sudo ln -sf /usr/lib64/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
+        sudo ln -sf /usr/lib64/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
+        sudo ln -sf /usr/lib64/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         sudo ln -sf /usr/lib64/libzip.so.5 /usr/lib64/libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -559,8 +565,7 @@ function BasebandDetect {
         BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
         Baseband=Mav5-11.80.00.Release.bbfw
         BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
-    elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
-         [ $ProductType == iPad4,5 ] || [ $ProductType == iPad4,6 ] ||
+    elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] || [ $ProductType == iPad4,5 ] ||
          [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
         BasebandURL=$(cat $Firmware/14G60/url)
         Baseband=Mav7Mav8-7.60.00.Release.bbfw
@@ -579,7 +584,6 @@ function BasebandDetect {
     [ $ProductType == iPad4,3 ] && HWModel=j73
     [ $ProductType == iPad4,4 ] && HWModel=j85
     [ $ProductType == iPad4,5 ] && HWModel=j86
-    [ $ProductType == iPad4,6 ] && HWModel=j87
     SEP=sep-firmware.$HWModel.RELEASE.im4p
 }
 
