@@ -27,6 +27,10 @@ function Main {
     else
         Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     fi
+    cd resources/tools
+    ln -sf futurerestore249_macos futurerestore152_macos
+    cd ../..
+    
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     Clean
@@ -172,12 +176,12 @@ function SaveOTABlobs {
         echo "* APNonce: $APNonce"
     fi
     if [ $A7Device == 1 ]; then
-        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m BuildManifest.plist --apnonce $APNonce -o -s
+        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
         LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
-    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)    
+    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
@@ -383,7 +387,7 @@ function Downgrade {
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [ $A7Device == 1 ]; then
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
             sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
@@ -401,7 +405,7 @@ function Downgrade {
         fi
         BasebandSHA1L=$(sha1sum $Baseband | awk '{print $1}')
         if [ ! *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
-            rm saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
+            rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed."
             echo "* Your device is still in kDFU mode and you may run the script again"
             echo "* You can also continue and futurerestore can attempt to download the baseband again"
@@ -409,13 +413,13 @@ function Downgrade {
             sleep 10
             Log "Proceeding to futurerestore..."
             if [ $A7Device == 1 ]; then
-                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH --latest-sep --latest-baseband $IPSW.ipsw
+                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
                 sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
             fi
         elif [ $A7Device == 1 ]; then
             Log "Proceeding to futurerestore..."
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore248_$platform -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
+            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
             Log "Proceeding to futurerestore..."
             sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
@@ -437,10 +441,9 @@ function InstallDependencies {
     Log "Installing dependencies..."
     if [[ $(which pacman) ]]; then
         # Arch Linux
-        sudo pacman -Sy --noconfirm --needed bsdiff curl libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
-        git clone https://aur.archlinux.org/ifuse.git
-        cd ifuse
-        makepkg -sic --noconfirm
+        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
+        Compile libimobiledevice ifuse
+        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
@@ -471,7 +474,7 @@ function InstallDependencies {
         curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
         sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/local/lib
-        sudo ln -sf usr/lib64/libzip.so.5 usr/lib64/libzip.so.4
+        sudo ln -sf /usr/lib64/libzip.so.5 /usr/lib64/libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
@@ -492,7 +495,7 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
     fi
     
-    Compile libirecovery
+    Compile libimobiledevice libirecovery
     [[ $platform == linux ]] && sudo cp ../resources/lib/* /usr/local/lib
     
     Log "Install script done! Please run the script again to proceed"
@@ -500,7 +503,7 @@ function InstallDependencies {
 }
 
 function Compile {
-    git clone https://github.com/$1/$2
+    git clone https://github.com/$1/$2.git
     cd $2
     ./autogen.sh
     sudo make install
