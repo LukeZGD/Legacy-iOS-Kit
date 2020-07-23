@@ -63,13 +63,15 @@ function Main {
     
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
-        read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
-        if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
-            Log "Downgrading device $ProductType in kDFU mode..."
-            Mode='Downgrade'
-            SelectVersion
-        elif [[ $A7Device != 1 ]]; then
-            Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
+        if [[ $A7Device != 1 ]]; then
+            read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
+            if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
+                Log "Downgrading device $ProductType in kDFU mode..."
+                Mode='Downgrade'
+                SelectVersion
+            else
+                Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
+            fi
         fi
     elif [ $RecoveryDevice == 1 ] && [[ $A7Device != 1 ]]; then
         Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
@@ -452,14 +454,13 @@ function InstallDependencies {
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $VERSION_ID == "20.04" ]]; then
-        # Ubuntu Bionic, Focal
+        # Ubuntu Focal
         sudo apt update
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libglib-2.0-dev libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 python2 usbmuxd
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        sudo apt -y install libusbmuxd6 libzip5
         curl -L http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb -o libpng12.deb
         curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
