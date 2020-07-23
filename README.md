@@ -33,17 +33,18 @@
 
 ## Other notes:
 - **You do NOT need blobs to use this**, the script will get them for you
-- This script verify the IPSW with SHA1sum before restoring
+- This script will verify the IPSW with SHA1sum before restoring
 - 32-bit only:
   - This script does not modify the IPSW
   - To devices with baseband, this script will restore your device with the latest baseband
   - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script uses futurerestore "Odysseus method" for downgrading (different from OdysseusOTA/2, which are deprecated)
+  - This script only uses iBSS patches for entering kDFU mode
+  - This script can also be used to just enter kDFU mode for all supported devices
   - This script can also be used to futurerestore to other iOS versions with provided SHSH blobs
   - This script can work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
-- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/)
 - [Ubuntu 20.04](http://releases.ubuntu.com/focal/)
 - [Arch Linux](https://www.archlinux.org/)
 - [Manjaro](https://manjaro.org/) ([Testing branch](https://wiki.manjaro.org/index.php?title=Switching_Branches))

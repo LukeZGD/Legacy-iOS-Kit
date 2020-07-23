@@ -38,19 +38,24 @@ function Main {
 
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
-    if [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] || [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
+    if [[ $1 == InstallDependencies ]] || [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] ||
+       [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
+        GetProductType
         UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 7-)
+        ProductVer='Unknown'
     else
         HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
+        [ ! $ProductType ] && ProductType='NA'
         ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
         VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
         UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
     fi
+    BasebandDetect
     
     chmod +x resources/tools/*
     SaveExternal firmware
@@ -58,48 +63,43 @@ function Main {
     
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
-        GetProductType
-        BasebandDetect
-        if [ $A7Device == 1 ]; then
-            CheckM8
-        fi
         read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
         if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
             Log "Downgrading device $ProductType in kDFU mode..."
             Mode='Downgrade'
             SelectVersion
-        else
+        elif [[ $A7Device != 1 ]]; then
             Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
-    elif [ $RecoveryDevice == 1 ]; then
-        GetProductType
-        BasebandDetect
-        if [ $A7Device == 1 ]; then
-            Recovery
-        else
-            Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" 
-        fi
-    elif [ ! $ProductType ]; then
+    elif [ $RecoveryDevice == 1 ] && [[ $A7Device != 1 ]]; then
+        Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
+    elif [ $ProductType == 'NA' ]; then
         Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
     fi
-    BasebandDetect
     
-    echo "*** Main Menu ***"
-    echo
     echo "* HardwareModel: ${HWModel}ap"
     echo "* ProductType: $ProductType"
     echo "* ProductVersion: $ProductVer"
     echo "* UniqueChipID (ECID): $UniqueChipID"
     echo
-    echo "[Input] Select an option:"
-    select opt in "Downgrade device" "Save OTA blobs" "(Re-)Install Dependencies" "(Any other key to exit)"; do
-        case $opt in
-            "Downgrade device" ) Mode='Downgrade'; break;;
-            "Save OTA blobs" ) Mode='SaveOTABlobs'; break;;
-            "(Re-)Install Dependencies" ) InstallDependencies; exit;;
-            * ) exit;;
-        esac
-    done
+    if [[ $1 ]]; then
+        Mode="$1"
+    else
+        Selection=("Downgrade device")
+        [[ $A7Device != 1 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
+        Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
+        echo "*** Main Menu ***"
+        echo "[Input] Select an option:"
+        select opt in "${Selection[@]}"; do
+            case $opt in
+                "Downgrade device" ) Mode='Downgrade'; break;;
+                "Save OTA blobs" ) Mode='SaveOTABlobs'; break;;
+                "Just put device in kDFU mode" ) Mode='kDFU'; break;;
+                "(Re-)Install Dependencies" ) InstallDependencies; exit;;
+                * ) exit;;
+            esac
+        done
+    fi
     SelectVersion
 }
 
@@ -134,8 +134,12 @@ function Action {
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
-    elif [ $A7Device == 1 ] && [[ $pwnDFUDevice != 1 ]] && [[ $Mode == 'Downgrade' ]]; then
-        Recovery
+    elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 1 ]]; then
+        if [[ $DFUDevice == 1 ]]; then
+            CheckM8
+        else
+            Recovery
+        fi
     fi
     
     if [ $ProductType == iPod5,1 ]; then
@@ -164,6 +168,8 @@ function Action {
         Downgrade
     elif [[ $Mode == 'SaveOTABlobs' ]]; then
         SaveOTABlobs
+    elif [[ $Mode == 'kDFU' ]]; then
+        kDFU
     fi
     exit
 }
@@ -445,29 +451,19 @@ function InstallDependencies {
         Compile libimobiledevice ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
-    elif [[ $VERSION_ID == "18.04" ]] || [[ $VERSION_ID == "20.04" ]]; then
+    elif [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Bionic, Focal
         sudo apt update
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev python2 python3 usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libglib-2.0-dev libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev usbmuxd
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        if [[ $VERSION_ID == "20.04" ]]; then
-            URLlibpng12=http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb
-            sudo apt -y install libusbmuxd6 libzip5
-            curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-            sudo dpkg -i libssl1.0.0.deb libzip4.deb
-        else
-            URLlibpng12=http://mirrors.edge.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1_amd64.deb
-            sudo apt -y install libzip4
-            curl -L http://archive.ubuntu.com/ubuntu/pool/main/libu/libusbmuxd/libusbmuxd6_2.0.2-3_amd64.deb -o libusbmuxd6.deb
-            curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip5_1.5.1-0ubuntu1_amd64.deb -o libzip5.deb
-            sudo dpkg -i libusbmuxd6.deb libzip5.deb
-        fi
-        curl -L $URLlibpng12 -o libpng12.deb
-        sudo dpkg -i libpng12.deb
+        sudo apt -y install libusbmuxd6 libzip5
+        curl -L http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb -o libpng12.deb
+        curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
+        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
+        sudo dpkg -i libpng12.deb libssl1.0.0.deb libzip4.deb
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
@@ -536,9 +532,7 @@ function SaveExternal {
 
 function GetProductType {
     ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
-    [ ! $ProductType ] && "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-    echo "* ProductType: $ProductType"
-    echo "* UniqueChipID: $UniqueChipID"
+    [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
 }
 
 function BasebandDetect {
@@ -587,4 +581,4 @@ function BasebandDetect {
     SEP=sep-firmware.$HWModel.RELEASE.im4p
 }
 
-Main
+Main $1
