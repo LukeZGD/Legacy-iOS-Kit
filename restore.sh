@@ -181,9 +181,9 @@ function SaveOTABlobs {
     if [ $A7Device == 1 ]; then
         APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
-        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
+        env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
-        LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
+        env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
     [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
@@ -492,7 +492,7 @@ function InstallDependencies {
         brew uninstall --ignore-dependencies libimobiledevice
         brew install --HEAD usbmuxd
         brew install --HEAD libimobiledevice
-        brew install libzip lsusb python3
+        brew install libzip lsusb md5sha1sum python3
         brew install make automake autoconf libtool pkg-config gcc
         brew cask install osxfuse
         brew install ifuse
