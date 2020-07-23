@@ -1,11 +1,13 @@
 *.bbfw
+*.dfu
+*.im4p
 *.ipsw
 *.json
-*.plist
 *.shsh
 *.shsh2
 *.txt
 iP*
 saved/
 resources/firmware/
+resources/ipwndfu/
 tmp/
