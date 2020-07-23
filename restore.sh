@@ -42,19 +42,20 @@ function Main {
        [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        GetProductType
+        ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
+        [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
     else
         HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-        [ ! $ProductType ] && ProductType='NA'
         ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
         VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
         UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
     fi
+    [ ! $ProductType ] && ProductType='NA'
     BasebandDetect
     
     chmod +x resources/tools/*
@@ -75,8 +76,6 @@ function Main {
         fi
     elif [ $RecoveryDevice == 1 ] && [[ $A7Device != 1 ]]; then
         Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
-    elif [ $ProductType == 'NA' ]; then
-        Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
     fi
     
     echo "* HardwareModel: ${HWModel}ap"
@@ -182,8 +181,6 @@ function SaveOTABlobs {
     if [ $A7Device == 1 ]; then
         APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
-    fi
-    if [ $A7Device == 1 ]; then
         LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
         LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
@@ -456,7 +453,7 @@ function InstallDependencies {
     elif [[ $VERSION_ID == "20.04" ]]; then
         # Ubuntu Focal
         sudo apt update
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 python2 usbmuxd
+        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 openssh-client python2 python3 usbmuxd usbutils
         curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
@@ -531,14 +528,10 @@ function SaveExternal {
     fi
 }
 
-function GetProductType {
-    ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
-    [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-}
-
 function BasebandDetect {
     Firmware=resources/firmware/$ProductType
     BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
+    Baseband=0
     if [ $ProductType == iPad2,2 ]; then
         BasebandURL=$(cat $Firmware/13G36/url) # iOS 9.3.5
         Baseband=ICE3_04.12.09_BOOT_02.13.Release.bbfw
@@ -566,11 +559,13 @@ function BasebandDetect {
         Baseband=Mav7Mav8-7.60.00.Release.bbfw
         BasebandSHA1=f397724367f6bed459cf8f3d523553c13e8ae12c
         A7Device=1
-    else # For Wi-Fi only devices
-        Baseband=0
-        if [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
-            A7Device=1
-        fi
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
+        A7Device=1
+    elif [ $ProductType == 'NA' ]; then
+        Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
+    elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
+         [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ]; then
+        Error "Your device $ProductType is not supported."
     fi
     [ $ProductType == iPhone6,1 ] && HWModel=n51
     [ $ProductType == iPhone6,2 ] && HWModel=n53
