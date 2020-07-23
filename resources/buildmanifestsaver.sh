@@ -104,7 +104,7 @@ function HWModel {
     fi
 }
 
-echo "32bit-OTA-Downgrader BuildManifest and Firmware Keys Saver"
+echo "iOS-OTA-Downgrader BuildManifest and Firmware Keys Saver"
 echo "- by LukeZGD"
 
 for ProductType in "${devices[@]}"

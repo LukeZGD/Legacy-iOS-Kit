@@ -523,8 +523,8 @@ function SaveExternal {
             ExternalURL="https://github.com/LukeZGD/ipwndfu/archive/master.zip"
             ExternalFile="ipwndfu-master"
         else
-            ExternalURL="https://github.com/LukeZGD/32bit-OTA-Downgrader/archive/$1.zip"
-            ExternalFile="32bit-OTA-Downgrader-$1"
+            ExternalURL="https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/$1.zip"
+            ExternalFile="iOS-OTA-Downgrader-$1"
         fi
         Log "Downloading $1..."
         curl -Ls $ExternalURL -o tmp/$ExternalFile.zip
