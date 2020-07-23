@@ -5,7 +5,7 @@
 
 ## Supported devices:
 
-- **iOS 10.3.3**: (Linux only) All A7 devices are supported **except iPad4,6 iPad4,7 iPad4,8 iPad4,9**
+- **iOS 10.3.3**: All A7 devices are supported **except iPad4,6 iPad4,7 iPad4,8 iPad4,9**
 - **iOS 8.4.1**: All A5, A5X, A6, and A6X devices are supported **except iPad2,2 (iPad 2 GSM) iPhone5,3 and 5,4 (iPhone 5C)**
 - **iOS 6.1.3**: Only iPhone 4S and iPad 2 devices are supported **except iPad2,2 (iPad 2 GSM) and iPad2,4 (iPad 2 Rev A)**
 
@@ -33,14 +33,14 @@
 
 ## Other notes:
 - **You do NOT need blobs to use this**, the script will get them for you
-- To devices with baseband, this script will restore your device with the latest baseband
-- This script has a workaround for the activation error on devices downgrading from iOS 10
-- This script uses futurerestore "Odysseus method" for downgrading (different from OdysseusOTA/2, which are deprecated)
-- This script does not modify the IPSW and will verify it with SHA1sum before restoring
-- This script only uses iBSS patches for entering kDFU mode
-- This script can also be used to just enter kDFU mode for all supported devices
-- This script can also be used to futurerestore to other iOS versions with provided SHSH blobs
-- This script can also work on virtual machines, but I won't provide support for them
+- This script verify the IPSW with SHA1sum before restoring
+- 32-bit only:
+  - This script does not modify the IPSW
+  - To devices with baseband, this script will restore your device with the latest baseband
+  - This script has a workaround for the activation error on devices downgrading from iOS 10
+  - This script uses futurerestore "Odysseus method" for downgrading (different from OdysseusOTA/2, which are deprecated)
+  - This script can also be used to futurerestore to other iOS versions with provided SHSH blobs
+  - This script can work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
 - [Ubuntu 18.04](http://releases.ubuntu.com/bionic/)
@@ -54,15 +54,19 @@
 - cURL
 - bspatch
 - ifuse
+- igetnonce
 - ipwndfu
 - libimobiledevice utilities
 - python2
 - python3
-- [tsschecker](https://github.com/tihmstar/tsschecker/releases/tag/v212)
-- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip)
+- [tsschecker](https://github.com/tihmstar/s0uthwest/tsschecker)
+- [futurerestore 152 (Linux)](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
+- [futurerestore 249 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
+- [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore)
 - [xpwntool](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://mtmdev.org/pmbonneau-archive)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
 - [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser/releases/tag/36)
-- iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
+- 32-bit iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
+- A7 iBSS and iBEC patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
