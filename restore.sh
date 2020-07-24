@@ -455,17 +455,17 @@ function InstallDependencies {
         sudo add-apt-repository universe
         sudo apt update
         sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 openssh-client python2 python3 usbmuxd usbutils
-        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb -o libcurl3.deb
-        Verify libcurl3.deb f6ab4c77f7c4680e72f9dd754f706409c8598a9f
+        SavePkg http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb libcurl3.deb
+        VerifyPkg libcurl3.deb f6ab4c77f7c4680e72f9dd754f706409c8598a9f
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        curl -L http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb -o libpng12.deb
-        Verify libpng12.deb 4ceaaa02d2af09d0cdf1074372ed5df10b90b088
-        curl -L http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb -o libssl1.0.0.deb
-        Verify libssl1.0.0.deb 573f3b5744c4121431179abee144543fc662e8b1
-        curl -L http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb -o libzip4.deb
-        Verify libzip4.deb 449ce0b3de6772f6fab0ec680fde641fb3428a28
+        SavePkg http://ppa.launchpad.net/linuxuprising/libpng12/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1.1+1~ppa0~focal_amd64.deb libpng12.deb
+        VerifyPkg libpng12.deb 4ceaaa02d2af09d0cdf1074372ed5df10b90b088
+        SavePkg http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.3_amd64.deb libssl1.0.0.deb
+        VerifyPkg libssl1.0.0.deb 573f3b5744c4121431179abee144543fc662e8b1
+        SavePkg http://archive.ubuntu.com/ubuntu/pool/universe/libz/libzip/libzip4_1.1.2-1.1_amd64.deb libzip4.deb
+        VerifyPkg libzip4.deb 449ce0b3de6772f6fab0ec680fde641fb3428a28
         sudo dpkg -i libpng12.deb libssl1.0.0.deb libzip4.deb
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
@@ -473,8 +473,8 @@ function InstallDependencies {
         
     elif [[ $ID == "fedora" ]]; then
         sudo dnf install -y automake bsdiff git ifuse libimobiledevice-utils libpng12 libtool libusb-devel libzip make python2 readline-devel
-        curl -L http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm -o openssl-1.0.0.rpm
-        Verify openssl-1.0.0.rpm 10e7e37c0eac8e7ea8c0657596549d7fe9dac454
+        SavePkg http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm openssl-1.0.0.rpm
+        VerifyPkg openssl-1.0.0.rpm 10e7e37c0eac8e7ea8c0657596549d7fe9dac454
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
         sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
         sudo ln -sf /usr/lib64/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
@@ -534,9 +534,23 @@ function SaveExternal {
     fi
 }
 
-function Verify {
+function SavePkg {
+    if [[ ! -e ../saved/pkg/$2 ]]; then
+        mkdir -p ../saved/pkg 2>/dev/null
+        Log "Downloading $1..."
+        curl -L $1 -o $2
+        cp $2 ../saved/pkg
+    else
+        cp ../saved/pkg/$2 .
+    fi
+}
+
+function VerifyPkg {
     Log "Verifying $1..."
-    [[ $(sha1sum $1 | awk '{print $1}') != $2 ]] && Error "Verifying $1 failed. Please run the script again" '$ ./restore.sh InstallDependencies'
+    if [[ $(sha1sum $1 | awk '{print $1}') != $2 ]]; then
+        rm -f ../saved/pkg/$1
+        Error "Verifying $1 failed. Please run the script again" '$ ./restore.sh InstallDependencies'
+    fi
 }
 
 function BasebandDetect {
