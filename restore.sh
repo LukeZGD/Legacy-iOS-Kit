@@ -313,7 +313,7 @@ function CheckM8 {
         Mode='Downgrade'
         SelectVersion
     else
-        Error "Entering pwnDFU failed. Please run the script again"
+        Error "Entering pwnDFU failed. Please run the script again" '$ ./restore.sh Downgrade'
     fi    
 }
 
@@ -508,11 +508,6 @@ function InstallDependencies {
     exit
 }
 
-function Verify {
-    Log "Verifying $1..."
-    [[ $(sha1sum $1 | awk '{print $1}') != $2 ]] && Error "Verifying $1 failed. Please run the script again"
-}
-
 function Compile {
     git clone --depth 1 https://github.com/$1/$2.git
     cd $2
@@ -537,6 +532,11 @@ function SaveExternal {
         mkdir resources/$1
         mv tmp/$ExternalFile/* resources/$1
     fi
+}
+
+function Verify {
+    Log "Verifying $1..."
+    [[ $(sha1sum $1 | awk '{print $1}') != $2 ]] && Error "Verifying $1 failed. Please run the script again" '$ ./restore.sh InstallDependencies'
 }
 
 function BasebandDetect {
