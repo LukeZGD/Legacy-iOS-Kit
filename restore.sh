@@ -178,7 +178,7 @@ function Action {
 function SaveOTABlobs {
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    if [ $A7Device == 1 ]; then
+    if [[ $A7Device == 1 ]]; then
         APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
         env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
@@ -342,7 +342,7 @@ function Downgrade {
         else
             IPSW=$IPSWCustom
         fi
-        if [ ! $DFUManual ]; then
+        if [ ! $DFUManual ] && [[ $iBSSBuildVer == $BuildVer ]]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
             unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
@@ -354,7 +354,7 @@ function Downgrade {
     Log "Extracting IPSW..."
     unzip -q $IPSW.ipsw -d $IPSW/
     
-    if [ $A7Device == 1 ]; then
+    if [[ $A7Device == 1 ]]; then
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Preparing custom IPSW..."
             cp $IPSW/Firmware/all_flash/$SEP .
@@ -391,13 +391,13 @@ function Downgrade {
     if [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
-        if [ $A7Device == 1 ]; then
+        if [[ $A7Device == 1 ]]; then
             sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
             sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
-        if [ $A7Device == 1 ]; then
+        if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
         elif [ ! saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
@@ -417,12 +417,12 @@ function Downgrade {
             echo "* Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
             Log "Proceeding to futurerestore..."
-            if [ $A7Device == 1 ]; then
+            if [[ $A7Device == 1 ]]; then
                 sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
                 sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
             fi
-        elif [ $A7Device == 1 ]; then
+        elif [[ $A7Device == 1 ]]; then
             Log "Proceeding to futurerestore..."
             sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
