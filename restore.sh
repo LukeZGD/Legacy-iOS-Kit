@@ -132,6 +132,7 @@ function Action {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
+        echo "* Create a backup of the SHSH"
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
@@ -399,7 +400,7 @@ function Downgrade {
     else
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
-        elif [ ! saved/$ProductType/*.bbfw ]; then
+        elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
             resources/tools/pzb_$platform -g Firmware/$Baseband -o $Baseband $BasebandURL
             resources/tools/pzb_$platform -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
@@ -409,7 +410,7 @@ function Downgrade {
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
         BasebandSHA1L=$(sha1sum $Baseband | awk '{print $1}')
-        if [ ! *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
+        if [ ! -e *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed."
             echo "* Your device is still in kDFU mode and you may run the script again"
