@@ -338,7 +338,7 @@ function Downgrade {
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
-            IPSWSHA1L=$(sha1sum $IPSW.ipsw | awk '{print $1}')
+            IPSWSHA1L=$(shasum -a 1 $IPSW.ipsw | awk '{print $1}')
             [[ $IPSWSHA1L != $IPSWSHA1 ]] && Error "Verifying IPSW failed. Delete/replace the IPSW and run the script again"
         else
             IPSW=$IPSWCustom
@@ -409,7 +409,7 @@ function Downgrade {
         else
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
-        BasebandSHA1L=$(sha1sum $Baseband | awk '{print $1}')
+        BasebandSHA1L=$(shasum -a 1 $Baseband | awk '{print $1}')
         if [ ! -e *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed."
@@ -473,7 +473,7 @@ function InstallDependencies {
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         
     elif [[ $ID == "fedora" ]]; then
-        sudo dnf install -y automake bsdiff git ifuse libimobiledevice-utils libpng12 libtool libusb-devel libzip make python2 readline-devel
+        sudo dnf install -y automake bsdiff git ifuse libimobiledevice-utils libpng12 libtool libusb-devel libzip make perl-Digest-SHA python2 readline-devel
         SavePkg http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm openssl-1.0.0.rpm
         VerifyPkg openssl-1.0.0.rpm 10e7e37c0eac8e7ea8c0657596549d7fe9dac454
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
@@ -493,7 +493,7 @@ function InstallDependencies {
         brew uninstall --ignore-dependencies libimobiledevice
         brew install --HEAD usbmuxd
         brew install --HEAD libimobiledevice
-        brew install libzip lsusb md5sha1sum python3
+        brew install libzip lsusb python3
         brew install make automake autoconf libtool pkg-config gcc
         brew cask install osxfuse
         brew install ifuse
@@ -548,7 +548,7 @@ function SavePkg {
 
 function VerifyPkg {
     Log "Verifying $1..."
-    if [[ $(sha1sum $1 | awk '{print $1}') != $2 ]]; then
+    if [[ $(shasum -a 1 $1 | awk '{print $1}') != $2 ]]; then
         rm -f ../saved/pkg/$1
         Error "Verifying $1 failed. Please run the script again" '$ ./restore.sh InstallDependencies'
     fi
