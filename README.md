@@ -20,13 +20,11 @@
   - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/package/openssh/); The computer and iOS device must be on the same network for SSH to work
   - iOS 10 users: Install [MTerminal](http://cydia.saurik.com/package/com.officialscheduler.mterminal/)
 1. [Download](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) or `git clone` this repo
-2. Open Terminal, cd to the directory where the script is located (example: `cd /home/user/iOS-OTA-Downgrader`)
+2. Open Terminal, `cd` to the directory where the script is located (example: `cd /home/user/iOS-OTA-Downgrader`)
 3. Run `chmod +x restore.sh`
 
 ## How to use:
-1. Plug in your iOS device in:
-  - Normal mode (32-bit)
-  - Recovery or DFU mode (A7)
+1. Plug in your iOS device
 2. Run `./restore.sh`
 3. Select option to be used
 4. Follow instructions
@@ -54,10 +52,10 @@
 ## Tools and other stuff used by this script:
 - cURL
 - bspatch
-- ifuse
-- igetnonce
-- ipwndfu
-- libimobiledevice utilities
+- [ifuse](https://github.com/libimobiledevice/ifuse)
+- [igetnonce](https://github.com/LukeZGD/igetnonce)
+- [ipwndfu](https://github.com/LukeZGD/ipwndfu)
+- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) utilities
 - python2
 - python3
 - [tsschecker](https://github.com/tihmstar/s0uthwest/tsschecker)
