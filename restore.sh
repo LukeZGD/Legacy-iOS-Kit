@@ -455,7 +455,7 @@ function InstallDependencies {
         # Ubuntu Focal
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt -y install autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 openssh-client python2 python3 usbmuxd usbutils
+        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 openssh-client python2 python3 usbmuxd usbutils
         SavePkg http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb libcurl3.deb
         VerifyPkg libcurl3.deb f6ab4c77f7c4680e72f9dd754f706409c8598a9f
         ar x libcurl3.deb data.tar.xz

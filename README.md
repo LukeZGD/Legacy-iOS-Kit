@@ -43,9 +43,8 @@
   - This script can work on virtual machines, but I won't provide support for them
 
 ## OS versions/distros tested on:
-- [Ubuntu 20.04](http://releases.ubuntu.com/focal/)
-- [Arch Linux](https://www.archlinux.org/)
-- [Manjaro](https://manjaro.org/) ([Testing branch](https://wiki.manjaro.org/index.php?title=Switching_Branches))
+- [Ubuntu 20.04](http://releases.ubuntu.com/focal/) (and Focal-based distros like [Linux Mint 20](https://www.linuxmint.com/))
+- [Arch Linux](https://www.archlinux.org/) (and Arch-based distros like [Manjaro](https://manjaro.org/))
 - [Fedora 32](https://getfedora.org/)
 - macOS 10.13.6 High Sierra, 10.14.6 Mojave, 10.15.5 Catalina
 
