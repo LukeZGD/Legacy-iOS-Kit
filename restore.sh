@@ -42,7 +42,7 @@ function Main {
        [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform)
+        ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform 2>/dev/null)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
@@ -451,7 +451,7 @@ function InstallDependencies {
         Compile libimobiledevice ifuse
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
-    elif [[ $VERSION_ID == "20.04" ]]; then
+    elif [[ $UBUNTU_CODENAME == "focal" ]]; then
         # Ubuntu Focal
         sudo add-apt-repository universe
         sudo apt update
