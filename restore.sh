@@ -115,6 +115,8 @@ function SelectVersion {
         OSVer='10.3.3'
         BuildVer='14G60'
         Action
+    elif [[ $Mode == 'kDFU' ]]; then
+        Action
     fi
     Selection=("iOS 8.4.1")
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
