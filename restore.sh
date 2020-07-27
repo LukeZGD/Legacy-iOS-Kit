@@ -27,6 +27,9 @@ function Main {
     else
         Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     fi
+    [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
+    [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+    
     futurerestore152="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform"
     futurerestore249="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform"
     irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
@@ -36,11 +39,6 @@ function Main {
     cd resources/tools
     ln -sf futurerestore249_macos futurerestore152_macos
     cd ../..
-    
-    [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
-    [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
-    Clean
-    mkdir tmp
     chmod +x resources/tools/*
     SaveExternal firmware
     SaveExternal ipwndfu
@@ -65,20 +63,20 @@ function Main {
         UniqueChipID=$(echo "$ideviceinfo" | grep 'UniqueChipID' | cut -c 15-)
         UniqueDeviceID=$(echo "$ideviceinfo" | grep 'UniqueDeviceID' | cut -c 17-)
     fi
-    [ ! $ProductType ] && ProductType='NA'
+    [ ! $ProductType ] && ProductType=0
     BasebandDetect
+    Clean
+    mkdir tmp
     
-    if [ $DFUDevice == 1 ]; then
+    if [ $DFUDevice == 1 ] && [[ $A7Device != 1 ]]; then
         Log "Device in DFU mode detected."
-        if [[ $A7Device != 1 ]]; then
-            read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
-            if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
-                Log "Downgrading device $ProductType in kDFU mode..."
-                Mode='Downgrade'
-                SelectVersion
-            else
-                Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
-            fi
+        read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
+        if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
+            Log "Downgrading device $ProductType in kDFU mode..."
+            Mode='Downgrade'
+            SelectVersion
+        else
+            Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
     elif [ $RecoveryDevice == 1 ] && [[ $A7Device != 1 ]]; then
         Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
@@ -141,7 +139,7 @@ function Action {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
-        echo "* Create a backup of the SHSH"
+        echo "* Reminder to create a backup of the SHSH"
         read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
@@ -175,13 +173,9 @@ function Action {
     IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
     Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
     
-    if [[ $Mode == 'Downgrade' ]]; then
-        Downgrade
-    elif [[ $Mode == 'SaveOTABlobs' ]]; then
-        SaveOTABlobs
-    elif [[ $Mode == 'kDFU' ]]; then
-        kDFU
-    fi
+    [[ $Mode == 'Downgrade' ]] && Downgrade
+    [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
+    [[ $Mode == 'kDFU' ]] && kDFU
     exit
 }
 
@@ -228,7 +222,7 @@ function kDFU {
 
     if [[ $VersionDetect == 1 ]]; then
         # ifuse+MTerminal is used instead of SSH for devices on iOS 10
-        [ ! $(which ifuse) ] && Error "One of the dependencies (ifuse) cannot be found. Please re-install dependencies and try again" "For macOS systems, install osxfuse and ifuse with brew"
+        [ ! $(which ifuse) ] && Error "One of the dependencies (ifuse) cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
         WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
@@ -238,32 +232,35 @@ function kDFU {
         Log "Mounting device with ifuse..."
         mkdir mount
         ifuse mount
+        [[ ! -d mount/DCIM ]] && Error "Failed to mount device. Please run the script again" "Make sure to trust this computer before proceeding"
         Log "Copying stuff to device..."
-        cp "tmp/pwn.sh" "resources/tools/$kloader" "tmp/pwnediBSS" "mount/"
+        cp tmp/pwn.sh resources/tools/$kloader tmp/pwnediBSS mount/
         Log "Unmounting device... (Enter root password of your PC/Mac when prompted)"
-        sudo umount mount
+        sudo umount mount 2>/dev/null
         echo
         echo "* Open MTerminal and run these commands:"
         echo
         echo '$ su'
-        echo "(Enter root password of your iOS device, default is 'alpine')"
+        echo "* (Enter root password of your iOS device, default is 'alpine')"
         echo "# cd Media"
         echo "# chmod +x pwn.sh"
         echo "# ./pwn.sh"
     else
         # SSH kloader and pwnediBSS
-        echo "* Make sure SSH is installed and working on the device!"
-        echo "* Please enter Wi-Fi IP address of device for SSH connection"
+        echo "* Make sure OpenSSH is installed on the device!"
+        echo "* Also make sure that the PC/Mac and the iOS device are on the same network"
+        echo
+        echo "* Please enter Wi-Fi IP address of the device for SSH connection"
         read -p "[Input] IP Address: " IPAddress
-        Log "Connecting to device via SSH... (Enter root password of your iOS device, default is 'alpine')"
-        Log "Copying stuff to device..."
+        Log "Copying stuff to device via SSH..."
+        echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
         Log "Entering kDFU mode..."
         ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
     fi
     echo
-    echo "* Press home/power button once when screen goes black on the device"
+    echo "* Press POWER or HOME button when screen goes black on the device"
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
@@ -299,11 +296,8 @@ function Recovery {
     for i in {10..01}; do
         echo -n "$i "
         DFUDevice=$(lsusb | grep -c '1227')
+        [[ $DFUDevice == 1 ]] && CheckM8
         sleep 1
-        if [[ $DFUDevice == 1 ]]; then
-            echo -e "\n[Log] Device in DFU mode detected."
-            CheckM8
-        fi
     done
     echo -e "\n[Error] Failed to detect device in DFU mode. Please run the script again"
     exit
@@ -311,6 +305,7 @@ function Recovery {
 
 function CheckM8 {
     DFUManual=0
+    echo -e "\n[Log] Device in DFU mode detected."
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo python2 ipwndfu -p
@@ -323,7 +318,7 @@ function CheckM8 {
         Mode='Downgrade'
         SelectVersion
     else
-        Error "Entering pwnDFU failed. Please run the script again" '$ ./restore.sh Downgrade'
+        Error "Entering pwnDFU failed. Please run the script again" "./restore.sh Downgrade"
     fi    
 }
 
@@ -334,7 +329,7 @@ function Downgrade {
         elif [[ $ProductType == iPhone6* ]]; then
             IPSW="iPhone_64bit"
         else
-            IPSW="${ProductType}"
+            IPSW="$ProductType"
             SaveOTABlobs
         fi
         IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
@@ -387,7 +382,7 @@ function Downgrade {
         sleep 5
         RecoveryDevice=$(lsusb | grep -c '1281')
         if [[ $RecoveryDevice != 1 ]]; then
-            echo -e "\n[Error] Failed to send iBSS/iBEC. Please try again"
+            echo -e "\n[Error] Failed to detect device in PWNREC mode. Please try again"
             exit
         fi
         SaveOTABlobs
@@ -496,8 +491,6 @@ function InstallDependencies {
             Log "Homebrew is not detected/installed, installing Homebrew..."
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
         fi
-        brew uninstall --ignore-dependencies usbmuxd
-        brew uninstall --ignore-dependencies libimobiledevice
         brew install --HEAD usbmuxd
         brew install --HEAD libimobiledevice
         brew install libzip lsusb python3
@@ -557,7 +550,7 @@ function VerifyPkg {
     Log "Verifying $1..."
     if [[ $(shasum -a 1 $1 | awk '{print $1}') != $2 ]]; then
         rm -f ../saved/pkg/$1
-        Error "Verifying $1 failed. Please run the script again" '$ ./restore.sh InstallDependencies'
+        Error "Verifying $1 failed. Please run the script again" "./restore.sh InstallDependencies"
     fi
 }
 
@@ -594,7 +587,7 @@ function BasebandDetect {
         A7Device=1
     elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
         A7Device=1
-    elif [ $ProductType == 'NA' ]; then
+    elif [ $ProductType == 0 ]; then
         Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
     elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
          [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ]; then
