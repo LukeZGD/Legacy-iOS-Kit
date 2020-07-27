@@ -27,6 +27,12 @@ function Main {
     else
         Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     fi
+    futurerestore152="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform"
+    futurerestore249="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform"
+    irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
+    pzb="resources/tools/pzb_$platform"
+    tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
+    
     cd resources/tools
     ln -sf futurerestore249_macos futurerestore152_macos
     cd ../..
@@ -35,6 +41,9 @@ function Main {
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     Clean
     mkdir tmp
+    chmod +x resources/tools/*
+    SaveExternal firmware
+    SaveExternal ipwndfu
 
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
@@ -44,23 +53,20 @@ function Main {
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
         ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform 2>/dev/null)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-        UniqueChipID=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'ECID' | cut -c 7-)
+        UniqueChipID=$($irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
     else
-        HWModel=$(ideviceinfo -s | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-        ProductType=$(ideviceinfo -s | grep 'ProductType' | cut -c 14-)
+        ideviceinfo=$(ideviceinfo -s)
+        HWModel=$(echo "$ideviceinfo" | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+        ProductType=$(echo "$ideviceinfo" | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-        ProductVer=$(ideviceinfo -s | grep 'ProductVer' | cut -c 17-)
+        ProductVer=$(echo "$ideviceinfo" | grep 'ProductVer' | cut -c 17-)
         VersionDetect=$(echo $ProductVer | cut -c 1)
-        UniqueChipID=$(ideviceinfo -s | grep 'UniqueChipID' | cut -c 15-)
-        UniqueDeviceID=$(ideviceinfo -s | grep 'UniqueDeviceID' | cut -c 17-)
+        UniqueChipID=$(echo "$ideviceinfo" | grep 'UniqueChipID' | cut -c 15-)
+        UniqueDeviceID=$(echo "$ideviceinfo" | grep 'UniqueDeviceID' | cut -c 17-)
     fi
     [ ! $ProductType ] && ProductType='NA'
     BasebandDetect
-    
-    chmod +x resources/tools/*
-    SaveExternal firmware
-    SaveExternal ipwndfu
     
     if [ $DFUDevice == 1 ]; then
         Log "Device in DFU mode detected."
@@ -116,6 +122,7 @@ function SelectVersion {
         Selection+=("iOS 6.1.3")
     fi
     [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
+    Selection+=("(Any other key to exit)")
     echo "[Input] Select iOS version:"
     select opt in "${Selection[@]}"; do
         case $opt in
@@ -180,11 +187,11 @@ function SaveOTABlobs {
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [[ $A7Device == 1 ]]; then
-        APNonce=$(sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -q | grep 'NONC' | cut -c 7-)
+        APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
-        env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
+        $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
     else
-        env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
+        $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
     [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
@@ -197,7 +204,7 @@ function SaveOTABlobs {
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
-        resources/tools/pzb_$platform -g Firmware/dfu/${iBSS}.dfu -o $iBSS.dfu $(cat $Firmware/$iBSSBuildVer/url)
+        $pzb -g Firmware/dfu/$iBSS.dfu -o $iBSS.dfu $(cat $Firmware/$iBSSBuildVer/url)
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
@@ -278,7 +285,7 @@ function Recovery {
     read -p "[Input] Select Y to continue, N to exit recovery (Y/n) " RecoveryDFU
     if [[ $RecoveryDFU == n ]] || [[ $RecoveryDFU == N ]]; then
         Log "Exiting recovery mode."
-        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -n
+        $irecovery -n
         exit
     fi
     echo "* Hold POWER and HOME button for 10 seconds."
@@ -363,7 +370,7 @@ function Downgrade {
             bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
             cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
             cd $IPSW
-            zip ../$IPSWCustom.ipsw -r0 *
+            zip ../$IPSWCustom.ipsw -rq0 *
             cd ..
             mv $IPSW $IPSWCustom
             IPSW=$IPSWCustom
@@ -373,8 +380,8 @@ function Downgrade {
             cp $IPSW/Firmware/all_flash/$SEP .
         fi
         Log "Entering PWNREC mode..."
-        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -f $iBSS.im4p
-        sudo LD_LIBRARY_PATH=/usr/local/lib irecovery -f $iBEC.im4p
+        $irecovery -f $iBSS.im4p
+        $irecovery -f $iBEC.im4p
         sleep 5
         RecoveryDevice=$(lsusb | grep -c '1281')
         if [[ $RecoveryDevice != 1 ]]; then
@@ -393,23 +400,24 @@ function Downgrade {
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [[ $A7Device == 1 ]]; then
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
+            $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
-            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
+            $futurerestore152 -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
         elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
-            resources/tools/pzb_$platform -g Firmware/$Baseband -o $Baseband $BasebandURL
-            resources/tools/pzb_$platform -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
+            $pzb -g Firmware/$Baseband -o $Baseband $BasebandURL
+            $pzb -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
             mkdir -p saved/$ProductType 2>/dev/null
             cp $Baseband BuildManifest.plist saved/$ProductType
         else
             cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
         fi
         BasebandSHA1L=$(shasum -a 1 $Baseband | awk '{print $1}')
+        Log "Proceeding to futurerestore..."
         if [ ! -e *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
             echo "[Error] Downloading/verifying baseband failed."
@@ -417,18 +425,15 @@ function Downgrade {
             echo "* You can also continue and futurerestore can attempt to download the baseband again"
             echo "* Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
-            Log "Proceeding to futurerestore..."
             if [[ $A7Device == 1 ]]; then
-                sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
+                $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
-                sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
+                $futurerestore152 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
             fi
         elif [[ $A7Device == 1 ]]; then
-            Log "Proceeding to futurerestore..."
-            sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
+            $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
-            Log "Proceeding to futurerestore..."
-            sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
+            $futurerestore152 -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
         fi
     fi
         
