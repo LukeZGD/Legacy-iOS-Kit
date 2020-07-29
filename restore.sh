@@ -444,6 +444,7 @@ function Downgrade {
 function InstallDependencies {
     echo "Install Dependencies"
     . /etc/os-release 2>/dev/null
+    mkdir tmp 2>/dev/null
     cd tmp
     
     Log "Installing dependencies..."
