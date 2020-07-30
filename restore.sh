@@ -6,8 +6,9 @@ function Clean {
 }
 
 function Error {
-    echo "[Error] $1"
+    echo -e "\n[Error] $1"
     [[ ! -z $2 ]] && echo "* $2"
+    echo
     exit
 }
 
@@ -20,27 +21,18 @@ function Main {
     echo "******* iOS-OTA-Downgrader *******"
     echo "   Downgrader script by LukeZGD   "
     echo
-    if [[ $OSTYPE == "linux-gnu" ]]; then
-        platform='linux'
-    elif [[ $OSTYPE == "darwin"* ]]; then
-        platform='macos'
-    else
-        Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
-    fi
+    [[ $OSTYPE == "linux-gnu" ]] && platform='linux'
+    [[ $OSTYPE == "darwin"* ]] && platform='macos'
+    [[ ! $platform ]] && Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
-    futurerestore152="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform"
-    futurerestore249="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform"
+    futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_$platform"
+    futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_$platform"
     irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
     pzb="resources/tools/pzb_$platform"
     tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
     
-    chmod +x resources/tools/*
-    mkdir tmp
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
-
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
     if [[ $1 == InstallDependencies ]] || [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] ||
@@ -65,8 +57,11 @@ function Main {
     BasebandDetect
     Clean
     mkdir tmp
+    chmod +x resources/tools/*
+    SaveExternal iOS-OTA-Downgrader-Keys
+    SaveExternal ipwndfu
     
-    if [ $DFUDevice == 1 ] && [[ $A7Device != 1 ]]; then
+    if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Log "Device in DFU mode detected."
         read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
         if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
@@ -76,10 +71,11 @@ function Main {
         else
             Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
-    elif [ $RecoveryDevice == 1 ] && [[ $A7Device != 1 ]]; then
+    elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
     fi
     
+    echo "* Platform: $platform"
     echo "* HardwareModel: ${HWModel}ap"
     echo "* ProductType: $ProductType"
     echo "* ProductVersion: $ProductVer"
@@ -98,7 +94,7 @@ function Main {
                 "Downgrade device" ) Mode='Downgrade'; break;;
                 "Save OTA blobs" ) Mode='SaveOTABlobs'; break;;
                 "Just put device in kDFU mode" ) Mode='kDFU'; break;;
-                "(Re-)Install Dependencies" ) InstallDependencies; exit;;
+                "(Re-)Install Dependencies" ) InstallDependencies;;
                 * ) exit;;
             esac
         done
@@ -142,11 +138,7 @@ function Action {
         IPSW="$(basename $IPSW .ipsw)"
         read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
     elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 1 ]]; then
-        if [[ $DFUDevice == 1 ]]; then
-            CheckM8
-        else
-            Recovery
-        fi
+        [[ $DFUDevice == 1 ]] && CheckM8 || Recovery
     fi
     
     if [ $ProductType == iPod5,1 ]; then
@@ -209,13 +201,9 @@ function kDFU {
     bspatch tmp/iBSS.dec tmp/pwnediBSS resources/patches/$iBSS.patch
     
     # Regular kloader only works on iOS 6 to 9, so other versions are provided for iOS 5 and 10
-    if [[ $VersionDetect == 1 ]]; then
-        kloader='kloader_hgsp'
-    elif [[ $VersionDetect == 5 ]]; then
-        kloader='kloader5'
-    else
-        kloader='kloader'
-    fi
+    [[ $VersionDetect == 1 ]] && kloader='kloader_hgsp'
+    [[ $VersionDetect == 5 ]] && kloader='kloader5'
+    [[ ! $kloader ]] && kloader='kloader'
 
     if [[ $VersionDetect == 1 ]]; then
         # ifuse+MTerminal is used instead of SSH for devices on iOS 10
@@ -224,7 +212,6 @@ function kDFU {
         WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
         echo '#!/bin/bash' > tmp/pwn.sh
         echo "nvram wifiaddr=$WifiAddrDecr
-        chmod 755 kloader_hgsp
         ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
         Log "Mounting device with ifuse..."
         mkdir mount
@@ -240,7 +227,6 @@ function kDFU {
         echo '$ su'
         echo "* (Enter root password of your iOS device, default is 'alpine')"
         echo "# cd Media"
-        echo "# chmod +x pwn.sh"
         echo "# ./pwn.sh"
     else
         # SSH kloader and pwnediBSS
@@ -254,7 +240,7 @@ function kDFU {
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
         Log "Entering kDFU mode..."
-        ssh root@$IPAddress "chmod 755 /$kloader && /$kloader /pwnediBSS" &
+        ssh root@$IPAddress "/$kloader /pwnediBSS" &
     fi
     echo
     echo "* Press POWER or HOME button when screen goes black on the device"
@@ -296,8 +282,7 @@ function Recovery {
         [[ $DFUDevice == 1 ]] && CheckM8
         sleep 1
     done
-    echo -e "\n[Error] Failed to detect device in DFU mode. Please run the script again"
-    exit
+    Error "Failed to detect device in DFU mode. Please run the script again"
 }
 
 function CheckM8 {
@@ -321,14 +306,9 @@ function CheckM8 {
 
 function Downgrade {    
     if [[ $OSVer != 'Other' ]]; then
-        if [[ $ProductType == iPad4* ]]; then
-            IPSW="iPad_64bit"
-        elif [[ $ProductType == iPhone6* ]]; then
-            IPSW="iPhone_64bit"
-        else
-            IPSW="$ProductType"
-            SaveOTABlobs
-        fi
+        [[ $ProductType == iPad4* ]] && IPSW="iPad_64bit"
+        [[ $ProductType == iPhone6* ]] && IPSW="iPhone_64bit"
+        [[ ! $IPSW ]] && IPSW="$ProductType" && SaveOTABlobs
         IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
         if [ ! -e $IPSW.ipsw ]; then
@@ -378,10 +358,7 @@ function Downgrade {
         $irecovery -f $iBEC.im4p
         sleep 5
         RecoveryDevice=$(lsusb | grep -c '1281')
-        if [[ $RecoveryDevice != 1 ]]; then
-            echo -e "\n[Error] Failed to detect device in PWNREC mode. Please try again"
-            exit
-        fi
+        [[ $RecoveryDevice != 1 ]] && Error "Failed to detect device in PWNREC mode. Please try again"
         SaveOTABlobs
     fi
     
@@ -394,9 +371,9 @@ function Downgrade {
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [[ $A7Device == 1 ]]; then
-            $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
+            $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
-            $futurerestore152 -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
+            $futurerestore1 -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
         if [[ $A7Device == 1 ]]; then
@@ -420,14 +397,14 @@ function Downgrade {
             echo "* Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
             sleep 10
             if [[ $A7Device == 1 ]]; then
-                $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
+                $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
-                $futurerestore152 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
+                $futurerestore1 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
             fi
         elif [[ $A7Device == 1 ]]; then
-            $futurerestore249 -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
+            $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
-            $futurerestore152 -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
+            $futurerestore1 -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
         fi
     fi
         
