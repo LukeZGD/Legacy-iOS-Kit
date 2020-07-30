@@ -171,15 +171,16 @@ function Action {
         iBSS="$HWModel"
         iBSSBuildVer='12H321'
     fi
-    iBSS="iBSS.$iBSS.RELEASE"
     iBEC="iBEC.$iBSS.RELEASE"
-    IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
-    Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
+    iBSS="iBSS.$iBSS.RELEASE"
+    IV=$(cat $Firmware/$iBSSBuildVer/iv_ibss 2>/dev/null)
+    Key=$(cat $Firmware/$iBSSBuildVer/key_ibss 2>/dev/null)
     IV_iBEC=$(cat $Firmware/$iBSSBuildVer/iv_ibec 2>/dev/null)
     Key_iBEC=$(cat $Firmware/$iBSSBuildVer/key_ibec 2>/dev/null)
     
     [[ $Mode == 'Downgrade' ]] && Downgrade
     [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
+    [[ $Mode == 'SaveOnboardBlobs' ]] && SaveOnboardBlobs
     [[ $Mode == 'kDFU' ]] && kDFU
     exit
 }
