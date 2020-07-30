@@ -37,7 +37,8 @@ function Main {
     tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
     
     chmod +x resources/tools/*
-    SaveExternal firmware
+    mkdir tmp
+    SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
 
     DFUDevice=$(lsusb | grep -c '1227')
@@ -149,24 +150,23 @@ function Action {
     fi
     
     if [ $ProductType == iPod5,1 ]; then
-        iBSS="iBSS.${HWModel}ap.RELEASE"
+        iBSS="${HWModel}ap"
         iBSSBuildVer='10B329'
     elif [ $ProductType == iPad3,1 ]; then
-        iBSS="iBSS.${HWModel}ap.RELEASE"
+        iBSS="${HWModel}ap"
         iBSSBuildVer='11D257'
     elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        iBSS="iBSS.iphone6.RELEASE"
-        iBEC="iBEC.iphone6.RELEASE"
+        iBSS="iphone6"
     elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
-        iBSS="iBSS.ipad4.RELEASE"
-        iBEC="iBEC.ipad4.RELEASE"
+        iBSS="ipad4"
     elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
-        iBSS="iBSS.ipad4b.RELEASE"
-        iBEC="iBEC.ipad4b.RELEASE"
+        iBSS="ipad4b"
     else
-        iBSS="iBSS.$HWModel.RELEASE"
+        iBSS="$HWModel"
         iBSSBuildVer='12H321'
     fi
+    iBEC="iBEC.$iBSS.RELEASE"
+    iBSS="iBSS.$iBSS.RELEASE"
     IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
     Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
     
@@ -517,20 +517,22 @@ function Compile {
 }
 
 function SaveExternal {
-    if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
-        if [[ $1 == 'ipwndfu' ]]; then
-            ExternalURL="https://github.com/LukeZGD/ipwndfu/archive/master.zip"
-            ExternalFile="ipwndfu-master"
-        else
-            ExternalURL="https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/$1.zip"
-            ExternalFile="iOS-OTA-Downgrader-$1"
-        fi
-        Log "Downloading $1..."
-        curl -Ls $ExternalURL -o tmp/$ExternalFile.zip
-        unzip -q tmp/$ExternalFile.zip -d tmp
-        mkdir resources/$1
-        mv tmp/$ExternalFile/* resources/$1
+    ExternalURL="https://github.com/LukeZGD/$1.git"
+    External=$1
+    [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
+    if [[ ! -d resources/$External ]] || [[ ! -d resources/$External/.git ]]; then
+        Log "Downloading $External..."
+        cd tmp
+        git clone $ExternalURL $External &>/dev/null
+        rm -rf ../resources/$External
+        cp -r $External/ ../resources/
+    else
+        Log "Updating $External..."
+        cd resources/$External
+        git pull &>/dev/null
+        cd ..
     fi
+    cd ..
 }
 
 function SavePkg {
