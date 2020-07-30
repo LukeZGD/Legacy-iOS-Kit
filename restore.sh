@@ -173,8 +173,8 @@ function Action {
     fi
     iBEC="iBEC.$iBSS.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
-    IV=$(cat $Firmware/$iBSSBuildVer/iv_ibss 2>/dev/null)
-    Key=$(cat $Firmware/$iBSSBuildVer/key_ibss 2>/dev/null)
+    IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
+    Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
     IV_iBEC=$(cat $Firmware/$iBSSBuildVer/iv_ibec 2>/dev/null)
     Key_iBEC=$(cat $Firmware/$iBSSBuildVer/key_ibec 2>/dev/null)
     
@@ -568,20 +568,23 @@ function Compile {
 }
 
 function SaveExternal {
-    if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
-        if [[ $1 == 'ipwndfu' ]]; then
-            ExternalURL="https://github.com/LukeZGD/ipwndfu/archive/master.zip"
-            ExternalFile="ipwndfu-master"
-        else
-            ExternalURL="https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/$1.zip"
-            ExternalFile="iOS-OTA-Downgrader-$1"
-        fi
-        Log "Downloading $1..."
-        curl -Ls $ExternalURL -o tmp/$ExternalFile.zip
-        unzip -q tmp/$ExternalFile.zip -d tmp
-        mkdir resources/$1
-        mv tmp/$ExternalFile/* resources/$1
+    if [[ $1 == 'ipwndfu' ]]; then
+        ExternalURL="https://github.com/LukeZGD/ipwndfu.git"
+        Branch=master
+    else
+        ExternalURL="https://github.com/LukeZGD/iOS-OTA-Downgrader.git"
+        Branch=$1
     fi
+    cd resources
+    if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
+        Log "Downloading $1..."
+        git clone --depth 1 -b $Branch $ExternalURL
+    else
+        cd $1
+        git pull 2>/dev/null
+        cd ..
+    fi
+    cd ..
 }
 
 function SavePkg {
