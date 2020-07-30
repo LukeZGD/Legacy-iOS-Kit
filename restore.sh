@@ -34,8 +34,14 @@ function Main {
     futurerestore249="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform"
     irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
     pzb="resources/tools/pzb_$platform"
+    ticket="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/ticket_$platform"
     tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
+    validate="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/validate_$platform"
+    xpwntool="resources/tools/xpwntool_$platform"
     
+    cd resources/tools
+    ln -sf futurerestore249_macos futurerestore152_macos
+    cd ../..
     chmod +x resources/tools/*
     SaveExternal firmware
     SaveExternal ipwndfu
@@ -87,15 +93,16 @@ function Main {
     if [[ $1 ]]; then
         Mode="$1"
     else
-        Selection=("Downgrade device")
-        [[ $A7Device != 1 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
+        Selection=("Downgrade Device")
+        [[ $A7Device != 1 ]] && Selection+=("Save OTA Blobs" "Save Onboard Blobs" "Just put device in kDFU mode")
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
         echo "*** Main Menu ***"
         echo "[Input] Select an option:"
         select opt in "${Selection[@]}"; do
             case $opt in
-                "Downgrade device" ) Mode='Downgrade'; break;;
-                "Save OTA blobs" ) Mode='SaveOTABlobs'; break;;
+                "Downgrade Device" ) Mode='Downgrade'; break;;
+                "Save OTA Blobs" ) Mode='SaveOTABlobs'; break;;
+                "Save Onboard Blobs" ) Mode='SaveOnboardBlobs'; break;;
                 "Just put device in kDFU mode" ) Mode='kDFU'; break;;
                 "(Re-)Install Dependencies" ) InstallDependencies; exit;;
                 * ) exit;;
@@ -149,26 +156,27 @@ function Action {
     fi
     
     if [ $ProductType == iPod5,1 ]; then
-        iBSS="iBSS.${HWModel}ap.RELEASE"
+        iBSS="${HWModel}ap"
         iBSSBuildVer='10B329'
     elif [ $ProductType == iPad3,1 ]; then
-        iBSS="iBSS.${HWModel}ap.RELEASE"
+        iBSS="${HWModel}ap"
         iBSSBuildVer='11D257'
     elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        iBSS="iBSS.iphone6.RELEASE"
-        iBEC="iBEC.iphone6.RELEASE"
+        iBSS="iphone6"
     elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
-        iBSS="iBSS.ipad4.RELEASE"
-        iBEC="iBEC.ipad4.RELEASE"
+        iBSS="ipad4"
     elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
-        iBSS="iBSS.ipad4b.RELEASE"
-        iBEC="iBEC.ipad4b.RELEASE"
+        iBSS="ipad4b"
     else
-        iBSS="iBSS.$HWModel.RELEASE"
+        iBSS="$HWModel"
         iBSSBuildVer='12H321'
     fi
+    iBSS="iBSS.$iBSS.RELEASE"
+    iBEC="iBEC.$iBSS.RELEASE"
     IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
     Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
+    IV_iBEC=$(cat $Firmware/$iBSSBuildVer/iv_ibec 2>/dev/null)
+    Key_iBEC=$(cat $Firmware/$iBSSBuildVer/key_ibec 2>/dev/null)
     
     [[ $Mode == 'Downgrade' ]] && Downgrade
     [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
@@ -194,6 +202,47 @@ function SaveOTABlobs {
     Log "Successfully saved $OSVer blobs."
 }
 
+function SaveOnboardBlobs {
+    ProductBuildVer=$($tsschecker -d $ProductType -i $ProductVer | grep "Buildmanifest" | cut -d _ -f 3)
+    echo "* Build version of iOS $ProductVer: $ProductBuildVer"
+    IPSW="${IPSW}_${ProductVer}_${ProductBuildVer}_Restore"
+    SHSH="$UniqueChipID-$ProductType-$ProductVer.shsh"
+    [ ! -e $IPSW.ipsw ] && Error "iOS $IPSW IPSW not found. Please download the IPSW and run the script again"
+    kDFU    
+    if [ ! -e saved/$ProductType/$iBEC.dfu ]; then
+        Log "Downloading iBEC..."
+        $pzb -g Firmware/dfu/$iBEC.dfu -o $iBEC.dfu $(cat $Firmware/$iBSSBuildVer/url)
+        mkdir -p saved/$ProductType 2>/dev/null
+        mv $iBEC.dfu saved/$ProductType
+    fi
+    Log "Downloading iBEC..."
+    $pzb -g BuildManifest.plist -o BuildManifest.plist $(curl https://api.ipsw.me/v2.1/$ProductType/$ProductBuildVer/url)
+    Log "Decrypting iBEC..."
+    Log "IV = $IV_iBEC"
+    Log "Key = $Key_iBEC"
+    $xpwntool saved/$ProductType/$iBEC.dfu tmp/iBEC.dec -k $Key_iBEC -iv $IV_iBEC
+    Log "Patching iBEC..."
+    bspatch tmp/iBEC.dec tmp/pwnediBEC resources/patches/$iBSS.patch
+    Log "Sending iBEC..."
+    $irecovery -f tmp/pwnediBEC
+    sleep 5
+    RecoveryDevice=$(lsusb | grep -c '1281')
+    if [[ $RecoveryDevice != 1 ]]; then
+        echo -e "\n[Error] Failed to detect device in recovery mode. Please try again"
+        exit
+    fi
+    Log "Saving onboard blobs..."
+    (echo -e "/send resources/tools/payload\ngo blobs\n/exit") | $irecovery -s
+    $irecovery -g myblob.dump
+    mkdir -p saved/shsh 2>/dev/null
+    $ticket myblob.dump saved/shsh/$SHSH $IPSW.ipsw -z
+    $validate $SHSH $IPSW.ipsw -z
+    Log "Rebooting device."
+    $irecovery -c reboot 
+    [ ! -e saved/shsh/$SHSH ] && Error "Saving onboard blobs failed. Please try again"
+    Log "Successfully saved onboard blobs: saved/shsh/$SHSH"
+}
+
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
@@ -204,7 +253,7 @@ function kDFU {
     Log "Decrypting iBSS..."
     Log "IV = $IV"
     Log "Key = $Key"
-    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV
+    $xpwntool saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV
     Log "Patching iBSS..."
     bspatch tmp/iBSS.dec tmp/pwnediBSS resources/patches/$iBSS.patch
     
@@ -449,6 +498,7 @@ function InstallDependencies {
         # Arch Linux
         sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
         Compile libimobiledevice ifuse
+        sudo ln -sf /usr/lib/libcrypto.so.1.0.0 /usr/local/lib/libcrypto.so.1
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $UBUNTU_CODENAME == "focal" ]]; then
