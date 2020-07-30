@@ -33,15 +33,13 @@ function Main {
     futurerestore152="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore152_$platform"
     futurerestore249="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore249_$platform"
     irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
+    irecovery2="sudo resources/tools/irecovery_$platform"
     pzb="resources/tools/pzb_$platform"
     ticket="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/ticket_$platform"
     tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
     validate="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/validate_$platform"
     xpwntool="resources/tools/xpwntool_$platform"
     
-    cd resources/tools
-    ln -sf futurerestore249_macos futurerestore152_macos
-    cd ../..
     chmod +x resources/tools/*
     SaveExternal firmware
     SaveExternal ipwndfu
@@ -85,6 +83,7 @@ function Main {
         Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
     fi
     
+    echo "* Platform: $platform"
     echo "* HardwareModel: ${HWModel}ap"
     echo "* ProductType: $ProductType"
     echo "* ProductVersion: $ProductVer"
@@ -117,7 +116,7 @@ function SelectVersion {
         OSVer='10.3.3'
         BuildVer='14G60'
         Action
-    elif [[ $Mode == 'kDFU' ]]; then
+    elif [[ $Mode == 'SaveOnboardBlobs' ]] || [[ $Mode == 'kDFU' ]]; then
         Action
     fi
     Selection=("iOS 8.4.1")
@@ -175,8 +174,6 @@ function Action {
     iBSS="iBSS.$iBSS.RELEASE"
     IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
     Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
-    IV_iBEC=$(cat $Firmware/$iBSSBuildVer/iv_ibec 2>/dev/null)
-    Key_iBEC=$(cat $Firmware/$iBSSBuildVer/key_ibec 2>/dev/null)
     
     [[ $Mode == 'Downgrade' ]] && Downgrade
     [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
@@ -204,42 +201,35 @@ function SaveOTABlobs {
 }
 
 function SaveOnboardBlobs {
+    OSVer='8.4.1'
+    BuildVer='12H321'
+    IPSWV="${ProductType}_${ProductVer}_${ProductBuildVer}_Restore.ipsw"
+    SHSHV="$UniqueChipID-$ProductType-$ProductVer.shsh"
     ProductBuildVer=$($tsschecker -d $ProductType -i $ProductVer | grep "Buildmanifest" | cut -d _ -f 3)
     echo "* Build version of iOS $ProductVer: $ProductBuildVer"
-    IPSW="${IPSW}_${ProductVer}_${ProductBuildVer}_Restore"
-    SHSH="$UniqueChipID-$ProductType-$ProductVer.shsh"
-    [ ! -e $IPSW.ipsw ] && Error "iOS $IPSW IPSW not found. Please download the IPSW and run the script again"
-    kDFU    
-    if [ ! -e saved/$ProductType/$iBEC.dfu ]; then
-        Log "Downloading iBEC..."
-        $pzb -g Firmware/dfu/$iBEC.dfu -o $iBEC.dfu $(cat $Firmware/$iBSSBuildVer/url)
-        mkdir -p saved/$ProductType 2>/dev/null
-        mv $iBEC.dfu saved/$ProductType
-    fi
-    Log "Downloading iBEC..."
-    $pzb -g BuildManifest.plist -o BuildManifest.plist $(curl https://api.ipsw.me/v2.1/$ProductType/$ProductBuildVer/url)
-    Log "Decrypting iBEC..."
-    Log "IV = $IV_iBEC"
-    Log "Key = $Key_iBEC"
-    $xpwntool saved/$ProductType/$iBEC.dfu tmp/iBEC.dec -k $Key_iBEC -iv $IV_iBEC
-    Log "Patching iBEC..."
-    bspatch tmp/iBEC.dec tmp/pwnediBEC resources/patches/$iBSS.patch
-    Log "Sending iBEC..."
-    $irecovery -f tmp/pwnediBEC
-    sleep 5
-    RecoveryDevice=$(lsusb | grep -c '1281')
-    if [[ $RecoveryDevice != 1 ]]; then
-        echo -e "\n[Error] Failed to detect device in recovery mode. Please try again"
-        exit
-    fi
+    [ ! -e $IPSWV ] && Error "iOS $ProductVer IPSW not found. Please download the IPSW and run the script again"
+    
+    SaveIPSW
+    kDFU
+    
+    Log "Entering PWNREC mode..."
+    ln -sf /dev/null $IPSW
+    sudo bash -c "$futurerestore152 -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw &"
+    while [[ $RecoveryDevice != 1 ]]; do
+        RecoveryDevice=$(lsusb | grep -c '1281')
+        sleep 2
+    done
+    ps aux | awk '/futurerestore152_linux/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    ps aux | awk '/futurerestore152_macos/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    
     Log "Saving onboard blobs..."
-    (echo -e "/send resources/tools/payload\ngo blobs\n/exit") | $irecovery -s
-    $irecovery -g myblob.dump
+    echo -e "/send resources/tools/payload\ngo blobs\n/exit" | $irecovery2 -s
+    $irecovery2 -g tmp/myblob.dump
     mkdir -p saved/shsh 2>/dev/null
-    $ticket myblob.dump saved/shsh/$SHSH $IPSW.ipsw -z
-    $validate $SHSH $IPSW.ipsw -z
+    $ticket tmp/myblob.dump saved/shsh/$SHSHV $IPSWV -z
+    $validate saved/shsh/$SHSHV $IPSWV -z
     Log "Rebooting device."
-    $irecovery -c reboot 
+    $irecovery2 -c reboot 
     [ ! -e saved/shsh/$SHSH ] && Error "Saving onboard blobs failed. Please try again"
     Log "Successfully saved onboard blobs: saved/shsh/$SHSH"
 }
@@ -369,7 +359,7 @@ function CheckM8 {
     fi    
 }
 
-function Downgrade {    
+function SaveIPSW {
     if [[ $OSVer != 'Other' ]]; then
         if [[ $ProductType == iPad4* ]]; then
             IPSW="iPad_64bit"
@@ -400,7 +390,10 @@ function Downgrade {
             unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
         fi
     fi
-    
+}
+
+function Downgrade {    
+    SaveIPSW
     [ ! $DFUManual ] && kDFU
     
     Log "Extracting IPSW..."
@@ -576,12 +569,13 @@ function SaveExternal {
         Branch=$1
     fi
     cd resources
-    if [[ ! $(ls resources/$1 2>/dev/null) ]]; then
+    if [[ ! $(ls $1 2>/dev/null) ]]; then
         Log "Downloading $1..."
         git clone --depth 1 -b $Branch $ExternalURL
     else
+        Log "Updating $1..."
         cd $1
-        git pull 2>/dev/null
+        git pull &>/dev/null
         cd ..
     fi
     cd ..
