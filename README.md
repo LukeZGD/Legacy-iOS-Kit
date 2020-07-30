@@ -58,7 +58,7 @@
 - python2
 - python3
 - [tsschecker](https://github.com/tihmstar/s0uthwest/tsschecker)
-- [futurerestore 152 (Linux)](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
+- [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 249 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
 - [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore)
 - [xpwntool](https://www.youtube.com/watch?v=fh0tB6fp0Sc)

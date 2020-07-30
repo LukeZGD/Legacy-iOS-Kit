@@ -36,9 +36,6 @@ function Main {
     pzb="resources/tools/pzb_$platform"
     tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
     
-    cd resources/tools
-    ln -sf futurerestore249_macos futurerestore152_macos
-    cd ../..
     chmod +x resources/tools/*
     SaveExternal firmware
     SaveExternal ipwndfu
