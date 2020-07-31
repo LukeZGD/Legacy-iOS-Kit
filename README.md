@@ -17,8 +17,8 @@
 - A **macOS** or a **64-bit Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
 - 32-bit users only:
   - iOS 7/8 Pangu users: Install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-  - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/package/openssh/); The computer and iOS device must be on the same network for SSH to work
-  - iOS 10 users: Install [MTerminal](http://cydia.saurik.com/package/com.officialscheduler.mterminal/)
+  - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/package/openssh/)
+  - iOS 10 users: Install [Dropbear (deb)](http://www.mediafire.com/file/m2wzque7zsa87lp/Dropbear.deb/file)
 1. [Download](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) or `git clone` this repo
 2. Open Terminal, `cd` to the directory where the script is located (example: `cd /home/user/iOS-OTA-Downgrader`)
 3. Run `chmod +x restore.sh`
@@ -51,7 +51,6 @@
 ## Tools and other stuff used by this script:
 - cURL
 - bspatch
-- [ifuse](https://github.com/libimobiledevice/ifuse)
 - [igetnonce](https://github.com/LukeZGD/igetnonce)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) utilities

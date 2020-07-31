@@ -175,11 +175,11 @@ function SaveOTABlobs {
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
+        SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
     fi
-    [ ! $SHSH ] && SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
     cp "$SHSH" saved/shsh
@@ -205,43 +205,16 @@ function kDFU {
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
 
-    if [[ $VersionDetect == 1 ]]; then
-        # ifuse+MTerminal is used instead of SSH for devices on iOS 10
-        [ ! $(which ifuse) ] && Error "One of the dependencies (ifuse) cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
-        WifiAddr=$(ideviceinfo -s | grep 'WiFiAddress' | cut -c 14-)
-        WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
-        echo '#!/bin/bash' > tmp/pwn.sh
-        echo "nvram wifiaddr=$WifiAddrDecr
-        ./kloader_hgsp pwnediBSS" >> tmp/pwn.sh
-        Log "Mounting device with ifuse..."
-        mkdir mount
-        ifuse mount
-        [[ ! -d mount/DCIM ]] && Error "Failed to mount device. Please run the script again" "Make sure to trust this computer before proceeding"
-        Log "Copying stuff to device..."
-        cp tmp/pwn.sh resources/tools/$kloader tmp/pwnediBSS mount/
-        Log "Unmounting device... (Enter root password of your PC/Mac when prompted)"
-        sudo umount mount 2>/dev/null
-        echo
-        echo "* Open MTerminal and run these commands:"
-        echo
-        echo '$ su'
-        echo "* (Enter root password of your iOS device, default is 'alpine')"
-        echo "# cd Media"
-        echo "# ./pwn.sh"
-    else
-        # SSH kloader and pwnediBSS
-        echo "* Make sure OpenSSH is installed on the device!"
-        echo "* Also make sure that the PC/Mac and the iOS device are on the same network"
-        echo
-        echo "* Please enter Wi-Fi IP address of the device for SSH connection"
-        read -p "[Input] IP Address: " IPAddress
-        Log "Copying stuff to device via SSH..."
-        echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
-        scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
-        [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
-        Log "Entering kDFU mode..."
-        ssh root@$IPAddress "/$kloader /pwnediBSS" &
-    fi
+    # SSH kloader and pwnediBSS
+    echo "* Make sure OpenSSH/Dropbear is installed on the device!"
+    iproxy 2222:22 &>/dev/null &
+    iproxyPID=$!
+    Log "Copying stuff to device via SSH..."
+    echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
+    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
+    [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
+    Log "Entering kDFU mode..."
+    ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
     echo
     echo "* Press POWER or HOME button when screen goes black on the device"
     
@@ -251,6 +224,7 @@ function kDFU {
         sleep 2
     done
     Log "Found device in DFU mode."
+    kill $iproxyPID
 }
 
 function Recovery {
@@ -424,15 +398,14 @@ function InstallDependencies {
     Log "Installing dependencies..."
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
         # Arch Linux
-        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
-        Compile libimobiledevice ifuse
+        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $UBUNTU_CODENAME == "focal" ]]; then
         # Ubuntu Focal
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git ifuse libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libzip5 openssh-client python2 python3 usbmuxd usbutils
+        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libusbmuxd-tools libzip5 openssh-client python2 python3 usbmuxd usbutils
         SavePkg http://archive.ubuntu.com/ubuntu/pool/universe/c/curl3/libcurl3_7.58.0-2ubuntu2_amd64.deb libcurl3.deb
         VerifyPkg libcurl3.deb f6ab4c77f7c4680e72f9dd754f706409c8598a9f
         ar x libcurl3.deb data.tar.xz
@@ -450,7 +423,7 @@ function InstallDependencies {
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         
     elif [[ $ID == "fedora" ]]; then
-        sudo dnf install -y automake bsdiff git ifuse libimobiledevice-utils libpng12 libtool libusb-devel libzip make perl-Digest-SHA python2 readline-devel
+        sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 python readline-devel
         SavePkg http://ftp.pbone.net/mirror/ftp.scientificlinux.org/linux/scientific/6.1/x86_64/os/Packages/openssl-1.0.0-10.el6.x86_64.rpm openssl-1.0.0.rpm
         VerifyPkg openssl-1.0.0.rpm 10e7e37c0eac8e7ea8c0657596549d7fe9dac454
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
@@ -468,10 +441,9 @@ function InstallDependencies {
         fi
         brew install --HEAD usbmuxd
         brew install --HEAD libimobiledevice
+        brew install --HEAD libusbmuxd
         brew install libzip lsusb python3
         brew install make automake autoconf libtool pkg-config gcc
-        brew cask install osxfuse
-        brew install ifuse
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
