@@ -200,21 +200,29 @@ function kDFU {
     Log "Patching iBSS..."
     bspatch tmp/iBSS.dec tmp/pwnediBSS resources/patches/$iBSS.patch
     
-    # Regular kloader only works on iOS 6 to 9, so other versions are provided for iOS 5 and 10
     [[ $VersionDetect == 1 ]] && kloader='kloader_hgsp'
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
-
-    # SSH kloader and pwnediBSS
-    echo "* Make sure OpenSSH/Dropbear is installed on the device!"
+    
     iproxy 2222:22 &>/dev/null &
     iproxyPID=$!
+    WifiAddr=$(echo "$ideviceinfo" | grep 'WiFiAddress' | cut -c 14-)
+    WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
+    echo '#!/bin/bash' > tmp/pwn.sh
+    echo "nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
+    chmod +x tmp/pwn.sh
+    
+    echo "* Make sure OpenSSH/Dropbear is installed on the device!"
     Log "Copying stuff to device via SSH..."
     echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
-    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
+    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
     [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
     Log "Entering kDFU mode..."
-    ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
+    if [[ $VersionDetect == 1 ]]; then
+        ssh -p 2222 root@127.0.0.1 "/pwn.sh; /$kloader /pwnediBSS" &
+    else
+        ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
+    fi
     echo
     echo "* Press POWER or HOME button when screen goes black on the device"
     
