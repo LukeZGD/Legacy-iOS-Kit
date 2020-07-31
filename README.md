@@ -15,10 +15,9 @@
   - An A7 device (any version, jailbreak not needed)
 - An IPSW for the version you want to downgrade to (the script can also download it for you)
 - A **macOS** or a **64-bit Linux install/live USB** (see distros tested on below) (a live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
-- 32-bit users only:
-  - iOS 7/8 Pangu users: Install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-  - iOS 9 and below users: Install [OpenSSH](https://cydia.saurik.com/package/openssh/)
-  - iOS 10 users: Install [Dropbear (deb)](http://www.mediafire.com/file/m2wzque7zsa87lp/Dropbear.deb/file)
+- All 32-bit users must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
+- A6/A6X iOS 10 users must install [Dropbear (deb)](http://www.mediafire.com/file/m2wzque7zsa87lp/Dropbear.deb/file) as well
+- For kDFU mode to work on Pangu 32-bit, install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
 1. [Download](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) or `git clone` this repo
 2. Open Terminal, `cd` to the directory where the script is located (example: `cd /home/user/iOS-OTA-Downgrader`)
 3. Run `chmod +x restore.sh`
