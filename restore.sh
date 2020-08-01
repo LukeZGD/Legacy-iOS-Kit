@@ -275,14 +275,14 @@ function CheckM8 {
     sudo python2 ipwndfu -p
     pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
     if [ $pwnDFUDevice == 1 ]; then
-        Log "Detected device in pwnDFU mode. Running rmsigchks.py..."
+        Log "Device in pwnDFU mode detected. Running rmsigchks.py..."
         sudo python2 rmsigchks.py
         cd ../..
         Log "Downgrading device $ProductType in pwnDFU mode..."
         Mode='Downgrade'
         SelectVersion
     else
-        Error "Entering pwnDFU failed. Please run the script again" "./restore.sh Downgrade"
+        Error "Failed to detect device in pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
     fi    
 }
 
@@ -335,12 +335,23 @@ function Downgrade {
             cp $IPSW/Firmware/dfu/$iBEC.im4p .
             cp $IPSW/Firmware/all_flash/$SEP .
         fi
-        Log "Entering PWNREC mode..."
+        Log "Entering pwnREC mode..."
         $irecovery -f $iBSS.im4p
         $irecovery -f $iBEC.im4p
         sleep 5
         RecoveryDevice=$(lsusb | grep -c '1281')
-        [[ $RecoveryDevice != 1 ]] && Error "Failed to detect device in PWNREC mode. Please try again"
+        if [[ $RecoveryDevice != 1 ]]; then
+            echo "[Error] Failed to detect device in pwnREC mode."
+            echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
+            echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
+            read
+            RecoveryDevice=$(lsusb | grep -c '1281')
+            if [[ $RecoveryDevice != 1 ]]; then
+                Log "Failed to detect device in pwnREC mode but continuing anyway."
+            else
+                Log "Device in pwnREC mode detected."
+            fi
+        fi
         SaveOTABlobs
     fi
     
@@ -376,8 +387,8 @@ function Downgrade {
             echo "[Error] Downloading/verifying baseband failed."
             echo "* Your device is still in kDFU mode and you may run the script again"
             echo "* You can also continue and futurerestore can attempt to download the baseband again"
-            echo "* Proceeding to futurerestore in 10 seconds (Press Ctrl+C to cancel)"
-            sleep 10
+            echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
+            read
             if [[ $A7Device == 1 ]]; then
                 $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
