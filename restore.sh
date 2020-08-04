@@ -204,6 +204,7 @@ function kDFU {
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
     
+    [ ! $(which iproxy) ] && Error "One of the dependencies (iproxy) cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
     iproxy 2222:22 &>/dev/null &
     iproxyPID=$!
     WifiAddr=$(echo "$ideviceinfo" | grep 'WiFiAddress' | cut -c 14-)
