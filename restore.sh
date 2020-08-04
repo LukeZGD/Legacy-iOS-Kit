@@ -491,15 +491,17 @@ function SaveExternal {
     [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
     if [[ ! -d resources/$External ]] || [[ ! -d resources/$External/.git ]]; then
         Log "Downloading $External..."
-        cd tmp
-        git clone $ExternalURL $External &>/dev/null
-        rm -rf ../resources/$External
-        cp -r $External/ ../resources/
+        cd resources
+        rm -rf $External
+        git clone $ExternalURL $External
     else
         Log "Updating $External..."
         cd resources/$External
-        git pull &>/dev/null
+        git pull 2>/dev/null
         cd ..
+    fi
+    if [[ ! -e $External/README.md ]] || [[ ! -d $External/.git ]]; then
+        Error "Downloading/updating $1 failed. Please run the script again"
     fi
     cd ..
 }
