@@ -345,14 +345,14 @@ function Downgrade {
             echo "[Error] Failed to detect device in pwnREC mode."
             echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
             echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
-            read
-            RecoveryDevice=$(lsusb | grep -c '1281')
-            if [[ $RecoveryDevice != 1 ]]; then
-                Log "Failed to detect device in pwnREC mode but continuing anyway."
-            else
-                Log "Device in pwnREC mode detected."
-            fi
+            read -s
+            Log "Finding device in pwnREC mode..."
+            while [[ $RecoveryDevice != 1 ]]; do
+                RecoveryDevice=$(lsusb | grep -c '1281')
+                sleep 2
+            done
         fi
+        Log "Found device in pwnREC mode."
         SaveOTABlobs
     fi
     
@@ -389,7 +389,7 @@ function Downgrade {
             echo "* Your device is still in kDFU mode and you may run the script again"
             echo "* You can also continue and futurerestore can attempt to download the baseband again"
             echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
-            read
+            read -s
             if [[ $A7Device == 1 ]]; then
                 $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
             else
