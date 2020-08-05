@@ -159,8 +159,6 @@ function Action {
     fi
     iBEC="iBEC.$iBSS.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
-    IV=$(cat $Firmware/$iBSSBuildVer/iv 2>/dev/null)
-    Key=$(cat $Firmware/$iBSSBuildVer/key 2>/dev/null)
     
     [[ $Mode == 'Downgrade' ]] && Downgrade
     [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
@@ -193,12 +191,9 @@ function kDFU {
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
-    Log "Decrypting iBSS..."
-    Log "IV = $IV"
-    Log "Key = $Key"
-    resources/tools/xpwntool_$platform saved/$ProductType/$iBSS.dfu tmp/iBSS.dec -k $Key -iv $IV
+    [[ ! -e saved/$ProductType/$iBSS.dfu ]] && Error "Failed to save iBSS. Please run the script again"
     Log "Patching iBSS..."
-    bspatch tmp/iBSS.dec tmp/pwnediBSS resources/patches/$iBSS.patch
+    bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
     
     [[ $VersionDetect == 1 ]] && kloader='kloader_hgsp'
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
@@ -561,7 +556,8 @@ function BasebandDetect {
     elif [ $ProductType == 0 ]; then
         Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
     elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
-         [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ]; then
+         [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ] &&
+         [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
         Error "Your device $ProductType is not supported."
     fi
     [ $ProductType == iPhone6,1 ] && HWModel=n51
