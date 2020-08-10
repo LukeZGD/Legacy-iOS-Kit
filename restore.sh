@@ -290,7 +290,10 @@ function Downgrade {
         IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
         if [ ! -e $IPSW.ipsw ]; then
-            Log "iOS $OSVer IPSW cannot be found. Downloading IPSW..."
+            Log "iOS $OSVer IPSW cannot be found."
+            echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
+            echo "* Do NOT rename the IPSW as the script will fail to detect it"
+            Log "Downloading IPSW... (Press Ctrl+C to cancel)"
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
@@ -461,7 +464,7 @@ function InstallDependencies {
         brew install make automake autoconf libtool pkg-config gcc
         
     else
-        Error "Distro not detected/supported by the install script." "See the repo README for OS versions/distros tested on"
+        Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
     Compile libimobiledevice libirecovery
