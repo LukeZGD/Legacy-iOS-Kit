@@ -499,8 +499,8 @@ function SaveExternal {
 function SavePkg {
     if [[ ! -d ../saved/pkg ]]; then
         Log "Downloading packages..."
-        curl -O https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/depends_linux.zip
-        if [[ $(shasum $1 | awk '{print $1}') != b5db6e4efdccc8a76ec592f7696494a7675a8d28 ]]; then
+        curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/depends_linux.zip -o depends_linux.zip
+        if [[ $(shasum depends_linux.zip | awk '{print $1}') != 0bec64537f3fff46933becfaaae928f47785b22a ]]; then
             Error "Verifying failed. Please run the script again" "./restore.sh InstallDependencies"
         fi
         mkdir -p ../saved/pkg
