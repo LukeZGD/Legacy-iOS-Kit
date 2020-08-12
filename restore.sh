@@ -62,17 +62,24 @@ function Main {
     SaveExternal ipwndfu
     
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
-        Log "Device in DFU mode detected."
-        read -p "[Input] Is this a 32-bit device in kDFU mode? (y/N) " DFUManual
-        if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
-            Log "Downgrading device $ProductType in kDFU mode..."
-            Mode='Downgrade'
-            SelectVersion
+        Mode='Downgrade'
+        Log "32-bit device in DFU mode detected."
+        echo "[Input] This device is in:"
+        select opt in "kDFU mode" "DFU mode (A6)" "pwnDFU mode (A5 using Arduino)"; do
+            case $opt in
+                "kDFU mode" ) Log "Downgrading $ProductType in kDFU mode..."; break;;
+                "DFU mode (A6)" ) CheckM8; break;;
+                "pwnDFU mode (A5 using Arduino)" ) kDFU iBSS; break;;
+                * ) exit;;
+            esac
+        done
+        SelectVersion
         else
             Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
         fi
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
-        Error "Non-A7 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
+        Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
+        echo "* For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
     fi
     
     echo "* Platform: $platform"
@@ -195,6 +202,13 @@ function kDFU {
     Log "Patching iBSS..."
     bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
     
+    if [[ $1 == iBSS ]]; then
+        cd resources/ipwndfu 2>/dev/null
+        Log "Booting iBSS..."
+        sudo python2 ipwndfu -l ../../tmp/pwnediBSS
+        return $?
+    fi
+    
     [[ $VersionDetect == 1 ]] && kloader='kloader_hgsp'
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
@@ -265,15 +279,20 @@ function Recovery {
 
 function CheckM8 {
     DFUManual=0
-    echo -e "\n[Log] Device in DFU mode detected."
+    [[ $A7Device == 1 ]] && echo -e "\n[Log] Device in DFU mode detected."
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo python2 ipwndfu -p
     pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
     if [ $pwnDFUDevice == 1 ]; then
-        Log "Device in pwnDFU mode detected. Running rmsigchks.py..."
-        sudo python2 rmsigchks.py
-        cd ../..
+        Log "Device in pwnDFU mode detected."
+        if [[ $A7Device == 1 ]]; then
+            Log "Running rmsigchks.py..."
+            sudo python2 rmsigchks.py
+            cd ../..
+        else
+            kDFU iBSS
+        fi
         Log "Downgrading device $ProductType in pwnDFU mode..."
         Mode='Downgrade'
         SelectVersion
