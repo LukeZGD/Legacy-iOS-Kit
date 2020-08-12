@@ -206,6 +206,7 @@ function kDFU {
         cd resources/ipwndfu 2>/dev/null
         Log "Booting iBSS..."
         sudo python2 ipwndfu -l ../../tmp/pwnediBSS
+        cd ../..
         return $?
     fi
     
