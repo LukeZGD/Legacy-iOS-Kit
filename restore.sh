@@ -74,9 +74,7 @@ function Main {
             esac
         done
         SelectVersion
-        else
-            Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
-        fi
+        
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
         echo "* For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
