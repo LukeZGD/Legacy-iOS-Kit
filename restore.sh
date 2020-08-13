@@ -35,7 +35,7 @@ function Main {
     
     DFUDevice=$(lsusb | grep -c '1227')
     RecoveryDevice=$(lsusb | grep -c '1281')
-    if [[ $1 == InstallDependencies ]] || [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] ||
+    if [[ $1 == Install ]] || [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] ||
        [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
@@ -76,8 +76,7 @@ function Main {
         SelectVersion
         
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
-        Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding"
-        echo "* For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
+        Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
     fi
     
     echo "* Platform: $platform"
@@ -519,7 +518,7 @@ function SavePkg {
         Log "Downloading packages..."
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/depends_linux.zip -o depends_linux.zip
         if [[ $(shasum depends_linux.zip | awk '{print $1}') != 0bec64537f3fff46933becfaaae928f47785b22a ]]; then
-            Error "Verifying failed. Please run the script again" "./restore.sh InstallDependencies"
+            Error "Verifying failed. Please run the script again" "./restore.sh Install"
         fi
         mkdir -p ../saved/pkg
         unzip depends_linux.zip -d ../saved/pkg
