@@ -71,12 +71,12 @@ function Main {
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep 'UniqueDeviceID' | cut -c 17-)
     fi
     [ ! $ProductType ] && ProductType=0
+    SaveExternal iOS-OTA-Downgrader-Keys
+    SaveExternal ipwndfu
     BasebandDetect
     Clean
     mkdir tmp
     chmod +x resources/tools/*
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
     
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Mode='Downgrade'
