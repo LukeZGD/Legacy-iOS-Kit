@@ -227,8 +227,8 @@ function kDFU {
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
     
-    [ ! $(which iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
-    iproxy 2222 22 &
+    [ ! $(which $iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
+    $iproxy 2222 22 &
     iproxyPID=$!
     WifiAddr=$(echo "$ideviceinfo2" | grep 'WiFiAddress' | cut -c 14-)
     WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
@@ -263,7 +263,7 @@ function Recovery {
     RecoveryDevice=$($lsusb | grep -c '1281')
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
-        ideviceenterrecovery $UniqueDeviceID >/dev/null
+        $ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
             RecoveryDevice=$($lsusb | grep -c '1281')
             sleep 2
@@ -530,7 +530,7 @@ function SaveExternal {
 function SavePkg {
     if [[ ! -d ../saved/pkg ]]; then
         Log "Downloading packages..."
-        curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/depends_linux.zip -o depends_linux.zip
+        curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends_linux.zip -o depends_linux.zip
         if [[ $(shasum depends_linux.zip | awk '{print $1}') != 0bec64537f3fff46933becfaaae928f47785b22a ]]; then
             Error "Verifying failed. Please run the script again" "./restore.sh Install"
         fi
