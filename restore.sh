@@ -21,22 +21,39 @@ function Main {
     echo "******* iOS-OTA-Downgrader *******"
     echo "   Downgrader script by LukeZGD   "
     echo
-    [[ $OSTYPE == "linux-gnu" ]] && platform='linux'
-    [[ $OSTYPE == "darwin"* ]] && platform='macos'
+    
+    if [[ $OSTYPE == "linux-gnu" ]]; then
+        platform='linux'
+        bspatch="bspatch"
+        ideviceenterrecovery="ideviceenterrecovery"
+        ideviceinfo="ideviceinfo"
+        iproxy="iproxy"
+        irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
+        lsusb="lsusb"
+        python="python2"
+    elif [[ $OSTYPE == "darwin"* ]]; then
+        platform='macos'
+        bspatch="resources/tools/bspatch_macos"
+        ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
+        ideviceinfo="resources/libimobiledevice/ideviceinfo"
+        iproxy="resources/libimobiledevice/iproxy"
+        irecovery="resources/tools/irecovery_macos"
+        lsusb="system_profiler SPUSBDataType"
+        python="python"
+    fi
+    futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_$platform"
+    futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_$platform"
+    pzb="resources/tools/pzb_$platform"
+    tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
+    
     [[ ! $platform ]] && Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
-    futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_$platform"
-    futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_$platform"
-    irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
-    pzb="resources/tools/pzb_$platform"
-    tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
-    
-    DFUDevice=$(lsusb | grep -c '1227')
-    RecoveryDevice=$(lsusb | grep -c '1281')
-    if [[ $1 == Install ]] || [ ! $(which bspatch) ] || [ ! $(which ideviceinfo) ] ||
-       [ ! $(which lsusb) ] || [ ! $(which ssh) ] || [ ! $(which python3) ]; then
+    DFUDevice=$($lsusb | grep -c '1227')
+    RecoveryDevice=$($lsusb | grep -c '1281')
+    if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
+       [ ! $(which $lsusb) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
         ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform 2>/dev/null)
@@ -44,14 +61,14 @@ function Main {
         UniqueChipID=$($irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
     else
-        ideviceinfo=$(ideviceinfo -s)
-        HWModel=$(echo "$ideviceinfo" | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
-        ProductType=$(echo "$ideviceinfo" | grep 'ProductType' | cut -c 14-)
-        [ ! $ProductType ] && ProductType=$(ideviceinfo | grep 'ProductType' | cut -c 14-)
-        ProductVer=$(echo "$ideviceinfo" | grep 'ProductVer' | cut -c 17-)
+        ideviceinfo2=$($ideviceinfo -s)
+        HWModel=$(echo "$ideviceinfo2" | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
+        ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
+        [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
+        ProductVer=$(echo "$ideviceinfo2" | grep 'ProductVer' | cut -c 17-)
         VersionDetect=$(echo $ProductVer | cut -c 1)
-        UniqueChipID=$(echo "$ideviceinfo" | grep 'UniqueChipID' | cut -c 15-)
-        UniqueDeviceID=$(echo "$ideviceinfo" | grep 'UniqueDeviceID' | cut -c 17-)
+        UniqueChipID=$(echo "$ideviceinfo2" | grep 'UniqueChipID' | cut -c 15-)
+        UniqueDeviceID=$(echo "$ideviceinfo2" | grep 'UniqueDeviceID' | cut -c 17-)
     fi
     [ ! $ProductType ] && ProductType=0
     BasebandDetect
@@ -74,7 +91,6 @@ function Main {
             esac
         done
         SelectVersion
-        
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
     fi
@@ -197,12 +213,12 @@ function kDFU {
     fi
     [[ ! -e saved/$ProductType/$iBSS.dfu ]] && Error "Failed to save iBSS. Please run the script again"
     Log "Patching iBSS..."
-    bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
+    $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
     
     if [[ $1 == iBSS ]]; then
         cd resources/ipwndfu 2>/dev/null
         Log "Booting iBSS..."
-        sudo python2 ipwndfu -l ../../tmp/pwnediBSS
+        sudo $python ipwndfu -l ../../tmp/pwnediBSS
         cd ../..
         return $?
     fi
@@ -214,7 +230,7 @@ function kDFU {
     [ ! $(which iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
     iproxy 2222 22 &
     iproxyPID=$!
-    WifiAddr=$(echo "$ideviceinfo" | grep 'WiFiAddress' | cut -c 14-)
+    WifiAddr=$(echo "$ideviceinfo2" | grep 'WiFiAddress' | cut -c 14-)
     WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
     echo '#!/bin/bash' > tmp/pwn.sh
     echo "nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
@@ -236,7 +252,7 @@ function kDFU {
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        DFUDevice=$(lsusb | grep -c '1227')
+        DFUDevice=$($lsusb | grep -c '1227')
         sleep 2
     done
     Log "Found device in DFU mode."
@@ -244,12 +260,12 @@ function kDFU {
 }
 
 function Recovery {
-    RecoveryDevice=$(lsusb | grep -c '1281')
+    RecoveryDevice=$($lsusb | grep -c '1281')
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
         ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
-            RecoveryDevice=$(lsusb | grep -c '1281')
+            RecoveryDevice=$($lsusb | grep -c '1281')
             sleep 2
         done
     fi
@@ -268,7 +284,7 @@ function Recovery {
     echo -e "\n* Release POWER and hold HOME button for 10 seconds."
     for i in {10..01}; do
         echo -n "$i "
-        DFUDevice=$(lsusb | grep -c '1227')
+        DFUDevice=$($lsusb | grep -c '1227')
         [[ $DFUDevice == 1 ]] && CheckM8
         sleep 1
     done
@@ -280,13 +296,13 @@ function CheckM8 {
     [[ $A7Device == 1 ]] && echo -e "\n[Log] Device in DFU mode detected."
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
-    sudo python2 ipwndfu -p
-    pwnDFUDevice=$(sudo lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
+    sudo $python ipwndfu -p
+    pwnDFUDevice=$(sudo $lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
     if [ $pwnDFUDevice == 1 ]; then
         Log "Device in pwnDFU mode detected."
         if [[ $A7Device == 1 ]]; then
             Log "Running rmsigchks.py..."
-            sudo python2 rmsigchks.py
+            sudo $python rmsigchks.py
             cd ../..
         else
             kDFU iBSS
@@ -338,8 +354,8 @@ function Downgrade {
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Preparing custom IPSW..."
             cp $IPSW/Firmware/all_flash/$SEP .
-            bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
-            bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+            $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+            $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
             cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
             cd $IPSW
             zip ../$IPSWCustom.ipsw -rq0 *
@@ -355,7 +371,7 @@ function Downgrade {
         $irecovery -f $iBSS.im4p
         $irecovery -f $iBEC.im4p
         sleep 5
-        RecoveryDevice=$(lsusb | grep -c '1281')
+        RecoveryDevice=$($lsusb | grep -c '1281')
         if [[ $RecoveryDevice != 1 ]]; then
             echo "[Error] Failed to detect device in pwnREC mode."
             echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
@@ -363,7 +379,7 @@ function Downgrade {
             read -s
             Log "Finding device in pwnREC mode..."
             while [[ $RecoveryDevice != 1 ]]; do
-                RecoveryDevice=$(lsusb | grep -c '1281')
+                RecoveryDevice=$($lsusb | grep -c '1281')
                 sleep 2
             done
         fi
@@ -373,7 +389,7 @@ function Downgrade {
     
     Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
-    sudo bash -c "python3 -m http.server 80 &"
+    sudo bash -c "$python -m SimpleHTTPServer 80 &"
     cd ..
     
     if [ $Baseband == 0 ]; then
@@ -420,7 +436,7 @@ function Downgrade {
     echo
     Log "futurerestore done!"    
     Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
-    ps aux | awk '/python3/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     Log "Downgrade script done!"
 }
 
@@ -433,14 +449,14 @@ function InstallDependencies {
     Log "Installing dependencies..."
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
         # Arch Linux
-        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 python unzip usbmuxd usbutils
+        sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
     elif [[ $UBUNTU_CODENAME == "focal" ]]; then
         # Ubuntu Focal
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libusbmuxd-tools libzip5 openssh-client python2 python3 usbmuxd usbutils
+        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libusbmuxd-tools libzip5 openssh-client python2 usbmuxd usbutils
         SavePkg
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
@@ -451,7 +467,7 @@ function InstallDependencies {
         sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         
     elif [[ $ID == "fedora" ]]; then
-        sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 python readline-devel
+        sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 readline-devel
         SavePkg
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
         sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
@@ -462,22 +478,20 @@ function InstallDependencies {
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
-        if [[ ! $(which brew) ]]; then
-            Log "Homebrew is not detected/installed, installing Homebrew..."
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-        fi
-        brew install --HEAD usbmuxd
-        brew install --HEAD libimobiledevice
-        brew install --HEAD libusbmuxd
-        brew install libzip lsusb python3
-        brew install make automake autoconf libtool pkg-config gcc
+        curl -L https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip -o libimobiledevice.zip
+        rm -rf ../resources/libimobiledevice
+        mkdir ../resources/libimobiledevice
+        unzip libimobiledevice.zip -d ../resources/libimobiledevice
+        chmod +x ../resources/libimobiledevice/*
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
-    Compile libimobiledevice libirecovery
-    [[ $platform == linux ]] && sudo cp ../resources/lib/* /usr/local/lib
+    if [[ $platform == linux ]]; then
+        Compile libimobiledevice libirecovery
+        sudo cp ../resources/lib/* /usr/local/lib
+    fi
     
     Log "Install script done! Please run the script again to proceed"
     exit
