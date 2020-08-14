@@ -227,7 +227,7 @@ function kDFU {
     [[ $VersionDetect == 5 ]] && kloader='kloader5'
     [[ ! $kloader ]] && kloader='kloader'
     
-    [ ! $(which $iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh InstallDependencies"
+    [ ! $(which $iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh Install"
     $iproxy 2222 22 &
     iproxyPID=$!
     WifiAddr=$(echo "$ideviceinfo2" | grep 'WiFiAddress' | cut -c 14-)
@@ -478,8 +478,11 @@ function InstallDependencies {
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
-        xcode-select --install
+        [ ! $(which git) ] && xcode-select --install
         curl -L https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip -o libimobiledevice.zip
+        if [[ $(shasum libimobiledevice.zip | awk '{print $1}') != 2812e01fc7c09b5980b46b97236b2981dbec7307 ]]; then
+            Error "Verifying failed. Please run the script again" "./restore.sh Install"
+        fi
         rm -rf ../resources/libimobiledevice
         mkdir ../resources/libimobiledevice
         unzip libimobiledevice.zip -d ../resources/libimobiledevice
