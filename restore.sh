@@ -45,7 +45,7 @@ function Main {
         ideviceinfo="resources/libimobiledevice/ideviceinfo"
         iproxy="resources/libimobiledevice/iproxy"
         irecovery="resources/tools/irecovery_macos"
-        lsusb="system_profiler SPUSBDataType"
+        lsusb="system_profiler SPUSBDataType 2>/dev/null"
         python="python"
         futurerestore1="resources/tools/futurerestore1_macos"
         futurerestore2="resources/tools/futurerestore2_macos"
