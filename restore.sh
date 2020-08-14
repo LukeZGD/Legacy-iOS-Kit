@@ -53,7 +53,7 @@ function Main {
     DFUDevice=$($lsusb | grep -c '1227')
     RecoveryDevice=$($lsusb | grep -c '1281')
     if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
-       [ ! $(which $lsusb) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
+       [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
         ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform 2>/dev/null)
@@ -478,6 +478,7 @@ function InstallDependencies {
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
+        xcode-select --install
         curl -L https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip -o libimobiledevice.zip
         rm -rf ../resources/libimobiledevice
         mkdir ../resources/libimobiledevice
