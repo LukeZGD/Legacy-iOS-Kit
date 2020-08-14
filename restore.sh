@@ -31,6 +31,13 @@ function Main {
         irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
         lsusb="lsusb"
         python="python2"
+        futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_linux"
+        futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_linux"
+        tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_linux"
+        if [[ $UBUNTU_CODENAME == "bionic" ]]; then
+            futurerestore2="${futurerestore2}_bionic"
+            tsschecker="${tsschecker}_bionic"
+        fi
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform='macos'
         bspatch="resources/tools/bspatch_macos"
@@ -40,11 +47,10 @@ function Main {
         irecovery="resources/tools/irecovery_macos"
         lsusb="system_profiler SPUSBDataType"
         python="python"
+        futurerestore1="resources/tools/futurerestore1_macos"
+        futurerestore2="resources/tools/futurerestore2_macos"
     fi
-    futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_$platform"
-    futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_$platform"
     pzb="resources/tools/pzb_$platform"
-    tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_$platform"
     
     [[ ! $platform ]] && Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
@@ -452,19 +458,27 @@ function InstallDependencies {
         sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
         sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
         
-    elif [[ $UBUNTU_CODENAME == "focal" ]]; then
-        # Ubuntu Focal
+    elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]]; then
+        # Ubuntu Bionic, Focal
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd6 libusbmuxd-tools libzip5 openssh-client python2 usbmuxd usbutils
+        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libglib2.0-dev libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
         SavePkg
+        if [[ $UBUNTU_CODENAME == "bionic" ]]; then
+            sudo apt install -y libzip4 python
+            sudo dpkg -i libusbmuxd6.deb libpng12_bionic.deb libzip5.deb
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 5cb8b3c1c1608a72f369331827ab78b317e30ddb
+            unzip tools_linux_bionic.zip -d ../resources/tools
+        else
+            sudo apt install -y libusbmuxd6 libzip5 python2
+            sudo dpkg -i libssl1.0.0.deb libpng12.deb libzip4.deb
+            sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
+            sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
+            sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
+        fi
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
         sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
-        sudo dpkg -i libpng12.deb libssl1.0.0.deb libzip4.deb
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
-        sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
         
     elif [[ $ID == "fedora" ]]; then
         sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 readline-devel
@@ -479,10 +493,7 @@ function InstallDependencies {
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
         [ ! $(which git) ] && xcode-select --install
-        curl -L https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip -o libimobiledevice.zip
-        if [[ $(shasum libimobiledevice.zip | awk '{print $1}') != 2812e01fc7c09b5980b46b97236b2981dbec7307 ]]; then
-            Error "Verifying failed. Please run the script again" "./restore.sh Install"
-        fi
+        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
         rm -rf ../resources/libimobiledevice
         mkdir ../resources/libimobiledevice
         unzip libimobiledevice.zip -d ../resources/libimobiledevice
@@ -531,13 +542,17 @@ function SaveExternal {
     cd ..
 }
 
+function SaveFile {
+    curl -L $1 -o $2
+    if [[ $(shasum $2 | awk '{print $1}') != $3 ]]; then
+        Error "Verifying failed. Please run the script again" "./restore.sh Install"
+    fi
+}
+
 function SavePkg {
     if [[ ! -d ../saved/pkg ]]; then
         Log "Downloading packages..."
-        curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends_linux.zip -o depends_linux.zip
-        if [[ $(shasum depends_linux.zip | awk '{print $1}') != 0bec64537f3fff46933becfaaae928f47785b22a ]]; then
-            Error "Verifying failed. Please run the script again" "./restore.sh Install"
-        fi
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends_linux.zip depends_linux.zip c61825bdb41e34ee995ef183c7aca8183d76f8eb
         mkdir -p ../saved/pkg
         unzip depends_linux.zip -d ../saved/pkg
     fi

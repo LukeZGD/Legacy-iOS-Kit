@@ -47,6 +47,7 @@
   - This script can work on virtual machines, but I won't provide support for them
 
 ## Supported OS versions/distros:
+- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/) and Bionic-based distros
 - [Ubuntu 20.04](http://releases.ubuntu.com/focal/) and Focal-based distros like [Linux Mint 20](https://www.linuxmint.com/)
 - [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
 - [Fedora 32](https://getfedora.org/)
