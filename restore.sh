@@ -85,14 +85,17 @@ function Main {
     chmod +x resources/tools/*
     
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
+        DFUManual=1
         Mode='Downgrade'
         Log "32-bit device in DFU mode detected."
+        echo "* Advanced options menu - use at your own risk"
+        echo "* Warning: A6 devices won't have activation error workaround yet when using this method"
         echo "[Input] This device is in:"
-        select opt in "kDFU mode" "DFU mode (A6)" "pwnDFU mode (A5 using Arduino)"; do
+        select opt in "kDFU mode" "DFU mode (ipwndfu A6)" "pwnDFU mode (checkm8 A5)" "(Any other key to exit)"; do
             case $opt in
                 "kDFU mode" ) Log "Downgrading $ProductType in kDFU mode..."; break;;
-                "DFU mode (A6)" ) CheckM8; break;;
-                "pwnDFU mode (A5 using Arduino)" ) kDFU iBSS; break;;
+                "DFU mode (ipwndfu A6)" ) CheckM8; break;;
+                "pwnDFU mode (checkm8 A5)" ) kDFU iBSS; break;;
                 * ) exit;;
             esac
         done
@@ -298,7 +301,7 @@ function Recovery {
 }
 
 function CheckM8 {
-    DFUManual=0
+    DFUManual=1
     [[ $A7Device == 1 ]] && echo -e "\n[Log] Device in DFU mode detected."
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
