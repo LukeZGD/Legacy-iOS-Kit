@@ -31,9 +31,9 @@ function Main {
         irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
         lsusb="lsusb"
         python="python2"
-        futurerestore1="sudo LD_PRELOAD=libcurl.so.3 resources/tools/futurerestore1_linux"
-        futurerestore2="sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/futurerestore2_linux"
-        tsschecker="env LD_LIBRARY_PATH=/usr/local/lib resources/tools/tsschecker_linux"
+        futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
+        futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
+        tsschecker="env LD_LIBRARY_PATH=resources/lib resources/tools/tsschecker_linux"
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             futurerestore2="${futurerestore2}_bionic"
             tsschecker="${tsschecker}_bionic"
@@ -62,7 +62,7 @@ function Main {
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        ProductType=$(sudo LD_LIBRARY_PATH=/usr/local/lib resources/tools/igetnonce_$platform 2>/dev/null)
+        ProductType=$(sudo LD_LIBRARY_PATH=resources/lib resources/tools/igetnonce_$platform 2>/dev/null)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$($irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
@@ -459,10 +459,11 @@ function InstallDependencies {
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
         # Arch Linux
         sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
-        sudo ln -sf /usr/lib/libzip.so.5 /usr/lib/libzip.so.4
+        ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
+        ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
         
     elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]]; then
-        # Ubuntu Bionic, Focal
+        # Ubuntu Bionic and Focal
         sudo add-apt-repository universe
         sudo apt update
         sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libglib2.0-dev libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
@@ -470,28 +471,29 @@ function InstallDependencies {
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             sudo apt install -y libzip4 python
             sudo dpkg -i libusbmuxd6.deb libpng12_bionic.deb libzip5.deb
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 5cb8b3c1c1608a72f369331827ab78b317e30ddb
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 685b422cae3ae3d15d6deda397d38ccc8fbcd5b2
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
             sudo apt install -y libusbmuxd6 libzip5 python2
             sudo dpkg -i libssl1.0.0.deb libpng12.deb libzip4.deb
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
+            ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
+            ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 ../resources/lib/libplist-2.0.so.3
+            ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
         fi
         ar x libcurl3.deb data.tar.xz
         tar xf data.tar.xz
-        sudo cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* /usr/lib/libcurl.so.3
+        cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* ../resources/lib/libcurl.so.3
         
     elif [[ $ID == "fedora" ]]; then
+        # Fedora 32
         sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 readline-devel
         SavePkg
         rpm2cpio openssl-1.0.0.rpm | cpio -idmv
-        sudo cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 /usr/lib64
-        sudo ln -sf /usr/lib64/libimobiledevice.so.6 /usr/local/lib/libimobiledevice-1.0.so.6
-        sudo ln -sf /usr/lib64/libplist.so.3 /usr/local/lib/libplist-2.0.so.3
-        sudo ln -sf /usr/lib64/libusbmuxd.so.6 /usr/local/lib/libusbmuxd-2.0.so.6
-        sudo ln -sf /usr/lib64/libzip.so.5 /usr/lib64/libzip.so.4
+        cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 ../resources/lib
+        ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
+        ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
+        ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+        ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
@@ -505,11 +507,7 @@ function InstallDependencies {
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
-    
-    if [[ $platform == linux ]]; then
-        Compile libimobiledevice libirecovery
-        sudo cp ../resources/lib/* /usr/local/lib
-    fi
+    [[ $platform == linux ]] && Compile libimobiledevice libirecovery
     
     Log "Install script done! Please run the script again to proceed"
     exit
