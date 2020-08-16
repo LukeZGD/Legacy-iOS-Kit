@@ -58,10 +58,10 @@
 - bspatch
 - [igetnonce](https://github.com/LukeZGD/igetnonce)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
-- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) utilities
+- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) for macOS
 - python2
-- python3
-- [tsschecker](https://github.com/tihmstar/s0uthwest/tsschecker)
+- [tsschecker](https://github.com/tihmstar/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 249 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
 - [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore)
