@@ -50,7 +50,7 @@ function Main {
         futurerestore1="resources/tools/futurerestore1_macos"
         futurerestore2="resources/tools/futurerestore2_macos"
     fi
-    pzb="resources/tools/pzb_$platform"
+    partialzip="resources/tools/partialzip_$platform"
     
     [[ ! $platform ]] && Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
@@ -216,7 +216,7 @@ function SaveOTABlobs {
 function kDFU {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
-        $pzb -g Firmware/dfu/$iBSS.dfu -o $iBSS.dfu $(cat $Firmware/$iBSSBuildVer/url)
+        $partialzip $(cat $Firmware/$iBSSBuildVer/url) Firmware/dfu/$iBSS.dfu $iBSS.dfu
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
@@ -414,8 +414,8 @@ function Downgrade {
             cp $IPSW/Firmware/$Baseband .
         elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
-            $pzb -g Firmware/$Baseband -o $Baseband $BasebandURL
-            $pzb -g BuildManifest.plist -o BuildManifest.plist $BasebandURL
+            $partialzip $BasebandURL Firmware/$Baseband $Baseband 
+            $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
             mkdir -p saved/$ProductType 2>/dev/null
             cp $Baseband BuildManifest.plist saved/$ProductType
         else
@@ -497,7 +497,7 @@ function InstallDependencies {
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
-        [ ! $(which git) ] && xcode-select --install
+        xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
         rm -rf ../resources/libimobiledevice
         mkdir ../resources/libimobiledevice
