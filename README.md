@@ -34,9 +34,10 @@
 - **You do NOT need blobs to use this**, the script will get them for you
 - If the restore process does not work for you, try switching USB ports and/or cables
 - This script will verify the IPSW SHA1sum before restoring
+- For users having issues related to missing libraries or tools, re-install dependencies with `./restore.sh Install`
 - For A7 devices:
   - Do not use USB-C to lightning cables as this can prevent a successful restore
-  - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times
+  - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (for Linux users I recommend trying in a live USB)
   - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
 - For 32-bit devices:
   - This script does not modify the IPSW
@@ -59,7 +60,7 @@
 - [igetnonce](https://github.com/LukeZGD/igetnonce)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
-- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) for macOS
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - python2
 - [tsschecker](https://github.com/tihmstar/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)

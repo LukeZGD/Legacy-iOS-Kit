@@ -508,7 +508,10 @@ function InstallDependencies {
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
-    [[ $platform == linux ]] && Compile libimobiledevice libirecovery
+    if [[ $platform == linux ]]; then
+        Compile libimobiledevice libirecovery
+        ln -sf /usr/local/lib/libirecovery-1.0.so.3 ../resources/lib/libirecovery-1.0.so.3
+    fi
     
     Log "Install script done! Please run the script again to proceed"
     exit
