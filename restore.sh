@@ -49,6 +49,7 @@ function Main {
         python="python"
         futurerestore1="resources/tools/futurerestore1_macos"
         futurerestore2="resources/tools/futurerestore2_macos"
+        tsschecker="resources/tools/tsschecker_macos"
     fi
     partialzip="resources/tools/partialzip_$platform"
     
