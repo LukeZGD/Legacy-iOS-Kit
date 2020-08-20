@@ -5,14 +5,27 @@
 
 ## Supported devices:
 
-- **iOS 10.3.3**: All A7 devices are supported **except iPad4,6 and all iPad mini 3 models**
-- **iOS 8.4.1**: All A5, A5X, A6, and A6X devices are supported **except iPhone5,3 and 5,4 (iPhone 5C)**
-- **iOS 6.1.3**: Only iPhone 4S and iPad 2 devices are supported **except iPad2,4 (iPad 2 Rev A)**
+- **iOS 10.3.3** - A7 devices:
+  - iPhone 5S
+  - iPad Air
+  - iPad mini 2 **except iPad4,6**
+  - **iPad mini 3 is NOT supported**
+- **iOS 8.4.1** - 32-bit devices:
+  - iPhone 4S
+  - iPhone 5
+  - iPad 2
+  - iPad 3
+  - iPad mini 1
+  - iPod 5th gen
+  - **iPhone 5C is NOT Supported**
+- **iOS 6.1.3**:
+  - iPhone 4S
+  - iPad 2 **except iPad2,4**
 
 ## Prerequisites:
-- **A supported device:**
-  - A 32-bit iOS device (any version, **jailbreak needed**)
-  - An A7 device (any version, jailbreak not needed)
+- **A supported device in any iOS version:**
+  - A 32-bit iOS device (**jailbreak needed** for kloader, checkm8 A5 or ipwndfu can also be used in DFU advanced menu)
+  - An A7 device (jailbreak not needed)
 - An IPSW for the version you want to downgrade to (the script can also download it for you)
 - A **macOS** or a **64-bit Linux install/live USB**
   - See supported Linux distros below
@@ -62,7 +75,7 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - python2
-- [tsschecker](https://github.com/tihmstar/tihmstar/tsschecker)
+- [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 249 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
 - [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore)
