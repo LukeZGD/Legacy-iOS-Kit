@@ -171,26 +171,7 @@ function Action {
     elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 1 ]]; then
         [[ $DFUDevice == 1 ]] && CheckM8 || Recovery
     fi
-    
-    if [ $ProductType == iPod5,1 ]; then
-        iBSS="${HWModel}ap"
-        iBSSBuildVer='10B329'
-    elif [ $ProductType == iPad3,1 ]; then
-        iBSS="${HWModel}ap"
-        iBSSBuildVer='11D257'
-    elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        iBSS="iphone6"
-    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
-        iBSS="ipad4"
-    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
-        iBSS="ipad4b"
-    else
-        iBSS="$HWModel"
-        iBSSBuildVer='12H321'
-    fi
-    iBEC="iBEC.$iBSS.RELEASE"
-    iBSS="iBSS.$iBSS.RELEASE"
-    
+
     [[ $Mode == 'Downgrade' ]] && Downgrade
     [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs
     [[ $Mode == 'kDFU' ]] && kDFU
@@ -605,6 +586,7 @@ function BasebandDetect {
          [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
         Error "Your device $ProductType is not supported."
     fi
+    
     [ $ProductType == iPad2,1 ] && HWModel=k93
     [ $ProductType == iPad2,2 ] && HWModel=k94
     [ $ProductType == iPad2,3 ] && HWModel=k95
@@ -631,6 +613,25 @@ function BasebandDetect {
     [ $ProductType == iPhone6,1 ] && HWModel=n51
     [ $ProductType == iPhone6,2 ] && HWModel=n53
     [ $ProductType == iPod5,1 ] && HWModel=n78
+    
+    if [ $ProductType == iPod5,1 ]; then
+        iBSS="${HWModel}ap"
+        iBSSBuildVer='10B329'
+    elif [ $ProductType == iPad3,1 ]; then
+        iBSS="${HWModel}ap"
+        iBSSBuildVer='11D257'
+    elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
+        iBSS="iphone6"
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
+        iBSS="ipad4"
+    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
+        iBSS="ipad4b"
+    else
+        iBSS="$HWModel"
+        iBSSBuildVer='12H321'
+    fi
+    iBEC="iBEC.$iBSS.RELEASE"
+    iBSS="iBSS.$iBSS.RELEASE"
     SEP=sep-firmware.$HWModel.RELEASE.im4p
 }
 
