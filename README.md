@@ -1,7 +1,7 @@
 # iOS-OTA-Downgrader
 ### (formerly 32bit-OTA-Downgrader)
 ### Downgrade/restore iOS devices to signed OTA firmwares
-- **Please see the "Other notes" section below to serve as answers for FAQs**
+- **Please see the "Other notes" section below to serve as answers/solutions for FAQs and issues**
 
 ## Supported devices:
 

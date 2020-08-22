@@ -69,7 +69,6 @@ function Main {
         ProductVer='Unknown'
     else
         ideviceinfo2=$($ideviceinfo -s)
-        HWModel=$(echo "$ideviceinfo2" | grep 'HardwareModel' | cut -c 16- | tr '[:upper:]' '[:lower:]' | sed 's/.\{2\}$//')
         ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
         ProductVer=$(echo "$ideviceinfo2" | grep 'ProductVer' | cut -c 17-)
@@ -85,6 +84,13 @@ function Main {
     mkdir tmp
     chmod +x resources/tools/*
     
+    echo "* Platform: $platform"
+    echo "* HardwareModel: ${HWModel}ap"
+    echo "* ProductType: $ProductType"
+    echo "* ProductVersion: $ProductVer"
+    echo "* UniqueChipID (ECID): $UniqueChipID"
+    echo
+    
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         DFUManual=1
         Mode='Downgrade'
@@ -94,23 +100,18 @@ function Main {
         echo "[Input] This device is in:"
         select opt in "kDFU mode" "DFU mode (ipwndfu A6)" "pwnDFU mode (checkm8 A5)" "(Any other key to exit)"; do
             case $opt in
-                "kDFU mode" ) Log "Downgrading $ProductType in kDFU mode..."; break;;
+                "kDFU mode" ) break;;
                 "DFU mode (ipwndfu A6)" ) CheckM8; break;;
                 "pwnDFU mode (checkm8 A5)" ) kDFU iBSS; break;;
                 * ) exit;;
             esac
         done
+        Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
         SelectVersion
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
     fi
     
-    echo "* Platform: $platform"
-    echo "* HardwareModel: ${HWModel}ap"
-    echo "* ProductType: $ProductType"
-    echo "* ProductVersion: $ProductVer"
-    echo "* UniqueChipID (ECID): $UniqueChipID"
-    echo
     if [[ $1 ]]; then
         Mode="$1"
     else
@@ -604,13 +605,32 @@ function BasebandDetect {
          [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
         Error "Your device $ProductType is not supported."
     fi
-    [ $ProductType == iPhone6,1 ] && HWModel=n51
-    [ $ProductType == iPhone6,2 ] && HWModel=n53
+    [ $ProductType == iPad2,1 ] && HWModel=k93
+    [ $ProductType == iPad2,2 ] && HWModel=k94
+    [ $ProductType == iPad2,3 ] && HWModel=k95
+    [ $ProductType == iPad2,4 ] && HWModel=k93a
+    [ $ProductType == iPad2,5 ] && HWModel=p105
+    [ $ProductType == iPad2,6 ] && HWModel=p106
+    [ $ProductType == iPad2,7 ] && HWModel=p107
+    [ $ProductType == iPad3,1 ] && HWModel=j1
+    [ $ProductType == iPad3,2 ] && HWModel=j2
+    [ $ProductType == iPad3,3 ] && HWModel=j2a
+    [ $ProductType == iPad3,4 ] && HWModel=p101
+    [ $ProductType == iPad3,5 ] && HWModel=p102
+    [ $ProductType == iPad3,6 ] && HWModel=p103
     [ $ProductType == iPad4,1 ] && HWModel=j71
     [ $ProductType == iPad4,2 ] && HWModel=j72
     [ $ProductType == iPad4,3 ] && HWModel=j73
     [ $ProductType == iPad4,4 ] && HWModel=j85
     [ $ProductType == iPad4,5 ] && HWModel=j86
+    [ $ProductType == iPhone4,1 ] && HWModel=n94
+    [ $ProductType == iPhone5,1 ] && HWModel=n41
+    [ $ProductType == iPhone5,2 ] && HWModel=n42
+    [ $ProductType == iPhone5,3 ] && HWModel=n48
+    [ $ProductType == iPhone5,4 ] && HWModel=n49
+    [ $ProductType == iPhone6,1 ] && HWModel=n51
+    [ $ProductType == iPhone6,2 ] && HWModel=n53
+    [ $ProductType == iPod5,1 ] && HWModel=n78
     SEP=sep-firmware.$HWModel.RELEASE.im4p
 }
 
