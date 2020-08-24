@@ -185,7 +185,7 @@ function SaveOTABlobs {
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
-        SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-*.shsh)
+        SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-${APNonce}.shsh)
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
