@@ -98,7 +98,7 @@ function Main {
     echo "* UniqueChipID (ECID): $UniqueChipID"
     echo
     
-    if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
+    if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]] && [[ $platform != win ]]; then
         DFUManual=1
         Mode='Downgrade'
         Log "32-bit device in DFU mode detected."
@@ -117,6 +117,8 @@ function Main {
         SelectVersion
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
+    else
+        Error "Please put the device in normal mode and jailbroken before proceeding"
     fi
     
     if [[ $1 ]]; then
@@ -494,7 +496,7 @@ function InstallDependencies {
         # Windows MSYS2 MinGW64
         pacman -Sy --noconfirm --needed mingw-w64-x86_64-python openssh unzip
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-win-x64.zip libimobiledevice.zip 6d23f7d28e2212d9acc0723fe4f3fdec8e2ddeb8
-        if [[ ! $(ls resources/tools/*win) ]]; then
+        if [[ ! $(ls ../resources/tools/*win) ]]; then
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/tools_win.zip tools_win.zip 92dd493c2128ad81255180b2536445dc1643ed55
             unzip tools_win.zip -d ../resources/tools
         fi
