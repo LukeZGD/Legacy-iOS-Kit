@@ -38,27 +38,34 @@ function Main {
             futurerestore2="${futurerestore2}_bionic"
             tsschecker="${tsschecker}_bionic"
         fi
-    elif [[ $OSTYPE == "darwin"* ]]; then
-        platform='macos'
-        bspatch="resources/tools/bspatch_macos"
-        ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
-        ideviceinfo="resources/libimobiledevice/ideviceinfo"
-        iproxy="resources/libimobiledevice/iproxy"
-        irecovery="resources/tools/irecovery_macos"
-        lsusb="system_profiler SPUSBDataType 2>/dev/null"
+    else
+        if [[ $OSTYPE == "darwin"* ]]; then
+            platform='macos'
+            lsusb="system_profiler SPUSBDataType 2>/dev/null"
+        elif [[ $(uname -s) == "MINGW64_NT"* ]]; then
+            platform='win'
+            lsusb="wmic path Win32_USBControllerDevice get Dependent"
+            ping="ping -n 1"
+        fi
+        bspatch="resources/tools/bspatch_$platform"
+        ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
+        ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
+        iproxy="resources/libimobiledevice_$platform/iproxy"
+        irecovery="resources/libimobiledevice_$platform/irecovery"
         python="python"
-        futurerestore1="resources/tools/futurerestore1_macos"
-        futurerestore2="resources/tools/futurerestore2_macos"
-        tsschecker="resources/tools/tsschecker_macos"
+        futurerestore1="resources/tools/futurerestore1_$platform"
+        futurerestore2="resources/tools/futurerestore2_$platform"
+        tsschecker="resources/tools/tsschecker_$platform"
     fi
     partialzip="resources/tools/partialzip_$platform"
+    [[ ! $ping ]] && ping="ping -c1"
     
-    [[ ! $platform ]] && Error "OSTYPE unknown/not supported." "Supports Linux and macOS only"
-    [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
+    [[ ! $platform ]] && Error "Platform unknown/not supported."
+    [[ ! $($ping google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
-    DFUDevice=$($lsusb | grep -c '1227')
-    RecoveryDevice=$($lsusb | grep -c '1281')
+    DFUDevice=$($lsusb | grep -ci '1227')
+    RecoveryDevice=$($lsusb | grep -ci '1281')
     if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
@@ -244,7 +251,7 @@ function kDFU {
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        DFUDevice=$($lsusb | grep -c '1227')
+        DFUDevice=$($lsusb | grep -ci '1227')
         sleep 2
     done
     Log "Found device in DFU mode."
@@ -252,12 +259,12 @@ function kDFU {
 }
 
 function Recovery {
-    RecoveryDevice=$($lsusb | grep -c '1281')
+    RecoveryDevice=$($lsusb | grep -ci '1281')
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
         $ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
-            RecoveryDevice=$($lsusb | grep -c '1281')
+            RecoveryDevice=$($lsusb | grep -ci '1281')
             sleep 2
         done
     fi
@@ -276,7 +283,7 @@ function Recovery {
     echo -e "\n* Release POWER and hold HOME button for 10 seconds."
     for i in {10..01}; do
         echo -n "$i "
-        DFUDevice=$($lsusb | grep -c '1227')
+        DFUDevice=$($lsusb | grep -ci '1227')
         [[ $DFUDevice == 1 ]] && CheckM8
         sleep 1
     done
@@ -289,7 +296,7 @@ function CheckM8 {
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo $python ipwndfu -p
-    pwnDFUDevice=$(sudo $lsusb -v -d 05ac:1227 2>/dev/null | grep -c 'checkm8')
+    pwnDFUDevice=$(sudo $lsusb -v -d 05ac:1227 2>/dev/null | grep -ci 'checkm8')
     if [ $pwnDFUDevice == 1 ]; then
         Log "Device in pwnDFU mode detected."
         if [[ $A7Device == 1 ]]; then
@@ -363,7 +370,7 @@ function Downgrade {
         $irecovery -f $iBSS.im4p
         $irecovery -f $iBEC.im4p
         sleep 5
-        RecoveryDevice=$($lsusb | grep -c '1281')
+        RecoveryDevice=$($lsusb | grep -ci '1281')
         if [[ $RecoveryDevice != 1 ]]; then
             echo "[Error] Failed to detect device in pwnREC mode."
             echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
@@ -371,7 +378,7 @@ function Downgrade {
             read -s
             Log "Finding device in pwnREC mode..."
             while [[ $RecoveryDevice != 1 ]]; do
-                RecoveryDevice=$($lsusb | grep -c '1281')
+                RecoveryDevice=$($lsusb | grep -ci '1281')
                 sleep 2
             done
         fi
@@ -381,7 +388,7 @@ function Downgrade {
     
     Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
     cd resources
-    sudo bash -c "$python -m SimpleHTTPServer 80 &"
+    [[ $platform != win ]] && sudo bash -c "$python -m SimpleHTTPServer 80 &" || python3 -m http.server --bind 127.0.0.1 80 &
     cd ..
     
     if [ $Baseband == 0 ]; then
@@ -482,17 +489,29 @@ function InstallDependencies {
         # macOS
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
-        rm -rf ../resources/libimobiledevice
-        mkdir ../resources/libimobiledevice
-        unzip libimobiledevice.zip -d ../resources/libimobiledevice
-        chmod +x ../resources/libimobiledevice/*
+        
+    elif [[ $platform == "win" ]]; then
+        # Windows MSYS2 MinGW64
+        pacman -Sy --noconfirm --needed mingw-w64-x86_64-python openssh unzip
+        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-win-x64.zip libimobiledevice.zip 6d23f7d28e2212d9acc0723fe4f3fdec8e2ddeb8
+        if [[ ! $(ls resources/tools/*win) ]]; then
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader/releases/download/tools/tools_win.zip tools_win.zip 92dd493c2128ad81255180b2536445dc1643ed55
+            unzip tools_win.zip -d ../resources/tools
+        fi
+        ln -sf /mingw64/bin/libplist-2.0.dll /mingw64/bin/libplist.dll
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
+    
     if [[ $platform == linux ]]; then
         Compile libimobiledevice libirecovery
         ln -sf /usr/local/lib/libirecovery-1.0.so.3 ../resources/lib/libirecovery-1.0.so.3
+    else
+        rm -rf ../resources/libimobiledevice_$platform
+        mkdir ../resources/libimobiledevice_$platform
+        unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
+        chmod +x ../resources/libimobiledevice_$platform/*
     fi
     
     Log "Install script done! Please run the script again to proceed"
@@ -633,6 +652,10 @@ function BasebandDetect {
     iBEC="iBEC.$iBSS.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
     SEP=sep-firmware.$HWModel.RELEASE.im4p
+    
+    if [[ $platform == win ]] && [[ $A7Device == 1 ]]; then
+        Error "A7 devices are not supported on Windows." "Supports Linux and macOS only"
+    fi
 }
 
 Main $1
