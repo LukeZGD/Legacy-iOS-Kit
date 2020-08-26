@@ -117,8 +117,6 @@ function Main {
         SelectVersion
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
-    else
-        Error "Please put the device in normal mode and jailbroken before proceeding"
     fi
     
     if [[ $1 ]]; then
