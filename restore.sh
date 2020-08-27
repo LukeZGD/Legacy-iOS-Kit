@@ -27,6 +27,7 @@ function Main {
         bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
+        igetnonce="sudo LD_LIBRARY_PATH=resources/lib resources/tools/igetnonce_linux"
         iproxy="iproxy"
         irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
         lsusb="lsusb"
@@ -50,6 +51,7 @@ function Main {
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
+        igetnonce="resources/tools/igetnonce_$platform"
         iproxy="resources/libimobiledevice_$platform/iproxy"
         irecovery="resources/libimobiledevice_$platform/irecovery"
         python="python"
@@ -70,7 +72,7 @@ function Main {
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        ProductType=$(sudo LD_LIBRARY_PATH=resources/lib resources/tools/igetnonce_$platform 2>/dev/null)
+        ProductType=$($igetnonce 2>/dev/null)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$($irecovery -q | grep 'ECID' | cut -c 7-)
         ProductVer='Unknown'
@@ -239,7 +241,7 @@ function kDFU {
     Log "Copying stuff to device via SSH..."
     echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
-    [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please check your ~/.ssh/known_hosts file and try again"
+    [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
     Log "Entering kDFU mode..."
     if [[ $VersionDetect == 1 ]]; then
         ssh -p 2222 root@127.0.0.1 "/pwn.sh; /$kloader /pwnediBSS" &
@@ -599,7 +601,7 @@ function BasebandDetect {
     elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
         A7Device=1
     elif [ $ProductType == 0 ]; then
-        Error "Please put the device in normal mode (and jailbroken for 32-bit) before proceeding." "Recovery or DFU mode is also applicable for A7 devices"
+        Error "No device detected. Please put the device in normal mode (and jailbroken for 32-bit) before proceeding" "Recovery or DFU mode is also applicable for A7 devices"
     elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
          [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ] &&
          [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
