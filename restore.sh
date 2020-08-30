@@ -2,7 +2,7 @@
 trap 'Clean; exit' INT TERM EXIT
 
 function Clean {
-    rm -rf iP*/ tmp/ $(ls *_${ProductType}_${OSVer}-*.shsh2 2>/dev/null) $(ls *_${ProductType}_${OSVer}-*.shsh 2>/dev/null) $(ls *.im4p 2>/dev/null) $(ls *.bbfw 2>/dev/null) BuildManifest.plist
+    rm -rf iP*/ tmp/ ${UniqueChipID}_${ProductType}_${OSVer}-*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-*.shsh *.im4p *.bbfw BuildManifest.plist
 }
 
 function Error {
@@ -74,7 +74,7 @@ function Main {
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
         ProductType=$($igetnonce 2>/dev/null)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-        UniqueChipID=$($irecovery -q | grep 'ECID' | cut -c 7-)
+        UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
         ProductVer='Unknown'
     else
         ideviceinfo2=$($ideviceinfo -s)
@@ -194,10 +194,10 @@ function SaveOTABlobs {
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
-        SHSH=$(ls *_${ProductType}_${HWModel}ap_${OSVer}-${APNonce}.shsh)
+        SHSH=$(ls ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${APNonce}.shsh)
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
-        SHSH=$(ls *_${ProductType}_${OSVer}-*.shsh2)
+        SHSH=$(ls ${UniqueChipID}_${ProductType}_${OSVer}-*.shsh2)
     fi
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
