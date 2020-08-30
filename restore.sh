@@ -194,10 +194,10 @@ function SaveOTABlobs {
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
-        SHSH=$(ls ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${APNonce}.shsh)
+        SHSH=$(ls ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh)
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
-        SHSH=$(ls ${UniqueChipID}_${ProductType}_${OSVer}-*.shsh2)
+        SHSH=$(ls ${UniqueChipID}_${ProductType}_${OSVer}-${BuildVer}_*.shsh2)
     fi
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
