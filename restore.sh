@@ -1,25 +1,40 @@
 #!/bin/bash
 trap 'Clean; exit' INT TERM EXIT
+if [[ $1 != 'NoColor' ]]; then
+    Color_R=$(tput setaf 9)
+    Color_G=$(tput setaf 10)
+    Color_B=$(tput setaf 12)
+    Color_Y=$(tput setaf 11)
+    Color_N=$(tput sgr0)
+fi
 
 function Clean {
     rm -rf iP*/ tmp/ ${UniqueChipID}_${ProductType}_${OSVer}-*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-*.shsh *.im4p *.bbfw BuildManifest.plist
 }
 
+function Echo {
+    echo "${Color_B}$1 ${Color_N}"
+}
+
 function Error {
-    echo -e "\n[Error] $1"
-    [[ ! -z $2 ]] && echo "* $2"
+    echo -e "\n${Color_R}[Error] $1 ${Color_N}"
+    [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
     exit
 }
 
+function Input {
+    echo "${Color_Y}[Input] $1 ${Color_N}"
+}
+
 function Log {
-    echo "[Log] $1"
+    echo "${Color_G}[Log] $1 ${Color_N}"
 }
 
 function Main {
     clear
-    echo "******* iOS-OTA-Downgrader *******"
-    echo "   Downgrader script by LukeZGD   "
+    Echo "******* iOS-OTA-Downgrader *******"
+    Echo "   Downgrader script by LukeZGD   "
     echo
     
     if [[ $OSTYPE == "linux-gnu" ]]; then
@@ -93,20 +108,20 @@ function Main {
     mkdir tmp
     chmod +x resources/tools/*
     
-    echo "* Platform: $platform"
-    echo "* HardwareModel: ${HWModel}ap"
-    echo "* ProductType: $ProductType"
-    echo "* ProductVersion: $ProductVer"
-    echo "* UniqueChipID (ECID): $UniqueChipID"
+    Echo "* Platform: $platform"
+    Echo "* HardwareModel: ${HWModel}ap"
+    Echo "* ProductType: $ProductType"
+    Echo "* ProductVersion: $ProductVer"
+    Echo "* UniqueChipID (ECID): $UniqueChipID"
     echo
     
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]] && [[ $platform != win ]]; then
         DFUManual=1
         Mode='Downgrade'
         Log "32-bit device in DFU mode detected."
-        echo "* Advanced options menu - use at your own risk"
-        echo "* Warning: A6 devices won't have activation error workaround yet when using this method"
-        echo "[Input] This device is in:"
+        Echo "* Advanced options menu - use at your own risk"
+        Echo "* Warning: A6 devices won't have activation error workaround yet when using this method"
+        Input "This device is in:"
         select opt in "kDFU mode" "DFU mode (ipwndfu A6)" "pwnDFU mode (checkm8 A5)" "(Any other key to exit)"; do
             case $opt in
                 "kDFU mode" ) break;;
@@ -121,14 +136,14 @@ function Main {
         Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
     fi
     
-    if [[ $1 ]]; then
+    if [[ $1 ]] && [[ $1 != 'NoColor' ]]; then
         Mode="$1"
     else
         Selection=("Downgrade device")
         [[ $A7Device != 1 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
-        echo "*** Main Menu ***"
-        echo "[Input] Select an option:"
+        Echo "*** Main Menu ***"
+        Input "Select an option:"
         select opt in "${Selection[@]}"; do
             case $opt in
                 "Downgrade device" ) Mode='Downgrade'; break;;
@@ -157,7 +172,7 @@ function SelectVersion {
     fi
     [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
     Selection+=("(Any other key to exit)")
-    echo "[Input] Select iOS version:"
+    Input "Select iOS version:"
     select opt in "${Selection[@]}"; do
         case $opt in
             "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
@@ -172,11 +187,11 @@ function SelectVersion {
 function Action {    
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
-        echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
-        echo "* Reminder to create a backup of the SHSH"
-        read -p "[Input] Path to IPSW (drag IPSW to terminal window): " IPSW
+        Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
+        Echo "* Reminder to create a backup of the SHSH"
+        read -p "$(Input 'Path to IPSW (drag IPSW to terminal window): ')" IPSW
         IPSW="$(basename $IPSW .ipsw)"
-        read -p "[Input] Path to SHSH (drag SHSH to terminal window): " SHSH
+        read -p "$(Input 'Path to SHSH (drag SHSH to terminal window): ')" SHSH
     elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 1 ]]; then
         [[ $DFUDevice == 1 ]] && CheckM8 || Recovery
     fi
@@ -192,7 +207,7 @@ function SaveOTABlobs {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [[ $A7Device == 1 ]]; then
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
-        echo "* APNonce: $APNonce"
+        Echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
         SHSH=$(ls ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh)
     else
@@ -237,9 +252,9 @@ function kDFU {
     echo "nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
     chmod +x tmp/pwn.sh
     
-    echo "* Make sure OpenSSH/Dropbear is installed on the device!"
+    Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
     Log "Copying stuff to device via SSH..."
-    echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
+    Echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
     [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
     Log "Entering kDFU mode..."
@@ -249,7 +264,7 @@ function kDFU {
         ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
     fi
     echo
-    echo "* Press POWER or HOME button when screen goes black on the device"
+    Echo "* Press POWER or HOME button when screen goes black on the device"
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
@@ -271,18 +286,18 @@ function Recovery {
         done
     fi
     Log "A7 device in recovery mode detected. Get ready to enter DFU mode"
-    read -p "[Input] Select Y to continue, N to exit recovery (Y/n) " RecoveryDFU
+    read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n) ')" RecoveryDFU
     if [[ $RecoveryDFU == n ]] || [[ $RecoveryDFU == N ]]; then
         Log "Exiting recovery mode."
         $irecovery -n
         exit
     fi
-    echo "* Hold POWER and HOME button for 10 seconds."
+    Echo "* Hold POWER and HOME button for 10 seconds."
     for i in {10..01}; do
         echo -n "$i "
         sleep 1
     done
-    echo -e "\n* Release POWER and hold HOME button for 10 seconds."
+    echo -e "\n$(Echo '* Release POWER and hold HOME button for 10 seconds.')"
     for i in {10..01}; do
         echo -n "$i "
         DFUDevice=$($lsusb | grep -ci '1227')
@@ -294,7 +309,7 @@ function Recovery {
 
 function CheckM8 {
     DFUManual=1
-    [[ $A7Device == 1 ]] && echo -e "\n[Log] Device in DFU mode detected."
+    [[ $A7Device == 1 ]] && echo -e "\n$(Log 'Device in DFU mode detected.')"
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo $python ipwndfu -p
@@ -325,8 +340,8 @@ function Downgrade {
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
         if [ ! -e $IPSW.ipsw ]; then
             Log "iOS $OSVer IPSW cannot be found."
-            echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
-            echo "* Do NOT rename the IPSW as the script will fail to detect it"
+            Echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
+            Echo "* Do NOT rename the IPSW as the script will fail to detect it"
             Log "Downloading IPSW... (Press Ctrl+C to cancel)"
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
@@ -351,6 +366,7 @@ function Downgrade {
     Log "Extracting IPSW..."
     unzip -q $IPSW.ipsw -d $IPSW/
     
+    # this part won't be needed if futurerestore with odysseus64 is used (maybe sometime)
     if [[ $A7Device == 1 ]]; then
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Preparing custom IPSW..."
@@ -374,9 +390,9 @@ function Downgrade {
         sleep 5
         RecoveryDevice=$($lsusb | grep -ci '1281')
         if [[ $RecoveryDevice != 1 ]]; then
-            echo "[Error] Failed to detect device in pwnREC mode."
-            echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
-            echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
+            Log "Failed to detect device in pwnREC mode."
+            Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
+            Input "* Press ENTER to continue (or press Ctrl+C to cancel)"
             read -s
             Log "Finding device in pwnREC mode..."
             while [[ $RecoveryDevice != 1 ]]; do
@@ -417,10 +433,10 @@ function Downgrade {
         Log "Proceeding to futurerestore..."
         if [ ! -e *.bbfw ] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
-            echo "[Error] Downloading/verifying baseband failed."
-            echo "* Your device is still in kDFU mode and you may run the script again"
-            echo "* You can also continue and futurerestore can attempt to download the baseband again"
-            echo "* Press ENTER to continue (or press Ctrl+C to cancel)"
+            Log "Downloading/verifying baseband failed."
+            Echo "* Your device is still in kDFU mode and you may run the script again"
+            Echo "* You can also continue and futurerestore can attempt to download the baseband again"
+            Input "Press ENTER to continue (or press Ctrl+C to cancel)"
             read -s
             if [[ $A7Device == 1 ]]; then
                 $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
