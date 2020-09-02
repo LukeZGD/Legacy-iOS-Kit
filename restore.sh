@@ -44,16 +44,14 @@ function Main {
         ideviceinfo="ideviceinfo"
         igetnonce="sudo LD_LIBRARY_PATH=resources/lib resources/tools/igetnonce_linux"
         iproxy="iproxy"
-        irecovery="sudo LD_LIBRARY_PATH=/usr/local/lib irecovery"
+        irecovery="sudo LD_LIBRARY_PATH=resources/lib irecovery"
         lsusb="lsusb"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
         tsschecker="env LD_LIBRARY_PATH=resources/lib resources/tools/tsschecker_linux"
-        if [[ $UBUNTU_CODENAME == "bionic" ]]; then
-            futurerestore2="${futurerestore2}_bionic"
-            tsschecker="${tsschecker}_bionic"
-        fi
+        [[ $UBUNTU_CODENAME == "bionic" ]] && futurerestore2="${futurerestore2}_bionic"
+
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform='macos'
         lsusb="system_profiler SPUSBDataType 2>/dev/null"
@@ -472,7 +470,7 @@ function InstallDependencies {
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             sudo apt install -y libzip4 python
             sudo dpkg -i libusbmuxd6.deb libpng12_bionic.deb libzip5.deb
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 685b422cae3ae3d15d6deda397d38ccc8fbcd5b2
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 34300e26cf34e8d0e2b36c8545268eb4b645d1b3
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
             sudo apt install -y libusbmuxd6 libzip5 python2
