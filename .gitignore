@@ -5,6 +5,7 @@
 *.json
 *.shsh
 *.shsh2
+*.so*
 *.txt
 iP*
 saved/

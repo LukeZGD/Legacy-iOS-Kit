@@ -70,8 +70,8 @@
 ## Tools and other stuff used by this script:
 - cURL
 - bspatch
-- [igetnonce](https://github.com/LukeZGD/igetnonce)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
+- [irecovery](https://github.com/LukeZGD/libirecovery)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - python2

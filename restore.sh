@@ -42,9 +42,8 @@ function Main {
         bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
-        igetnonce="sudo LD_LIBRARY_PATH=resources/lib resources/tools/igetnonce_linux"
         iproxy="iproxy"
-        irecovery="sudo LD_LIBRARY_PATH=resources/lib irecovery"
+        irecovery="sudo resources/tools/irecovery_linux"
         lsusb="lsusb"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
@@ -58,7 +57,6 @@ function Main {
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
-        igetnonce="resources/tools/igetnonce_$platform"
         iproxy="resources/libimobiledevice_$platform/iproxy"
         irecovery="resources/libimobiledevice_$platform/irecovery"
         python="python"
@@ -78,7 +76,7 @@ function Main {
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         InstallDependencies
     elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
-        ProductType=$($igetnonce 2>/dev/null)
+        ProductType=$($irecovery -q | grep 'PTYP' | cut -c 7-)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
         ProductVer='Unknown'
@@ -465,11 +463,11 @@ function InstallDependencies {
         # Ubuntu Bionic and Focal
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y autoconf automake binutils bsdiff build-essential checkinstall curl git libglib2.0-dev libimobiledevice-utils libplist3 libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
+        sudo apt install -y bsdiff curl git libimobiledevice-utils libplist3 libusbmuxd-tools openssh-client usbmuxd usbutils
         SavePkg
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             sudo apt install -y libzip4 python
-            sudo dpkg -i libusbmuxd6.deb libpng12_bionic.deb libzip5.deb
+            sudo dpkg -i libpng12_bionic.deb libzip5.deb
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 34300e26cf34e8d0e2b36c8545268eb4b645d1b3
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
@@ -479,16 +477,15 @@ function InstallDependencies {
             ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 ../resources/lib/libplist-2.0.so.3
             ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
         fi
-        ar x libcurl3.deb data.tar.xz
-        tar xf data.tar.xz
-        cp usr/lib/x86_64-linux-gnu/libcurl.so.4.* ../resources/lib/libcurl.so.3
+        cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         
     elif [[ $ID == "fedora" ]]; then
         # Fedora 32
-        sudo dnf install -y automake bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils libzip make perl-Digest-SHA python2 readline-devel
+        sudo dnf install -y binutils bsdiff git libimobiledevice-utils libpng12 libusbmuxd-utils libzip perl-Digest-SHA python2
         SavePkg
-        rpm2cpio openssl-1.0.0.rpm | cpio -idmv
-        cp usr/lib64/libcrypto.so.1.0.0 usr/lib64/libssl.so.1.0.0 ../resources/lib
+        ar x libssl1.0.0.deb data.tar.xz
+        tar xf data.tar.xz
+        cp usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 ../resources/lib
         ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
         ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
         ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
@@ -503,10 +500,7 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
-    if [[ $platform == linux ]]; then
-        Compile libimobiledevice libirecovery
-        ln -sf /usr/local/lib/libirecovery-1.0.so.3 ../resources/lib/libirecovery-1.0.so.3
-    else
+    if [[ $platform != linux ]]; then
         rm -rf ../resources/libimobiledevice_$platform
         mkdir ../resources/libimobiledevice_$platform
         unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
@@ -557,7 +551,7 @@ function SaveFile {
 function SavePkg {
     if [[ ! -d ../saved/pkg ]]; then
         Log "Downloading packages..."
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends_linux.zip depends_linux.zip c61825bdb41e34ee995ef183c7aca8183d76f8eb
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends_linux.zip depends_linux.zip 7daf991e0e80647547f5ceb33007eae6c99707d2
         mkdir -p ../saved/pkg
         unzip depends_linux.zip -d ../saved/pkg
     fi
