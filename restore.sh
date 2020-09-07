@@ -38,7 +38,7 @@ function Main {
     echo
     
     if [[ $OSTYPE == "linux-gnu" ]]; then
-        platform='linux'
+        platform="linux"
         bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
@@ -52,7 +52,7 @@ function Main {
         [[ $UBUNTU_CODENAME == "bionic" ]] && futurerestore2="${futurerestore2}_bionic"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
-        platform='macos'
+        platform="macos"
         lsusb="system_profiler SPUSBDataType 2>/dev/null"
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
@@ -122,7 +122,12 @@ function Main {
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
         SelectVersion
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
-        Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
+        read -p "$(Input 'Is this an A6 device in recovery mode? (y/N) ')" DFUManual
+        if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
+            Recovery
+        else
+            Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in Recovery/DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
+        fi
     fi
     
     if [[ $1 ]] && [[ $1 != 'NoColor' ]]; then
@@ -274,7 +279,7 @@ function Recovery {
             sleep 2
         done
     fi
-    Log "A7 device in recovery mode detected. Get ready to enter DFU mode"
+    Log "Device in recovery mode detected. Get ready to enter DFU mode"
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n) ')" RecoveryDFU
     if [[ $RecoveryDFU == n ]] || [[ $RecoveryDFU == N ]]; then
         Log "Exiting recovery mode."
@@ -454,33 +459,35 @@ function InstallDependencies {
     
     Log "Installing dependencies..."
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
-        # Arch Linux
+        # Arch
         sudo pacman -Sy --noconfirm --needed bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
         
-    elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]]; then
-        # Ubuntu Bionic and Focal
+    elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
+        # Ubuntu
         sudo add-apt-repository universe
         sudo apt update
         sudo apt install -y bsdiff curl git libimobiledevice-utils libplist3 libusbmuxd-tools openssh-client usbmuxd usbutils
         SavePkg
+        cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             sudo apt install -y libzip4 python
             sudo dpkg -i libpng12_bionic.deb libzip5.deb
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 34300e26cf34e8d0e2b36c8545268eb4b645d1b3
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 2fb44dbb6c167ba6f7782521454503998a285751
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
             sudo apt install -y libusbmuxd6 libzip5 python2
             sudo dpkg -i libssl1.0.0.deb libpng12.deb libzip4.deb
+        fi
+        if [[ $UBUNTU_CODENAME == "focal" ]]; then
             ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
             ln -sf /usr/lib/x86_64-linux-gnu/libplist.so.3 ../resources/lib/libplist-2.0.so.3
             ln -sf /usr/lib/x86_64-linux-gnu/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
         fi
-        cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         
     elif [[ $ID == "fedora" ]]; then
-        # Fedora 32
+        # Fedora
         sudo dnf install -y binutils bsdiff git libimobiledevice-utils libpng12 libusbmuxd-utils libzip perl-Digest-SHA python2
         SavePkg
         ar x libssl1.0.0.deb data.tar.xz
@@ -644,7 +651,7 @@ function BasebandDetect {
     fi
     iBEC="iBEC.$iBSS.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
-    SEP=sep-firmware.$HWModel.RELEASE.im4p
+    SEP="sep-firmware.$HWModel.RELEASE.im4p"
 }
 
 Main $1
