@@ -70,6 +70,9 @@ function Main {
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
+    SaveExternal iOS-OTA-Downgrader-Keys
+    SaveExternal ipwndfu
+    
     DFUDevice=$($lsusb | grep -ci '1227')
     RecoveryDevice=$($lsusb | grep -ci '1281')
     if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
@@ -90,8 +93,6 @@ function Main {
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep 'UniqueDeviceID' | cut -c 17-)
     fi
     [ ! $ProductType ] && ProductType=0
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
     BasebandDetect
     Clean
     mkdir tmp
@@ -159,7 +160,9 @@ function SelectVersion {
     elif [[ $Mode == 'kDFU' ]]; then
         Action
     fi
-    Selection=("iOS 8.4.1")
+    if [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
+        Selection=("iOS 8.4.1")
+    fi
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
        [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         Selection+=("iOS 6.1.3")
