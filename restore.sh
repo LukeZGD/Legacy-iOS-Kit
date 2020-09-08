@@ -327,12 +327,12 @@ function CheckM8 {
 
 function Downgrade {    
     if [[ $OSVer != 'Other' ]]; then
-        [[ $ProductType == iPad4* ]] && IPSW="iPad_64bit"
-        [[ $ProductType == iPhone6* ]] && IPSW="iPhone_64bit"
-        [[ ! $IPSW ]] && IPSW="$ProductType" && SaveOTABlobs
-        IPSW="${IPSW}_${OSVer}_${BuildVer}_Restore"
-        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
-        if [ ! -e $IPSW.ipsw ]; then
+        [[ $ProductType == iPad4* ]] && IPSWType="iPad_64bit"
+        [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_64bit"
+        [[ ! $IPSWType ]] && IPSWType="$ProductType" && SaveOTABlobs
+        IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
+        IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+        if [ ! -e $IPSW.ipsw ] && [ ! -e $IPSWCustom.ipsw ]; then
             Log "iOS $OSVer IPSW cannot be found."
             Echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
             Echo "* Do NOT rename the IPSW as the script will fail to detect it"
@@ -367,16 +367,22 @@ function Downgrade {
             cp $IPSW/Firmware/all_flash/$SEP .
             $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
             $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
-            cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+            $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
+            $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+            cp -f $iBSS.im4p $iBEC.im4p $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
             cd $IPSW
             zip ../$IPSWCustom.ipsw -rq0 *
             cd ..
             mv $IPSW $IPSWCustom
             IPSW=$IPSWCustom
         else
-            cp $IPSW/Firmware/dfu/$iBSS.im4p .
-            cp $IPSW/Firmware/dfu/$iBEC.im4p .
+            cp $IPSW/Firmware/dfu/$iBSS.im4p $IPSW/Firmware/dfu/$iBEC.im4p .
+            cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
             cp $IPSW/Firmware/all_flash/$SEP .
+        fi
+        if [[ $ProductType == "iPad4,4" ]] || [[ $ProductType == "iPad4,5" ]]; then
+            iBEC=$iBECb
+            iBSS=$iBSSb
         fi
         Log "Entering pwnREC mode..."
         $irecovery -f $iBSS.im4p
@@ -384,7 +390,7 @@ function Downgrade {
         sleep 5
         RecoveryDevice=$($lsusb | grep -ci '1281')
         if [[ $RecoveryDevice != 1 ]]; then
-            Log "Failed to detect device in pwnREC mode."
+            echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
             Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
             Input "* Press ENTER to continue (or press Ctrl+C to cancel)"
             read -s
@@ -518,15 +524,6 @@ function InstallDependencies {
     exit
 }
 
-function Compile {
-    git clone --depth 1 https://github.com/$1/$2.git
-    cd $2
-    ./autogen.sh
-    sudo make install
-    cd ..
-    sudo rm -rf $2
-}
-
 function SaveExternal {
     ExternalURL="https://github.com/LukeZGD/$1.git"
     External=$1
@@ -641,15 +638,16 @@ function BasebandDetect {
         iBSSBuildVer='11D257'
     elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
         iBSS="iphone6"
-    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ]; then
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
+         [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
         iBSS="ipad4"
-    elif [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
-        iBSS="ipad4b"
     else
         iBSS="$HWModel"
         iBSSBuildVer='12H321'
     fi
     iBEC="iBEC.$iBSS.RELEASE"
+    iBECb="iBEC.${iBSS}b.RELEASE"
+    iBSSb="iBSS.${iBSS}b.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
 }
