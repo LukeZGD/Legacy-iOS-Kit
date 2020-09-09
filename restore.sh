@@ -249,9 +249,9 @@ function kDFU {
     echo "nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
     chmod +x tmp/pwn.sh
     
-    Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
     Log "Copying stuff to device via SSH..."
-    Echo "* (Enter root password of your iOS device when prompted, default is 'alpine')"
+    Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
+    Echo "* Enter root password of your iOS device when prompted, default is 'alpine'"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
     [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
     Log "Entering kDFU mode..."
@@ -477,7 +477,7 @@ function InstallDependencies {
         # Ubuntu
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice-utils libplist3 libusbmuxd-tools openssh-client usbmuxd usbutils
+        sudo apt install -y bsdiff curl git libimobiledevice-utils libusbmuxd-tools openssh-client usbmuxd usbutils
         SavePkg
         cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
@@ -486,8 +486,8 @@ function InstallDependencies {
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 2fb44dbb6c167ba6f7782521454503998a285751
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
-            sudo apt install -y libusbmuxd6 libzip5 python2
-            sudo dpkg -i libssl1.0.0.deb libpng12.deb libzip4.deb
+            sudo apt install -y libzip5 python2
+            sudo dpkg -i libpng12.deb libssl1.0.0.deb libzip4.deb
         fi
         if [[ $UBUNTU_CODENAME == "focal" ]]; then
             ln -sf /usr/lib/x86_64-linux-gnu/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
@@ -502,9 +502,11 @@ function InstallDependencies {
         ar x libssl1.0.0.deb data.tar.xz
         tar xf data.tar.xz
         cp usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 ../resources/lib
-        ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
-        ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
-        ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+        if (( $VERSION_ID <= 32 )); then
+            ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
+            ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
+            ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+        fi
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
         
     elif [[ $OSTYPE == "darwin"* ]]; then
