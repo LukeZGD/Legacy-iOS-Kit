@@ -43,7 +43,7 @@ function Main {
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
         iproxy="iproxy"
-        irecovery="env LD_LIBRARY_PATH=resources/lib irecovery"
+        irecovery="env LD_LIBRARY_PATH=resources/lib /usr/local/bin/irecovery"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -78,7 +78,8 @@ function Main {
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
-    irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
+    ideviceinfo2=$($ideviceinfo -s)
+    [[ $? != 0 ]] && irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
     [[ $irecovery2 == "DFU" ]] && DFUDevice=1
     [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1
     
@@ -88,7 +89,6 @@ function Main {
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
         ProductVer='Unknown'
     else
-        ideviceinfo2=$($ideviceinfo -s)
         ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
         ProductVer=$(echo "$ideviceinfo2" | grep 'ProductVer' | cut -c 17-)
