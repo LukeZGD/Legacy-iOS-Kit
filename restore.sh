@@ -44,7 +44,6 @@ function Main {
         ideviceinfo="ideviceinfo"
         iproxy="iproxy"
         irecovery="sudo resources/tools/irecovery_linux"
-        lsusb="lsusb"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -53,7 +52,6 @@ function Main {
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
-        lsusb="system_profiler SPUSBDataType 2>/dev/null"
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
@@ -73,12 +71,14 @@ function Main {
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
-    DFUDevice=$($lsusb | grep -ci '1227')
-    RecoveryDevice=$($lsusb | grep -ci '1281')
+    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
+    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
+        
     if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
+        rm -rf resources/firmware resources/ipwndfu
         InstallDependencies
-    elif [ $DFUDevice == 1 ] || [ $RecoveryDevice == 1 ]; then
+    elif [[ $DFUDevice == 1 ]] || [[ $RecoveryDevice == 1 ]]; then
         ProductType=$($irecovery -q | grep 'PTYP' | cut -c 7-)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
@@ -189,7 +189,7 @@ function Action {
         read -p "$(Input 'Path to IPSW (drag IPSW to terminal window): ')" IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "$(Input 'Path to SHSH (drag SHSH to terminal window): ')" SHSH
-    elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 1 ]]; then
+    elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 0 ]]; then
         [[ $DFUDevice == 1 ]] && CheckM8 || Recovery
     fi
 
@@ -265,7 +265,7 @@ function kDFU {
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        DFUDevice=$($lsusb | grep -ci '1227')
+        [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
         sleep 2
     done
     Log "Found device in DFU mode."
@@ -273,12 +273,12 @@ function kDFU {
 }
 
 function Recovery {
-    RecoveryDevice=$($lsusb | grep -ci '1281')
+    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
         $ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
-            RecoveryDevice=$($lsusb | grep -ci '1281')
+            [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
             sleep 2
         done
     fi
@@ -289,18 +289,18 @@ function Recovery {
         $irecovery -n
         exit
     fi
-    Echo "* Hold POWER and HOME button for 10 seconds."
-    for i in {10..01}; do
+    Echo "* Hold POWER and HOME button for 8 seconds."
+    for i in {08..01}; do
         echo -n "$i "
         sleep 1
     done
-    echo -e "\n$(Echo '* Release POWER and hold HOME button for 10 seconds.')"
-    for i in {10..01}; do
+    echo -e "\n$(Echo '* Release POWER and hold HOME button for 8 seconds.')"
+    for i in {08..01}; do
         echo -n "$i "
-        DFUDevice=$($lsusb | grep -ci '1227')
-        [[ $DFUDevice == 1 ]] && CheckM8
         sleep 1
     done
+    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
+    [[ $DFUDevice == 1 ]] && CheckM8
     Error "Failed to detect device in DFU mode. Please run the script again"
 }
 
@@ -310,8 +310,8 @@ function CheckM8 {
     Log "Entering pwnDFU mode with ipwndfu..."
     cd resources/ipwndfu
     sudo $python ipwndfu -p
-    pwnDFUDevice=$(sudo $lsusb -v -d 05ac:1227 2>/dev/null | grep -ci 'checkm8')
-    if [ $pwnDFUDevice == 1 ]; then
+    pwnDFUDevice=$?
+    if [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
         if [[ $A7Device == 1 ]]; then
             Log "Running rmsigchks.py..."
@@ -324,7 +324,7 @@ function CheckM8 {
         Mode='Downgrade'
         SelectVersion
     else
-        Error "Failed to detect device in pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
+        Error "Failed to enter pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
     fi    
 }
 
@@ -391,7 +391,7 @@ function Downgrade {
         $irecovery -f $iBSS.im4p
         $irecovery -f $iBEC.im4p
         sleep 5
-        RecoveryDevice=$($lsusb | grep -ci '1281')
+        [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
         if [[ $RecoveryDevice != 1 ]]; then
             echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
             Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
@@ -399,7 +399,7 @@ function Downgrade {
             read -s
             Log "Finding device in pwnREC mode..."
             while [[ $RecoveryDevice != 1 ]]; do
-                RecoveryDevice=$($lsusb | grep -ci '1281')
+                [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
                 sleep 2
             done
         fi
