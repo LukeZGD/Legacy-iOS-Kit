@@ -43,7 +43,7 @@ function Main {
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
         iproxy="iproxy"
-        irecovery="sudo resources/tools/irecovery_linux"
+        irecovery="env LD_LIBRARY_PATH=resources/lib irecovery"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -63,22 +63,26 @@ function Main {
         tsschecker="resources/tools/tsschecker_$platform"
     fi
     partialzip="resources/tools/partialzip_$platform"
+    chmod +x resources/tools/*
     
     [[ ! $platform ]] && Error "Platform unknown/not supported."
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
-    
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
-    
-    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
-    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
         
     if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
         rm -rf resources/firmware resources/ipwndfu
         InstallDependencies
-    elif [[ $DFUDevice == 1 ]] || [[ $RecoveryDevice == 1 ]]; then
+    fi
+    
+    SaveExternal iOS-OTA-Downgrader-Keys
+    SaveExternal ipwndfu
+    
+    irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
+    [[ $irecovery2 == "DFU" ]] && DFUDevice=1
+    [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1
+    
+    if [[ $DFUDevice == 1 ]] || [[ $RecoveryDevice == 1 ]]; then
         ProductType=$($irecovery -q | grep 'PTYP' | cut -c 7-)
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
@@ -96,7 +100,6 @@ function Main {
     BasebandDetect
     Clean
     mkdir tmp
-    chmod +x resources/tools/*
     
     Echo "* Platform: $platform"
     Echo "* HardwareModel: ${HWModel}ap"
@@ -265,21 +268,19 @@ function kDFU {
     
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
-        sleep 2
+        [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
     done
     Log "Found device in DFU mode."
     kill $iproxyPID
 }
 
 function Recovery {
-    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
+    [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
         $ideviceenterrecovery $UniqueDeviceID >/dev/null
         while [[ $RecoveryDevice != 1 ]]; do
-            [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
-            sleep 2
+            [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
         done
     fi
     Log "Device in recovery mode detected. Get ready to enter DFU mode"
@@ -299,7 +300,8 @@ function Recovery {
         echo -n "$i "
         sleep 1
     done
-    [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
+    sleep 2
+    [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
     [[ $DFUDevice == 1 ]] && CheckM8
     Error "Failed to detect device in DFU mode. Please run the script again"
 }
@@ -391,7 +393,7 @@ function Downgrade {
         $irecovery -f $iBSS.im4p
         $irecovery -f $iBEC.im4p
         sleep 5
-        [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
+        [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
         if [[ $RecoveryDevice != 1 ]]; then
             echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
             Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
@@ -399,8 +401,7 @@ function Downgrade {
             read -s
             Log "Finding device in pwnREC mode..."
             while [[ $RecoveryDevice != 1 ]]; do
-                [[ $($irecovery -q | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
-                sleep 2
+                [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
             done
         fi
         Log "Found device in pwnREC mode."
@@ -477,7 +478,8 @@ function InstallDependencies {
         # Ubuntu
         sudo add-apt-repository universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice-utils libusbmuxd-tools openssh-client usbmuxd usbutils
+        sudo apt install -y autoconf automake bsdiff build-essential checkinstall curl git libglib2.0-dev libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
+        
         SavePkg
         cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
@@ -497,7 +499,7 @@ function InstallDependencies {
         
     elif [[ $ID == "fedora" ]]; then
         # Fedora
-        sudo dnf install -y binutils bsdiff git libimobiledevice-utils libpng12 libusbmuxd-utils libzip perl-Digest-SHA python2
+        sudo dnf install -y automake binutils bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils make libzip perl-Digest-SHA python2 readline-devel
         SavePkg
         ar x libssl1.0.0.deb data.tar.xz
         tar xf data.tar.xz
@@ -518,7 +520,10 @@ function InstallDependencies {
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
-    if [[ $platform != linux ]]; then
+    if [[ $platform == linux ]]; then
+        Compile LukeZGD libirecovery
+        ln -sf /usr/local/lib/libirecovery-1.0.so.3 ../resources/lib/libirecovery-1.0.so.3
+    else
         rm -rf ../resources/libimobiledevice_$platform
         mkdir ../resources/libimobiledevice_$platform
         unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
@@ -527,6 +532,15 @@ function InstallDependencies {
     
     Log "Install script done! Please run the script again to proceed"
     exit
+}
+
+function Compile {
+    git clone --depth 1 https://github.com/$1/$2.git
+    cd $2
+    ./autogen.sh
+    sudo make install
+    cd ..
+    sudo rm -rf $2
 }
 
 function SaveExternal {
