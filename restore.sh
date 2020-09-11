@@ -372,8 +372,10 @@ function Downgrade {
             cp $IPSW/Firmware/all_flash/$SEP .
             $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
             $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
-            $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
-            $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+            if [[ $ProductType == iPad4* ]]; then
+                $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
+                $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+            fi
             cp -f $iBSS.im4p $iBEC.im4p $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
             cd $IPSW
             zip ../$IPSWCustom.ipsw -rq0 *
@@ -382,10 +384,10 @@ function Downgrade {
             IPSW=$IPSWCustom
         else
             cp $IPSW/Firmware/dfu/$iBSS.im4p $IPSW/Firmware/dfu/$iBEC.im4p .
-            cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
+            [[ $ProductType == iPad4* ]] && cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
             cp $IPSW/Firmware/all_flash/$SEP .
         fi
-        if [[ $ProductType == "iPad4,4" ]] || [[ $ProductType == "iPad4,5" ]]; then
+        if [[ $ProductType == iPad4,4 ]] || [[ $ProductType == iPad4,5 ]]; then
             iBEC=$iBECb
             iBSS=$iBSSb
         fi
