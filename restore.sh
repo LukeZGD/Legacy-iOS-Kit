@@ -333,7 +333,7 @@ function CheckM8 {
 function Downgrade {    
     if [[ $OSVer != 'Other' ]]; then
         [[ $ProductType == iPad4* ]] && IPSWType="iPad_64bit"
-        [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_64bit"
+        [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_4.0_64bit"
         [[ ! $IPSWType ]] && IPSWType="$ProductType" && SaveOTABlobs
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
@@ -397,14 +397,11 @@ function Downgrade {
         if [[ $RecoveryDevice != 1 ]]; then
             echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
             Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
-            Input "* Press ENTER to continue (or press Ctrl+C to cancel)"
+            Input "Press ENTER to continue anyway (or press Ctrl+C to cancel)"
             read -s
-            Log "Finding device in pwnREC mode..."
-            while [[ $RecoveryDevice != 1 ]]; do
-                [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
-            done
+        else
+            Log "Found device in pwnREC mode."
         fi
-        Log "Found device in pwnREC mode."
         SaveOTABlobs
     fi
     
