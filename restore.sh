@@ -44,6 +44,7 @@ function Main {
         ideviceinfo="ideviceinfo"
         iproxy="iproxy"
         irecovery="env LD_LIBRARY_PATH=resources/lib /usr/local/bin/irecovery"
+        pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_$platform"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -57,6 +58,7 @@ function Main {
         ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
         iproxy="resources/libimobiledevice_$platform/iproxy"
         irecovery="resources/libimobiledevice_$platform/irecovery"
+        pwnedDFU="resources/tools/pwnedDFU_$platform"
         python="python"
         futurerestore1="resources/tools/futurerestore1_$platform"
         futurerestore2="resources/tools/futurerestore2_$platform"
@@ -309,10 +311,27 @@ function Recovery {
 function CheckM8 {
     DFUManual=1
     [[ $A7Device == 1 ]] && echo -e "\n$(Log 'Device in DFU mode detected.')"
-    Log "Entering pwnDFU mode with ipwndfu..."
-    cd resources/ipwndfu
-    sudo $python ipwndfu -p
-    pwnDFUDevice=$?
+    [[ $platform == macos ]] && Selection=("iPwnder32" "ipwndfu") || Selection=("ipwndfu" "iPwnder32")
+    Input "Select pwnDFU tool to use (press ENTER when unsure):"
+    Echo "* iPwnder32 is recommended for macOS"
+    Echo "* ipwndfu is recommended for Linux (not sure if I correctly compiled iPwnder32 for Linux)"
+    select opt in "${Selection[@]}"; do
+        case $opt in
+            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
+            "iPwnder32" ) pwnDFUTool="iPwnder32"; break;;
+            *) pwnDFUTool="${Selection[0]}"; break;;
+        esac
+    done
+    Log "Entering pwnDFU mode with $pwnDFUTool..."
+    if [[ $pwnDFUTool == "ipwndfu" ]]; then
+        cd resources/ipwndfu
+        sudo $python ipwndfu -p
+        pwnDFUDevice=$?
+    elif [[ $pwnDFUTool == "iPwnder32" ]]; then
+        $pwnedDFU -p -f
+        pwnDFUDevice=$?
+        cd resources/ipwndfu
+    fi    
     if [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
         if [[ $A7Device == 1 ]]; then
@@ -521,7 +540,8 @@ function InstallDependencies {
     
     if [[ $platform == linux ]]; then
         Compile LukeZGD libirecovery
-        ln -sf /usr/local/lib/libirecovery-1.0.so.3 ../resources/lib/libirecovery-1.0.so.3
+        ln -sf /usr/local/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
+        ln -sf /usr/local/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
     else
         rm -rf ../resources/libimobiledevice_$platform
         mkdir ../resources/libimobiledevice_$platform

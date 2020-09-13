@@ -71,6 +71,7 @@
 - cURL
 - bspatch
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
+- [iPwnder32](https://github.com/dora2-iOS/iPwnder32)
 - [irecovery](https://github.com/LukeZGD/libirecovery)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
