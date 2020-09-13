@@ -43,7 +43,7 @@ function Main {
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
         iproxy="iproxy"
-        irecovery="env LD_LIBRARY_PATH=resources/lib /usr/local/bin/irecovery"
+        irecovery="env LD_LIBRARY_PATH=resources/lib resources/libirecovery/bin/irecovery"
         pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_$platform"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
@@ -540,8 +540,8 @@ function InstallDependencies {
     
     if [[ $platform == linux ]]; then
         Compile LukeZGD libirecovery
-        ln -sf /usr/local/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
-        ln -sf /usr/local/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
+        ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
+        ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
     else
         rm -rf ../resources/libimobiledevice_$platform
         mkdir ../resources/libimobiledevice_$platform
@@ -556,8 +556,8 @@ function InstallDependencies {
 function Compile {
     git clone --depth 1 https://github.com/$1/$2.git
     cd $2
-    ./autogen.sh
-    sudo make install
+    ./autogen.sh --prefix="$(dirname $(dirname $(pwd)))/resources/$2"
+    make install
     cd ..
     sudo rm -rf $2
 }
