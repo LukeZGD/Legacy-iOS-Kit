@@ -556,7 +556,7 @@ function InstallDependencies {
 function Compile {
     git clone --depth 1 https://github.com/$1/$2.git
     cd $2
-    ./autogen.sh --prefix="$(dirname $(dirname $(pwd)))/resources/$2"
+    ./autogen.sh --prefix="$(cd ../.. && pwd)/resources/$2"
     make install
     cd ..
     sudo rm -rf $2
