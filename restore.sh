@@ -311,17 +311,19 @@ function Recovery {
 function CheckM8 {
     DFUManual=1
     [[ $A7Device == 1 ]] && echo -e "\n$(Log 'Device in DFU mode detected.')"
-    [[ $platform == macos ]] && Selection=("iPwnder32" "ipwndfu") || Selection=("ipwndfu" "iPwnder32")
-    Input "Select pwnDFU tool to use (press ENTER when unsure):"
-    Echo "* iPwnder32 is recommended for macOS"
-    Echo "* ipwndfu is recommended for Linux (not sure if I correctly compiled iPwnder32 for Linux)"
-    select opt in "${Selection[@]}"; do
-        case $opt in
-            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
-            "iPwnder32" ) pwnDFUTool="iPwnder32"; break;;
-            *) pwnDFUTool="${Selection[0]}"; break;;
-        esac
-    done
+    if [[ $platform == macos ]]; then
+        Selection=("iPwnder32" "ipwndfu")
+        Input "Select pwnDFU tool to use (press ENTER when unsure):"
+        select opt in "${Selection[@]}"; do
+            case $opt in
+                "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
+                "iPwnder32" ) pwnDFUTool="iPwnder32"; break;;
+                *) pwnDFUTool="${Selection[0]}"; break;;
+            esac
+        done
+    else
+        pwnDFUTool="ipwndfu"
+    fi
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
@@ -394,8 +396,9 @@ function Downgrade {
             if [[ $ProductType == iPad4* ]]; then
                 $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
                 $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+                cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
             fi
-            cp -f $iBSS.im4p $iBEC.im4p $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+            cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
             cd $IPSW
             zip ../$IPSWCustom.ipsw -rq0 *
             cd ..
