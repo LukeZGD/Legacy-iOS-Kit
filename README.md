@@ -1,47 +1,59 @@
 # iOS-OTA-Downgrader
 ### (formerly 32bit-OTA-Downgrader)
 ### Downgrade/restore iOS devices to signed OTA firmwares
-- **Please see the "Other notes" section below to serve as answers/solutions for FAQs and issues**
+- This is currently the only downgrade script/tool that supports **both Linux and macOS**
+- **Please see the "Other notes" section below to serve as answers/solutions for frequent questions and issues**
 
 ## Supported devices:
 
+- You can identify your device [here](https://ipsw.me/device-finder)
 - **iOS 10.3.3** - A7 devices:
   - iPhone 5S
-  - iPad Air
+  - iPad Air 1
   - iPad mini 2 **except iPad4,6**
   - **iPad mini 3 is NOT supported**
 - **iOS 8.4.1** - 32-bit devices:
-  - iPhone 4S
-  - iPhone 5
-  - iPad 2
-  - iPad 3
-  - iPad mini 1
-  - iPod 5th gen
+  - iPhones: iPhone 4S, iPhone 5
+  - iPads - iPad 2, iPad 3, iPad mini 1
+  - iPods - iPod 5th gen
   - **iPhone 5C is NOT Supported**
 - **iOS 6.1.3**:
   - iPhone 4S
   - iPad 2 **except iPad2,4**
 
-## Prerequisites:
+## Requirements:
 - **A supported device in any iOS version:**
-  - A 32-bit iOS device (**jailbreak needed** for kloader, checkm8 A5 or ipwndfu can also be used in DFU advanced menu)
+  - A 32-bit iOS device (**jailbreak needed**)
   - An A7 device (jailbreak not needed)
-- An IPSW for the version you want to downgrade to (the script can also download it for you)
-- A **macOS** or a **64-bit Linux install/live USB**
-  - See supported Linux distros below
-  - A live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
+- An IPSW for the version you want to downgrade to
+  - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3)
+  - The script can also download it for you
+- A **64-bit Linux install/live USB** or a supported **macOS** version
+  - See supported OS versions and Linux distros below
+  - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
 - All 32-bit users must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
-  - A6/A6X iOS 10 users must install [Dropbear (deb)](https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/Dropbear.deb) as well
-- For 32-bit users using Pangu, install the [latest Pangu 7.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.axe7_0.3_iphoneos-arm.deb) or [latest Pangu 8.0-8.1.x Untether (deb)](http://apt.saurik.com/debs/io.pangu.xuanyuansword8_0.5_iphoneos-arm.deb)
-1. [Download](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) or `git clone` this repo
-2. Open Terminal and `cd` to the directory where the script is located (example: `cd /home/user/iOS-OTA-Downgrader`)
-3. Run `chmod +x restore.sh`
+  - Users in iOS 10 must install [Dropbear (deb)](https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/Dropbear.deb) as well
+  
+<details>
+  <summary>For Pangu 32-bit users:</summary>
+  <ul><li>For 32-bit users using Pangu, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
+</details>
 
 ## How to use:
-1. Plug in your iOS device
-2. Run `./restore.sh`
-3. Select option to be used
-4. Follow instructions
+1. [Download iOS-OTA-Downgrader here](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) and extract the zip archive
+2. Plug in your iOS device
+3. Open a Terminal window
+4. Drag `restore.sh` to the Terminal window and press ENTER
+5. Select option to be used
+6. Follow instructions
+
+## Supported OS versions/distros:
+- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/) and Bionic-based distros
+- [Ubuntu 20.04](http://releases.ubuntu.com/focal/) and Focal-based distros like [Linux Mint 20](https://www.linuxmint.com/)
+- Ubuntu 20.10
+- [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
+- [Fedora 32 to 33](https://getfedora.org/)
+- macOS 10.13 to 10.15
 
 ## Other notes:
 - **You do NOT need blobs to use this**, the script will get them for you
@@ -52,20 +64,16 @@
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (for Linux users I recommend trying in a live USB)
   - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
+  - Other than the above there's not much else I can help regarding entering pwnDFU mode...
 - For 32-bit devices:
-  - This script does not modify the IPSW
   - To devices with baseband, this script will restore your device with the latest baseband
   - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script can also be used to just enter kDFU mode for all supported devices
   - This script can also restore your device to other iOS versions with provided SHSH blobs
+  - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
+    - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
+  - This script does not modify the IPSW
   - This script can work on virtual machines, but I won't provide support for them
-
-## Supported OS versions/distros:
-- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/) and Bionic-based distros
-- [Ubuntu 20.04](http://releases.ubuntu.com/focal/) and Focal-based distros like [Linux Mint 20](https://www.linuxmint.com/)
-- [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
-- [Fedora 32](https://getfedora.org/)
-- macOS 10.13 High Sierra, 10.14 Mojave, 10.15 Catalina
 
 ## Tools and other stuff used by this script:
 - cURL

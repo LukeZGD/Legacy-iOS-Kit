@@ -693,4 +693,5 @@ function BasebandDetect {
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
 }
 
+cd "$(dirname $0)"
 Main $1
