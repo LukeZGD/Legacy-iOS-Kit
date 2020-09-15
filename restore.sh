@@ -398,7 +398,7 @@ function Downgrade {
             cd tmp
             Log "Downloading jailbreak files..."
             for i in {0..2}; do
-                SaveFile $JBLink/jailbreak/${JBFiles[$i]} ${JBFiles[$i]} ${JBSHA1[$i]}
+                SaveFile $JBLink/${JBFiles[$i]} ${JBFiles[$i]} ${JBSHA1[$i]}
             done
             mkdir ../resources/jailbreak
             cp ${JBFiles[@]} ../resources/jailbreak

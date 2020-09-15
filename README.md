@@ -17,7 +17,7 @@
   - iPads - iPad 2, iPad 3, iPad mini 1
   - iPods - iPod 5th gen
   - **iPhone 5C is NOT Supported**
-- **iOS 6.1.3**:
+- **iOS 6.1.3** (can be jailbroken):
   - iPhone 4S
   - iPad 2 **except iPad2,4**
 
