@@ -13,9 +13,9 @@
   - iPad mini 2 **except iPad4,6**
   - **iPad mini 3 is NOT supported**
 - **iOS 8.4.1** - 32-bit devices:
-  - iPhones: iPhone 4S, iPhone 5
-  - iPads - iPad 2, iPad 3, iPad mini 1
-  - iPods - iPod 5th gen
+  - iPhone 4S, iPhone 5
+  - iPad 2, iPad 3, iPad mini 1
+  - iPod 5th gen
   - **iPhone 5C is NOT Supported**
 - **iOS 6.1.3** (can be jailbroken):
   - iPhone 4S
@@ -83,6 +83,8 @@
 - [irecovery](https://github.com/LukeZGD/libirecovery)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
+- [idevicerestore](https://github.com/LukeZGD/idevicerestore)
+- ipsw tool from OdysseusOTA
 - python2
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
