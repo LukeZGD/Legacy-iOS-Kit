@@ -67,13 +67,12 @@
   - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
   - Other than the above there's not much else I can help regarding entering pwnDFU mode...
 - For 32-bit devices:
-  - To devices with baseband, this script will restore your device with the latest baseband
+  - To devices with baseband, this script will restore your device with the latest baseband (except iOS 6 jailbreak)
   - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script can also be used to just enter kDFU mode for all supported devices
   - This script can also restore your device to other iOS versions with provided SHSH blobs
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
-  - This script does not modify the IPSW
   - This script can work on virtual machines, but I won't provide support for them
 
 ## Tools and other stuff used by this script:

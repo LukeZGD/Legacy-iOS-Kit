@@ -42,9 +42,11 @@ function Main {
         bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
+        idevicerestore="sudo LD_LIBRARY_PATH=resources/lib resources/tools/idevicerestore_linux"
         iproxy="iproxy"
+        ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_$platform"
         irecovery="env LD_LIBRARY_PATH=resources/lib resources/libirecovery/bin/irecovery"
-        pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_$platform"
+        pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_linux"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -56,7 +58,9 @@ function Main {
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
+        idevicerestore="resources/tools/idevicerestore_$platform"
         iproxy="resources/libimobiledevice_$platform/iproxy"
+        ipsw="tools/ipsw_$platform"
         irecovery="resources/libimobiledevice_$platform/irecovery"
         pwnedDFU="resources/tools/pwnedDFU_$platform"
         python="python"
@@ -170,7 +174,7 @@ function SelectVersion {
     fi
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
        [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
-        Selection+=("iOS 6.1.3")
+        Selection+=("iOS 6.1.3 (Jailbreak)" "iOS 6.1.3")
     fi
     [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
     Selection+=("(Any other key to exit)")
@@ -178,6 +182,7 @@ function SelectVersion {
     select opt in "${Selection[@]}"; do
         case $opt in
             "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
+            "iOS 6.1.3 (Jailbreak)" ) OSVer='6.1.3'; BuildVer='10B329'; A5Jailbreak=1; break;;
             "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
             "Other" ) OSVer='Other'; break;;
             *) exit;;
@@ -383,6 +388,34 @@ function Downgrade {
     
     [ ! $DFUManual ] && kDFU
     
+    if [[ $A5Jailbreak == 1 ]]; then
+        JBFiles=(Cydia6.tar fstab_rw.tar p0sixspwn.tar)
+        JBSHA1=(1d5a351016d2546aa9558bc86ce39186054dc281
+                887f82cb601116ee78ad752eca7007128b6b38d3
+                6b003d3baddbafed2b468ba11328374d2dab276b)
+        JBLink=https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak
+        if [[ ! $(ls resources/jailbreak) ]]; then
+            cd tmp
+            Log "Downloading jailbreak files..."
+            for i in {0..2}; do
+                SaveFile $JBLink/jailbreak/${JBFiles[$i]} ${JBFiles[$i]} ${JBSHA1[$i]}
+            done
+            mkdir ../resources/jailbreak
+            cp ${JBFiles[@]} ../resources/jailbreak
+            cd ..
+        fi
+        for i in {0..2}; do
+            JBFiles[$i]=jailbreak/${JBFiles[$i]}
+        done
+        if [ ! -e $IPSWCustom.ipsw ]; then
+            Log "Preparing custom IPSW..."
+            cd resources
+            $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw -memory -bbupdate -s 1260 ${JBFiles[@]}
+            cd ..
+        fi
+        IPSW=$IPSWCustom
+    fi
+    
     Log "Extracting IPSW..."
     unzip -q $IPSW.ipsw -d $IPSW/
     
@@ -429,12 +462,20 @@ function Downgrade {
         SaveOTABlobs
     fi
     
-    Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
-    cd resources
-    sudo bash -c "$python -m SimpleHTTPServer 80 &"
-    cd ..
+    if [[ -z $A5Jailbreak ]] && [[ -z $A7Device ]]; then
+        Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
+        cd resources
+        sudo bash -c "$python -m SimpleHTTPServer 80 &"
+        cd ..
+    fi
     
-    if [ $Baseband == 0 ]; then
+    if [[ $A5Jailbreak == 1 ]]; then
+        Log "Proceeding to idevicerestore..."
+        mkdir shsh
+        mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
+        $idevicerestore -y -e -w $IPSW.ipsw
+        rm -rf shsh
+    elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
         if [[ $A7Device == 1 ]]; then
@@ -476,9 +517,11 @@ function Downgrade {
     fi
         
     echo
-    Log "futurerestore done!"    
-    Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
-    ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    Log "Restoring done!"
+    if [[ -z $A5Jailbreak ]] && [[ -z $A7Device ]]; then
+        Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
+        ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    fi
     Log "Downgrade script done!"
 }
 
