@@ -30,7 +30,7 @@
   - The script can also download it for you
 - A **64-bit Linux install/live USB** or a supported **macOS** version
   - See supported OS versions and Linux distros below
-  - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/))
+  - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)
 - All 32-bit users must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
   - Users in iOS 10 must install [Dropbear (deb)](https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/Dropbear.deb) as well
   
@@ -43,7 +43,8 @@
 1. [Download iOS-OTA-Downgrader here](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) and extract the zip archive
 2. Plug in your iOS device
 3. Open a Terminal window
-4. Drag `restore.sh` to the Terminal window and press ENTER
+4. `cd` to where the zip archive is extracted, and run `./restore.sh`
+    - You can also drag `restore.sh` to the Terminal window and press ENTER
 5. Select option to be used
 6. Follow instructions
 
@@ -87,7 +88,7 @@
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 251 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
-- [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore)
+- [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore) (A7)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://mtmdev.org/pmbonneau-archive)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
