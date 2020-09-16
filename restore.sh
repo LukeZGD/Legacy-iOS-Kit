@@ -86,8 +86,10 @@ function Main {
     
     Log "Finding device in normal mode..."
     ideviceinfo2=$($ideviceinfo -s)
-    Log "Finding device in DFU/recovery mode..."
-    [[ $? != 0 ]] && irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
+    if [[ $? != 0 ]]; then
+        Log "Finding device in DFU/recovery mode..."
+        irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
+    fi
     [[ $irecovery2 == "DFU" ]] && DFUDevice=1
     [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1
     
