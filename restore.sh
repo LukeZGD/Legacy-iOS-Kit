@@ -44,8 +44,9 @@ function Main {
         ideviceinfo="ideviceinfo"
         idevicerestore="sudo LD_LIBRARY_PATH=resources/lib resources/tools/idevicerestore_linux"
         iproxy="iproxy"
-        ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_$platform"
-        irecovery="sudo LD_LIBRARY_PATH=resources/lib resources/libirecovery/bin/irecovery"
+        ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_linux"
+        irecoverychk="resources/libirecovery/bin/irecovery"
+        irecovery="sudo LD_LIBRARY_PATH=resources/lib $irecoverychk"
         pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_linux"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
@@ -62,6 +63,7 @@ function Main {
         iproxy="resources/libimobiledevice_$platform/iproxy"
         ipsw="tools/ipsw_$platform"
         irecovery="resources/libimobiledevice_$platform/irecovery"
+        irecoverychk=$irecovery
         pwnedDFU="resources/tools/pwnedDFU_$platform"
         python="python"
         futurerestore1="resources/tools/futurerestore1_$platform"
@@ -69,14 +71,16 @@ function Main {
         tsschecker="resources/tools/tsschecker_$platform"
     fi
     partialzip="resources/tools/partialzip_$platform"
-    chmod +x resources/tools/*
     
+    [[ ! -d resources ]] && Error "resources folder cannot be found. Replace resources folder and try again" "If resources folder is present try removing spaces from path/folder name"
     [[ ! $platform ]] && Error "Platform unknown/not supported."
+    chmod +x resources/tools/*
+    [ $? == 1 ] && Log "An error occurred in chmod. This might cause problems..."
     [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
-        
-    if [[ $1 == Install ]] || [ ! $(which $bspatch) ] || [ ! $(which $ideviceinfo) ] ||
-       [ ! $(which git) ] || [ ! $(which ssh) ] || [ ! $(which $python) ]; then
+    
+    if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
+       [ ! $(which git) ] || [ ! $(which $bspatch) ] || [ ! $(which $python) ]; then
         rm -rf resources/firmware resources/ipwndfu
         InstallDependencies
     fi
@@ -493,7 +497,7 @@ function Downgrade {
         Log "Proceeding to idevicerestore..."
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-        $idevicerestore -y -e -w $IPSW.ipsw
+        $idevicerestore -e -w $IPSW.ipsw
         rm -rf shsh
     elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
@@ -599,6 +603,7 @@ function InstallDependencies {
         # macOS
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
+        mkdir resources/libirecovery 2>/dev/null
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
