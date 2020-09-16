@@ -1,7 +1,10 @@
 # iOS-OTA-Downgrader
 ### (formerly 32bit-OTA-Downgrader)
-### Downgrade/restore iOS devices to signed OTA firmwares
+### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
 - This is currently the only downgrade script/tool that supports **both Linux and macOS**
+- iOS 8.4.1 and 6.1.3 downgrades have the option to jailbreak
+  - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol)
+- **You do NOT need blobs to use this**, the script will get them for you
 - **Please see the "Other notes" section below to serve as answers/solutions for frequent questions and issues**
 
 ## Supported devices:
@@ -17,7 +20,7 @@
   - iPad 2, iPad 3, iPad mini 1
   - iPod 5th gen
   - **iPhone 5C is NOT Supported**
-- **iOS 6.1.3** (can be jailbroken):
+- **iOS 6.1.3**:
   - iPhone 4S
   - iPad 2 **except iPad2,4**
 
@@ -57,7 +60,6 @@
 - macOS 10.13 to 10.15
 
 ## Other notes:
-- **You do NOT need blobs to use this**, the script will get them for you
 - If the restore process does not work for you, try switching USB ports and/or cables
 - This script will verify the IPSW SHA1sum before restoring
 - For users having issues related to missing libraries or tools, re-install dependencies with `./restore.sh Install`
@@ -67,7 +69,7 @@
   - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
   - Other than the above there's not much else I can help regarding entering pwnDFU mode...
 - For 32-bit devices:
-  - To devices with baseband, this script will restore your device with the latest baseband (except iOS 6 jailbreak)
+  - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled)
   - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script can also be used to just enter kDFU mode for all supported devices
   - This script can also restore your device to other iOS versions with provided SHSH blobs
@@ -84,7 +86,7 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore)
-- ipsw tool from OdysseusOTA
+- ipsw tool from OdysseusOTA/2
 - python2
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)

@@ -174,7 +174,7 @@ function SelectVersion {
     fi
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
        [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
-        Selection+=("iOS 6.1.3 (Jailbreak)" "iOS 6.1.3")
+        Selection+=("iOS 6.1.3")
     fi
     [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
     Selection+=("(Any other key to exit)")
@@ -182,12 +182,13 @@ function SelectVersion {
     select opt in "${Selection[@]}"; do
         case $opt in
             "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
-            "iOS 6.1.3 (Jailbreak)" ) OSVer='6.1.3'; BuildVer='10B329'; A5Jailbreak=1; break;;
             "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
             "Other" ) OSVer='Other'; break;;
             *) exit;;
         esac
     done
+    [[ -z $A7Device ]] && read -p "$(Input 'Jailbreak the selected iOS version? (y/N): ')" Jailbreak
+    [[ $Jailbreak == y ]] || [[ $Jailbreak == Y ]] && Jailbreak=1
     Action
 }
 
@@ -388,18 +389,26 @@ function Downgrade {
     
     [ ! $DFUManual ] && kDFU
     
-    if [[ $A5Jailbreak == 1 ]]; then
-        JBFiles=(Cydia6.tar fstab_rw.tar p0sixspwn.tar)
-        JBSHA1=(1d5a351016d2546aa9558bc86ce39186054dc281
-                887f82cb601116ee78ad752eca7007128b6b38d3
-                6b003d3baddbafed2b468ba11328374d2dab276b)
-        JBLink=https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak
-        if [[ ! $(ls resources/jailbreak) ]]; then
+    # uses ipsw tool from OdysseusOTA/2 to create custom IPSW with jailbreak
+    if [[ $Jailbreak == 1 ]]; then
+        if [[ $OSVer == 8.4.1 ]]; then
+            JBFiles=(fstab.tar etasonJB-untether.tar Cydia8.tar)
+            JBSHA1=(5e5871aadeb0b958d577f43f6a04e1a2d04bf530
+                    b1cb2cb3c40fabeeee3a293d8f0e4e1f8f5de79a
+                    6459dbcbfe871056e6244d23b33c9b99aaeca970)
+            JBS=2265
+        else
+            JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
+            JBSHA1=(887f82cb601116ee78ad752eca7007128b6b38d3
+                    6b003d3baddbafed2b468ba11328374d2dab276b
+                    1d5a351016d2546aa9558bc86ce39186054dc281)
+            JBS=1260
+        fi
+        if [[ ! $(ls resources/jailbreak) ]] || [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
+            mkdir tmp
             cd tmp
             Log "Downloading jailbreak files..."
-            for i in {0..2}; do
-                SaveFile $JBLink/${JBFiles[$i]} ${JBFiles[$i]} ${JBSHA1[$i]}
-            done
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} ${JBSHA1[2]}
             mkdir ../resources/jailbreak
             cp ${JBFiles[@]} ../resources/jailbreak
             cd ..
@@ -408,11 +417,17 @@ function Downgrade {
             JBFiles[$i]=jailbreak/${JBFiles[$i]}
         done
         if [ ! -e $IPSWCustom.ipsw ]; then
+            Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
+            Echo "* If it doesn't work with both, you might not have enough RAM or tmp storage"
+            read -p "$(Input 'Memory option? (press ENTER if unsure) (Y/n): ')" JBMemory
+            [[ $JBMemory != n ]] && [[ $JBMemory != N ]] && JBMemory="-memory" || JBMemory=
             Log "Preparing custom IPSW..."
             cd resources
-            $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw -memory -bbupdate -s 1260 ${JBFiles[@]}
+            ln -sf firmware/FirmwareBundles FirmwareBundles
+            $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -bbupdate -s $JBS ${JBFiles[@]}
             cd ..
         fi
+        [ ! -e $IPSWCustom.ipsw ] && Error "Failed to find custom IPSW. Please run the script again" "You may try selecting N for memory option"
         IPSW=$IPSWCustom
     fi
     
@@ -462,14 +477,14 @@ function Downgrade {
         SaveOTABlobs
     fi
     
-    if [[ -z $A5Jailbreak ]] && [[ -z $A7Device ]]; then
+    if [[ -z $Jailbreak ]] && [[ -z $A7Device ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         sudo bash -c "$python -m SimpleHTTPServer 80 &"
         cd ..
     fi
     
-    if [[ $A5Jailbreak == 1 ]]; then
+    if [[ $Jailbreak == 1 ]]; then
         Log "Proceeding to idevicerestore..."
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
@@ -518,7 +533,7 @@ function Downgrade {
         
     echo
     Log "Restoring done!"
-    if [[ -z $A5Jailbreak ]] && [[ -z $A7Device ]]; then
+    if [[ -z $Jailbreak ]] && [[ -z $A7Device ]]; then
         Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
         ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     fi
