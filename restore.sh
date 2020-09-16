@@ -461,6 +461,7 @@ function Downgrade {
             [[ $ProductType == iPad4* ]] && cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
             cp $IPSW/Firmware/all_flash/$SEP .
         fi
+        [ ! -e $IPSW.ipsw ] && Error "Failed to create custom IPSW. Please run the script again"
         if [[ $ProductType == iPad4,4 ]] || [[ $ProductType == iPad4,5 ]]; then
             iBEC=$iBECb
             iBSS=$iBSSb
