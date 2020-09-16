@@ -45,7 +45,7 @@ function Main {
         idevicerestore="sudo LD_LIBRARY_PATH=resources/lib resources/tools/idevicerestore_linux"
         iproxy="iproxy"
         ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_$platform"
-        irecovery="env LD_LIBRARY_PATH=resources/lib resources/libirecovery/bin/irecovery"
+        irecovery="sudo LD_LIBRARY_PATH=resources/lib resources/libirecovery/bin/irecovery"
         pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_linux"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
@@ -84,7 +84,9 @@ function Main {
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
+    Log "Finding device in normal mode..."
     ideviceinfo2=$($ideviceinfo -s)
+    Log "Finding device in DFU/recovery mode..."
     [[ $? != 0 ]] && irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
     [[ $irecovery2 == "DFU" ]] && DFUDevice=1
     [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1
