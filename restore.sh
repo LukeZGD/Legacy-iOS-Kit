@@ -9,7 +9,7 @@ if [[ $1 != 'NoColor' ]]; then
 fi
 
 function Clean {
-    rm -rf iP*/ tmp/ ${UniqueChipID}_${ProductType}_${OSVer}-*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-*.shsh *.im4p *.bbfw BuildManifest.plist
+    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist
 }
 
 function Echo {
@@ -81,7 +81,9 @@ function Main {
     
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which $bspatch) ] || [ ! $(which $python) ]; then
-        rm -rf resources/firmware resources/ipwndfu
+        cd resources
+        rm -rf firmware ipwndfu libimobiledevice_$platform libirecovery
+        cd ..
         InstallDependencies
     fi
     
@@ -200,7 +202,7 @@ function SelectVersion {
     Action
 }
 
-function Action {    
+function Action {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
@@ -225,14 +227,16 @@ function SaveOTABlobs {
         APNonce=$($irecovery -q | grep 'NONC' | cut -c 7-)
         Echo "* APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
-        SHSH=$(ls ${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh)
+        SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
-        SHSH=$(ls ${UniqueChipID}_${ProductType}_${OSVer}-${BuildVer}_*.shsh2)
+        SHSHChk=${UniqueChipID}_${ProductType}_${OSVer}-${BuildVer}_*.shsh2
+        
     fi
+    SHSH=$(ls $SHSHChk)
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     mkdir -p saved/shsh 2>/dev/null
-    cp "$SHSH" saved/shsh
+    [[ ! $(ls saved/shsh/$SHSHChk 2>/dev/null) ]] && cp "$SHSH" saved/shsh
     Log "Successfully saved $OSVer blobs."
 }
 
@@ -281,7 +285,8 @@ function kDFU {
     fi
     echo
     Echo "* Press POWER or HOME button when screen goes black on the device"
-    
+    Input "Press ENTER to continue."
+    read -s
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
         [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
@@ -404,7 +409,7 @@ function Downgrade {
             JBSHA1=(5e5871aadeb0b958d577f43f6a04e1a2d04bf530
                     b1cb2cb3c40fabeeee3a293d8f0e4e1f8f5de79a
                     6459dbcbfe871056e6244d23b33c9b99aaeca970)
-            JBS=2265
+            JBS=2305
         else
             JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
             JBSHA1=(887f82cb601116ee78ad752eca7007128b6b38d3
@@ -412,13 +417,11 @@ function Downgrade {
                     1d5a351016d2546aa9558bc86ce39186054dc281)
             JBS=1260
         fi
-        if [[ ! $(ls resources/jailbreak) ]] || [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
-            mkdir tmp
+        if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
             cd tmp
             Log "Downloading jailbreak files..."
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} ${JBSHA1[2]}
-            mkdir ../resources/jailbreak
-            cp ${JBFiles[@]} ../resources/jailbreak
+            cp ${JBFiles[2]} ../resources/jailbreak
             cd ..
         fi
         for i in {0..2}; do
@@ -498,7 +501,6 @@ function Downgrade {
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
         $idevicerestore -e -w $IPSW.ipsw
-        rm -rf shsh
     elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
@@ -550,7 +552,6 @@ function Downgrade {
 }
 
 function InstallDependencies {
-    echo "Install Dependencies"
     . /etc/os-release 2>/dev/null
     mkdir tmp 2>/dev/null
     cd tmp
@@ -603,7 +604,6 @@ function InstallDependencies {
         # macOS
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
-        mkdir resources/libirecovery 2>/dev/null
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
@@ -614,7 +614,6 @@ function InstallDependencies {
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
     else
-        rm -rf ../resources/libimobiledevice_$platform
         mkdir ../resources/libimobiledevice_$platform
         unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
         chmod +x ../resources/libimobiledevice_$platform/*
