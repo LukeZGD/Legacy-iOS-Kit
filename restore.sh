@@ -285,11 +285,11 @@ function kDFU {
     fi
     echo
     Echo "* Press POWER or HOME button when screen goes black on the device"
-    Input "Press ENTER to continue."
-    read -s
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
+        [[ $platform == linux ]] && [[ $(lsusb | grep -c '1227') == 1 ]] && DFUDevice=1
+        [[ $platform == macos ]] && [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
+        sleep 1
     done
     Log "Found device in DFU mode."
     kill $iproxyPID
