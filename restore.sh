@@ -287,7 +287,7 @@ function kDFU {
     Echo "* Press POWER or HOME button when screen goes black on the device"
     Log "Finding device in DFU mode..."
     while [[ $DFUDevice != 1 ]]; do
-        [[ $platform == linux ]] && [[ $(lsusb | grep -c '1227') == 1 ]] && DFUDevice=1
+        [[ $platform == linux ]] && DFUDevice=$(lsusb | grep -c '1227')
         [[ $platform == macos ]] && [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
         sleep 1
     done
