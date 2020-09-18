@@ -60,7 +60,7 @@
 - macOS 10.13 to 10.15
 
 ## Other notes:
-- If the restore process does not work for you, try switching USB ports and/or cables
+- If something in the process does not work for you, try switching USB ports and/or cables (using a USB 2.0 port is recommended)
 - This script will verify the IPSW SHA1sum before restoring
 - For users having issues related to missing libraries or tools, re-install dependencies with `./restore.sh Install`
 - For A7 devices:
