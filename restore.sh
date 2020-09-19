@@ -197,8 +197,6 @@ function SelectVersion {
             *) exit;;
         esac
     done
-    [[ -z $A7Device ]] && read -p "$(Input 'Jailbreak the selected iOS version? (y/N): ')" Jailbreak
-    [[ $Jailbreak == y ]] || [[ $Jailbreak == Y ]] && Jailbreak=1
     Action
 }
 
@@ -210,6 +208,11 @@ function Action {
         read -p "$(Input 'Path to IPSW (drag IPSW to terminal window): ')" IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "$(Input 'Path to SHSH (drag SHSH to terminal window): ')" SHSH
+        
+    elif [[ $Mode == 'Downgrade' ]] && [[ $A7Device != 1 ]]; then
+        read -p "$(Input 'Jailbreak the selected iOS version? (y/N): ')" Jailbreak
+        [[ $Jailbreak == y ]] || [[ $Jailbreak == Y ]] && Jailbreak=1
+        
     elif [[ $A7Device == 1 ]] && [[ $pwnDFUDevice != 0 ]]; then
         [[ $DFUDevice == 1 ]] && CheckM8 || Recovery
     fi
@@ -489,7 +492,7 @@ function Downgrade {
         SaveOTABlobs
     fi
     
-    if [[ -z $Jailbreak ]] && [[ -z $A7Device ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         sudo bash -c "$python -m SimpleHTTPServer 80 &"
@@ -544,7 +547,7 @@ function Downgrade {
         
     echo
     Log "Restoring done!"
-    if [[ -z $Jailbreak ]] && [[ -z $A7Device ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]]; then
         Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
         ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     fi
