@@ -1,7 +1,7 @@
 # iOS-OTA-Downgrader
 ### (formerly 32bit-OTA-Downgrader)
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
-- This is currently the only downgrade script/tool that supports **both Linux and macOS**
+- This downgrade script/tool supports **both Linux and macOS**
 - iOS 8.4.1 and 6.1.3 downgrades have the option to jailbreak
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol)
 - **You do NOT need blobs to use this**, the script will get them for you
@@ -76,6 +76,11 @@
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
   - This script can work on virtual machines, but I won't provide support for them
+- For jailbreak option:
+  - On iOS 8 downgrades, stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install the "Stashing for #etasonJB" package
+  - If you have problems with Cydia, remove the ultrasn0w repo and force-close Cydia, then try opening Cydia again
+  - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://`
+  - Warning: If your device bootloops with EtasonJB, it may not work with the jailbreak option as well! (I think this applies to [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) users) If this happens, bootloop protection will trigger and you won't be able to open Cydia
 
 ## Tools and other stuff used by this script:
 - cURL
