@@ -179,9 +179,7 @@ function SelectVersion {
     elif [[ $Mode == 'kDFU' ]]; then
         Action
     fi
-    if [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
-        Selection=("iOS 8.4.1")
-    fi
+    Selection=("iOS 8.4.1")
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
        [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         Selection+=("iOS 6.1.3")
@@ -234,7 +232,6 @@ function SaveOTABlobs {
     else
         $tsschecker -d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s
         SHSHChk=${UniqueChipID}_${ProductType}_${OSVer}-${BuildVer}_*.shsh2
-        
     fi
     SHSH=$(ls $SHSHChk)
     [ ! $SHSH ] && Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
@@ -448,7 +445,7 @@ function Downgrade {
     Log "Extracting IPSW..."
     unzip -q $IPSW.ipsw -d $IPSW/
     
-    # this part won't be needed if futurerestore with odysseus64 is used (maybe sometime)
+    # create custom IPSW for 10.3.3
     if [[ $A7Device == 1 ]]; then
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Preparing custom IPSW..."
@@ -492,7 +489,7 @@ function Downgrade {
         SaveOTABlobs
     fi
     
-    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]] && [[ $OSVer != 'Other' ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         sudo bash -c "$python -m SimpleHTTPServer 80 &"
@@ -547,7 +544,7 @@ function Downgrade {
         
     echo
     Log "Restoring done!"
-    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]] && [[ $OSVer != 'Other' ]]; then
         Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
         ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     fi
@@ -606,7 +603,7 @@ function InstallDependencies {
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
         xcode-select --install
-        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.4/libimobiledevice.1.2.1-r1079-osx-x64.zip libimobiledevice.zip 2812e01fc7c09b5980b46b97236b2981dbec7307
+        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.6/libimobiledevice.1.2.1-r1091-osx-x64.zip libimobiledevice.zip dba9ca5399e9ff7e39f0062d63753d1a0c749224
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
