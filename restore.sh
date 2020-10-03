@@ -500,7 +500,7 @@ function Downgrade {
         Log "Proceeding to idevicerestore..."
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-        $idevicerestore -y -e -w $IPSW.ipsw
+        $idevicerestore -e -w $IPSW.ipsw
     elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
