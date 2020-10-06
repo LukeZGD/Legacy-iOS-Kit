@@ -38,6 +38,7 @@ function Main {
     echo
     
     if [[ $OSTYPE == "linux-gnu" ]]; then
+        . /etc/os-release 2>/dev/null
         platform="linux"
         bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
@@ -555,7 +556,6 @@ function Downgrade {
 }
 
 function InstallDependencies {
-    . /etc/os-release 2>/dev/null
     mkdir tmp 2>/dev/null
     cd tmp
     
