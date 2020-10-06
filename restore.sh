@@ -52,7 +52,10 @@ function Main {
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
         tsschecker="env LD_LIBRARY_PATH=resources/lib resources/tools/tsschecker_linux"
-        [[ $UBUNTU_CODENAME == "bionic" ]] && futurerestore2="${futurerestore2}_bionic"
+        if [[ $UBUNTU_CODENAME == "bionic" ]]; then
+            futurerestore2="${futurerestore2}_bionic"
+            idevicerestore="${idevicerestore}_bionic"
+        fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -574,7 +577,7 @@ function InstallDependencies {
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             sudo apt install -y libzip4 python
             sudo dpkg -i libpng12_bionic.deb libzip5.deb
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 2fb44dbb6c167ba6f7782521454503998a285751
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 959abbafacfdaddf87dd07683127da1dab6c835f
             unzip tools_linux_bionic.zip -d ../resources/tools
         else
             sudo apt install -y libzip5 python2
