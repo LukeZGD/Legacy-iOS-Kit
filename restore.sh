@@ -59,6 +59,7 @@ function Main {
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
+        macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
         bspatch="resources/tools/bspatch_$platform"
         ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
@@ -121,7 +122,7 @@ function Main {
     Clean
     mkdir tmp
     
-    Echo "* Platform: $platform"
+    Echo "* Platform: $platform $macver"
     Echo "* HardwareModel: ${HWModel}ap"
     Echo "* ProductType: $ProductType"
     Echo "* ProductVersion: $ProductVer"
@@ -504,7 +505,7 @@ function Downgrade {
         Log "Proceeding to idevicerestore..."
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-        $idevicerestore -e -w $IPSW.ipsw
+        $idevicerestore -y -e -w $IPSW.ipsw
     elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
@@ -607,6 +608,9 @@ function InstallDependencies {
         # macOS
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.6/libimobiledevice.1.2.1-r1091-osx-x64.zip libimobiledevice.zip dba9ca5399e9ff7e39f0062d63753d1a0c749224
+        if [[ $macver == 10.15* ]] || [[ $macver == 10.16* ]] || [[ $macver == 11* ]]; then
+            sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
+        fi
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
