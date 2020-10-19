@@ -52,9 +52,7 @@
 6. Follow instructions
 
 ## Supported OS versions/distros:
-- [Ubuntu 18.04](http://releases.ubuntu.com/bionic/) and Bionic-based distros
-- [Ubuntu 20.04](http://releases.ubuntu.com/focal/) and Focal-based distros like [Linux Mint 20](https://www.linuxmint.com/)
-- Ubuntu 20.10
+- Ubuntu [16.04](http://releases.ubuntu.com/xenial/), [18.04](http://releases.ubuntu.com/bionic/), [20.04](http://releases.ubuntu.com/focal/), and [20.10](https://releases.ubuntu.com/groovy/) and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
 - [Fedora 32 to 33](https://getfedora.org/)
 - macOS 10.13 to 10.15

@@ -56,6 +56,11 @@ function Main {
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
             futurerestore2="${futurerestore2}_bionic"
             idevicerestore="${idevicerestore}_bionic"
+        elif [[ $UBUNTU_CODENAME == "xenial" ]]; then
+            futurerestore2="${futurerestore2}_xenial"
+            idevicerestore="${idevicerestore}_xenial"
+            partialzip="${partialzip}_xenial"
+            tsschecker="${tsschecker}_xenial"
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -567,7 +572,8 @@ function InstallDependencies {
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
         
-    elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
+    elif [[ $UBUNTU_CODENAME == "xenial" ]] || [[ $UBUNTU_CODENAME == "bionic" ]] ||
+         [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
         # Ubuntu
         sudo add-apt-repository universe
         sudo apt update
@@ -580,6 +586,10 @@ function InstallDependencies {
             sudo dpkg -i libpng12_bionic.deb libzip5.deb
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 959abbafacfdaddf87dd07683127da1dab6c835f
             unzip tools_linux_bionic.zip -d ../resources/tools
+        elif [[ $UBUNTU_CODENAME == "xenial" ]]; then
+            sudo apt install -y libzip4 python libpng12
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_xenial.zip tools_linux_xenial.zip b74861fd87511a92e36e27bf2ec3e1e83b6e8200
+            unzip tools_linux_xenial.zip -d ../resources/tools
         else
             sudo apt install -y libzip5 python2
             sudo dpkg -i libpng12.deb libssl1.0.0.deb libzip4.deb
