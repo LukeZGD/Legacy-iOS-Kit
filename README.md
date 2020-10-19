@@ -17,7 +17,7 @@
   - **iPad mini 3 is NOT supported**
 - **iOS 8.4.1** - 32-bit devices:
   - iPhone 4S, iPhone 5
-  - iPad 2, iPad 3, iPad mini 1
+  - iPad 2, iPad 3, iPad 4, iPad mini 1
   - iPod 5th gen
   - **iPhone 5C is NOT Supported**
 - **iOS 6.1.3**:
