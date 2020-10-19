@@ -81,7 +81,7 @@ function Main {
     [[ ! $platform ]] && Error "Platform unknown/not supported."
     chmod +x resources/tools/*
     [ $? == 1 ] && Log "An error occurred in chmod. This might cause problems..."
-    [[ ! $(ping -c1 google.com 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
+    [[ ! $(ping -c1 8.8.8.8 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
     [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
@@ -273,8 +273,8 @@ function kDFU {
     iproxyPID=$!
     WifiAddr=$(echo "$ideviceinfo2" | grep 'WiFiAddress' | cut -c 14-)
     WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
-    echo '#!/bin/bash' > tmp/pwn.sh
-    echo "nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
+    echo '#!/bin/sh' > tmp/pwn.sh
+    echo "/usr/sbin/nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
     chmod +x tmp/pwn.sh
     
     Log "Copying stuff to device via SSH..."
@@ -643,18 +643,19 @@ function SaveExternal {
     ExternalURL="https://github.com/LukeZGD/$1.git"
     External=$1
     [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
-    if [[ ! -d resources/$External ]] || [[ ! -d resources/$External/.git ]]; then
+    cd resources
+    if [[ ! -d $External ]] || [[ ! -d $External/.git ]]; then
         Log "Downloading $External..."
-        cd resources
         rm -rf $External
         git clone $ExternalURL $External
-    else
-        Log "Updating $External..."
-        cd resources/$External
-        git pull 2>/dev/null
-        cd ..
+    #else
+    #    Log "Updating $External..."
+    #    cd $External
+    #    git pull 2>/dev/null
+    #    cd ..
     fi
     if [[ ! -e $External/README.md ]] || [[ ! -d $External/.git ]]; then
+        rm -rf $External
         Error "Downloading/updating $1 failed. Please run the script again"
     fi
     cd ..
