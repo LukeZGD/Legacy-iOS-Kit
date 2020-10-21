@@ -618,9 +618,8 @@ function InstallDependencies {
         # macOS
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.6/libimobiledevice.1.2.1-r1091-osx-x64.zip libimobiledevice.zip dba9ca5399e9ff7e39f0062d63753d1a0c749224
-        if [[ $macver == 10.15* ]] || [[ $macver == 10.16* ]] || [[ $macver == 11* ]]; then
-            sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
-        fi
+        Log "(Enter root password of your Mac when prompted)"
+        sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
