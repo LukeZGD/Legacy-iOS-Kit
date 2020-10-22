@@ -522,6 +522,9 @@ function Downgrade {
     else
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
+        elif [ $ProductType == iPhone5,1 ]; then
+            unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
+            unzip -o -j $IPSW.ipsw BuildManifest.plist -d .
         elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
             $partialzip $BasebandURL Firmware/$Baseband $Baseband 
@@ -707,8 +710,11 @@ function BasebandDetect {
     elif [ $ProductType == iPhone4,1 ]; then
         Baseband=Trek-6.7.00.Release.bbfw
         BasebandSHA1=22a35425a3cdf8fa1458b5116cfb199448eecf49
-    elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
-         [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
+    elif [ $ProductType == iPhone5,1 ]; then
+        BasebandURL=$(cat $Firmware/12H321/url)
+        Baseband=Mav5-8.02.00.Release.bbfw
+        BasebandSHA1=db71823841ffab5bb41341576e7adaaeceddef1c
+    elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] || [ $ProductType == iPhone5,2 ]; then
         BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
         Baseband=Mav5-11.80.00.Release.bbfw
         BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
