@@ -19,7 +19,7 @@
   - iPhone 4S, iPhone 5
   - iPad 2, iPad 3, iPad 4, iPad mini 1
   - iPod 5th gen
-  - **iPhone 5C is NOT Supported**
+  - **iPhone 5C is NOT supported**
 - **iOS 6.1.3**:
   - iPhone 4S
   - iPad 2 **except iPad2,4**

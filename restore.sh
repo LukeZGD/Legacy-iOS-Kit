@@ -212,7 +212,7 @@ function Action {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
-        Echo "* Reminder to create a backup of the SHSH"
+        Echo "* Remember to create a backup of the SHSH"
         read -p "$(Input 'Path to IPSW (drag IPSW to terminal window): ')" IPSW
         IPSW="$(basename $IPSW .ipsw)"
         read -p "$(Input 'Path to SHSH (drag SHSH to terminal window): ')" SHSH
@@ -226,7 +226,7 @@ function Action {
     fi
     
     if [[ $Mode == 'Downgrade' ]] && [[ $ProductType == iPhone5,1 ]] && [[ $Jailbreak != 1 ]]; then
-        Echo "By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1 by default"
+        Echo "By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "There are potential network issues that with the latest baseband when used on iOS 8.4.1"
         read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER when unsure): ')" Baseband5
@@ -279,8 +279,9 @@ function kDFU {
         cd resources/ipwndfu 2>/dev/null
         Log "Booting iBSS..."
         sudo $python ipwndfu -l ../../tmp/pwnediBSS
+        ret=$?
         cd ../..
-        return $?
+        return $ret
     fi
     
     [[ $VersionDetect == 1 ]] && kloader='kloader_hgsp'
@@ -430,21 +431,17 @@ function Downgrade {
     if [[ $Jailbreak == 1 ]]; then
         if [[ $OSVer == 8.4.1 ]]; then
             JBFiles=(fstab.tar etasonJB-untether.tar Cydia8.tar)
-            JBSHA1=(5e5871aadeb0b958d577f43f6a04e1a2d04bf530
-                    b1cb2cb3c40fabeeee3a293d8f0e4e1f8f5de79a
-                    6459dbcbfe871056e6244d23b33c9b99aaeca970)
+            JBSHA1=6459dbcbfe871056e6244d23b33c9b99aaeca970
             JBS=2305
         else
             JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
-            JBSHA1=(887f82cb601116ee78ad752eca7007128b6b38d3
-                    6b003d3baddbafed2b468ba11328374d2dab276b
-                    1d5a351016d2546aa9558bc86ce39186054dc281)
+            JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
             JBS=1260
         fi
         if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
             cd tmp
             Log "Downloading jailbreak files..."
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} ${JBSHA1[2]}
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
             cp ${JBFiles[2]} ../resources/jailbreak
             cd ..
         fi
@@ -557,18 +554,14 @@ function Downgrade {
             Echo "* You can also continue and futurerestore can attempt to download the baseband again"
             Input "Press ENTER to continue (or press Ctrl+C to cancel)"
             read -s
-            if [[ $A7Device == 1 ]]; then
-                $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --latest-baseband $IPSW.ipsw
-            else
-                $futurerestore1 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
-            fi
+            $futurerestore1 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
         elif [[ $A7Device == 1 ]]; then
             $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
             $futurerestore1 -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
         fi
     fi
-        
+    
     echo
     Log "Restoring done!"
     if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]] && [[ $OSVer != 'Other' ]]; then
