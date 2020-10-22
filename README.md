@@ -35,7 +35,7 @@
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)
 - All 32-bit users must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
-  - Users in iOS 10 must install [Dropbear (deb)](https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/Dropbear.deb) as well
+  - Users in iOS 10 must install Dropbear ([Cydia repo](https://lukezgd.github.io/repo/)) as well
   
 <details>
   <summary>For Pangu 32-bit users:</summary>
@@ -74,11 +74,12 @@
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
   - This script can work on virtual machines, but I won't provide support for them
-- For jailbreak option:
-  - On iOS 8 downgrades, stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install the "Stashing for #etasonJB" package
-  - If you have problems with Cydia, remove the ultrasn0w repo and force-close Cydia, then try opening Cydia again
-  - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://`
-  - Warning: If your device bootloops with EtasonJB, it may not work with the jailbreak option as well! (I think this applies to [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) users) If this happens, bootloop protection will trigger and you won't be able to open Cydia
+- If you have problems with Cydia, remove the ultrasn0w repo and force-close Cydia, then try opening Cydia again
+- For jailbreak option on iOS 8 downgrades:
+  - Stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install "Stashing for #etasonJB" package
+  - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package ([Cydia repo](https://lukezgd.github.io/repo/))
+  - To fix LaunchDaemons not loading on startup, install "Infigo" package ([Cydia repo](https://lukezgd.github.io/repo/))
+  - Warning: If your device bootloops with EtasonJB, it may not work with the jailbreak option as well! (I think this applies to some but not all [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) users) If this happens, bootloop protection will trigger and you won't be able to open Cydia
 
 ## Tools and other stuff used by this script:
 - cURL
