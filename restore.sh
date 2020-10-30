@@ -276,7 +276,7 @@ function kDFU {
     $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
     
     if [[ $1 == iBSS ]]; then
-        cd resources/ipwndfu 2>/dev/null
+        cd resources/ipwndfu
         Log "Booting iBSS..."
         sudo $python ipwndfu -l ../../tmp/pwnediBSS
         ret=$?
@@ -385,6 +385,7 @@ function CheckM8 {
             sudo $python rmsigchks.py
             cd ../..
         else
+            cd ../..
             kDFU iBSS
         fi
         Log "Downgrading device $ProductType in pwnDFU mode..."
