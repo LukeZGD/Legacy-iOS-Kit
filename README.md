@@ -5,6 +5,7 @@
 - iOS 8.4.1 and 6.1.3 downgrades have the option to jailbreak
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol)
 - **You do NOT need blobs to use this**, the script will get them for you
+- This script can also restore your device to other iOS versions that you have SHSH blobs on (for 32-bit devices only)
 - **Please see the "Other notes" section below to serve as answers/solutions for frequent questions and issues**
 
 ## Supported devices:
@@ -70,7 +71,6 @@
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
   - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script can also be used to just enter kDFU mode for all supported devices
-  - This script can also restore your device to other iOS versions with provided SHSH blobs
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
   - This script can work on virtual machines, but I won't provide support for them
