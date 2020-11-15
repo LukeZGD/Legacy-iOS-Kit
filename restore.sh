@@ -535,11 +535,11 @@ function Downgrade {
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
         elif [ $ProductType == iPhone5,1 ] && [[ $Baseband5 != 0 ]]; then
-            unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
-            cp $BuildManifest BuildManifest.plist
+            [ ! -e saved/$ProductType/*.bbfw ] && unzip -o -j $IPSW.ipsw Firmware/$Baseband -d saved/$ProductType
+            cp saved/$ProductType/*.bbfw $BuildManifest .
         elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
-            $partialzip $BasebandURL Firmware/$Baseband $Baseband 
+            $partialzip $BasebandURL Firmware/$Baseband $Baseband
             $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
             mkdir -p saved/$ProductType 2>/dev/null
             cp $Baseband BuildManifest.plist saved/$ProductType
