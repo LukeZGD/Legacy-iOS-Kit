@@ -230,9 +230,7 @@ function Action {
         Echo "Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "There are potential network issues that with the latest baseband when used on iOS 8.4.1"
         read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER when unsure): ')" Baseband5
-        if [[ $Baseband5 == y ]] || [[ $Baseband5 == Y ]]; then
-            Baseband5=0
-        else
+        if [[ $Baseband5 != y ]] && [[ $Baseband5 != Y ]]; then
             BasebandURL=$(cat $Firmware/12H321/url)
             Baseband=Mav5-8.02.00.Release.bbfw
             BasebandSHA1=db71823841ffab5bb41341576e7adaaeceddef1c
@@ -534,9 +532,6 @@ function Downgrade {
     else
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
-        elif [ $ProductType == iPhone5,1 ] && [[ $Baseband5 != 0 ]]; then
-            [ ! -e saved/$ProductType/*.bbfw ] && unzip -o -j $IPSW.ipsw Firmware/$Baseband -d saved/$ProductType
-            cp saved/$ProductType/*.bbfw $BuildManifest .
         elif [ ! -e saved/$ProductType/*.bbfw ]; then
             Log "Downloading baseband..."
             $partialzip $BasebandURL Firmware/$Baseband $Baseband
