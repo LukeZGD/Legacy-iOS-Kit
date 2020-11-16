@@ -532,14 +532,14 @@ function Downgrade {
     else
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
-        elif [ ! -e saved/$ProductType/*.bbfw ]; then
+        elif [ ! -e saved/$ProductType/$Baseband ]; then
             Log "Downloading baseband..."
             $partialzip $BasebandURL Firmware/$Baseband $Baseband
             $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
             mkdir -p saved/$ProductType 2>/dev/null
             cp $Baseband BuildManifest.plist saved/$ProductType
         else
-            cp saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist .
+            cp saved/$ProductType/$Baseband saved/$ProductType/BuildManifest.plist .
         fi
         BasebandSHA1L=$(shasum $Baseband | awk '{print $1}')
         Log "Proceeding to futurerestore..."
