@@ -1,6 +1,6 @@
 #!/bin/bash
-libipatcher=0
-PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
+export libipatcher=0
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig
 
 # This script can be used to compile tools used by iOS-OTA-Downgrader for Linux
 
@@ -36,9 +36,9 @@ Compile libimobiledevice libplist
 Compile libimobiledevice libusbmuxd
 Compile libimobiledevice libimobiledevice
 Compile LukeZGD libirecovery #irecovery_linux
-Compile tihmstar libgeneral
-Compile tihmstar libfragmentzip
-Compile tihmstar img4tool
+Compile LukeZGD libgeneral
+Compile LukeZGD libfragmentzip
+Compile LukeZGD img4tool
 
 if [[ $libipatcher != 0 ]]; then
     Clone Merculous xpwn
