@@ -625,6 +625,7 @@ function InstallDependencies {
             ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
         fi
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
+        ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
