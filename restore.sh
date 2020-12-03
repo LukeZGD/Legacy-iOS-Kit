@@ -37,6 +37,7 @@ function Main {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
+    partialzip="resources/tools/partialzip_$platform"
     if [[ $OSTYPE == "linux-gnu" ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
@@ -80,7 +81,6 @@ function Main {
         futurerestore2="resources/tools/futurerestore2_$platform"
         tsschecker="resources/tools/tsschecker_$platform"
     fi
-    partialzip="resources/tools/partialzip_$platform"
     
     [[ ! -d resources ]] && Error "resources folder cannot be found. Replace resources folder and try again" "If resources folder is present try removing spaces from path/folder name"
     [[ ! $platform ]] && Error "Platform unknown/not supported."
