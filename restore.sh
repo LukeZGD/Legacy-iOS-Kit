@@ -37,7 +37,6 @@ function Main {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
-    partialzip="resources/tools/partialzip_$platform"
     if [[ $OSTYPE == "linux-gnu" ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
@@ -49,6 +48,7 @@ function Main {
         ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_linux"
         irecoverychk="resources/libirecovery/bin/irecovery"
         irecovery="sudo LD_LIBRARY_PATH=resources/lib $irecoverychk"
+        partialzip="resources/tools/partialzip_linux"
         pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_linux"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
@@ -75,6 +75,7 @@ function Main {
         ipsw="tools/ipsw_$platform"
         irecovery="resources/libimobiledevice_$platform/irecovery"
         irecoverychk=$irecovery
+        partialzip="resources/tools/partialzip_$platform"
         pwnedDFU="resources/tools/pwnedDFU_$platform"
         python="python"
         futurerestore1="resources/tools/futurerestore1_$platform"
