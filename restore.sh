@@ -584,7 +584,14 @@ function InstallDependencies {
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
-        
+    
+    elif [[ $ID == "opensuse-tumbleweed" ]]; then
+        #openSUSE Tumbleweed
+        sudo zypper -n install automake bsdiff gcc git-core imobiledevice-tools libimobiledevice libpng12-0 libopenssl1_0_0 libusb-1_0-devel libusbmuxd-tools libtool make python-base readline-devel
+        ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
+        ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
+        ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+    
     elif [[ $UBUNTU_CODENAME == "xenial" ]] || [[ $UBUNTU_CODENAME == "bionic" ]] ||
          [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
         # Ubuntu
@@ -627,7 +634,7 @@ function InstallDependencies {
         fi
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        
+    
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
         xcode-select --install
