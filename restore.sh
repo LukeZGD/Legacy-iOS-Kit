@@ -37,7 +37,7 @@ function Main {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
-    if [[ $OSTYPE == "linux-gnu" ]]; then
+    if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
         bspatch="bspatch"
@@ -591,6 +591,7 @@ function InstallDependencies {
         ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
         ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
         ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+        ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $UBUNTU_CODENAME == "xenial" ]] || [[ $UBUNTU_CODENAME == "bionic" ]] ||
          [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
