@@ -302,12 +302,27 @@ function kDFU {
     Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
     Echo "* Enter root password of your iOS device when prompted, default is 'alpine'"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
-    [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
-    Log "Entering kDFU mode..."
-    if [[ $VersionDetect == 1 ]]; then
-        ssh -p 2222 root@127.0.0.1 "/pwn.sh; /$kloader /pwnediBSS" &
+    if [ $? == 1 ]; then
+        Log "Cannot connect to device via USB SSH. Will try again with Wi-Fi SSH..."
+        Echo "* Make sure that the device and your PC/Mac are on the same network!"
+        Echo "* You can check for your device's IP Address in: Settings > WiFi/WLAN > tap the 'i' next to your network name"
+        read -p "$(Input 'Enter the IP Address of your device: ')" IPAddress
+        Log "Copying stuff to device via SSH..."
+        scp resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@$IPAddress:/
+        [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
+        Log "Entering kDFU mode..."
+        if [[ $VersionDetect == 1 ]]; then
+            ssh root@$IPAddress "/pwn.sh; /$kloader /pwnediBSS" &
+        else
+            ssh root@$IPAddress "/$kloader /pwnediBSS" &
+        fi
     else
-        ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
+        Log "Entering kDFU mode..."
+        if [[ $VersionDetect == 1 ]]; then
+            ssh -p 2222 root@127.0.0.1 "/pwn.sh; /$kloader /pwnediBSS" &
+        else
+            ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
+        fi
     fi
     echo
     Echo "* Press POWER or HOME button when screen goes black on the device"
