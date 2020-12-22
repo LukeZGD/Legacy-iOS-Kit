@@ -54,7 +54,7 @@ function Main {
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
         tsschecker="env LD_LIBRARY_PATH=resources/lib resources/tools/tsschecker_linux"
-        if [[ $UBUNTU_CODENAME == "bionic" ]]; then
+        if [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
             futurerestore2="${futurerestore2}_bionic"
             idevicerestore="${idevicerestore}_bionic"
         elif [[ $UBUNTU_CODENAME == "xenial" ]]; then
@@ -600,21 +600,12 @@ function InstallDependencies {
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
     
-    elif [[ $ID == "opensuse-tumbleweed" ]]; then
-        #openSUSE Tumbleweed
-        sudo zypper -n install automake bsdiff gcc git-core imobiledevice-tools libimobiledevice libpng12-0 libopenssl1_0_0 libusb-1_0-devel libusbmuxd-tools libtool make python-base readline-devel
-        ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
-        ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
-        ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
-        ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
-    
     elif [[ $UBUNTU_CODENAME == "xenial" ]] || [[ $UBUNTU_CODENAME == "bionic" ]] ||
          [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]]; then
         # Ubuntu
         sudo add-apt-repository universe
         sudo apt update
         sudo apt install -y autoconf automake bsdiff build-essential checkinstall curl git libglib2.0-dev libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
-        
         SavePkg
         cp libcurl.so.4.5.0 ../resources/lib/libcurl.so.3
         if [[ $UBUNTU_CODENAME == "bionic" ]]; then
@@ -642,7 +633,9 @@ function InstallDependencies {
         SavePkg
         ar x libssl1.0.0.deb data.tar.xz
         tar xf data.tar.xz
-        cp usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 ../resources/lib
+        cd usr/lib/x86_64-linux-gnu
+        cp libcrypto.so.1.0.0 libssl.so.1.0.0 ../../../../resources/lib
+        cd ../../..
         if (( $VERSION_ID <= 32 )); then
             ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
             ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
@@ -650,6 +643,15 @@ function InstallDependencies {
         fi
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
+    
+    elif [[ $ID == "opensuse-tumbleweed" ]] || [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
+        # openSUSE
+        [[ $ID == "opensuse-tumbleweed" ]] && iproxy="libusbmuxd-tools" || iproxy="iproxy libzip5"
+        sudo zypper -n in automake bsdiff gcc git imobiledevice-tools $iproxy libimobiledevice libpng12-0 libopenssl1_0_0 libusb-1_0-devel libtool make python-base readline-devel
+        ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
+        ln -sf /usr/lib64/libplist.so.3 ../resources/lib/libplist-2.0.so.3
+        ln -sf /usr/lib64/libusbmuxd.so.6 ../resources/lib/libusbmuxd-2.0.so.6
+        ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS

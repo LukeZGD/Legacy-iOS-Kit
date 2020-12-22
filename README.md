@@ -55,7 +55,7 @@
 ## Supported OS versions/distros:
 - Ubuntu [16.04](http://releases.ubuntu.com/xenial/), [18.04](http://releases.ubuntu.com/bionic/), [20.04](http://releases.ubuntu.com/focal/), and [20.10](https://releases.ubuntu.com/groovy/) and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
-- [openSUSE Tumbleweed](https://software.opensuse.org/distributions/tumbleweed)
+- openSUSE [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
 - [Fedora 32 to 33](https://getfedora.org/)
 - macOS 10.13 to 10.15
 
