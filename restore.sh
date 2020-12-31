@@ -655,8 +655,9 @@ function InstallDependencies {
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
+        imobiledevicenet=$(curl -s https://api.github.com/repos/libimobiledevice-win32/imobiledevice-net/releases/latest | grep browser_download_url | cut -d '"' -f 4 | awk '/osx-x64/ {print $1}')
         xcode-select --install
-        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.6/libimobiledevice.1.2.1-r1091-osx-x64.zip libimobiledevice.zip dba9ca5399e9ff7e39f0062d63753d1a0c749224
+        curl -L $imobiledevicenet -o libimobiledevice.zip
         Log "(Enter root password of your Mac when prompted)"
         sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
         
