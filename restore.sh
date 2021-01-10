@@ -190,19 +190,23 @@ function SelectVersion {
     elif [[ $Mode == 'kDFU' ]]; then
         Action
     fi
-    Selection=("iOS 8.4.1")
+    if [ $ProductType == iPhone5,3 ] || [ $ProductType == iPhone5,4 ]; then
+        Selection=()
+    else
+        Selection=("iOS 8.4.1")
+    fi
     if [ $ProductType == iPad2,1 ] || [ $ProductType == iPad2,2 ] ||
        [ $ProductType == iPad2,3 ] || [ $ProductType == iPhone4,1 ]; then
         Selection+=("iOS 6.1.3")
     fi
-    [[ $Mode == 'Downgrade' ]] && Selection+=("Other")
+    [[ $Mode == 'Downgrade' ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     Input "Select iOS version:"
     select opt in "${Selection[@]}"; do
         case $opt in
             "iOS 8.4.1" ) OSVer='8.4.1'; BuildVer='12H321'; break;;
             "iOS 6.1.3" ) OSVer='6.1.3'; BuildVer='10B329'; break;;
-            "Other" ) OSVer='Other'; break;;
+            "Other (use SHSH blobs)" ) OSVer='Other'; break;;
             *) exit;;
         esac
     done
