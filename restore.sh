@@ -1,6 +1,6 @@
 #!/bin/bash
 trap 'Clean; exit' INT TERM EXIT
-if [[ $1 != 'NoColor' ]]; then
+if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
     Color_B=$(tput setaf 12)
@@ -67,20 +67,20 @@ function Main {
     elif [[ $OSTYPE == "darwin"* ]]; then
         macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
-        bspatch="resources/tools/bspatch_$platform"
-        ideviceenterrecovery="resources/libimobiledevice_$platform/ideviceenterrecovery"
-        ideviceinfo="resources/libimobiledevice_$platform/ideviceinfo"
-        idevicerestore="resources/tools/idevicerestore_$platform"
-        iproxy="resources/libimobiledevice_$platform/iproxy"
-        ipsw="tools/ipsw_$platform"
-        irecovery="resources/libimobiledevice_$platform/irecovery"
+        bspatch="resources/tools/bspatch_macos"
+        ideviceenterrecovery="resources/libimobiledevice_macos/ideviceenterrecovery"
+        ideviceinfo="resources/libimobiledevice_macos/ideviceinfo"
+        idevicerestore="resources/tools/idevicerestore_macos"
+        iproxy="resources/libimobiledevice_macos/iproxy"
+        ipsw="tools/ipsw_macos"
+        irecovery="resources/libimobiledevice_macos/irecovery"
         irecoverychk=$irecovery
-        partialzip="resources/tools/partialzip_$platform"
-        pwnedDFU="resources/tools/pwnedDFU_$platform"
+        partialzip="resources/tools/partialzip_macos"
+        pwnedDFU="resources/tools/pwnedDFU_macos"
         python="python"
-        futurerestore1="resources/tools/futurerestore1_$platform"
-        futurerestore2="resources/tools/futurerestore2_$platform"
-        tsschecker="resources/tools/tsschecker_$platform"
+        futurerestore1="resources/tools/futurerestore1_macos"
+        futurerestore2="resources/tools/futurerestore2_macos"
+        tsschecker="resources/tools/tsschecker_macos"
     fi
     
     [[ ! -d resources ]] && Error "resources folder cannot be found. Replace resources folder and try again" "If resources folder is present try removing spaces from path/folder name"
@@ -659,9 +659,10 @@ function InstallDependencies {
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         # macOS
-        imobiledevicenet=$(curl -s https://api.github.com/repos/libimobiledevice-win32/imobiledevice-net/releases/latest | grep browser_download_url | cut -d '"' -f 4 | awk '/osx-x64/ {print $1}')
+        #imobiledevicenet=$(curl -s https://api.github.com/repos/libimobiledevice-win32/imobiledevice-net/releases/latest | grep browser_download_url | cut -d '"' -f 4 | awk '/osx-x64/ {print $1}')
         xcode-select --install
-        curl -L $imobiledevicenet -o libimobiledevice.zip
+        #curl -L $imobiledevicenet -o libimobiledevice.zip
+        SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip libimobiledevice.zip 328e809dea350ae68fb644225bbf8469c0f0634b
         Log "(Enter root password of your Mac when prompted)"
         sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
         
