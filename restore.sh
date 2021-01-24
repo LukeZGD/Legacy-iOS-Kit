@@ -140,7 +140,6 @@ function Main {
         Mode='Downgrade'
         Log "32-bit device in DFU mode detected."
         Echo "* Advanced options menu - use at your own risk"
-        Echo "* Warning: A6 devices won't have activation error workaround yet when using this method"
         Input "This device is in:"
         select opt in "kDFU mode" "DFU mode (ipwndfu A6)" "pwnDFU mode (checkm8 A5)" "(Any other key to exit)"; do
             case $opt in
@@ -296,38 +295,24 @@ function kDFU {
     [ ! $(which $iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh Install"
     $iproxy 2222 22 &
     iproxyPID=$!
-    WifiAddr=$(echo "$ideviceinfo2" | grep 'WiFiAddress' | cut -c 14-)
-    WifiAddrDecr=$(echo $(printf "%x\n" $(expr $(printf "%d\n" 0x$(echo "${WifiAddr}" | tr -d ':')) - 1)) | sed 's/\(..\)/\1:/g;s/:$//')
-    echo '#!/bin/sh' > tmp/pwn.sh
-    echo "/usr/sbin/nvram wifiaddr=$WifiAddrDecr" >> tmp/pwn.sh
-    chmod +x tmp/pwn.sh
     
     Log "Copying stuff to device via SSH..."
     Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
     Echo "* Enter root password of your iOS device when prompted, default is 'alpine'"
-    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@127.0.0.1:/
+    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
     if [ $? == 1 ]; then
         Log "Cannot connect to device via USB SSH. Will try again with Wi-Fi SSH..."
         Echo "* Make sure that the device and your PC/Mac are on the same network!"
         Echo "* You can check for your device's IP Address in: Settings > WiFi/WLAN > tap the 'i' next to your network name"
         read -p "$(Input 'Enter the IP Address of your device: ')" IPAddress
         Log "Copying stuff to device via SSH..."
-        scp resources/tools/$kloader tmp/pwnediBSS tmp/pwn.sh root@$IPAddress:/
+        scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
         [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
-        Log "Entering kDFU mode..."
-        if [[ $VersionDetect == 1 ]]; then
-            ssh root@$IPAddress "/pwn.sh; /$kloader /pwnediBSS" &
-        else
-            ssh root@$IPAddress "/$kloader /pwnediBSS" &
-        fi
+        ssh root@$IPAddress "/$kloader /pwnediBSS" &
     else
-        Log "Entering kDFU mode..."
-        if [[ $VersionDetect == 1 ]]; then
-            ssh -p 2222 root@127.0.0.1 "/pwn.sh; /$kloader /pwnediBSS" &
-        else
-            ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
-        fi
+        ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
     fi
+    Log "Entering kDFU mode..."
     echo
     Echo "* Press POWER or HOME button when screen goes black on the device"
     Log "Finding device in DFU mode..."
@@ -539,7 +524,7 @@ function Downgrade {
     fi
     
     if [[ $Jailbreak == 1 ]]; then
-        Log "Proceeding to idevicerestore..."
+        Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
         $idevicerestore -y -e -w $IPSW.ipsw

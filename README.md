@@ -94,7 +94,6 @@
   - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
 - For 32-bit devices:
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
-  - This script has a workaround for the activation error on devices downgrading from iOS 10
   - This script can also be used to just enter kDFU mode for all supported devices
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
