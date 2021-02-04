@@ -49,7 +49,6 @@ function Main {
         irecoverychk="resources/libirecovery/bin/irecovery"
         irecovery="sudo LD_LIBRARY_PATH=resources/lib $irecoverychk"
         partialzip="resources/tools/partialzip_linux"
-        pwnedDFU="sudo LD_LIBRARY_PATH=resources/lib resources/tools/pwnedDFU_linux"
         python="python2"
         futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
@@ -73,10 +72,10 @@ function Main {
         idevicerestore="resources/tools/idevicerestore_macos"
         iproxy="resources/libimobiledevice_macos/iproxy"
         ipsw="tools/ipsw_macos"
+        ipwnder32="resources/tools/iPwnder32"
         irecovery="resources/libimobiledevice_macos/irecovery"
         irecoverychk=$irecovery
         partialzip="resources/tools/partialzip_macos"
-        pwnedDFU="resources/tools/pwnedDFU_macos"
         python="python"
         futurerestore1="resources/tools/futurerestore1_macos"
         futurerestore2="resources/tools/futurerestore2_macos"
@@ -366,8 +365,7 @@ function CheckM8 {
         select opt in "${Selection[@]}"; do
             case $opt in
                 "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
-                "iPwnder32" ) pwnDFUTool="iPwnder32"; break;;
-                *) pwnDFUTool="${Selection[0]}"; break;;
+                *) pwnDFUTool="iPwnder32"; break;;
             esac
         done
     else
@@ -379,10 +377,14 @@ function CheckM8 {
         sudo $python ipwndfu -p
         pwnDFUDevice=$?
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
-        $pwnedDFU -p -f
+        if [ ! -e $ipwnder32 ]; then
+            SaveFile https://dora2ios.web.app/iPwnder32/iPwnder32_v3.1.0.zip tmp/iPwnder32.zip b2cf12c96a64b2be822710b97dbf03073d60bbc7
+            unzip -o -j tmp/iPwnder32.zip iPwnder32_macosx/iPwnder32 -d resources/tools
+        fi
+        $ipwnder32 -p
         pwnDFUDevice=$?
         cd resources/ipwndfu
-    fi    
+    fi
     if [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
         if [[ $A7Device == 1 ]]; then
