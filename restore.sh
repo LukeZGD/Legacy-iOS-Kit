@@ -378,7 +378,7 @@ function CheckM8 {
         pwnDFUDevice=$?
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         if [ ! -e $ipwnder32 ]; then
-            SaveFile https://dora2ios.web.app/iPwnder32/iPwnder32_v3.1.0.zip tmp/iPwnder32.zip b2cf12c96a64b2be822710b97dbf03073d60bbc7
+            SaveFile https://dora2ios.web.app/iPwnder32/iPwnder32_v3.1.2.zip tmp/iPwnder32.zip 79a64133e11b1c60569aba422fa1b5046aa33d83
             unzip -o -j tmp/iPwnder32.zip iPwnder32_macosx/iPwnder32 -d resources/tools
         fi
         $ipwnder32 -p
