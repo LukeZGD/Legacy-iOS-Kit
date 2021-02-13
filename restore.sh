@@ -72,7 +72,7 @@ function Main {
         idevicerestore="resources/tools/idevicerestore_macos"
         iproxy="resources/libimobiledevice_macos/iproxy"
         ipsw="tools/ipsw_macos"
-        ipwnder32="resources/tools/iPwnder32"
+        ipwnder32="resources/tools/ipwnder32_macos"
         irecovery="resources/libimobiledevice_macos/irecovery"
         irecoverychk=$irecovery
         partialzip="resources/tools/partialzip_macos"
@@ -380,6 +380,7 @@ function CheckM8 {
         if [ ! -e $ipwnder32 ]; then
             SaveFile https://dora2ios.web.app/iPwnder32/iPwnder32_v3.1.2.zip tmp/iPwnder32.zip 79a64133e11b1c60569aba422fa1b5046aa33d83
             unzip -o -j tmp/iPwnder32.zip iPwnder32_macosx/iPwnder32 -d resources/tools
+            mv resources/tools/iPwnder32 $ipwnder32
         fi
         $ipwnder32 -p
         pwnDFUDevice=$?
