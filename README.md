@@ -80,7 +80,7 @@
 - [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
 - [Fedora 32 to 33](https://getfedora.org/)
 - openSUSE [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
-- macOS 10.13 to 10.15 (11.x support is unknown)
+- macOS 10.13 to 11
 
 ## Other notes:
 - If something in the process does not work for you, try switching USB ports and/or cables (also try using a USB 2.0 port)
