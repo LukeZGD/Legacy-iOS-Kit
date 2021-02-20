@@ -232,7 +232,7 @@ function Action {
         Echo "By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "There are potential network issues that with the latest baseband when used on iOS 8.4.1"
-        read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER when unsure): ')" Baseband5
+        read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER if unsure): ')" Baseband5
         if [[ $Baseband5 == y ]] || [[ $Baseband5 == Y ]]; then
             Baseband5=0
         else
@@ -361,7 +361,7 @@ function CheckM8 {
     [[ $A7Device == 1 ]] && echo -e "\n$(Log 'Device in DFU mode detected.')"
     if [[ $platform == macos ]]; then
         Selection=("iPwnder32" "ipwndfu")
-        Input "Select pwnDFU tool to use (press ENTER when unsure):"
+        Input "Select pwnDFU tool to use (Select 1 if unsure):"
         select opt in "${Selection[@]}"; do
             case $opt in
                 "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
@@ -375,7 +375,6 @@ function CheckM8 {
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
         sudo $python ipwndfu -p
-        pwnDFUDevice=$?
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         if [ ! -e $ipwnder32 ]; then
             SaveFile https://dora2ios.web.app/iPwnder32/iPwnder32_v3.1.2.zip tmp/iPwnder32.zip 79a64133e11b1c60569aba422fa1b5046aa33d83
@@ -383,24 +382,27 @@ function CheckM8 {
             mv resources/tools/iPwnder32 $ipwnder32
         fi
         $ipwnder32 -p
-        pwnDFUDevice=$?
         cd resources/ipwndfu
     fi
-    if [[ $pwnDFUDevice == 0 ]]; then
+    if [[ $A7Device == 1 ]]; then
+        Log "Running rmsigchks.py..."
+        sudo $python rmsigchks.py
+        pwnDFUDevice=$?
+        Echo $pwnDFUDevice
+        cd ../..
+    else
+        cd ../..
+        kDFU iBSS
+        pwnDFUDevice=$?
+    fi
+    
+    if [[ $pwnDFUDevice == 1 ]] || [[ $pwnDFUDevice == 255 ]]; then
+        Error "Failed to enter pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
+    elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
-        if [[ $A7Device == 1 ]]; then
-            Log "Running rmsigchks.py..."
-            sudo $python rmsigchks.py
-            cd ../..
-        else
-            cd ../..
-            kDFU iBSS
-        fi
         Log "Downgrading device $ProductType in pwnDFU mode..."
         Mode='Downgrade'
         SelectVersion
-    else
-        Error "Failed to enter pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
     fi    
 }
 
