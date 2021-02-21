@@ -77,10 +77,10 @@
 - Ubuntu [20.04](http://releases.ubuntu.com/focal/) and [20.10](https://releases.ubuntu.com/groovy/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - Ubuntu [16.04](http://releases.ubuntu.com/xenial/) and [18.04](http://releases.ubuntu.com/bionic/)
     - Use 20.04 and newer as older versions are untested
-- [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [Manjaro](https://manjaro.org/)
+- [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [Fedora 32 to 33](https://getfedora.org/)
 - openSUSE [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
-- macOS 10.13 to 11
+- macOS 10.12 to 11
 
 ## Other notes:
 - If something in the process does not work for you, try switching USB ports and/or cables (also try using a USB 2.0 port)
