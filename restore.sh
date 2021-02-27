@@ -91,9 +91,6 @@ function Main {
     
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which $bspatch) ] || [ ! $(which $python) ]; then
-        cd resources
-        rm -rf firmware ipwndfu libimobiledevice_$platform libirecovery
-        cd ..
         InstallDependencies
     fi
     
@@ -585,7 +582,9 @@ function Downgrade {
 
 function InstallDependencies {
     mkdir tmp 2>/dev/null
-    cd tmp
+    cd resources
+    rm -rf firmware ipwndfu lib/* libimobiledevice_$platform libirecovery
+    cd ../tmp
     
     Log "Installing dependencies..."
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
