@@ -98,6 +98,9 @@
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
   - This script can work on virtual machines, but I won't provide support for them
+  - If you want to use manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named after your ProductType (example: `iPad2,1`). You can then put your blob inside that folder.
+    - The naming should be: `(ECID in Decimal)_(ProductType)_(Version)-(BuildVer).shsh(2)`
+    - Example: `123456789012_iPad2,1_8.4.1_12H321.shsh`
 - For jailbreak option:
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
   - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package ([Cydia repo](https://lukezgd.github.io/repo/))
@@ -119,7 +122,7 @@
 - python2
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
-- [futurerestore 251 (Linux)](https://github.com/LukeZGD/futurerestore) (A7)
+- [futurerestore 251 (Linux)](https://github.com/LukeeGD/futurerestore) (A7)
 - [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore) (A7)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://mtmdev.org/pmbonneau-archive)
