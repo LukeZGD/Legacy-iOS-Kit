@@ -20,7 +20,7 @@ function Error {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
-    exit
+    exit 1
 }
 
 function Input {
@@ -301,17 +301,26 @@ function kDFU {
     iproxyPID=$!
     
     Log "Copying stuff to device via SSH..."
-    Echo "* Make sure OpenSSH/Dropbear is installed on the device!"
-    Echo "* Enter root password of your iOS device when prompted, default is 'alpine'"
+    Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
+    Echo "* Dropbear is only needed for devices on iOS 10"
+    Echo "* To make sure that SSH is successful, try these steps:"
+    Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall again"
+    echo
+    Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
     if [ $? == 1 ]; then
-        Log "Cannot connect to device via USB SSH. Will try again with Wi-Fi SSH..."
+        Log "Cannot connect to device via USB SSH."
+        Echo "* Check your ~/.ssh/known_hosts file. You may also run: rm ~/.ssh/known_hosts" 
+        Echo "* Also try the steps above to make sure that SSH is successful"
+        Input "Press ENTER to continue anyway (or press Ctrl+C to cancel and try again)"
+        read -s
+        Log "Will try again with Wi-Fi SSH..."
         Echo "* Make sure that the device and your PC/Mac are on the same network!"
         Echo "* You can check for your device's IP Address in: Settings > WiFi/WLAN > tap the 'i' next to your network name"
         read -p "$(Input 'Enter the IP Address of your device: ')" IPAddress
         Log "Copying stuff to device via SSH..."
         scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
-        [ $? == 1 ] && Error "Cannot connect to device via SSH. Please check your ~/.ssh/known_hosts file and try again" "You may also run: rm ~/.ssh/known_hosts"
+        [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
         ssh root@$IPAddress "/$kloader /pwnediBSS" &
     else
         ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
@@ -402,7 +411,10 @@ function CheckM8 {
     fi
     
     if [[ $pwnDFUDevice == 1 ]] || [[ $pwnDFUDevice == 255 ]]; then
-        Error "Failed to enter pwnDFU mode. Please run the script again" "./restore.sh Downgrade"
+        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
+        echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
+        echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
+        exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
         Log "Downgrading device $ProductType in pwnDFU mode..."

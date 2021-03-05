@@ -91,6 +91,7 @@
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (for Linux users, also try in a live USB)
   - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
+  - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
 - For 32-bit devices:
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
