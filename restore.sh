@@ -111,6 +111,7 @@ function Main {
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
         ProductVer='Unknown'
+        [[ $RecoveryDevice == 1 ]] && Echo "* Your $ProductType is currently in recovery mode. To exit recovery, select Downgrade device, then select N to exit recovery"
     else
         ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
@@ -226,9 +227,9 @@ function Action {
     fi
     
     if [[ $Mode == 'Downgrade' ]] && [[ $ProductType == iPhone5,1 ]] && [[ $Jailbreak != 1 ]]; then
-        Echo "By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
-        Echo "Flashing the latest baseband is still available as an option but beware of problems it may cause"
-        Echo "There are potential network issues that with the latest baseband when used on iOS 8.4.1"
+        Echo "* By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
+        Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
+        Echo "* There are potential network issues that with the latest baseband when used on iOS 8.4.1"
         read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER if unsure): ')" Baseband5
         if [[ $Baseband5 == y ]] || [[ $Baseband5 == Y ]]; then
             Baseband5=0
@@ -262,7 +263,7 @@ function SaveOTABlobs {
     if [ ! $SHSH ] && [ ! $SHSHExisting ]; then
         Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
     elif [ ! $SHSH ]; then
-        Log "Saving $OSVer blobs failed, but detected saved SHSH blobs. Continuing..."
+        Log "Saving $OSVer blobs failed, but detected existing saved SHSH blobs. Continuing..."
         cp $SHSHExisting .
         SHSH=$(ls $SHSHChk)
     else
@@ -304,7 +305,7 @@ function kDFU {
     Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
     Echo "* Dropbear is only needed for devices on iOS 10"
     Echo "* To make sure that SSH is successful, try these steps:"
-    Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall again"
+    Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
     echo
     Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
@@ -442,7 +443,7 @@ function Downgrade {
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
-            [[ $IPSWSHA1L != $IPSWSHA1 ]] && Error "Verifying IPSW failed. Delete/replace the IPSW and run the script again"
+            [[ $IPSWSHA1L != $IPSWSHA1 ]] && Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." "Delete/replace the IPSW and run the script again"
         else
             IPSW=$IPSWCustom
         fi
@@ -478,7 +479,7 @@ function Downgrade {
         done
         if [ ! -e $IPSWCustom.ipsw ]; then
             Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
-            Echo "* If it doesn't work with both, you might not have enough RAM or tmp storage"
+            Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
             read -p "$(Input 'Memory option? (press ENTER if unsure) (Y/n): ')" JBMemory
             [[ $JBMemory != n ]] && [[ $JBMemory != N ]] && JBMemory="-memory" || JBMemory=
             Log "Preparing custom IPSW..."
@@ -529,7 +530,8 @@ function Downgrade {
         [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
         if [[ $RecoveryDevice != 1 ]]; then
             echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
-            Echo "* If you device has backlight turned on, you may try re-plugging in your device and attempt to continue"
+            Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device, and attempt to continue"
+            Echo "* If not, you may have to hard-reset your device and attempt to start over entering pwnDFU mode again"
             Input "Press ENTER to continue anyway (or press Ctrl+C to cancel)"
             read -s
         else

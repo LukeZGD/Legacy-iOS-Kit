@@ -94,6 +94,7 @@
   - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
 - For 32-bit devices:
+  - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
   - This script can also be used to just enter kDFU mode for all supported devices
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
@@ -108,7 +109,7 @@
 - For jailbreak option (on iOS 8.4.1 downgrades only):
   - Stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install "Stashing for #etasonJB" package
   - To fix LaunchDaemons not loading on startup, install "Infigo" package ([Cydia repo](https://lukezgd.github.io/repo/))
-  - Warning: If your device bootloops with EtasonJB, it may not work with the jailbreak option as well! (I think this applies to some but not all [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) users) If this happens, bootloop protection will trigger and you won't be able to open Cydia
+  - Warning: On some but not all [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) devices, your device might take a very long time to boot, possibly 20 minutes or more
 
 ## Tools and other stuff used by this script:
 - cURL
