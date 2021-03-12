@@ -439,7 +439,8 @@ function Downgrade {
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
-        if [ ! -e $IPSWCustom.ipsw ]; then
+        [[ $Jailbreak == 1 ]] && [ -e $IPSWCustom.ipsw ] && Verify=0
+        if [[ $Verify != 0 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
