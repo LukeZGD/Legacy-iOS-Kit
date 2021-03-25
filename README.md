@@ -7,12 +7,12 @@
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) to jailbreak
 - **You do NOT need blobs to use this**, the script will get them for you
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, listed under Supported devices)
-- **Please read the "Other notes" section for frequent questions and troubleshooting**
+- **Please read the "Other notes" section for tips, frequent questions, and troubleshooting**
 
 ## Supported devices:
 
 - You can identify your device [here](https://ipsw.me/device-finder)
-- **iPhone 5C and iPad mini 3 devices are NOT supported (OTA versions are not signed)**
+- **iPhone 5C and iPad mini 3 devices are NOT supported** (OTA versions for them are not signed)
 - iPhone 5C can still be restored to versions that you have SHSH blobs for
 
 <table>
@@ -31,13 +31,14 @@
         <tr><td>iPad Air 1</td></tr>
         <tr><td>iPad mini 2 (except iPad4,6)</td></tr>
         <tr>
-            <td rowspan=5>iOS 8.4.1</td>
+            <td rowspan=6>iOS 8.4.1</td>
             <td><b>32-bit devices:</b></td>
         </tr>
         <tr><td>iPhone 4S</td></tr>
         <tr><td>iPhone 5</td></tr>
         <tr><td>iPad 2, iPad 3, iPad 4</td></tr>
-        <tr><td>iPod 5th gen</td></tr>
+        <tr><td>iPad mini 1</td></tr>
+        <tr><td>iPod 5th generation</td></tr>
         <tr>
             <td rowspan=2>iOS 6.1.3</td>
             <td>iPhone 4S</td>
@@ -122,7 +123,7 @@
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore)
 - ipsw tool from OdysseusOTA/2
-- python2
+- Python 2 (for ipwndfu, rmsigchks)
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 251 (Linux)](https://github.com/LukeeGD/futurerestore) (A7)
