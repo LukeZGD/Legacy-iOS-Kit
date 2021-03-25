@@ -75,14 +75,12 @@
 6. Follow instructions
 
 ## Supported OS versions/distros:
-- Ubuntu [20.04](http://releases.ubuntu.com/focal/) and [20.10](https://releases.ubuntu.com/groovy/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
-- Ubuntu [16.04](http://releases.ubuntu.com/xenial/) and [18.04](http://releases.ubuntu.com/bionic/)
-    - Use 20.04 and newer as older versions are untested
-- [Arch Linux](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [Fedora 32 to 33](https://getfedora.org/)
-- openSUSE [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
-- [Debian Buster, Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
-- macOS 10.12 to 11
+- **Ubuntu** [18.04](https://releases.ubuntu.com/bionic/), [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
+- [**Fedora** 32 to 33](https://getfedora.org/)
+- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
+- [**Debian** Buster, Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
+- **macOS** 10.12 to 11
 
 ## Other notes:
 - If something in the process does not work for you, try switching USB ports and/or cables (also try using a USB 2.0 port)
@@ -104,7 +102,7 @@
   - This script can work on virtual machines, but I won't provide support for them
   - If you want to use manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named after your ProductType (example: `iPad2,1`). You can then put your blob inside that folder.
     - The naming should be: `(ECID in Decimal)_(ProductType)_(Version)-(BuildVer).shsh(2)`
-    - Example: `123456789012_iPad2,1_8.4.1_12H321.shsh`
+    - Example: `123456789012_iPad2,1_8.4.1-12H321.shsh`
 - For jailbreak option:
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
   - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package ([Cydia repo](https://lukezgd.github.io/repo/))

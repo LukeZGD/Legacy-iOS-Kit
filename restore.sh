@@ -68,13 +68,13 @@ function Main {
         macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
         bspatch="resources/tools/bspatch_macos"
-        ideviceenterrecovery="resources/libimobiledevice_macos/ideviceenterrecovery"
-        ideviceinfo="resources/libimobiledevice_macos/ideviceinfo"
+        ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
+        ideviceinfo="resources/libimobiledevice/ideviceinfo"
         idevicerestore="resources/tools/idevicerestore_macos"
-        iproxy="resources/libimobiledevice_macos/iproxy"
+        iproxy="resources/libimobiledevice/iproxy"
         ipsw="tools/ipsw_macos"
         ipwnder32="resources/tools/ipwnder32_macos"
-        irecovery="resources/libimobiledevice_macos/irecovery"
+        irecovery="resources/libimobiledevice/irecovery"
         irecoverychk=$irecovery
         partialzip="resources/tools/partialzip_macos"
         python="python"
@@ -112,7 +112,7 @@ function Main {
         [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
         UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
         ProductVer='Unknown'
-        [[ $RecoveryDevice == 1 ]] && Echo "* Your $ProductType is currently in recovery mode. To exit recovery, select Downgrade device, then select N to exit recovery"
+        [[ $RecoveryDevice == 1 ]] && Echo "* Your $ProductType is currently in recovery mode. If you want to exit recovery, select Downgrade device, then select N to exit recovery"
     else
         ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
         [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
@@ -566,17 +566,18 @@ function Downgrade {
         if [[ $A7Device == 1 ]]; then
             cp $IPSW/Firmware/$Baseband .
         elif [ $ProductType == iPhone5,1 ] && [[ $Baseband5 != 0 ]]; then
-            [ ! -e saved/$ProductType/$Baseband ] && unzip -o -j $IPSW.ipsw Firmware/$Baseband -d saved/$ProductType
-            cp saved/$ProductType/$Baseband .
+            unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
             cp $BuildManifest BuildManifest.plist
-        elif [ ! -e saved/$ProductType/$Baseband ]; then
+        elif [ ! -e saved/baseband/$Baseband ]; then
             Log "Downloading baseband..."
             $partialzip $BasebandURL Firmware/$Baseband $Baseband
             $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
             mkdir -p saved/$ProductType 2>/dev/null
-            cp $Baseband BuildManifest.plist saved/$ProductType
+            mkdir -p saved/baseband 2>/dev/null
+            cp $Baseband saved/baseband
+            cp BuildManifest.plist saved/$ProductType
         else
-            cp saved/$ProductType/$Baseband saved/$ProductType/BuildManifest.plist .
+            cp saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist .
         fi
         BasebandSHA1L=$(shasum $Baseband | awk '{print $1}')
         Log "Proceeding to futurerestore..."
@@ -607,7 +608,7 @@ function Downgrade {
 function InstallDependencies {
     mkdir tmp 2>/dev/null
     cd resources
-    rm -rf firmware ipwndfu lib/* libimobiledevice_$platform libirecovery
+    rm -rf firmware ipwndfu lib/* libimobiledevice* libirecovery
     cd ../tmp
     
     Log "Installing dependencies..."
@@ -618,8 +619,9 @@ function InstallDependencies {
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $UBUNTU_CODENAME == "xenial" ]] || [[ $UBUNTU_CODENAME == "bionic" ]] ||
-         [[ $UBUNTU_CODENAME == "focal" ]] || [[ $UBUNTU_CODENAME == "groovy" ]] ||
-         [[ $VERSION == "10 (buster)" ]] || [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
+         [[ $UBUNTU_CODENAME == "focal" ]] || [[ $VERSION == "10 (buster)" ]] ||
+         [[ $UBUNTU_CODENAME == "groovy" ]] || [[ $UBUNTU_CODENAME == "hirsute" ]] ||
+         [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
         # Ubuntu, Debian
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository universe
         sudo apt update
@@ -632,6 +634,10 @@ function InstallDependencies {
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 959abbafacfdaddf87dd07683127da1dab6c835f
             unzip tools_linux_bionic.zip -d ../resources/tools
         elif [[ $UBUNTU_CODENAME == "xenial" ]]; then
+            Echo "* Ubuntu 16.04 (Xenial) is no longer supported and is at End-of-Life."
+            Echo "* You can still continue, but you will not get any help/support from me when errors occur"
+            Input "Press ENTER to continue anyway (or press Ctrl+C to cancel)"
+            read -s
             sudo apt install -y libcurl3 libzip4 python libpng12-0
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_xenial.zip tools_linux_xenial.zip b74861fd87511a92e36e27bf2ec3e1e83b6e8200
             unzip tools_linux_xenial.zip -d ../resources/tools
@@ -688,9 +694,9 @@ function InstallDependencies {
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
     else
-        mkdir ../resources/libimobiledevice_$platform
-        unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
-        chmod +x ../resources/libimobiledevice_$platform/*
+        mkdir ../resources/libimobiledevice
+        unzip libimobiledevice.zip -d ../resources/libimobiledevice
+        chmod +x ../resources/libimobiledevice/*
     fi
     
     Log "Install script done! Please run the script again to proceed"
@@ -736,13 +742,13 @@ function SaveFile {
 }
 
 function SavePkg {
-    if [[ ! -d ../saved/pkg ]]; then
+    if [[ ! -d ../saved/lib ]]; then
         Log "Downloading packages..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends2_linux.zip depends_linux.zip 38cf1db21c9aba88f0de95a1a7959ac2ac53c464
-        mkdir -p ../saved/pkg
-        unzip depends_linux.zip -d ../saved/pkg
+        mkdir -p ../saved/lib
+        unzip depends_linux.zip -d ../saved/lib
     fi
-    cp ../saved/pkg/* .
+    cp ../saved/lib/* .
 }
 
 function BasebandDetect {
