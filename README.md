@@ -38,7 +38,7 @@
         <tr><td>iPhone 5</td></tr>
         <tr><td>iPad 2, iPad 3, iPad 4</td></tr>
         <tr><td>iPad mini 1</td></tr>
-        <tr><td>iPod 5th generation</td></tr>
+        <tr><td>iPod touch 5</td></tr>
         <tr>
             <td rowspan=2>iOS 6.1.3</td>
             <td>iPhone 4S</td>
