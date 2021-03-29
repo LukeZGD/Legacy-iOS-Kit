@@ -1,5 +1,4 @@
 # iOS-OTA-Downgrader
-### (formerly 32bit-OTA-Downgrader)
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
 - **Linux and macOS** are supported by this downgrade script/tool
   - Windows users can create a Linux live USB (see Requirements)
@@ -58,58 +57,64 @@
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)
 - Users with 32-bit devices must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
-  - Users in iOS 10 (A6/A6X) must also install Dropbear ([Cydia repo](https://lukezgd.github.io/repo/))
+  - Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
   
 <details>
   <summary>For Pangu 32-bit users:</summary>
   <ul><li>For 32-bit users using Pangu, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
 </details>
 
-## How to use:
+## Usage:
 1. [Download iOS-OTA-Downgrader here](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) and extract the zip archive
 2. Plug in your iOS device
 3. Open a Terminal window
 4. `cd` to where the zip archive is extracted, and run `./restore.sh`
     - You can also drag `restore.sh` to the Terminal window and press ENTER
-5. Select option to be used
+5. Select options to be used
 6. Follow instructions
 
 ## Supported OS versions/distros:
 - **Ubuntu** [18.04](https://releases.ubuntu.com/bionic/), [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora** 32 to 33](https://getfedora.org/)
-- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
+- [**Fedora** 32 to 34](https://getfedora.org/)
 - [**Debian** Buster, Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
+- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
 - **macOS** 10.12 to 11
 
 ## Other notes:
-- If something in the process does not work for you, try switching USB ports and/or cables (also try using a USB 2.0 port)
-- This script will verify the IPSW SHA1 before restoring
-- For users having issues related to missing libraries or tools, re-install dependencies with `./restore.sh Install`
+- **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
+- **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
+- **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` or `libirecovery` folder in `resources` then run the script again
-- For A7 devices:
+- **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (for Linux users, also try in a live USB)
-  - If the script can't find your device in pwnREC mode or gets stuck, you may have to start over
+  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by hard-resetting and re-entering recovery/DFU mode
   - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
-- For 32-bit devices:
+- **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
   - This script can also be used to just enter kDFU mode for all supported devices
   - As alternatives to kloader/kDFU, checkm8 A5 or ipwndfu can also be used in DFU advanced menu
     - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
-  - This script can work on virtual machines, but I won't provide support for them
-  - If you want to use manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named after your ProductType (example: `iPad2,1`). You can then put your blob inside that folder.
-    - The naming should be: `(ECID in Decimal)_(ProductType)_(Version)-(BuildVer).shsh(2)`
-    - Example: `123456789012_iPad2,1_8.4.1-12H321.shsh`
-- For jailbreak option:
+  - This script can work on virtual machines, but I will not provide support for them
+  - If you want to use other manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named `shsh`. You can then put your blob inside that folder.
+    - The naming of the blob should be: `(ECID in Decimal)_(ProductType)_(Version)-(BuildVer).shsh(2)`
+    - Example with path: `saved/shsh/123456789012_iPad2,1_8.4.1-12H321.shsh`
+- **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
-  - If you can't find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package ([Cydia repo](https://lukezgd.github.io/repo/))
-- For jailbreak option (on iOS 8.4.1 downgrades only):
+  - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
+- **For the jailbreak option (iOS 8.4.1 only):**
   - Stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install "Stashing for #etasonJB" package
-  - To fix LaunchDaemons not loading on startup, install "Infigo" package ([Cydia repo](https://lukezgd.github.io/repo/))
-  - Warning: On some but not all [8942](https://www.theiphonewiki.com/wiki/S5L8942)/[8945](https://www.theiphonewiki.com/wiki/S5L8945) devices, your device might take a very long time to boot, possibly 20 minutes or more
+  - To fix tweaks (LaunchDaemons) not loading on startup, install "Infigo" package from my Cydia repo
+- **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
+  - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
+  - **A5X devices:** iPad 3
+  - The jailbreak option **might not work** on A5 Rev A devices (see issue #70)
+  - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
+  - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
+- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, Infigo, EtasonJB Disable Bootloop Protection
 
 ## Tools and other stuff used by this script:
 - cURL
