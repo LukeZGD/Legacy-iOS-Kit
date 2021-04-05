@@ -107,14 +107,13 @@
   - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
 - **For the jailbreak option (iOS 8.4.1 only):**
   - Stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install "Stashing for #etasonJB" package
-  - To fix tweaks (LaunchDaemons) not loading on startup, install "Infigo" package from my Cydia repo
 - **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
   - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
   - **A5X devices:** iPad 3
   - The jailbreak option **might not work** on A5 Rev A devices (see issue #70)
   - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
   - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
-- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, Infigo, EtasonJB Disable Bootloop Protection
+- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection
 
 ## Tools and other stuff used by this script:
 - cURL
