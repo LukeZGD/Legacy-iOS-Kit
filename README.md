@@ -3,7 +3,7 @@
 - **Linux and macOS** are supported by this downgrade script/tool
   - Windows users can create a Linux live USB (see Requirements)
 - iOS 8.4.1 and 6.1.3 downgrades have the option to **jailbreak** the install
-  - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) to jailbreak
+  - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - **You do NOT need blobs to use this**, the script will get them for you
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, listed under Supported devices)
 - **Please read the "Other notes" section for tips, frequent questions, and troubleshooting**
@@ -110,7 +110,7 @@
 - **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
   - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
   - **A5X devices:** iPad 3
-  - The jailbreak option **might not work** on A5 Rev A devices (see issue #70)
+  - The jailbreak option **might not work** on A5 Rev A devices (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70))
   - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
   - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
 - **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection
