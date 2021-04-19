@@ -137,13 +137,17 @@ function Main {
         DFUManual=1
         Mode='Downgrade'
         Log "32-bit device in DFU mode detected."
-        Echo "* Advanced options menu - use at your own risk"
+        Echo "* Advanced Options Menu"
         Input "This device is in:"
-        select opt in "kDFU mode" "DFU mode (ipwndfu A6)" "pwnDFU mode (checkm8 A5)" "(Any other key to exit)"; do
+        select opt in "kDFU mode" "DFU mode (A6)" "pwnDFU mode (A5)" "(Any other key to exit)"; do
             case $opt in
                 "kDFU mode" ) break;;
-                "DFU mode (ipwndfu A6)" ) CheckM8; break;;
-                "pwnDFU mode (checkm8 A5)" ) kDFU iBSS; break;;
+                "DFU mode (A6)" ) CheckM8; break;;
+                "pwnDFU mode (A5)" ) 
+                    Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
+                    Input "Press ENTER to continue (or press Ctrl+C to cancel)";
+                    read -s;
+                    kDFU iBSS; break;;
                 * ) exit;;
             esac
         done
@@ -408,7 +412,7 @@ function CheckM8 {
         cd ../..
     else
         cd ../..
-        kDFU iBSS
+        [[ $pwnDFUTool == "ipwndfu" ]] && kDFU iBSS || echo
         pwnDFUDevice=$?
     fi
     
