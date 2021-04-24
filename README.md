@@ -141,3 +141,5 @@
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - 32-bit iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
 - A7 iBSS and iBEC patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
+- [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
+- [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
