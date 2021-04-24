@@ -145,6 +145,7 @@ function Main {
                 "DFU mode (A6)" ) CheckM8; break;;
                 "pwnDFU mode (A5)" ) 
                     Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
+                    Echo "* This option will NOT work if your device is not in pwnDFU mode.";
                     Input "Press ENTER to continue (or press Ctrl+C to cancel)";
                     read -s;
                     kDFU iBSS; break;;
@@ -291,7 +292,7 @@ function kDFU {
     
     if [[ $1 == iBSS ]]; then
         cd resources/ipwndfu
-        Log "Booting iBSS..."
+        Log "Sending iBSS..."
         sudo $python ipwndfu -l ../../tmp/pwnediBSS
         ret=$?
         cd ../..

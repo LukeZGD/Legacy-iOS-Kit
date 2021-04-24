@@ -47,21 +47,21 @@
 </table>
 
 ## Requirements:
-- **A supported device in any iOS version (listed above):**
-  - A 32-bit device (**jailbreak needed**)
-  - An A7 device (jailbreak not needed)
-- An IPSW for the version you want to downgrade to
-  - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3)
+- **A supported device in any iOS version (listed above)**
+- The IPSW firmware for the version you want to downgrade to
+  - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3) (ignore the signing statuses in the site)
   - The script can also download it for you
 - A **64-bit Linux install/live USB** or a supported **macOS** version
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)
-- Users with 32-bit devices must install [OpenSSH](https://cydia.saurik.com/package/openssh/)
-  - Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
-  
+- **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
+  - Normal method - **jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
+  - DFU method - for alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
+- **A7 devices** - jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
+
 <details>
   <summary>For Pangu 32-bit users:</summary>
-  <ul><li>For 32-bit users using Pangu, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
+  <ul><li>For 32-bit users using Pangu and normal method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
 </details>
 
 ## Usage:
@@ -88,7 +88,8 @@
   - Alternatively, delete the `libimobiledevice` or `libirecovery` folder in `resources` then run the script again
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
-  - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (for Linux users, also try in a live USB)
+  - For Mac users, selecting iPwnder32 instead of ipwndfu is highly recommended for entering pwnDFU mode
+  - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (Linux users may also try in a live USB)
   - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by hard-resetting and re-entering recovery/DFU mode
   - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
@@ -96,12 +97,16 @@
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
   - This script can also be used to just enter kDFU mode for all supported devices
-  - As alternatives to kloader/kDFU, checkm8 A5 or pwnDFU A6 can also be used in DFU advanced menu
-    - To enter DFU advanced menu, put your iOS device in DFU mode before running the script
   - This script can work on virtual machines, but I will not provide support for them
   - If you want to use other manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named `shsh`. You can then put your blob inside that folder.
     - The naming of the blob should be: `(ECID in Decimal)_(ProductType)_(Version)-(BuildVer).shsh(2)`
     - Example with path: `saved/shsh/123456789012_iPad2,1_8.4.1-12H321.shsh`
+- **For DFU advanced menu:**
+  - To enter DFU advanced menu, put your iOS device in recovery (A6 only), normal DFU (also A6 only), kDFU, or pwnDFU mode before running the script
+  - There are three options that can be used for the DFU advanced menu
+  - Only select the "kDFU mode" option if your device is already in kDFU mode beforehand (example is using kDFUApp from tihmstar)
+  - For A6/A6X devices, "DFU mode (A6)" option should be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
+  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield (checkm8-a5)
 - **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
   - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
@@ -125,7 +130,7 @@
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore)
 - ipsw tool from OdysseusOTA/2
-- Python 2 (for ipwndfu, rmsigchks)
+- Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker)
 - [futurerestore 152](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) (32-bit)
 - [futurerestore 251 (Linux)](https://github.com/LukeeGD/futurerestore) (A7)
