@@ -556,6 +556,7 @@ function Downgrade {
     
     if [[ $Jailbreak == 1 ]]; then
         Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
+        [[ $platform == macOS ]] && sudo codesign --sign - --force --deep $idevicerestore
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
         $idevicerestore -y -e -w $IPSW.ipsw
@@ -678,8 +679,6 @@ function InstallDependencies {
         xcode-select --install
         #curl -L $imobiledevicenet -o libimobiledevice.zip
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip libimobiledevice.zip 328e809dea350ae68fb644225bbf8469c0f0634b
-        Log "(Enter root password of your Mac when prompted)"
-        sudo codesign --sign - --force --deep ../resources/tools/idevicerestore_macos
         
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
