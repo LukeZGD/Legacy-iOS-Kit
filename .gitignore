@@ -15,3 +15,5 @@ resources/firmware/
 resources/ipwndfu/
 resources/libirecovery/
 tmp/
+resources/libimobiledevice
+.DS_Store

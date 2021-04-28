@@ -9,7 +9,7 @@ if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
 fi
 
 function Clean {
-    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist
+    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist *Custom*
 }
 
 function Echo {
@@ -67,7 +67,7 @@ function Main {
     elif [[ $OSTYPE == "darwin"* ]]; then
         macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
-        bspatch="resources/tools/bspatch_macos"
+        bspatch="/usr/bin/bspatch"
         ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice/ideviceinfo"
         idevicerestore="resources/tools/idevicerestore_macos"
@@ -77,7 +77,7 @@ function Main {
         irecovery="resources/libimobiledevice/irecovery"
         irecoverychk=$irecovery
         partialzip="resources/tools/partialzip_macos"
-        python="python"
+        python="/usr/bin/python"
         futurerestore1="resources/tools/futurerestore1_macos"
         futurerestore2="resources/tools/futurerestore2_macos"
         tsschecker="resources/tools/tsschecker_macos"
@@ -88,7 +88,7 @@ function Main {
     chmod +x resources/tools/*
     [ $? == 1 ] && Log "An error occurred in chmod. This might cause problems..."
     [[ ! $(ping -c1 8.8.8.8 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
-    [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+    [[ $(uname -m) != 'x86_64' && $platform != "macos" ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which $bspatch) ] || [ ! $(which $python) ]; then
