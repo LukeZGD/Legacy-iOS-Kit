@@ -9,7 +9,7 @@ if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
 fi
 
 function Clean {
-    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist *Custom*
+    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist
 }
 
 function Echo {
@@ -521,8 +521,12 @@ function Downgrade {
             mv $IPSW $IPSWCustom
             IPSW=$IPSWCustom
         else
-            cp $IPSW/Firmware/dfu/$iBSS.im4p $IPSW/Firmware/dfu/$iBEC.im4p .
-            [[ $ProductType == iPad4* ]] && cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
+        Log "Custom IPSW Already prepared. Preparing temporary patched IBSS and IBEC..."
+            $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+            $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+            if [[ $ProductType == iPad4* ]]; then
+                cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+            fi
             cp $IPSW/Firmware/all_flash/$SEP .
         fi
         [ ! -e $IPSW.ipsw ] && Error "Failed to create custom IPSW. Please run the script again"
