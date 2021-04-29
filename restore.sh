@@ -317,7 +317,7 @@ function kDFU {
     scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
     if [ $? == 1 ]; then
         Log "Cannot connect to device via USB SSH."
-        Echo "* Check your ~/.ssh/known_hosts file. You may also run: rm ~/.ssh/known_hosts" 
+        Echo "* Check your ~/.ssh/known_hosts file. You may also run: rm -rf ~/.ssh/known_hosts" 
         Echo "* Also try the steps above to make sure that SSH is successful"
         Input "Press ENTER to continue anyway (or press Ctrl+C to cancel and try again)"
         read -s
