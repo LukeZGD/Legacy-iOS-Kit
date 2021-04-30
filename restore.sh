@@ -556,7 +556,7 @@ function Downgrade {
     
     if [[ $Jailbreak == 1 ]]; then
         Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
-        [[ $platform == macOS ]] && sudo codesign --sign - --force --deep $idevicerestore
+        [[ $platform == macos ]] && sudo codesign --sign - --force --deep $idevicerestore
         mkdir shsh
         mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
         $idevicerestore -y -e -w $IPSW.ipsw
