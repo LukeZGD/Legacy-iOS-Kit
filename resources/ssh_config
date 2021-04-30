@@ -1,0 +1,2 @@
+StrictHostKeyChecking no
+UserKnownHostsFile tmp/known_hosts

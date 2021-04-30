@@ -82,6 +82,9 @@ function Main {
         futurerestore2="resources/tools/futurerestore2_macos"
         tsschecker="resources/tools/tsschecker_macos"
     fi
+    SSH="-F resources/ssh_config"
+    SCP="scp $SSH"
+    SSH="ssh $SSH"
     
     [[ ! -d resources ]] && Error "resources folder cannot be found. Replace resources folder and try again" "If resources folder is present try removing spaces from path/folder name"
     [[ ! $platform ]] && Error "Platform unknown/not supported."
@@ -314,11 +317,10 @@ function kDFU {
     Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
     echo
     Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
-    scp -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/
+    $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [ $? == 1 ]; then
         Log "Cannot connect to device via USB SSH."
-        Echo "* Check your ~/.ssh/known_hosts file. You may also run: rm ~/.ssh/known_hosts" 
-        Echo "* Also try the steps above to make sure that SSH is successful"
+        Echo "* Please try the steps above to make sure that SSH is successful"
         Input "Press ENTER to continue anyway (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
@@ -326,11 +328,11 @@ function kDFU {
         Echo "* You can check for your device's IP Address in: Settings > WiFi/WLAN > tap the 'i' next to your network name"
         read -p "$(Input 'Enter the IP Address of your device: ')" IPAddress
         Log "Copying stuff to device via SSH..."
-        scp resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/
+        $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
         [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
-        ssh root@$IPAddress "/$kloader /pwnediBSS" &
+        $SSH root@$IPAddress "/tmp/$kloader /tmp/pwnediBSS" &
     else
-        ssh -p 2222 root@127.0.0.1 "/$kloader /pwnediBSS" &
+        $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &
     fi
     Log "Entering kDFU mode..."
     echo
