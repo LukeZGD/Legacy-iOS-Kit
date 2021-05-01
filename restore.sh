@@ -8,30 +8,30 @@ if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
     Color_N=$(tput sgr0)
 fi
 
-function Clean {
+Clean() {
     rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist
 }
 
-function Echo {
+Echo() {
     echo "${Color_B}$1 ${Color_N}"
 }
 
-function Error {
+Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
     exit 1
 }
 
-function Input {
+Input() {
     echo "${Color_Y}[Input] $1 ${Color_N}"
 }
 
-function Log {
+Log() {
     echo "${Color_G}[Log] $1 ${Color_N}"
 }
 
-function Main {
+Main() {
     clear
     Echo "******* iOS-OTA-Downgrader *******"
     Echo "   Downgrader script by LukeZGD   "
@@ -187,7 +187,7 @@ function Main {
     SelectVersion
 }
 
-function SelectVersion {
+SelectVersion() {
     if [[ $ProductType == iPad4* ]] || [[ $ProductType == iPhone6* ]]; then
         OSVer='10.3.3'
         BuildVer='14G60'
@@ -218,7 +218,7 @@ function SelectVersion {
     Action
 }
 
-function Action {
+Action {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
@@ -255,7 +255,7 @@ function Action {
     exit
 }
 
-function SaveOTABlobs {
+SaveOTABlobs() {
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [[ $A7Device == 1 ]]; then
@@ -282,7 +282,7 @@ function SaveOTABlobs {
     fi
 }
 
-function kDFU {
+kDFU() {
     if [ ! -e saved/$ProductType/$iBSS.dfu ]; then
         Log "Downloading iBSS..."
         $partialzip $(cat $Firmware/$iBSSBuildVer/url) Firmware/dfu/$iBSS.dfu $iBSS.dfu
@@ -347,7 +347,7 @@ function kDFU {
     kill $iproxyPID
 }
 
-function Recovery {
+Recovery() {
     [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
     if [[ $RecoveryDevice != 1 ]]; then
         Log "Entering recovery mode..."
@@ -379,7 +379,7 @@ function Recovery {
     Error "Failed to detect device in DFU mode. Please run the script again"
 }
 
-function CheckM8 {
+CheckM8() {
     DFUManual=1
     [[ $A7Device == 1 ]] && echo -e "\n$(Log 'Device in DFU mode detected.')"
     if [[ $platform == macos ]]; then
@@ -432,7 +432,7 @@ function CheckM8 {
     fi    
 }
 
-function Downgrade {    
+Downgrade() {    
     if [[ $OSVer != 'Other' ]]; then
         [[ $ProductType == iPad4* ]] && IPSWType="iPad_64bit"
         [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_4.0_64bit"
@@ -613,7 +613,7 @@ function Downgrade {
     Log "Downgrade script done!"
 }
 
-function InstallDependencies {
+InstallDependencies() {
     mkdir tmp 2>/dev/null
     cd resources
     rm -rf firmware ipwndfu lib/* libimobiledevice* libirecovery
@@ -700,7 +700,7 @@ function InstallDependencies {
     exit
 }
 
-function Compile {
+Compile() {
     git clone --depth 1 https://github.com/$1/$2.git
     cd $2
     ./autogen.sh --prefix="$(cd ../.. && pwd)/resources/$2"
@@ -709,7 +709,7 @@ function Compile {
     sudo rm -rf $2
 }
 
-function SaveExternal {
+SaveExternal() {
     ExternalURL="https://github.com/LukeZGD/$1.git"
     External=$1
     [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
@@ -731,14 +731,14 @@ function SaveExternal {
     cd ..
 }
 
-function SaveFile {
+SaveFile() {
     curl -L $1 -o $2
     if [[ $(shasum $2 | awk '{print $1}') != $3 ]]; then
         Error "Verifying failed. Please run the script again" "./restore.sh Install"
     fi
 }
 
-function SavePkg {
+SavePkg() {
     if [[ ! -d ../saved/lib ]]; then
         Log "Downloading packages..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/depends2_linux.zip depends_linux.zip 38cf1db21c9aba88f0de95a1a7959ac2ac53c464
@@ -748,7 +748,7 @@ function SavePkg {
     cp ../saved/lib/* .
 }
 
-function BasebandDetect {
+BasebandDetect() {
     Firmware=resources/firmware/$ProductType
     BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
     Baseband=0

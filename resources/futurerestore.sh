@@ -5,11 +5,11 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:/usr/lib64/pk
 
 echo "This script can be used to compile tools used by iOS-OTA-Downgrader for Linux"
 
-function Clone {
+Clone() {
     git clone $3 https://github.com/$1/$2
 }
 
-function Compile {
+Compile() {
     [[ $3 == --recursive ]] && Clone $1 $2 $3 || Clone $1 $2
     cd $2
     [[ -e autogen.sh ]] && ./autogen.sh $3 $4
