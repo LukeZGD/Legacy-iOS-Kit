@@ -224,7 +224,7 @@ SelectVersion() {
     Action
 }
 
-Action {
+Action() {
     Log "Option: $Mode"
     if [[ $OSVer == 'Other' ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
