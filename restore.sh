@@ -40,7 +40,6 @@ Main() {
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
-        bspatch="bspatch"
         ideviceenterrecovery="ideviceenterrecovery"
         ideviceinfo="ideviceinfo"
         idevicerestore="sudo LD_LIBRARY_PATH=resources/lib resources/tools/idevicerestore_linux"
@@ -67,7 +66,6 @@ Main() {
     elif [[ $OSTYPE == "darwin"* ]]; then
         macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
-        bspatch="resources/tools/bspatch_macos"
         ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
         ideviceinfo="resources/libimobiledevice/ideviceinfo"
         idevicerestore="resources/tools/idevicerestore_macos"
@@ -91,10 +89,18 @@ Main() {
     chmod +x resources/tools/*
     [ $? == 1 ] && Log "An error occurred in chmod. This might cause problems..."
     [[ ! $(ping -c1 8.8.8.8 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
-    [[ $(uname -m) != 'x86_64' ]] && Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+    if [[ $plaform == macos ]] && [[ $(uname -m) != 'x86_64' ]]; then
+        Log "M1 Mac detected. Support is limited, the script may or may not work for you"
+        Echo "* M1 macs can still proceed but I cannot support it if things break"
+        Echo "* Proceed at your own risk."
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
+    elif [[ $(uname -m) != 'x86_64' ]]; then
+        Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+    fi
     
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
-       [ ! $(which git) ] || [ ! $(which $bspatch) ] || [ ! $(which $python) ]; then
+       [ ! $(which git) ] || [ ! $(which bspatch) ] || [ ! $(which $python) ]; then
         InstallDependencies
     fi
     
@@ -149,7 +155,7 @@ Main() {
                 "pwnDFU mode (A5)" ) 
                     Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
                     Echo "* This option will NOT work if your device is not in pwnDFU mode.";
-                    Input "Press ENTER to continue (or press Ctrl+C to cancel)";
+                    Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
                     read -s;
                     kDFU iBSS; break;;
                 * ) exit;;
@@ -291,7 +297,7 @@ kDFU() {
     fi
     [[ ! -e saved/$ProductType/$iBSS.dfu ]] && Error "Failed to save iBSS. Please run the script again"
     Log "Patching iBSS..."
-    $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
+    bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
     
     if [[ $1 == iBSS ]]; then
         cd resources/ipwndfu
@@ -321,7 +327,7 @@ kDFU() {
     if [ $? == 1 ]; then
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"
-        Input "Press ENTER to continue anyway (or press Ctrl+C to cancel and try again)"
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
         Echo "* Make sure that the device and your PC/Mac are on the same network!"
@@ -509,11 +515,11 @@ Downgrade() {
         if [ ! -e $IPSWCustom.ipsw ]; then
             Log "Preparing custom IPSW..."
             cp $IPSW/Firmware/all_flash/$SEP .
-            $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
-            $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+            bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+            bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
             if [[ $ProductType == iPad4* ]]; then
-                $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
-                $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+                bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
+                bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
                 cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
             fi
             cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
@@ -541,7 +547,7 @@ Downgrade() {
             echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
             Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device, and attempt to continue"
             Echo "* If not, you may have to hard-reset your device and attempt to start over entering pwnDFU mode again"
-            Input "Press ENTER to continue anyway (or press Ctrl+C to cancel)"
+            Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
             read -s
         else
             Log "Found device in pwnREC mode."
@@ -594,7 +600,7 @@ Downgrade() {
             Log "Downloading/verifying baseband failed."
             Echo "* Your device is still in kDFU mode and you may run the script again"
             Echo "* You can also continue and futurerestore can attempt to download the baseband again"
-            Input "Press ENTER to continue (or press Ctrl+C to cancel)"
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
             $futurerestore1 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
         elif [[ $A7Device == 1 ]]; then
