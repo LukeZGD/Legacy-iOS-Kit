@@ -646,7 +646,7 @@ InstallDependencies() {
             cp libpng12.so.0 libzip.so.5 ../resources/lib
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_bionic.zip tools_linux_bionic.zip 959abbafacfdaddf87dd07683127da1dab6c835f
             unzip tools_linux_bionic.zip -d ../resources/tools
-        elif [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
+        elif [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]] || [[ $UBUNTU_CODENAME == "hirsute" ]]; then
             sudo apt install -y libzip4 python2
             cp libpng12.so.0 libzip.so.5 ../resources/lib
         else
