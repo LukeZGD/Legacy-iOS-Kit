@@ -56,11 +56,6 @@ Main() {
            [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
             futurerestore2="${futurerestore2}_bionic"
             idevicerestore="${idevicerestore}_bionic"
-        elif [[ $UBUNTU_CODENAME == "xenial" ]]; then
-            futurerestore2="${futurerestore2}_xenial"
-            idevicerestore="${idevicerestore}_xenial"
-            partialzip="${partialzip}_xenial"
-            tsschecker="${tsschecker}_xenial"
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -245,7 +240,7 @@ Action() {
         Echo "* By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "* There are potential network issues that with the latest baseband when used on iOS 8.4.1"
-        read -p "$(Input 'Flash the latest baseband? (y/N) (press ENTER if unsure): ')" Baseband5
+        read -p "$(Input 'Flash the latest baseband? (y/N) (press Enter/Return if unsure): ')" Baseband5
         if [[ $Baseband5 == y ]] || [[ $Baseband5 == Y ]]; then
             Baseband5=0
         else
@@ -379,7 +374,6 @@ Recovery() {
         echo -n "$i "
         sleep 1
     done
-    sleep 2
     [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "DFU" ]] && DFUDevice=1
     [[ $DFUDevice == 1 ]] && CheckM8
     Error "Failed to detect device in DFU mode. Please run the script again"
@@ -495,7 +489,7 @@ Downgrade() {
         if [ ! -e $IPSWCustom.ipsw ]; then
             Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
             Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
-            read -p "$(Input 'Memory option? (press ENTER if unsure) (Y/n): ')" JBMemory
+            read -p "$(Input 'Memory option? (press Enter/Return if unsure) (Y/n): ')" JBMemory
             [[ $JBMemory != n ]] && [[ $JBMemory != N ]] && JBMemory="-memory" || JBMemory=
             Log "Preparing custom IPSW..."
             cd resources
