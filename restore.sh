@@ -1,10 +1,9 @@
 #!/bin/bash
-trap 'Clean; exit' INT TERM EXIT
+trap "Clean; exit" INT TERM EXIT
 
 . ./resources/blobs.sh
 . ./resources/depends.sh
 . ./resources/device.sh
-. ./resources/devicestate.sh
 . ./resources/downgrade.sh
 . ./resources/ipsw.sh
 
@@ -54,12 +53,12 @@ Main() {
     fi
     
     # Check resources folder
-    if [[ ! -d resources ]]; then
+    if [[ ! -d ./resources ]]; then
         Error "resources folder cannot be found. Replace resources folder and try again" \
         "If resources folder is present try removing spaces from path/folder name"
     fi
     
-    # Mark all in resources/modules and resources/tools as executable
+    # Mark all in resources and resources/tools as executable
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? == 1 ]]; then
         # If chmod failed, warn the user
@@ -71,20 +70,19 @@ Main() {
         Error "Please check your Internet connection before proceeding."
     fi
     
-    # Check uname value (must be "x86_64", warn if platform is "macos" and not "x86_64")
-    if [[ $platform == macos && $(uname -m) != 'x86_64' ]]; then
+    # Check uname -m value (must be "x86_64", warn if platform is "macos" and not "x86_64")
+    if [[ $platform == macos && $(uname -m) != "x86_64" ]]; then
         Log "M1 Mac detected. Support is limited, the script may or may not work for you"
         Echo "* M1 macs can still proceed but I cannot support it if things break"
         Echo "* Proceed at your own risk."
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
-    elif [[ $(uname -m) != 'x86_64' ]]; then
+    elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     fi
     
     # Check dependencies, if one or more are missing (or if manually specified), run InstallDependencies from depends
-    if [[ $1 == "Install" || ! $bspatch || ! $git ||
-          ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
+    if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
         InstallDependencies
     fi
     
@@ -92,22 +90,31 @@ Main() {
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
-    # Run functions from device
-    CheckDeviceState
+    # Run GetDeviceValues from device
     GetDeviceValues
-    
-    # Run function from firmware
-    BasebandDetect
     
     # Cleanup
     Clean
     mkdir tmp
     
     if [[ $DeviceProc == 7 ]]; then
+        # For A7 devices
+        if [[ $DeviceState == "Normal" ]]; then
+            Log "A7 device detected in normal mode."
+            Echo "* The device needs to be in recovery/DFU mode before proceeding."
+            read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
+            [[ ${Selection^} == Y ]] && Recovery || exit
+        elif [[ $DeviceState == "Recovery" ]]; then
+            Recovery
+        elif [[ $DeviceState == "DFU" ]]; then
+            CheckM8
+        fi
+    
     elif [[ $DeviceState == "DFU" ]]; then
         # Advanced options menu for 32-bit devices
         DFUManual=1
         Mode="Downgrade"
+        Log "32-bit device detected in DFU mode."
         Echo "* Advanced Options Menu"
         Input "This device is in:"
         Selection=("kDFU mode")
@@ -131,12 +138,15 @@ Main() {
         SkipMainMenu=1
     
     elif [[ $DeviceState == "Recovery" ]]; then
+        # Recovery for A6 devices only
         if [[ $DeviceProc == 6 ]]; then
             Recovery
         else
             Error "32-bit A5 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" \
-            "For usage of advanced DFU options, put the device in pwnDFU mode using Arduino + USB Host Shield"
+            "For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
         fi
+        Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
+        SkipMainMenu=1
     fi
     
     [[ ! -z $1 ]] && SkipMainMenu=1

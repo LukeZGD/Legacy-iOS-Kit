@@ -1,15 +1,15 @@
 #!/bin/bash
 
 Downgrade() {
-    if [[ $OSVer == 'Other' ]]; then
+    if [[ $OSVer == "Other" ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
         Echo "* Remember to create a backup of the SHSH"
-        read -p "$(Input 'Path to IPSW (drag IPSW to terminal window): ')" IPSW
+        read -p "$(Input 'Path to IPSW (drag IPSW to terminal window):')" IPSW
         IPSW="$(basename $IPSW .ipsw)"
-        read -p "$(Input 'Path to SHSH (drag SHSH to terminal window): ')" SHSH
+        read -p "$(Input 'Path to SHSH (drag SHSH to terminal window):')" SHSH
     
     elif [[ $Mode == 'Downgrade' ]] && [[ $DeviceProc != 7 ]]; then
-        read -p "$(Input 'Jailbreak the selected iOS version? (y/N): ')" Jailbreak
+        read -p "$(Input 'Jailbreak the selected iOS version? (y/N):')" Jailbreak
         [[ $Jailbreak == y ]] || [[ $Jailbreak == Y ]] && Jailbreak=1
     fi
     
@@ -17,8 +17,8 @@ Downgrade() {
         Echo "* By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "* There are potential network issues that with the latest baseband when used on iOS 8.4.1"
-        read -p "$(Input 'Flash the latest baseband? (y/N) (press Enter/Return if unsure): ')" Baseband5
-        if [[ $Baseband5 == y ]] || [[ $Baseband5 == Y ]]; then
+        read -p "$(Input 'Flash the latest baseband? (y/N) (press Enter/Return if unsure):')" Baseband5
+        if [[ ${Baseband5^} == Y ]]; then
             Baseband5=0
         else
             BasebandURL=$(cat $Firmware/12H321/url)
@@ -27,7 +27,7 @@ Downgrade() {
         fi
     fi
     
-    if [[ $OSVer != 'Other' ]]; then
+    if [[ $OSVer != "Other" ]]; then
         [[ $ProductType == iPad4* ]] && IPSWType="iPad_64bit"
         [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_4.0_64bit"
         [[ ! $IPSWType ]] && IPSWType="$ProductType" && SaveOTABlobs
@@ -66,7 +66,7 @@ Downgrade() {
     
     [[ $DeviceProc == 7 ]] && IPSW64
     
-    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]] && [[ $OSVer != 'Other' ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $DeviceProc != 7 ]] && [[ $OSVer != "Other" ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         sudo bash -c "$python -m SimpleHTTPServer 80 &"
@@ -82,13 +82,13 @@ Downgrade() {
     elif [ $Baseband == 0 ]; then
         Log "Device $ProductType has no baseband"
         Log "Proceeding to futurerestore..."
-        if [[ $A7Device == 1 ]]; then
+        if [[ $DeviceProc == 7 ]]; then
             $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest --no-baseband $IPSW.ipsw
         else
             $futurerestore1 -t $SHSH --no-baseband --use-pwndfu $IPSW.ipsw
         fi
     else
-        if [[ $A7Device == 1 ]]; then
+        if [[ $DeviceProc == 7 ]]; then
             cp $IPSW/Firmware/$Baseband .
         elif [ $ProductType == iPhone5,1 ] && [[ $Baseband5 != 0 ]]; then
             unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
@@ -114,7 +114,7 @@ Downgrade() {
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
             $futurerestore1 -t $SHSH --latest-baseband --use-pwndfu $IPSW.ipsw
-        elif [[ $A7Device == 1 ]]; then
+        elif [[ $DeviceProc == 7 ]]; then
             $futurerestore2 -t $SHSH -s $SEP -m $BuildManifest -b $Baseband -p $BuildManifest $IPSW.ipsw
         else
             $futurerestore1 -t $SHSH -b $Baseband -p BuildManifest.plist --use-pwndfu $IPSW.ipsw
@@ -123,7 +123,7 @@ Downgrade() {
     
     echo
     Log "Restoring done!"
-    if [[ $Jailbreak != 1 ]] && [[ $A7Device != 1 ]] && [[ $OSVer != 'Other' ]]; then
+    if [[ $Jailbreak != 1 ]] && [[ $DeviceProc != 7 ]] && [[ $OSVer != "Other" ]]; then
         Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
         ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     fi

@@ -24,7 +24,7 @@ IPSW32() {
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
         Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
-        read -p "$(Input 'Memory option? (press Enter/Return if unsure) (Y/n): ')" JBMemory
+        read -p "$(Input 'Memory option? (press Enter/Return if unsure) (Y/n):')" JBMemory
         [[ $JBMemory != n ]] && [[ $JBMemory != N ]] && JBMemory="-memory" || JBMemory=
         Log "Preparing custom IPSW..."
         cd resources

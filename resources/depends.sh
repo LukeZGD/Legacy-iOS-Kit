@@ -51,7 +51,7 @@ SetToolPaths() {
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     
-    Log "Depends: Running in $platform platform"
+    Log "Running in platform: $platform $macver"
 }
 
 Compile() {
@@ -177,7 +177,7 @@ InstallDependencies() {
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
-    if [[ $platform == linux ]]; then
+    if [[ $platform == "linux" ]]; then
         Compile LukeZGD libirecovery
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
