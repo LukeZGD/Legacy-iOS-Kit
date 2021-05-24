@@ -1,5 +1,6 @@
 #!/bin/bash
 trap 'Clean; exit' INT TERM EXIT
+
 if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
@@ -31,27 +32,27 @@ Log() {
     echo "${Color_G}[Log] $1 ${Color_N}"
 }
 
-Main() {
-    clear
-    Echo "******* iOS-OTA-Downgrader *******"
-    Echo "   Downgrader script by LukeZGD   "
-    echo
+SetToolPaths() {
+    # SetToolPaths does exactly what the function name does - set path to tools used by the script
+    # It also sets the platform variable to "macos" or "linux"
+    # This is used on the main function
     
     if [[ $OSTYPE == "linux"* ]]; then
-        . /etc/os-release 2>/dev/null
+        . /etc/os-release 2>/dev/null # source os-release to get distribution (and version if needed)
         platform="linux"
-        ideviceenterrecovery="ideviceenterrecovery"
-        ideviceinfo="ideviceinfo"
-        idevicerestore="sudo LD_LIBRARY_PATH=resources/lib resources/tools/idevicerestore_linux"
-        iproxy="iproxy"
-        ipsw="env LD_LIBRARY_PATH=lib tools/ipsw_linux"
-        irecoverychk="resources/libirecovery/bin/irecovery"
-        irecovery="sudo LD_LIBRARY_PATH=resources/lib $irecoverychk"
-        partialzip="resources/tools/partialzip_linux"
-        python="python2"
-        futurerestore1="sudo LD_PRELOAD=resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore1_linux"
-        futurerestore2="sudo LD_LIBRARY_PATH=resources/lib resources/tools/futurerestore2_linux"
-        tsschecker="env LD_LIBRARY_PATH=resources/lib resources/tools/tsschecker_linux"
+        
+        futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib ./resources/tools/futurerestore1_linux"
+        futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
+        ideviceenterrecovery="$(which ideviceenterrecovery)"
+        ideviceinfo="$(which ideviceinfo)"
+        idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
+        iproxy="$(which iproxy)"
+        ipsw="env LD_LIBRARY_PATH=./lib ./tools/ipsw_linux"
+        irecoverychk="./resources/libirecovery/bin/irecovery"
+        irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecoverychk"
+        partialzip="./resources/tools/partialzip_linux"
+        python="$(which python2)"
+        tsschecker="env LD_LIBRARY_PATH=./resources/lib ./resources/tools/tsschecker_linux"
         if [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $VERSION == "10 (buster)" ]] ||
            [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
             futurerestore2="${futurerestore2}_bionic"
@@ -59,31 +60,215 @@ Main() {
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
-        macver=${1:-$(sw_vers -productVersion)}
+        macver=${1:-$(sw_vers -productVersion)} # get macOS version
         platform="macos"
-        ideviceenterrecovery="resources/libimobiledevice/ideviceenterrecovery"
-        ideviceinfo="resources/libimobiledevice/ideviceinfo"
-        idevicerestore="resources/tools/idevicerestore_macos"
-        iproxy="resources/libimobiledevice/iproxy"
-        ipsw="tools/ipsw_macos"
-        ipwnder32="resources/tools/ipwnder32_macos"
-        irecovery="resources/libimobiledevice/irecovery"
-        irecoverychk=$irecovery
-        partialzip="resources/tools/partialzip_macos"
-        python="python"
-        futurerestore1="resources/tools/futurerestore1_macos"
-        futurerestore2="resources/tools/futurerestore2_macos"
-        tsschecker="resources/tools/tsschecker_macos"
+        
+        futurerestore1="./resources/tools/futurerestore1_macos"
+        futurerestore2="./resources/tools/futurerestore2_macos"
+        ideviceenterrecovery="./resources/libimobiledevice/ideviceenterrecovery"
+        ideviceinfo="./resources/libimobiledevice/ideviceinfo"
+        idevicerestore="./resources/tools/idevicerestore_macos"
+        iproxy="./resources/libimobiledevice/iproxy"
+        ipsw="./tools/ipsw_macos"
+        ipwnder32="./resources/tools/ipwnder32_macos"
+        irecoverychk="./resources/libimobiledevice/irecovery"
+        irecovery="$irecoverychk"
+        partialzip="./resources/tools/partialzip_macos"
+        python="/usr/bin/python"
+        tsschecker="./resources/tools/tsschecker_macos"
     fi
-    SSH="-F resources/ssh_config"
-    SCP="scp $SSH"
-    SSH="ssh $SSH"
+    SSH="-F ./resources/ssh_config"
+    SCP="$(which scp) $SSH"
+    SSH="$(which ssh) $SSH"
     
-    [[ ! -d resources ]] && Error "resources folder cannot be found. Replace resources folder and try again" "If resources folder is present try removing spaces from path/folder name"
-    [[ ! $platform ]] && Error "Platform unknown/not supported."
-    chmod +x resources/tools/*
-    [ $? == 1 ] && Log "An error occurred in chmod. This might cause problems..."
-    [[ ! $(ping -c1 8.8.8.8 2>/dev/null) ]] && Error "Please check your Internet connection before proceeding."
+    Echo "* Platform: $platform $macver"
+}
+
+CheckDeviceState() {
+    # CheckDeviceState - Checks the device state (depending on device, must be in normal, recovery, or DFU mode)
+    # This is used on the Main function and others
+    
+    Log "Finding device in normal mode..."
+    ideviceinfo2=$($ideviceinfo -s)
+    if [[ $? != 0 ]]; then
+        Log "Finding device in DFU/recovery mode..."
+        irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) # Change irecovery2 to DeviceState
+    fi
+    # Set DeviceState (0 for DFU, 1 for Recovery)
+    [[ $irecovery2 == "DFU" ]] && DFUDevice=1 # DeviceState=0
+    [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1 #DeviceState=1
+}
+
+GetDeviceValues() {
+    # GetDeviceValues - Get the device values using irecovery and/or ideviceinfo
+    # This is used on the Main function
+    
+    if [[ $DFUDevice == 1 ]] || [[ $RecoveryDevice == 1 ]]; then
+        ProductType=$($irecovery -q | grep 'PTYP' | cut -c 7-)
+        
+        # If not on Linux, user must enter ProductType manually
+        if [ ! $ProductType ]; then
+            read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
+        fi
+        
+        UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
+        ProductVer="Unknown"
+        
+        # inform user on how to exit recovery
+        if [[ $RecoveryDevice == 1 ]]; then
+            Echo "* Your $ProductType is currently in recovery mode."
+            Echo "* If you want to exit recovery, select Downgrade device, then select N to exit recovery"
+        fi
+    else
+        ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
+        [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
+        ProductVer=$(echo "$ideviceinfo2" | grep 'ProductVer' | cut -c 17-)
+        VersionDetect=$(echo $ProductVer | cut -c 1)
+        UniqueChipID=$(echo "$ideviceinfo2" | grep 'UniqueChipID' | cut -c 15-)
+        UniqueDeviceID=$(echo "$ideviceinfo2" | grep 'UniqueDeviceID' | cut -c 17-)
+    fi
+    [ ! $ProductType ] && ProductType=0
+}
+
+
+BasebandDetect() {
+    # BasebandDetect - set Baseband and other values depending on the detected device
+    # It is also used to check if the device is supported or not
+    # This is used on the Main function
+    
+    # Planned to be added:
+    # DeviceProc variable: the values will be 5 for A5, 6 for A6, 7 for A7
+    
+    # . ./resources/firmware.sh
+    
+    Firmware=resources/firmware/$ProductType
+    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
+    Baseband=0
+    if [ $ProductType == iPad2,2 ]; then
+        BasebandURL=$(cat $Firmware/13G36/url) # iOS 9.3.5
+        Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
+        BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
+    elif [ $ProductType == iPad2,3 ]; then
+        Baseband="Phoenix-3.6.03.Release.bbfw"
+        BasebandSHA1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
+    elif [ $ProductType == iPad2,6 ] || [ $ProductType == iPad2,7 ]; then
+        Baseband="Mav5-11.80.00.Release.bbfw"
+        BasebandSHA1="aa52cf75b82fc686f94772e216008345b6a2a750"
+    elif [ $ProductType == iPad3,2 ] || [ $ProductType == iPad3,3 ]; then
+        Baseband="Mav4-6.7.00.Release.bbfw"
+        BasebandSHA1="a5d6978ecead8d9c056250ad4622db4d6c71d15e"
+    elif [ $ProductType == iPhone4,1 ]; then
+        Baseband="Trek-6.7.00.Release.bbfw"
+        BasebandSHA1="22a35425a3cdf8fa1458b5116cfb199448eecf49"
+    elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
+         [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
+        BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
+        Baseband="Mav5-11.80.00.Release.bbfw"
+        BasebandSHA1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
+    elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] || [ $ProductType == iPad4,5 ] ||
+         [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
+        BasebandURL=$(cat $Firmware/14G60/url)
+        Baseband="Mav7Mav8-7.60.00.Release.bbfw"
+        BasebandSHA1="f397724367f6bed459cf8f3d523553c13e8ae12c"
+        A7Device=1
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
+        A7Device=1
+    elif [ $ProductType == 0 ]; then
+        Error "No device detected. Please put the device in normal mode (and jailbroken for 32-bit) before proceeding" \
+        "Recovery or DFU mode is also applicable for A7 devices"
+    elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
+         [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ] &&
+         [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
+        Error "Your device $ProductType is not supported."
+    fi
+    
+    # There must be a better way to do this
+    [ $ProductType == iPad2,1 ] && HWModel=k93
+    [ $ProductType == iPad2,2 ] && HWModel=k94
+    [ $ProductType == iPad2,3 ] && HWModel=k95
+    [ $ProductType == iPad2,4 ] && HWModel=k93a
+    [ $ProductType == iPad2,5 ] && HWModel=p105
+    [ $ProductType == iPad2,6 ] && HWModel=p106
+    [ $ProductType == iPad2,7 ] && HWModel=p107
+    [ $ProductType == iPad3,1 ] && HWModel=j1
+    [ $ProductType == iPad3,2 ] && HWModel=j2
+    [ $ProductType == iPad3,3 ] && HWModel=j2a
+    [ $ProductType == iPad3,4 ] && HWModel=p101
+    [ $ProductType == iPad3,5 ] && HWModel=p102
+    [ $ProductType == iPad3,6 ] && HWModel=p103
+    [ $ProductType == iPad4,1 ] && HWModel=j71
+    [ $ProductType == iPad4,2 ] && HWModel=j72
+    [ $ProductType == iPad4,3 ] && HWModel=j73
+    [ $ProductType == iPad4,4 ] && HWModel=j85
+    [ $ProductType == iPad4,5 ] && HWModel=j86
+    [ $ProductType == iPhone4,1 ] && HWModel=n94
+    [ $ProductType == iPhone5,1 ] && HWModel=n41
+    [ $ProductType == iPhone5,2 ] && HWModel=n42
+    [ $ProductType == iPhone5,3 ] && HWModel=n48
+    [ $ProductType == iPhone5,4 ] && HWModel=n49
+    [ $ProductType == iPhone6,1 ] && HWModel=n51
+    [ $ProductType == iPhone6,2 ] && HWModel=n53
+    [ $ProductType == iPod5,1 ] && HWModel=n78
+    
+    if [ $ProductType == iPod5,1 ]; then
+        iBSS="${HWModel}ap"
+        iBSSBuildVer='10B329'
+    elif [ $ProductType == iPad3,1 ]; then
+        iBSS="${HWModel}ap"
+        iBSSBuildVer='11D257'
+    elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
+        iBSS="iphone6"
+    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
+         [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
+        iBSS="ipad4"
+    else
+        iBSS="$HWModel"
+        iBSSBuildVer='12H321'
+    fi
+    iBEC="iBEC.$iBSS.RELEASE"
+    iBECb="iBEC.${iBSS}b.RELEASE"
+    iBSSb="iBSS.${iBSS}b.RELEASE"
+    iBSS="iBSS.$iBSS.RELEASE"
+    SEP="sep-firmware.$HWModel.RELEASE.im4p"
+    
+    Echo "* HardwareModel: ${HWModel}ap"
+    Echo "* ProductType: $ProductType"
+    Echo "* ProductVersion: $ProductVer"
+    Echo "* UniqueChipID (ECID): $UniqueChipID"
+}
+
+Main() {
+    clear
+    Echo "******* iOS-OTA-Downgrader *******"
+    Echo "   Downgrader script by LukeZGD   "
+    echo
+    
+    SetToolPaths
+    
+    # Check platform value (must be "macos" or "linux")
+    if [[ ! $platform ]]; then
+        Error "Platform unknown/not supported."
+    fi
+    
+    # Check resources folder
+    if [[ ! -d resources ]]; then
+        Error "resources folder cannot be found. Replace resources folder and try again" \
+        "If resources folder is present try removing spaces from path/folder name"
+    fi
+    
+    # Mark all in resources/tools as executable
+    chmod +x ./resources/tools/*
+    if [[ $? == 1 ]]; then
+        # If chmod failed, warn the user
+        Log "An error occurred in chmod. This might cause problems..."
+    fi
+    
+    # Internet connection check
+    if [[ ! $(ping -c1 1.1.1.1 2>/dev/null) ]]; then
+        Error "Please check your Internet connection before proceeding."
+    fi
+    
+    # Check uname value (must be "x86_64", warn if platform is "macos" and not "x86_64")
     if [[ $plaform == macos ]] && [[ $(uname -m) != 'x86_64' ]]; then
         Log "M1 Mac detected. Support is limited, the script may or may not work for you"
         Echo "* M1 macs can still proceed but I cannot support it if things break"
@@ -94,49 +279,24 @@ Main() {
         Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     fi
     
+    # Check dependencies
     if [[ $1 == Install ]] || [ ! $(which $irecoverychk) ] || [ ! $(which $ideviceinfo) ] ||
        [ ! $(which git) ] || [ ! $(which bspatch) ] || [ ! $(which $python) ]; then
         InstallDependencies
     fi
     
+    # Get required stuff
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
-    Log "Finding device in normal mode..."
-    ideviceinfo2=$($ideviceinfo -s)
-    if [[ $? != 0 ]]; then
-        Log "Finding device in DFU/recovery mode..."
-        irecovery2=$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)
-    fi
-    [[ $irecovery2 == "DFU" ]] && DFUDevice=1
-    [[ $irecovery2 == "Recovery" ]] && RecoveryDevice=1
+    CheckDeviceState
+    GetDeviceValues
     
-    if [[ $DFUDevice == 1 ]] || [[ $RecoveryDevice == 1 ]]; then
-        ProductType=$($irecovery -q | grep 'PTYP' | cut -c 7-)
-        [ ! $ProductType ] && read -p "[Input] Enter ProductType (eg. iPad2,1): " ProductType
-        UniqueChipID=$((16#$(echo $($irecovery -q | grep 'ECID' | cut -c 7-) | cut -c 3-)))
-        ProductVer='Unknown'
-        [[ $RecoveryDevice == 1 ]] && Echo "* Your $ProductType is currently in recovery mode. If you want to exit recovery, select Downgrade device, then select N to exit recovery"
-    else
-        ProductType=$(echo "$ideviceinfo2" | grep 'ProductType' | cut -c 14-)
-        [ ! $ProductType ] && ProductType=$($ideviceinfo | grep 'ProductType' | cut -c 14-)
-        ProductVer=$(echo "$ideviceinfo2" | grep 'ProductVer' | cut -c 17-)
-        VersionDetect=$(echo $ProductVer | cut -c 1)
-        UniqueChipID=$(echo "$ideviceinfo2" | grep 'UniqueChipID' | cut -c 15-)
-        UniqueDeviceID=$(echo "$ideviceinfo2" | grep 'UniqueDeviceID' | cut -c 17-)
-    fi
-    [ ! $ProductType ] && ProductType=0
     BasebandDetect
     Clean
     mkdir tmp
     
-    Echo "* Platform: $platform $macver"
-    Echo "* HardwareModel: ${HWModel}ap"
-    Echo "* ProductType: $ProductType"
-    Echo "* ProductVersion: $ProductVer"
-    Echo "* UniqueChipID (ECID): $UniqueChipID"
-    echo
-    
+    # if [[ $DeviceState == "DFU" ]] && [[ $
     if [[ $DFUDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         DFUManual=1
         Mode='Downgrade'
@@ -158,12 +318,14 @@ Main() {
         done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
         SelectVersion
+        
     elif [[ $RecoveryDevice == 1 ]] && [[ $A7Device != 1 ]]; then
         read -p "$(Input 'Is this an A6 device in recovery mode? (y/N) ')" DFUManual
-        if [[ $DFUManual == y ]] || [[ $DFUManual == Y ]]; then
+        if [[ ${DFUManual^} == Y ]]; then
             Recovery
         else
-            Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" "For usage of 32-bit ipwndfu, put the device in Recovery/DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
+            Error "32-bit device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" \
+            "For usage of 32-bit ipwndfu, put the device in Recovery/DFU mode (A6) or pwnDFU mode (A5 using Arduino)"
         fi
     fi
     
@@ -432,7 +594,7 @@ CheckM8() {
     fi    
 }
 
-Downgrade() {    
+Downgrade() {
     if [[ $OSVer != 'Other' ]]; then
         [[ $ProductType == iPad4* ]] && IPSWType="iPad_64bit"
         [[ $ProductType == iPhone6* ]] && IPSWType="iPhone_4.0_64bit"
@@ -746,96 +908,6 @@ SavePkg() {
         unzip depends_linux.zip -d ../saved/lib
     fi
     cp ../saved/lib/* .
-}
-
-BasebandDetect() {
-    Firmware=resources/firmware/$ProductType
-    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
-    Baseband=0
-    if [ $ProductType == iPad2,2 ]; then
-        BasebandURL=$(cat $Firmware/13G36/url) # iOS 9.3.5
-        Baseband=ICE3_04.12.09_BOOT_02.13.Release.bbfw
-        BasebandSHA1=e6f54acc5d5652d39a0ef9af5589681df39e0aca
-    elif [ $ProductType == iPad2,3 ]; then
-        Baseband=Phoenix-3.6.03.Release.bbfw
-        BasebandSHA1=8d4efb2214344ea8e7c9305392068ab0a7168ba4
-    elif [ $ProductType == iPad2,6 ] || [ $ProductType == iPad2,7 ]; then
-        Baseband=Mav5-11.80.00.Release.bbfw
-        BasebandSHA1=aa52cf75b82fc686f94772e216008345b6a2a750
-    elif [ $ProductType == iPad3,2 ] || [ $ProductType == iPad3,3 ]; then
-        Baseband=Mav4-6.7.00.Release.bbfw
-        BasebandSHA1=a5d6978ecead8d9c056250ad4622db4d6c71d15e
-    elif [ $ProductType == iPhone4,1 ]; then
-        Baseband=Trek-6.7.00.Release.bbfw
-        BasebandSHA1=22a35425a3cdf8fa1458b5116cfb199448eecf49
-    elif [ $ProductType == iPad3,5 ] || [ $ProductType == iPad3,6 ] ||
-         [ $ProductType == iPhone5,1 ] || [ $ProductType == iPhone5,2 ]; then
-        BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
-        Baseband=Mav5-11.80.00.Release.bbfw
-        BasebandSHA1=8951cf09f16029c5c0533e951eb4c06609d0ba7f
-    elif [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] || [ $ProductType == iPad4,5 ] ||
-         [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        BasebandURL=$(cat $Firmware/14G60/url)
-        Baseband=Mav7Mav8-7.60.00.Release.bbfw
-        BasebandSHA1=f397724367f6bed459cf8f3d523553c13e8ae12c
-        A7Device=1
-    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,4 ]; then
-        A7Device=1
-    elif [ $ProductType == 0 ]; then
-        Error "No device detected. Please put the device in normal mode (and jailbroken for 32-bit) before proceeding" "Recovery or DFU mode is also applicable for A7 devices"
-    elif [ $ProductType != iPad2,1 ] && [ $ProductType != iPad2,4 ] && [ $ProductType != iPad2,5 ] &&
-         [ $ProductType != iPad3,1 ] && [ $ProductType != iPad3,4 ] && [ $ProductType != iPod5,1 ] &&
-         [ $ProductType != iPhone5,3 ] && [ $ProductType != iPhone5,4 ]; then
-        Error "Your device $ProductType is not supported."
-    fi
-    
-    [ $ProductType == iPad2,1 ] && HWModel=k93
-    [ $ProductType == iPad2,2 ] && HWModel=k94
-    [ $ProductType == iPad2,3 ] && HWModel=k95
-    [ $ProductType == iPad2,4 ] && HWModel=k93a
-    [ $ProductType == iPad2,5 ] && HWModel=p105
-    [ $ProductType == iPad2,6 ] && HWModel=p106
-    [ $ProductType == iPad2,7 ] && HWModel=p107
-    [ $ProductType == iPad3,1 ] && HWModel=j1
-    [ $ProductType == iPad3,2 ] && HWModel=j2
-    [ $ProductType == iPad3,3 ] && HWModel=j2a
-    [ $ProductType == iPad3,4 ] && HWModel=p101
-    [ $ProductType == iPad3,5 ] && HWModel=p102
-    [ $ProductType == iPad3,6 ] && HWModel=p103
-    [ $ProductType == iPad4,1 ] && HWModel=j71
-    [ $ProductType == iPad4,2 ] && HWModel=j72
-    [ $ProductType == iPad4,3 ] && HWModel=j73
-    [ $ProductType == iPad4,4 ] && HWModel=j85
-    [ $ProductType == iPad4,5 ] && HWModel=j86
-    [ $ProductType == iPhone4,1 ] && HWModel=n94
-    [ $ProductType == iPhone5,1 ] && HWModel=n41
-    [ $ProductType == iPhone5,2 ] && HWModel=n42
-    [ $ProductType == iPhone5,3 ] && HWModel=n48
-    [ $ProductType == iPhone5,4 ] && HWModel=n49
-    [ $ProductType == iPhone6,1 ] && HWModel=n51
-    [ $ProductType == iPhone6,2 ] && HWModel=n53
-    [ $ProductType == iPod5,1 ] && HWModel=n78
-    
-    if [ $ProductType == iPod5,1 ]; then
-        iBSS="${HWModel}ap"
-        iBSSBuildVer='10B329'
-    elif [ $ProductType == iPad3,1 ]; then
-        iBSS="${HWModel}ap"
-        iBSSBuildVer='11D257'
-    elif [ $ProductType == iPhone6,1 ] || [ $ProductType == iPhone6,2 ]; then
-        iBSS="iphone6"
-    elif [ $ProductType == iPad4,1 ] || [ $ProductType == iPad4,2 ] || [ $ProductType == iPad4,3 ] ||
-         [ $ProductType == iPad4,4 ] || [ $ProductType == iPad4,5 ]; then
-        iBSS="ipad4"
-    else
-        iBSS="$HWModel"
-        iBSSBuildVer='12H321'
-    fi
-    iBEC="iBEC.$iBSS.RELEASE"
-    iBECb="iBEC.${iBSS}b.RELEASE"
-    iBSSb="iBSS.${iBSS}b.RELEASE"
-    iBSS="iBSS.$iBSS.RELEASE"
-    SEP="sep-firmware.$HWModel.RELEASE.im4p"
 }
 
 cd "$(dirname $0)"
