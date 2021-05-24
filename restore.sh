@@ -1,12 +1,12 @@
 #!/bin/bash
 trap 'Clean; exit' INT TERM EXIT
 
-. ./resources/modules/blobs.sh
-. ./resources/modules/depends.sh
-. ./resources/modules/device.sh
-. ./resources/modules/devicestate.sh
-. ./resources/modules/downgrade.sh
-. ./resources/modules/ipsw.sh
+. ./resources/blobs.sh
+. ./resources/depends.sh
+. ./resources/device.sh
+. ./resources/devicestate.sh
+. ./resources/downgrade.sh
+. ./resources/ipsw.sh
 
 if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
     Color_R=$(tput setaf 9)
@@ -60,7 +60,7 @@ Main() {
     fi
     
     # Mark all in resources/modules and resources/tools as executable
-    chmod +x ./resources/modules/*.sh ./resources/tools/*
+    chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? == 1 ]]; then
         # If chmod failed, warn the user
         Log "An error occurred in chmod. This might cause problems..."
