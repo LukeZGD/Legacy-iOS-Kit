@@ -1,24 +1,17 @@
 #!/bin/bash
 
 CheckDeviceState() {
-    # CheckDeviceState - Checks the device state (depending on device, must be in normal, recovery, or DFU mode)
-    # Detected device state will be set to variable DeviceState
-    
     Log "Finding device in normal mode..."
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-)" # Changed irecovery2 to DeviceState
+        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-)"
     else
         DeviceState="Normal"
     fi
 }
 
 FindDevice() {
-    # FindDevice - Function to find and wait for device in DFU/recovery
-    # Argument ($1) should be either "DFU" or "Recovery"
-    # When detected, device state will be set to variable DeviceState
-    
     local USB
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
     
@@ -33,22 +26,19 @@ FindDevice() {
 }
 
 GetDeviceValues() {
-    # GetDeviceValues - Get the device values using irecovery and/or ideviceinfo
-    # Also set baseband and other values depending on the detected device
-    # It is also used to check if the device is supported or not
-    # This is used on the Main function
-    
     CheckDeviceState
     
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         ProductType=$($irecovery -q | grep "PTYP" | cut -c 7-)
-        
-        # If not on Linux, user must enter ProductType manually
-        # todo automate this for macs as well
-        while [[ ! $ProductType ]]; do
-            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
-        done
-        
+        if [[ ! $ProductType ]]; then
+            local ProdDetect
+            local ProdCut=7
+            ProductType=$(irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
+            ProdDetect=$(echo $ProductType | cut -c 3)
+            [[ $ProdDetect == 'h' ]] && ProdCut=9
+            ProductType=$(echo $ProductType | cut -c -${ProdCut})
+        fi
+    
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
         ProductVer="Unknown"
     else
@@ -65,42 +55,42 @@ GetDeviceValues() {
     fi
     
     Baseband=0
-    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null) # iOS 9.3.6
+    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
     Firmware=resources/firmware/$ProductType
     
     if [[ $ProductType == "iPad2,2" ]]; then
-        BasebandURL=$(cat $Firmware/13G36/url) # iOS 9.3.5
+        BasebandURL=$(cat $Firmware/13G36/url)
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
-        
+    
     elif [[ $ProductType == "iPad2,3" ]]; then
         Baseband="Phoenix-3.6.03.Release.bbfw"
         BasebandSHA1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
-        
+    
     elif [[ $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
         Baseband="Mav5-11.80.00.Release.bbfw"
         BasebandSHA1="aa52cf75b82fc686f94772e216008345b6a2a750"
-        
+    
     elif [[ $ProductType == "iPad3,2" || $ProductType == "iPad3,3" ]]; then
         Baseband="Mav4-6.7.00.Release.bbfw"
         BasebandSHA1="a5d6978ecead8d9c056250ad4622db4d6c71d15e"
-        
+    
     elif [[ $ProductType == "iPhone4,1" ]]; then
         Baseband="Trek-6.7.00.Release.bbfw"
         BasebandSHA1="22a35425a3cdf8fa1458b5116cfb199448eecf49"
-        
+    
     elif [[ $ProductType == "iPad3,5" || $ProductType == "iPad3,6" ||
             $ProductType == "iPhone5,1" || $ProductType == "iPhone5,2" ]]; then
-        BasebandURL=$(cat $Firmware/14G61/url) # iOS 10.3.4
+        BasebandURL=$(cat $Firmware/14G61/url)
         Baseband="Mav5-11.80.00.Release.bbfw"
         BasebandSHA1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
-        
+    
     elif [[ $ProductType == "iPad4,2" || $ProductType == "iPad4,3" || $ProductType == "iPad4,5" ||
             $ProductType == "iPhone6,1" || $ProductType == "iPhone6,2" ]]; then
         BasebandURL=$(cat $Firmware/14G60/url)
         Baseband="Mav7Mav8-7.60.00.Release.bbfw"
         BasebandSHA1="f397724367f6bed459cf8f3d523553c13e8ae12c"
-        
+    
     elif [[ $ProductType != "iPad2"* && $ProductType != "iPad3"* && $ProductType != "iPad4,1" &&
             $ProductType != "iPad4,4" && $ProductType != "iPod5,1" && $ProductType != "iPhone5"* ]]; then
         Error "Your device $ProductType is not supported."
@@ -125,10 +115,10 @@ GetDeviceValues() {
     
     if [[ $ProductType == "iPod5,1" ]]; then
         iBSS="${HWModel}ap"
-        iBSSBuildVer='10B329'
+        iBSSBuildVer="10B329"
     elif [[ $ProductType == "iPad3,1" ]]; then
         iBSS="${HWModel}ap"
-        iBSSBuildVer='11D257'
+        iBSSBuildVer="11D257"
     elif [[ $ProductType == "iPhone6"* ]]; then
         iBSS="iphone6"
         IPSWType="iPhone_4.0_64bit"
@@ -289,7 +279,7 @@ pwnREC() {
     Log "Sending iBEC..."
     $irecovery -f $iBEC.im4p
     sleep 5
-    [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
+    [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
     if [[ $RecoveryDevice != 1 ]]; then
         echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
         Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device, and attempt to continue"

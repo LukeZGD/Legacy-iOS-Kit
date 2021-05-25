@@ -1,4 +1,4 @@
-# create custom IPSW for 10.3.3
+#!/bin/bash
 
 IPSW32() {
     local JBFiles

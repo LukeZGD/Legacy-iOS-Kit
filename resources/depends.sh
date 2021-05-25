@@ -1,14 +1,10 @@
 #!/bin/bash
 
 SetToolPaths() {
-    # SetToolPaths does exactly what the function name does - set path to tools used by the script
-    # It also sets the platform variable to "macos" or "linux"
-    # This is used on the main function
-    
     if [[ $OSTYPE == "linux"* ]]; then
-        . /etc/os-release 2>/dev/null # source os-release to get distribution (and version if needed)
+        . /etc/os-release 2>/dev/null
         platform="linux"
-        
+    
         futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib ./resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
         ideviceenterrecovery="$(which ideviceenterrecovery)"
@@ -28,9 +24,9 @@ SetToolPaths() {
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
-        macver=${1:-$(sw_vers -productVersion)} # get macOS version
+        macver=${1:-$(sw_vers -productVersion)}
         platform="macos"
-        
+    
         futurerestore1="./resources/tools/futurerestore1_macos"
         futurerestore2="./resources/tools/futurerestore2_macos"
         ideviceenterrecovery="./resources/libimobiledevice/ideviceenterrecovery"
@@ -73,11 +69,6 @@ SaveExternal() {
         Log "Downloading $External..."
         rm -rf $External
         $git clone $ExternalURL $External
-    #else
-    #    Log "Updating $External..."
-    #    cd $External
-    #    $git pull 2>/dev/null
-    #    cd ..
     fi
     if [[ ! -e $External/README.md ]] || [[ ! -d $External/.git ]]; then
         rm -rf $External
@@ -112,7 +103,6 @@ InstallDepends() {
     
     Log "Installing dependencies..."
     if [[ $ID == "arch" ]] || [[ $ID_LIKE == "arch" ]]; then
-        # Arch
         sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libusbmuxd libzip openssh openssl-1.0 python2 unzip usbmuxd usbutils
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
@@ -120,7 +110,6 @@ InstallDepends() {
     elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]] ||
          [[ $UBUNTU_CODENAME == "groovy" ]] || [[ $UBUNTU_CODENAME == "hirsute" ]] ||
          [[ $VERSION == "10 (buster)" ]] || [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
-        # Ubuntu, Debian
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository universe
         sudo apt update
         sudo apt install -y autoconf automake bsdiff build-essential curl git libglib2.0-dev libimobiledevice6 libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
@@ -145,7 +134,6 @@ InstallDepends() {
         fi
     
     elif [[ $ID == "fedora" ]]; then
-        # Fedora
         sudo dnf install -y automake binutils bsdiff git libimobiledevice-utils libpng12 libtool libusb-devel libusbmuxd-utils make libzip perl-Digest-SHA python2 readline-devel
         SavePkg
         cp libcrypto.so.1.0.0 libssl.so.1.0.0 ../resources/lib
@@ -158,7 +146,6 @@ InstallDepends() {
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
     
     elif [[ $ID == "opensuse-tumbleweed" ]] || [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
-        # openSUSE
         [[ $ID == "opensuse-tumbleweed" ]] && iproxy="libusbmuxd-tools" || iproxy="iproxy libzip5"
         sudo zypper -n in automake bsdiff gcc git imobiledevice-tools $iproxy libimobiledevice libpng12-0 libopenssl1_0_0 libusb-1_0-devel libtool make python-base readline-devel
         ln -sf /usr/lib64/libimobiledevice.so.6 ../resources/lib/libimobiledevice-1.0.so.6
@@ -167,12 +154,9 @@ InstallDepends() {
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $OSTYPE == "darwin"* ]]; then
-        # macOS
-        #imobiledevicenet=$(curl -s https://api.github.com/repos/libimobiledevice-win32/imobiledevice-net/releases/latest | grep browser_download_url | cut -d '"' -f 4 | awk '/osx-x64/ {print $1}')
         xcode-select --install
-        #curl -L $imobiledevicenet -o libimobiledevice.zip
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip libimobiledevice.zip 328e809dea350ae68fb644225bbf8469c0f0634b
-        
+    
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi

@@ -7,7 +7,7 @@ trap "Clean; exit" INT TERM EXIT
 . ./resources/downgrade.sh
 . ./resources/ipsw.sh
 
-if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
+if [[ $1 != 'NoColor' && $2 != 'NoColor' ]]; then
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
     Color_B=$(tput setaf 12)
@@ -47,33 +47,26 @@ Main() {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
-    # Run SetToolPaths from depends
     SetToolPaths
     
-    # Check platform value (must be "macos" or "linux")
     if [[ ! $platform ]]; then
         Error "Platform unknown/not supported."
     fi
     
-    # Check resources folder
     if [[ ! -d ./resources ]]; then
         Error "resources folder cannot be found. Replace resources folder and try again" \
         "If resources folder is present try removing spaces from path/folder name"
     fi
     
-    # Mark all in resources and resources/tools as executable
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? == 1 ]]; then
-        # If chmod failed, warn the user
         Log "An error occurred in chmod. This might cause problems..."
     fi
     
-    # Internet connection check
     if [[ ! $(ping -c1 1.1.1.1 2>/dev/null) ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
     
-    # Check uname -m value (must be "x86_64", warn if platform is "macos" and not "x86_64")
     if [[ $platform == macos && $(uname -m) != "x86_64" ]]; then
         Log "M1 Mac detected. Support is limited, the script may or may not work for you"
         Echo "* M1 macs can still proceed but I cannot support it if things break"
@@ -84,19 +77,15 @@ Main() {
         Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     fi
     
-    # Check dependencies, if one or more are missing (or if manually specified), run InstallDepends from depends
     if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
         InstallDepends
     fi
     
-    # Get needed stuff, run SaveExternal from depends
     SaveExternal iOS-OTA-Downgrader-Keys
     SaveExternal ipwndfu
     
-    # Run GetDeviceValues from device
     GetDeviceValues
     
-    # Cleanup
     Clean
     mkdir tmp
     
@@ -114,7 +103,6 @@ Main() {
         fi
     
     elif [[ $DeviceState == "DFU" ]]; then
-        # Advanced options menu for 32-bit devices
         Mode="Downgrade"
         Log "32-bit device detected in DFU mode."
         Echo "* Advanced Options Menu"
@@ -140,7 +128,6 @@ Main() {
         SkipMainMenu=1
     
     elif [[ $DeviceState == "Recovery" ]]; then
-        # Recovery for A6 devices only
         if [[ $DeviceProc == 6 ]]; then
             Recovery
         else
@@ -153,14 +140,10 @@ Main() {
     
     [[ ! -z $1 ]] && SkipMainMenu=1
     
-    if [[ $SkipMainMenu == 1 ]] && [[ $1 != "NoColor" ]]; then
-        # Skip main menu if argument passed
+    if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
         Mode="$1"
     else
-        # Main Menu
         Selection=("Downgrade device")
-    
-        # Only show these options for 32-bit devices
         [[ $DeviceProc != 7 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
     
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
@@ -180,9 +163,9 @@ Main() {
     SelectVersion
     
     Log "Option: $Mode"
-    [[ $Mode == "Downgrade" ]] && Downgrade # run from downgrade
-    [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs # run from blobs
-    [[ $Mode == "kDFU" ]] && kDFU # run from device
+    [[ $Mode == "Downgrade" ]] && Downgrade
+    [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs
+    [[ $Mode == "kDFU" ]] && kDFU
     exit
 }
 
@@ -196,20 +179,16 @@ SelectVersion() {
     fi
     
     if [[ $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" ]]; then
-        # Do not show 8.4.1 option for iPhone 5C devices
         Selection=()
     else
-        # Add 8.4.1 to version list
         Selection=("iOS 8.4.1")
     fi
     
     if [[ $ProductType == "iPad2,1" || $ProductType == "iPad2,2" ||
           $ProductType == "iPad2,3" || $ProductType == "iPhone4,1" ]]; then
-        # Only add 6.1.3 to version list if device is iPad 2 or iPhone 4S
         Selection+=("iOS 6.1.3")
     fi
     
-    # Finally, add "Other" (only if in Downgrade mode) and exit option to list
     [[ $Mode == "Downgrade" ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     

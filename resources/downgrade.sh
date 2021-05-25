@@ -7,7 +7,6 @@ Downgrade() {
     local Jailbreak
     
     if [[ $OSVer == "Other" ]]; then
-        # If version selected is "Other", ask for IPSW and SHSH
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
         Echo "* Remember to create a backup of the SHSH"
         read -p "$(Input 'Path to IPSW (drag IPSW to terminal window):')" IPSW
@@ -15,12 +14,10 @@ Downgrade() {
         read -p "$(Input 'Path to SHSH (drag SHSH to terminal window):')" SHSH
     
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
-        # Jailbreak option
         read -p "$(Input 'Jailbreak the selected iOS version? (y/N):')" Jailbreak
         [[ ${Jailbreak^} == 'Y' ]] && Jailbreak=1
     fi
     
-    # For iPhone5,1 only
     if [[ $Mode == "Downgrade" && $ProductType == iPhone5,1 && $Jailbreak != 1 ]]; then
         Echo "* By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
@@ -36,14 +33,11 @@ Downgrade() {
     fi
     
     if [[ $OSVer != "Other" ]]; then
-        # Save blobs now for 32-bit devices
         [[ $DeviceProc != 7 ]] && SaveOTABlobs
-        
-        # Full IPSW names
+    
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
-        
-        # See if original and/or custom IPSW's exist
+    
         if [[ ! -e "$IPSW.ipsw" && ! -e "$IPSWCustom.ipsw" ]]; then
             Log "iOS $OSVer IPSW cannot be found."
             Echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
@@ -52,7 +46,7 @@ Downgrade() {
             curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
             mv tmp/$IPSW.ipsw .
         fi
-        
+    
         if [[ $Jailbreak != 1 && ! -e "$IPSWCustom.ipsw" ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
@@ -66,7 +60,7 @@ Downgrade() {
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
         fi
-        
+    
         if [[ $DeviceState == "Normal" && $iBSSBuildVer == $BuildVer ]]; then
             Log "Extracting iBSS from IPSW..."
             mkdir -p saved/$ProductType 2>/dev/null
@@ -95,7 +89,7 @@ Downgrade() {
         Log "Setting restore IPSW to: $IPSW.ipsw"
         IPSWRestore="$IPSW"
     fi
-        
+    
     if [[ $Jailbreak == 1 ]]; then
         iDeviceRestore
     else
@@ -104,12 +98,12 @@ Downgrade() {
     
     echo
     Log "Restoring done!"
-    if [[ $Jailbreak != 1 ]] && [[ $DeviceProc != 7 ]] && [[ $OSVer != "Other" ]]; then
+    if [[ $Jailbreak != 1 && $DeviceProc != 7 && $OSVer != "Other" ]]; then
         Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
         ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
     fi
     Log "Downgrade script done!"
-} 
+}
 
 iDeviceRestore() {
     Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
