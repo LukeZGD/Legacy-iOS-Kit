@@ -90,7 +90,6 @@ Main() {
     mkdir tmp
     
     if [[ $DeviceProc == 7 ]]; then
-        # For A7 devices
         if [[ $DeviceState == "Normal" ]]; then
             Log "A7 device detected in normal mode."
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
