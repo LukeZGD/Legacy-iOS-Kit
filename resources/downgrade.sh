@@ -1,7 +1,7 @@
 #!/bin/bash
-local Baseband5
 
 Downgrade() {
+    local IPSWExtract
     local IPSWSHA1
     local IPSWSHA1L
     local Jailbreak
@@ -16,6 +16,13 @@ Downgrade() {
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
         read -p "$(Input 'Jailbreak the selected iOS version? (y/N):')" Jailbreak
         [[ ${Jailbreak^} == 'Y' ]] && Jailbreak=1
+        
+        if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
+              $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
+            Echo "* A5 Rev A device detected. Enabling the jailbreak option might not work for you"
+            read -p "$(Input 'Select Y to continue anyway, N to cancel and exit (y/N):')" Jailbreak
+            [[ ${Jailbreak^} == 'Y' ]] && Jailbreak=1 || exit
+        fi
     fi
     
     if [[ $Mode == "Downgrade" && $ProductType == iPhone5,1 && $Jailbreak != 1 ]]; then
@@ -37,7 +44,6 @@ Downgrade() {
     
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
-    
         if [[ ! -e "$IPSW.ipsw" && ! -e "$IPSWCustom.ipsw" ]]; then
             Log "iOS $OSVer IPSW cannot be found."
             Echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
@@ -47,7 +53,7 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if [[ $Jailbreak != 1 && ! -e "$IPSWCustom.ipsw" ]]; then
+        if [[ $Jailbreak != 1 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
@@ -55,8 +61,8 @@ Downgrade() {
                 Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
                 "Delete/replace the IPSW and run the script again"
             fi
-        else
-            Log "Detected existing Custom IPSW. Skipping verification."
+        elif [[ -e "$IPSWCustom.ipsw" ]]; then
+            Log "Found existing Custom IPSW. Skipping verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
         fi
@@ -69,10 +75,16 @@ Downgrade() {
     fi
     
     [[ $DeviceState == "Normal" ]] && kDFU
-    [[ $Jailbreak == 1 ]] && IPSW32
+    
+    if [[ $Jailbreak == 1 ]]; then
+        IPSW32
+        IPSWExtract=$IPSWCustom
+    else
+        IPSWExtract=$IPSW
+    fi
     
     Log "Extracting IPSW..."
-    unzip -q $IPSW.ipsw -d $IPSW/
+    unzip -q $IPSWExtract.ipsw -d $IPSWExtract/
     
     if [[ $DeviceProc == 7 ]]; then
         IPSW64
@@ -82,6 +94,7 @@ Downgrade() {
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         sudo bash -c "$python -m SimpleHTTPServer 80 &"
+        ServerRunning=1
         cd ..
     fi
     
@@ -98,10 +111,6 @@ Downgrade() {
     
     echo
     Log "Restoring done!"
-    if [[ $Jailbreak != 1 && $DeviceProc != 7 && $OSVer != "Other" ]]; then
-        Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
-        ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
-    fi
     Log "Downgrade script done!"
 }
 
@@ -119,16 +128,42 @@ iDeviceRestore() {
     fi
 }
 
-FutureRestore() {
+FRBaseband() {
     local BasebandSHA1L
+    
+    if [[ $DeviceProc == 7 ]]; then
+        mkdir -p saved/baseband 2>/dev/null
+        cp -n $IPSW/Firmware/$Baseband saved/baseband
+    elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
+        unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
+    elif [[ ! -e saved/baseband/$Baseband ]]; then
+        Log "Downloading baseband..."
+        $partialzip $BasebandURL Firmware/$Baseband $Baseband
+        $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
+        mkdir -p saved/$ProductType 2>/dev/null
+        mkdir -p saved/baseband 2>/dev/null
+        mv $Baseband saved/baseband
+        mv BuildManifest.plist saved/$ProductType
+        BuildManifest="saved/$ProductType/BuildManifest.plist"
+    else
+        BuildManifest="saved/$ProductType/BuildManifest.plist"
+    fi
+    
+    BasebandSHA1L=$(shasum ./$Baseband | awk '{print $1}')
+    if [[ ! -e $(ls *.bbfw) || $BasebandSHA1L != $BasebandSHA1 ]]; then
+        rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
+        Error "Downloading/verifying baseband failed. Please run the script again"
+    fi
+}
+
+FutureRestore() {
     local ExtraArgs
     local futurerestore
     
     if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs="-s $SEP -m $BuildManifest"
+        ExtraArgs="-s $IPSWCustom/Firmware/all_flash/$SEP -m $BuildManifest"
         futurerestore=$futurerestore2
     else
-        BuildManifest="BuildManifest.plist"
         ExtraArgs="--use-pwndfu"
         futurerestore=$futurerestore1
     fi
@@ -139,37 +174,7 @@ FutureRestore() {
         $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
     else
         FRBaseband
-        BasebandSHA1L=$(shasum $Baseband | awk '{print $1}')
         Log "Proceeding to futurerestore..."
-        if [[ ! -e *.bbfw ]] || [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
-            rm -f saved/$ProductType/*.bbfw saved/$ProductType/BuildManifest.plist
-            Log "Downloading/verifying baseband failed."
-            Echo "* Your device is still in kDFU mode and you may run the script again"
-            Echo "* You can also continue and futurerestore can attempt to download the baseband again"
-            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-            read -s
-            $futurerestore -t $SHSH --latest-baseband --use-pwndfu "$IPSWRestore.ipsw"
-        else
-            $futurerestore -t $SHSH -b $Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
-        fi
-    fi
-}
-
-FRBaseband() {
-    if [[ $DeviceProc == 7 ]]; then
-        cp $IPSW/Firmware/$Baseband .
-    elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
-        unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
-        cp $BuildManifest BuildManifest.plist
-    elif [[ ! -e saved/baseband/$Baseband ]]; then
-        Log "Downloading baseband..."
-        $partialzip $BasebandURL Firmware/$Baseband $Baseband
-        $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
-        mkdir -p saved/$ProductType 2>/dev/null
-        mkdir -p saved/baseband 2>/dev/null
-        cp $Baseband saved/baseband
-        cp BuildManifest.plist saved/$ProductType
-    else
-        cp saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist .
+        $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
     fi
 }

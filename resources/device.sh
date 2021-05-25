@@ -1,16 +1,5 @@
 #!/bin/bash
 
-CheckDeviceState() {
-    Log "Finding device in normal mode..."
-    ideviceinfo2=$($ideviceinfo -s)
-    if [[ $? != 0 ]]; then
-        Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-)"
-    else
-        DeviceState="Normal"
-    fi
-}
-
 FindDevice() {
     local USB
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
@@ -26,7 +15,16 @@ FindDevice() {
 }
 
 GetDeviceValues() {
-    CheckDeviceState
+    local ideviceinfo2
+    
+    Log "Finding device in Normal mode..."
+    ideviceinfo2=$($ideviceinfo -s)
+    if [[ $? != 0 ]]; then
+        Log "Finding device in DFU/recovery mode..."
+        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-)"
+    else
+        DeviceState="Normal"
+    fi
     
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         ProductType=$($irecovery -q | grep "PTYP" | cut -c 7-)
@@ -54,9 +52,9 @@ GetDeviceValues() {
         "For more details regarding alternatives, read the 'Other Notes' section of the README"
     fi
     
+    Firmware=resources/firmware/$ProductType
     Baseband=0
     BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
-    Firmware=resources/firmware/$ProductType
     
     if [[ $ProductType == "iPad2,2" ]]; then
         BasebandURL=$(cat $Firmware/13G36/url)
@@ -129,12 +127,14 @@ GetDeviceValues() {
         iBSS="$HWModel"
         iBSSBuildVer="12H321"
     fi
-    [[ ! $IPSWType ]] && IPSWType="$iBSS"
+    [[ ! $IPSWType ]] && IPSWType="$ProductType"
     iBEC="iBEC.$iBSS.RELEASE"
     iBECb="iBEC.${iBSS}b.RELEASE"
     iBSSb="iBSS.${iBSS}b.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
+    
+    Log "Found an $ProductType in $DeviceState mode"
 }
 
 Recovery() {
@@ -249,7 +249,9 @@ kDFU() {
     echo
     Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
-    if [[ $? == 1 ]]; then
+    if [[ $? == 0 ]]; then
+        $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &
+    else
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
@@ -262,22 +264,25 @@ kDFU() {
         $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
         [[ $? == 1 ]] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
         $SSH root@$IPAddress "/tmp/$kloader /tmp/pwnediBSS" &
-    else
-        $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &
     fi
+    
     Log "Entering kDFU mode..."
-    echo
     Echo "* Press POWER or HOME button when screen goes black on the device"
     FindDevice "DFU"
-    kill $iproxyPID
 }
 
 pwnREC() {
+    local RecoveryDevice
+    if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
+        Log "iPad mini 2 device detected. Setting iBSS and iBEC to 'ipad4b'"
+        iBEC=$iBECb
+        iBSS=$iBSSb
+    fi
     Log "Entering pwnREC mode..."
     Log "Sending iBSS..."
-    $irecovery -f $iBSS.im4p
+    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
     Log "Sending iBEC..."
-    $irecovery -f $iBEC.im4p
+    $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
     sleep 5
     [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
     if [[ $RecoveryDevice != 1 ]]; then

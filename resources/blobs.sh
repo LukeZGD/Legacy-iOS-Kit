@@ -8,7 +8,7 @@ SaveOTABlobs() {
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [[ $DeviceProc == 7 ]]; then
         APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
-        Echo "* APNonce: $APNonce"
+        Log "APNonce: $APNonce"
         $tsschecker -d $ProductType -B ${HWModel}ap -i $OSVer -e $UniqueChipID -m $BuildManifest --apnonce $APNonce -o -s
         SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh*
     else

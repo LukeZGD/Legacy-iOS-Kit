@@ -7,7 +7,7 @@ IPSW32() {
     local JBS
     
     if [[ $IPSWRestore == $IPSWCustom ]]; then
-        Log "Detected existing Custom IPSW. Skipping IPSW creation."
+        Log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
     
@@ -43,7 +43,7 @@ IPSW32() {
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Error "Failed to find custom IPSW. Please run the script again" \
-        "You may try selecting N for memoryoption"
+        "You may try selecting N for memory option"
     fi
     Log "Setting restore IPSW to: $IPSWCustom.ipsw"
     IPSWRestore=$IPSWCustom
@@ -51,36 +51,25 @@ IPSW32() {
 
 IPSW64() {
     if [[ $IPSWRestore == $IPSWCustom ]]; then
-        Log "Detected existing Custom IPSW. Skipping IPSW creation."
+        Log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
     
-    if [[ ! -e $IPSWCustom.ipsw ]]; then
-        Log "Preparing custom IPSW..."
-        cp $IPSW/Firmware/all_flash/$SEP .
-        $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
-        $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
-        if [[ $ProductType == iPad4* ]]; then
-            $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
-            $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
-            cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
-        fi
-        cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
-        cd $IPSW
-        zip ../$IPSWCustom.ipsw -rq0 *
-        cd ..
-        mv $IPSW $IPSWCustom
-        Log "Setting restore IPSW to: $IPSWCustom.ipsw"
-        IPSWRestore=$IPSWCustom
-    else
-        cp $IPSW/Firmware/dfu/$iBSS.im4p $IPSW/Firmware/dfu/$iBEC.im4p .
-        [[ $ProductType == "iPad4"* ]] && cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .
-        cp $IPSW/Firmware/all_flash/$SEP .
+    Log "Preparing custom IPSW..."
+    cp $IPSW/Firmware/all_flash/$SEP .
+    $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+    $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+    if [[ $ProductType == "iPad4"* ]]; then
+        $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
+        $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+        cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
     fi
-    [[ ! -e $IPSW.ipsw ]] && Error "Failed to find custom IPSW. Please run the script again"
-    if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
-        Log "iPad mini 2 device detected. Setting iBSS and iBEC to 'ipad4b'"
-        iBEC=$iBECb
-        iBSS=$iBSSb
-    fi
+    cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+    cd $IPSW
+    zip ../$IPSWCustom.ipsw -rq0 *
+    cd ..
+    mv $IPSW $IPSWCustom
+    [[ ! -e $IPSWCustom.ipsw ]] && Error "Failed to find custom IPSW. Please run the script again"
+    Log "Setting restore IPSW to: $IPSWCustom.ipsw"
+    IPSWRestore=$IPSWCustom
 }

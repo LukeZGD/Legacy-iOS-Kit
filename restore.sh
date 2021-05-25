@@ -18,6 +18,12 @@ fi
 Clean() {
     rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
     ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
+    kill $iproxyPID 2>/dev/null
+    if [[ $ServerRunning == 1 ]]; then
+        Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
+        ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+    fi
+    echo
 }
 
 Echo() {
@@ -91,7 +97,6 @@ Main() {
     
     if [[ $DeviceProc == 7 ]]; then
         if [[ $DeviceState == "Normal" ]]; then
-            Log "A7 device detected in normal mode."
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
             [[ ${Selection^} == 'Y' ]] && Recovery || exit
@@ -103,7 +108,6 @@ Main() {
     
     elif [[ $DeviceState == "DFU" ]]; then
         Mode="Downgrade"
-        Log "32-bit device detected in DFU mode."
         Echo "* Advanced Options Menu"
         Input "This device is in:"
         Selection=("kDFU mode")
@@ -124,23 +128,32 @@ Main() {
         esac
         done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
+        Mode="Downgrade"
         SkipMainMenu=1
     
     elif [[ $DeviceState == "Recovery" ]]; then
         if [[ $DeviceProc == 6 ]]; then
             Recovery
         else
-            Error "32-bit A5 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" \
-            "For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
+            Log "32-bit A5 device detected in recovery mode."
+            Echo "* Please put the device in normal mode and jailbroken before proceeding."
+            Echo "* For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
+            read -p "$(Input 'Attempt to exit recovery mode? (Y/n)')" Selection
+            if [[ ${Selection^} != 'N' ]]; then
+                Log "Exiting recovery mode."
+                $irecovery -n
+            fi
+            exit
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
+        Mode="Downgrade"
         SkipMainMenu=1
     fi
     
     [[ ! -z $1 ]] && SkipMainMenu=1
     
     if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
-        Mode="$1"
+        [[ ! -z $1 ]] && Mode="$1"
     else
         Selection=("Downgrade device")
         [[ $DeviceProc != 7 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
