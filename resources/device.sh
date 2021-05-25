@@ -137,6 +137,42 @@ GetDeviceValues() {
     Log "Found an $ProductType in $DeviceState mode"
 }
 
+CheckM8() {
+    local pwnDFUTool
+    
+    [[ $platform == macos ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
+    Log "Entering pwnDFU mode with $pwnDFUTool..."
+    if [[ $pwnDFUTool == "ipwndfu" ]]; then
+        cd resources/ipwndfu
+        sudo $python ipwndfu -p
+    elif [[ $pwnDFUTool == "iPwnder32" ]]; then
+        $ipwnder32 -p
+        cd resources/ipwndfu
+    fi
+    
+    if [[ $DeviceProc == 7 ]]; then
+        Log "Running rmsigchks.py..."
+        sudo $python rmsigchks.py
+        pwnDFUDevice=$?
+        Echo $pwnDFUDevice
+        cd ../..
+    else
+        cd ../..
+        [[ $pwnDFUTool == "ipwndfu" ]] && kDFU iBSS || echo
+        pwnDFUDevice=$?
+    fi
+    
+    if [[ $pwnDFUDevice == 1 ]] || [[ $pwnDFUDevice == 255 ]]; then
+        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
+        echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
+        echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
+        Echo "* For more details, read the 'Other Notes' section of the README"
+        exit 1
+    elif [[ $pwnDFUDevice == 0 ]]; then
+        Log "Device in pwnDFU mode detected."
+    fi
+}
+
 Recovery() {
     local RecoveryDFU
     local VerDetect=$(echo $ProductVer | cut -c 1)
@@ -171,42 +207,6 @@ Recovery() {
         CheckM8
     else
         Error "Failed to detect device in DFU mode. Please run the script again"
-    fi
-}
-
-CheckM8() {
-    local pwnDFUTool
-    
-    [[ $platform == macos ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
-    Log "Entering pwnDFU mode with $pwnDFUTool..."
-    if [[ $pwnDFUTool == "ipwndfu" ]]; then
-        cd resources/ipwndfu
-        sudo $python ipwndfu -p
-    elif [[ $pwnDFUTool == "iPwnder32" ]]; then
-        $ipwnder32 -p
-        cd resources/ipwndfu
-    fi
-    
-    if [[ $DeviceProc == 7 ]]; then
-        Log "Running rmsigchks.py..."
-        sudo $python rmsigchks.py
-        pwnDFUDevice=$?
-        Echo $pwnDFUDevice
-        cd ../..
-    else
-        cd ../..
-        [[ $pwnDFUTool == "ipwndfu" ]] && kDFU iBSS || echo
-        pwnDFUDevice=$?
-    fi
-    
-    if [[ $pwnDFUDevice == 1 ]] || [[ $pwnDFUDevice == 255 ]]; then
-        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
-        echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
-        echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
-        Echo "* For more details, read the 'Other Notes' section of the README"
-        exit 1
-    elif [[ $pwnDFUDevice == 0 ]]; then
-        Log "Device in pwnDFU mode detected."
     fi
 }
 
@@ -284,14 +284,8 @@ pwnREC() {
     Log "Sending iBEC..."
     $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
     sleep 5
-    [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
-    if [[ $RecoveryDevice != 1 ]]; then
-        echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
-        Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device, and attempt to continue"
-        Echo "* If not, you may have to hard-reset your device and attempt to start over entering pwnDFU mode again"
-        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
-        read -s
-    else
-        Log "Found device in pwnREC mode."
-    fi
+    Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device to attempt to continue"
+    Echo "* If not, you may have to hard-reset your device and start over entering pwnDFU mode again"
+    Echo "* You can press Ctrl+C to cancel finding device"
+    FindDevice "Recovery"
 }

@@ -1,5 +1,70 @@
 #!/bin/bash
 
+iDeviceRestore() {
+    Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
+    [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
+    mkdir shsh
+    mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
+    $idevicerestore -ewy $IPSWRestore.ipsw
+    if [[ $platform == "macos" && $? != 0 ]]; then
+        Log "An error seems to have occurred when running idevicerestore."
+        Echo "* If this is the 'Killed: 9' error or similar, try these steps:"
+        Echo "* cd to where the script is located, then run"
+        Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+    fi
+}
+
+FRBaseband() {
+    local BasebandSHA1L
+    
+    if [[ $DeviceProc == 7 ]]; then
+        mkdir -p saved/baseband 2>/dev/null
+        cp -n $IPSW/Firmware/$Baseband saved/baseband
+    elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
+        unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
+    elif [[ ! -e saved/baseband/$Baseband ]]; then
+        Log "Downloading baseband..."
+        $partialzip $BasebandURL Firmware/$Baseband $Baseband
+        $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
+        mkdir -p saved/$ProductType 2>/dev/null
+        mkdir -p saved/baseband 2>/dev/null
+        mv $Baseband saved/baseband
+        mv BuildManifest.plist saved/$ProductType
+        BuildManifest="saved/$ProductType/BuildManifest.plist"
+    else
+        BuildManifest="saved/$ProductType/BuildManifest.plist"
+    fi
+    
+    BasebandSHA1L=$(shasum ./$Baseband | awk '{print $1}')
+    if [[ ! -e $(ls *.bbfw) || $BasebandSHA1L != $BasebandSHA1 ]]; then
+        rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
+        Error "Downloading/verifying baseband failed. Please run the script again"
+    fi
+}
+
+FutureRestore() {
+    local ExtraArgs
+    local futurerestore
+    
+    if [[ $DeviceProc == 7 ]]; then
+        ExtraArgs="-s $IPSWCustom/Firmware/all_flash/$SEP -m $BuildManifest"
+        futurerestore=$futurerestore2
+    else
+        ExtraArgs="--use-pwndfu"
+        futurerestore=$futurerestore1
+    fi
+    
+    Log "Proceeding to futurerestore..."
+    if [[ $Baseband == 0 ]]; then
+        Log "Device $ProductType has no baseband"
+        $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
+    else
+        FRBaseband
+        Log "Proceeding to futurerestore..."
+        $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
+    fi
+}
+
 Downgrade() {
     local IPSWExtract
     local IPSWSHA1
@@ -112,69 +177,4 @@ Downgrade() {
     echo
     Log "Restoring done!"
     Log "Downgrade script done!"
-}
-
-iDeviceRestore() {
-    Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
-    [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
-    mkdir shsh
-    mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-    $idevicerestore -ewy $IPSWRestore.ipsw
-    if [[ $platform == "macos" && $? != 0 ]]; then
-        Log "An error seems to have occurred when running idevicerestore."
-        Echo "* If this is the 'Killed: 9' error or similar, try these steps:"
-        Echo "* cd to where the script is located, then run"
-        Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
-    fi
-}
-
-FRBaseband() {
-    local BasebandSHA1L
-    
-    if [[ $DeviceProc == 7 ]]; then
-        mkdir -p saved/baseband 2>/dev/null
-        cp -n $IPSW/Firmware/$Baseband saved/baseband
-    elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
-        unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
-    elif [[ ! -e saved/baseband/$Baseband ]]; then
-        Log "Downloading baseband..."
-        $partialzip $BasebandURL Firmware/$Baseband $Baseband
-        $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
-        mkdir -p saved/$ProductType 2>/dev/null
-        mkdir -p saved/baseband 2>/dev/null
-        mv $Baseband saved/baseband
-        mv BuildManifest.plist saved/$ProductType
-        BuildManifest="saved/$ProductType/BuildManifest.plist"
-    else
-        BuildManifest="saved/$ProductType/BuildManifest.plist"
-    fi
-    
-    BasebandSHA1L=$(shasum ./$Baseband | awk '{print $1}')
-    if [[ ! -e $(ls *.bbfw) || $BasebandSHA1L != $BasebandSHA1 ]]; then
-        rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
-        Error "Downloading/verifying baseband failed. Please run the script again"
-    fi
-}
-
-FutureRestore() {
-    local ExtraArgs
-    local futurerestore
-    
-    if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs="-s $IPSWCustom/Firmware/all_flash/$SEP -m $BuildManifest"
-        futurerestore=$futurerestore2
-    else
-        ExtraArgs="--use-pwndfu"
-        futurerestore=$futurerestore1
-    fi
-    
-    Log "Proceeding to futurerestore..."
-    if [[ $Baseband == 0 ]]; then
-        Log "Device $ProductType has no baseband"
-        $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
-    else
-        FRBaseband
-        Log "Proceeding to futurerestore..."
-        $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
-    fi
 }

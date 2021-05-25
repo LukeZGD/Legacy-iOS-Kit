@@ -80,7 +80,7 @@ Main() {
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
     elif [[ $(uname -m) != "x86_64" ]]; then
-        Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
+        Error "Only 64-bit (x86_64) distributions are supported."
     fi
     
     if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
