@@ -19,7 +19,7 @@ SaveOTABlobs() {
     SHSHExisting=$(ls saved/shsh/$SHSHChk 2>/dev/null)
     if [[ ! $SHSH && ! $SHSHExisting ]]; then
         Error "Saving $OSVer blobs failed. Please run the script again" "It is also possible that $OSVer for $ProductType is no longer signed"
-    elif [ ! $SHSH ]; then
+    elif [[ ! $SHSH ]]; then
         Log "Saving $OSVer blobs failed, but detected existing saved SHSH blobs. Continuing..."
         cp $SHSHExisting .
         SHSH=$(ls $SHSHChk)

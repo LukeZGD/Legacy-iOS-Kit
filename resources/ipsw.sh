@@ -55,7 +55,7 @@ IPSW64() {
         return
     fi
     
-    if [ ! -e $IPSWCustom.ipsw ]; then
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."
         cp $IPSW/Firmware/all_flash/$SEP .
         $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch

@@ -249,7 +249,7 @@ kDFU() {
     echo
     Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
-    if [ $? == 1 ]; then
+    if [[ $? == 1 ]]; then
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
@@ -260,7 +260,7 @@ kDFU() {
         read -p "$(Input 'Enter the IP Address of your device:')" IPAddress
         Log "Copying stuff to device via SSH..."
         $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
-        [ $? == 1 ] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
+        [[ $? == 1 ]] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
         $SSH root@$IPAddress "/tmp/$kloader /tmp/pwnediBSS" &
     else
         $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &

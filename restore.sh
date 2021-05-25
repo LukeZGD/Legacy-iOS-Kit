@@ -60,14 +60,14 @@ Main() {
     
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? == 1 ]]; then
-        Log "An error occurred in chmod. This might cause problems..."
+        Log "Warning - An error occurred in chmod. This might cause problems..."
     fi
     
     if [[ ! $(ping -c1 1.1.1.1 2>/dev/null) ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
     
-    if [[ $platform == macos && $(uname -m) != "x86_64" ]]; then
+    if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
         Log "M1 Mac detected. Support is limited, the script may or may not work for you"
         Echo "* M1 macs can still proceed but I cannot support it if things break"
         Echo "* Proceed at your own risk."
