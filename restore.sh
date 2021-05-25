@@ -16,7 +16,8 @@ if [[ $1 != 'NoColor' ]] && [[ $2 != 'NoColor' ]]; then
 fi
 
 Clean() {
-    rm -rf iP*/ shsh/ tmp/ ${UniqueChipID}_${ProductType}_*.shsh2 ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh *.im4p *.bbfw BuildManifest.plist
+    rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
+    ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
 }
 
 Echo() {
@@ -39,6 +40,8 @@ Log() {
 }
 
 Main() {
+    local SkipMainMenu
+    
     clear
     Echo "******* iOS-OTA-Downgrader *******"
     Echo "   Downgrader script by LukeZGD   "
@@ -81,9 +84,9 @@ Main() {
         Error "Only x86_64 distributions are supported. Use a 64-bit distro and try again"
     fi
     
-    # Check dependencies, if one or more are missing (or if manually specified), run InstallDependencies from depends
+    # Check dependencies, if one or more are missing (or if manually specified), run InstallDepends from depends
     if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
-        InstallDependencies
+        InstallDepends
     fi
     
     # Get needed stuff, run SaveExternal from depends
@@ -103,7 +106,7 @@ Main() {
             Log "A7 device detected in normal mode."
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
-            [[ ${Selection^} == Y ]] && Recovery || exit
+            [[ ${Selection^} == 'Y' ]] && Recovery || exit
         elif [[ $DeviceState == "Recovery" ]]; then
             Recovery
         elif [[ $DeviceState == "DFU" ]]; then
@@ -112,7 +115,6 @@ Main() {
     
     elif [[ $DeviceState == "DFU" ]]; then
         # Advanced options menu for 32-bit devices
-        DFUManual=1
         Mode="Downgrade"
         Log "32-bit device detected in DFU mode."
         Echo "* Advanced Options Menu"
@@ -125,7 +127,7 @@ Main() {
         case $opt in
             "kDFU mode" ) break;;
             "DFU mode (A6)" ) CheckM8; break;;
-            "pwnDFU mode (A5)" ) 
+            "pwnDFU mode (A5)" )
                 Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
                 Echo "* This option will NOT work if your device is not in pwnDFU mode.";
                 Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
@@ -145,17 +147,17 @@ Main() {
             Error "32-bit A5 device detected in recovery mode. Please put the device in normal mode and jailbroken before proceeding" \
             "For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
         fi
-        Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
+        Log "Downgrading $ProductType in pwnDFU mode..."
         SkipMainMenu=1
     fi
     
     [[ ! -z $1 ]] && SkipMainMenu=1
     
-    if [[ ! -z $1 ]] && [[ $1 != "NoColor" ]]; then
+    if [[ $SkipMainMenu == 1 ]] && [[ $1 != "NoColor" ]]; then
         # Skip main menu if argument passed
         Mode="$1"
     else
-        # Main Menu!
+        # Main Menu
         Selection=("Downgrade device")
     
         # Only show these options for 32-bit devices
@@ -169,7 +171,7 @@ Main() {
             "Downgrade device" ) Mode="Downgrade"; break;;
             "Save OTA blobs" ) Mode="SaveOTABlobs"; break;;
             "Just put device in kDFU mode" ) Mode="kDFU"; break;;
-            "(Re-)Install Dependencies" ) InstallDependencies;;
+            "(Re-)Install Dependencies" ) InstallDepends;;
             * ) exit;;
         esac
         done
@@ -178,21 +180,23 @@ Main() {
     SelectVersion
     
     Log "Option: $Mode"
-    [[ $Mode == 'Downgrade' ]] && Downgrade # run from downgrade
-    [[ $Mode == 'SaveOTABlobs' ]] && SaveOTABlobs # run from blobs
-    [[ $Mode == 'kDFU' ]] && kDFU # run from devicestate
+    [[ $Mode == "Downgrade" ]] && Downgrade # run from downgrade
+    [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs # run from blobs
+    [[ $Mode == "kDFU" ]] && kDFU # run from device
     exit
 }
 
 SelectVersion() {
-    if [[ $ProductType == "iPad4"* || $ProductType == iPhone6* || $Mode == "kDFU" ]]; then
+    if [[ $Mode == "kDFU" ]]; then
+        return
+    elif [[ $ProductType == "iPad4"* || $ProductType == "iPhone6"* ]]; then
         OSVer="10.3.3"
         BuildVer="14G60"
         return
     fi
     
     if [[ $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" ]]; then
-        # Do not show 8.4.1 option for 5C devices
+        # Do not show 8.4.1 option for iPhone 5C devices
         Selection=()
     else
         # Add 8.4.1 to version list
@@ -205,18 +209,18 @@ SelectVersion() {
         Selection+=("iOS 6.1.3")
     fi
     
-    # Finally, add "Other" and exit option to list (only if in Downgrade mode)
+    # Finally, add "Other" (only if in Downgrade mode) and exit option to list
     [[ $Mode == "Downgrade" ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     
     Input "Select iOS version:"
     select opt in "${Selection[@]}"; do
-        case $opt in
-            "iOS 8.4.1" ) OSVer="8.4.1"; BuildVer="12H321"; break;;
-            "iOS 6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
-            "Other (use SHSH blobs)" ) OSVer="Other"; break;;
-            *) exit;;
-        esac
+    case $opt in
+        "iOS 8.4.1" ) OSVer="8.4.1"; BuildVer="12H321"; break;;
+        "iOS 6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
+        "Other (use SHSH blobs)" ) OSVer="Other"; break;;
+        *) exit;;
+    esac
     done
 }
 

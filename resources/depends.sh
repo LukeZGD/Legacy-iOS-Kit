@@ -104,8 +104,8 @@ SavePkg() {
 }
 
 
-InstallDependencies() {
-    mkdir tmp 2>/dev/null
+InstallDepends() {
+    mkdir resources/lib tmp 2>/dev/null
     cd resources
     rm -rf firmware ipwndfu lib/* libimobiledevice* libirecovery
     cd ../tmp

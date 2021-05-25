@@ -23,7 +23,7 @@ FindDevice() {
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
     
     Log "Finding device in $1 mode..."
-    while [[ $DeviceState != "DFU" ]]; do
+    while [[ $DeviceState != "$1" ]]; do
         [[ $platform == "linux" ]] && DeviceState=$(lsusb | grep -c $USB)
         [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "$1" ]] && DeviceState=1
         [[ $DeviceState == 1 ]] && DeviceState="$1"
@@ -45,25 +45,23 @@ GetDeviceValues() {
         
         # If not on Linux, user must enter ProductType manually
         # todo automate this for macs as well
-        if [[ ! $ProductType ]]; then
-            while [[ ! $ProductType ]]; do
-                read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
-            done
-        fi
+        while [[ ! $ProductType ]]; do
+            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
+        done
+        
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
         ProductVer="Unknown"
     else
         ProductType=$(echo "$ideviceinfo2" | grep "ProductType" | cut -c 14-)
         [[ ! $ProductType ]] && ProductType=$($ideviceinfo | grep "ProductType" | cut -c 14-)
         ProductVer=$(echo "$ideviceinfo2" | grep "ProductVer" | cut -c 17-)
-        VersionDetect=$(echo $ProductVer | cut -c 1)
         UniqueChipID=$(echo "$ideviceinfo2" | grep "UniqueChipID" | cut -c 15-)
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep "UniqueDeviceID" | cut -c 17-)
     fi
     
     if [[ ! $ProductType ]]; then
-        Error "No device detected. Please put the device in normal mode before proceeding" \
-        "Recovery or DFU mode is also applicable depending on your device (see the README)"
+        Error "No device detected. Please put the device in normal mode before proceeding. Recovery or DFU mode is also applicable" \
+        "For more details regarding alternatives, read the 'Other Notes' section of the README"
     fi
     
     Baseband=0
@@ -120,6 +118,11 @@ GetDeviceValues() {
     
     HWModel=$(cat $Firmware/hwmodel)
     
+    if [[ ! $BasebandURL || ! $HWModel ]]; then
+        Error "GetDeviceValues: Missing BasebandURL and/or HWModel values. Is the firmware folder missing?" \
+        "Reinstall dependencies and try again. For more details, read the 'Other Notes' section of the README"
+    fi
+    
     if [[ $ProductType == "iPod5,1" ]]; then
         iBSS="${HWModel}ap"
         iBSSBuildVer='10B329'
@@ -143,6 +146,7 @@ GetDeviceValues() {
 
 Recovery() {
     local RecoveryDFU
+    local VerDetect=$(echo $ProductVer | cut -c 1)
     
     if [[ $DeviceState != "Recovery" ]]; then
         Log "Entering recovery mode..."
@@ -152,7 +156,7 @@ Recovery() {
     
     Log "Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
-    if [[ ${RecoveryDFU^} == N ]]; then
+    if [[ ${RecoveryDFU^} == 'N' ]]; then
         Log "Exiting recovery mode."
         $irecovery -n
         exit
@@ -180,7 +184,6 @@ Recovery() {
 CheckM8() {
     local pwnDFUTool
     
-    DFUManual=1
     [[ $platform == macos ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
@@ -207,6 +210,7 @@ CheckM8() {
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
+        Echo "* For more details, read the 'Other Notes' section of the README"
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
@@ -237,12 +241,10 @@ kDFU() {
         return $ret
     fi
     
-    [[ $VersionDetect == 1 ]] && kloader="kloader_hgsp"
-    [[ $VersionDetect == 5 ]] && kloader="kloader5"
+    [[ $VerDetect == 1 ]] && kloader="kloader_hgsp"
+    [[ $VerDetect == 5 ]] && kloader="kloader5"
     [[ ! $kloader ]] && kloader="kloader"
     
-    # todo change iproxy stuff
-    [ ! $(which $iproxy) ] && Error "iproxy cannot be found. Please re-install dependencies and try again" "./restore.sh Install"
     $iproxy 2222 22 &
     iproxyPID=$!
     

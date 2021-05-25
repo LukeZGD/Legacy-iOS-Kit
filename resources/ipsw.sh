@@ -36,7 +36,7 @@ IPSW32() {
         Error "Failed to find custom IPSW. Please run the script again" \
         "You may try selecting N for memoryoption"
     fi
-    IPSW=$IPSWCustom
+    IPSWRestore=$IPSWCustom
 }
 
 IPSW64() {
@@ -55,7 +55,7 @@ IPSW64() {
         zip ../$IPSWCustom.ipsw -rq0 *
         cd ..
         mv $IPSW $IPSWCustom
-        IPSW=$IPSWCustom
+        IPSWRestore=$IPSWCustom
     else
         cp $IPSW/Firmware/dfu/$iBSS.im4p $IPSW/Firmware/dfu/$iBEC.im4p .
         [[ $ProductType == iPad4* ]] && cp $IPSW/Firmware/dfu/$iBSSb.im4p $IPSW/Firmware/dfu/$iBECb.im4p .

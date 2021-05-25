@@ -1,6 +1,9 @@
 #!/bin/bash
 
 SaveOTABlobs() {
+    local SHSHChk
+    local SHSHExisting
+    
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
     if [[ $DeviceProc == 7 ]]; then
