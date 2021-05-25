@@ -131,12 +131,15 @@ GetDeviceValues() {
         iBSSBuildVer='11D257'
     elif [[ $ProductType == "iPhone6"* ]]; then
         iBSS="iphone6"
+        IPSWType="iPhone_4.0_64bit"
     elif [[ $ProductType == "iPad4"* ]]; then
         iBSS="ipad4"
+        IPSWType="iPad_64bit"
     else
         iBSS="$HWModel"
         iBSSBuildVer="12H321"
     fi
+    [[ ! $IPSWType ]] && IPSWType="$iBSS"
     iBEC="iBEC.$iBSS.RELEASE"
     iBECb="iBEC.${iBSS}b.RELEASE"
     iBSSb="iBSS.${iBSS}b.RELEASE"
@@ -277,4 +280,23 @@ kDFU() {
     Echo "* Press POWER or HOME button when screen goes black on the device"
     FindDevice "DFU"
     kill $iproxyPID
+}
+
+pwnREC() {
+    Log "Entering pwnREC mode..."
+    Log "Sending iBSS..."
+    $irecovery -f $iBSS.im4p
+    Log "Sending iBEC..."
+    $irecovery -f $iBEC.im4p
+    sleep 5
+    [[ $($irecovery -q 2>/dev/null | grep 'MODE' | cut -c 7-) == "Recovery" ]] && RecoveryDevice=1
+    if [[ $RecoveryDevice != 1 ]]; then
+        echo -e "\n$(Log 'Failed to detect device in pwnREC mode.')"
+        Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device, and attempt to continue"
+        Echo "* If not, you may have to hard-reset your device and attempt to start over entering pwnDFU mode again"
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+        read -s
+    else
+        Log "Found device in pwnREC mode."
+    fi
 }

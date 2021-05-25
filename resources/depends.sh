@@ -51,7 +51,7 @@ SetToolPaths() {
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     
-    Log "Running in platform: $platform $macver"
+    Log "Running on platform: $platform $macver"
 }
 
 Compile() {
