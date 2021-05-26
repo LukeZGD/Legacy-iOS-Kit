@@ -27,16 +27,12 @@ GetDeviceValues() {
     fi
     
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
-        ProductType=$($irecovery -q | grep "PTYP" | cut -c 7-)
-        if [[ ! $ProductType ]]; then
-            local ProdDetect
-            local ProdCut=7
-            ProductType=$(irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
-            ProdDetect=$(echo $ProductType | cut -c 3)
-            [[ $ProdDetect == 'h' ]] && ProdCut=9
-            ProductType=$(echo $ProductType | cut -c -${ProdCut})
-        fi
-    
+        local ProdDetect
+        local ProdCut=7
+        ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
+        ProdDetect=$(echo $ProductType | cut -c 3)
+        [[ $ProdDetect == 'h' ]] && ProdCut=9
+        ProductType=$(echo $ProductType | cut -c -${ProdCut})
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
         ProductVer="Unknown"
     else
@@ -146,7 +142,7 @@ CheckM8() {
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
-        sudo $python ipwndfu -p
+        $ipwndfu -p
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
         cd resources/ipwndfu
@@ -154,9 +150,8 @@ CheckM8() {
     
     if [[ $DeviceProc == 7 ]]; then
         Log "Running rmsigchks.py..."
-        sudo $python rmsigchks.py
+        $rmsigchks
         pwnDFUDevice=$?
-        Echo $pwnDFUDevice
         cd ../..
     else
         cd ../..
@@ -230,7 +225,7 @@ kDFU() {
     if [[ $1 == iBSS ]]; then
         cd resources/ipwndfu
         Log "Sending iBSS..."
-        sudo $python ipwndfu -l ../../tmp/pwnediBSS
+        $ipwndfu -l ../../tmp/pwnediBSS
         ret=$?
         cd ../..
         return $ret
@@ -274,7 +269,6 @@ kDFU() {
 }
 
 pwnREC() {
-    local RecoveryDevice
     if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
         Log "iPad mini 2 device detected. Setting iBSS and iBEC to 'ipad4b'"
         iBEC=$iBECb

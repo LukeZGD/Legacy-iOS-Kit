@@ -17,6 +17,9 @@ SetToolPaths() {
         partialzip="./resources/tools/partialzip_linux"
         python="$(which python2)"
         tsschecker="env LD_LIBRARY_PATH=./resources/lib ./resources/tools/tsschecker_linux"
+        ipwndfu="sudo $python ipwndfu"
+        rmsigchks="sudo $python rmsigchks.py"
+        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80 &"
         if [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $VERSION == "10 (buster)" ]] ||
            [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
             futurerestore2="${futurerestore2}_bionic"
@@ -40,6 +43,9 @@ SetToolPaths() {
         partialzip="./resources/tools/partialzip_macos"
         python="/usr/bin/python"
         tsschecker="./resources/tools/tsschecker_macos"
+        ipwndfu="$python ipwndfu"
+        rmsigchks="$python rmsigchks.py"
+        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80 &"
     fi
     bspatch="$(which bspatch)"
     git="$(which git)"
@@ -162,7 +168,7 @@ InstallDepends() {
     fi
     
     if [[ $platform == "linux" ]]; then
-        Compile LukeZGD libirecovery
+        Compile libimobiledevice libirecovery
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
         ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
     else

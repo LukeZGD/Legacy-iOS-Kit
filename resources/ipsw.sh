@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IPSW32() {
-    local JBFiles
+    local JBFile
     local JBMemory
     local JBSHA1
     local JBS
@@ -12,11 +12,11 @@ IPSW32() {
     fi
     
     if [[ $OSVer == 8.4.1 ]]; then
-        JBFiles=(fstab.tar etasonJB-untether.tar Cydia8.tar)
+        JBFile="Cydia8.tar"
         JBSHA1=6459dbcbfe871056e6244d23b33c9b99aaeca970
         JBS=2305
     else
-        JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
+        JBFile="Cydia6.tar"
         JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
         JBS=1260
     fi
@@ -24,7 +24,7 @@ IPSW32() {
         cd tmp
         Log "Downloading jailbreak files..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
-        cp ${JBFiles[2]} ../resources/jailbreak
+        mv ${JBFiles[2]} ../resources/jailbreak
         cd ..
     fi
     for i in {0..2}; do
@@ -56,15 +56,14 @@ IPSW64() {
     fi
     
     Log "Preparing custom IPSW..."
-    cp $IPSW/Firmware/all_flash/$SEP .
     $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
     $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
     if [[ $ProductType == "iPad4"* ]]; then
         $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
         $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
-        cp -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+        mv $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
     fi
-    cp -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+    mv $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
     cd $IPSW
     zip ../$IPSWCustom.ipsw -rq0 *
     cd ..

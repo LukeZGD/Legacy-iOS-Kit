@@ -118,7 +118,7 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if [[ $Jailbreak != 1 ]]; then
+        if [[ $Jailbreak != 1 && ! -e "$IPSWCustom.ipsw" ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
@@ -141,14 +141,14 @@ Downgrade() {
     
     [[ $DeviceState == "Normal" ]] && kDFU
     
-    if [[ $Jailbreak == 1 ]]; then
-        IPSW32
+    if [[ $Jailbreak == 1 || $IPSWRestore == $IPSWCustom ]]; then
+        [[ $Jailbreak == 1 ]] && IPSW32
         IPSWExtract=$IPSWCustom
     else
         IPSWExtract=$IPSW
     fi
     
-    Log "Extracting IPSW..."
+    Log "Extracting IPSW: $IPSWExtract"
     unzip -q $IPSWExtract.ipsw -d $IPSWExtract/
     
     if [[ $DeviceProc == 7 ]]; then
@@ -158,7 +158,7 @@ Downgrade() {
     elif [[ $Jailbreak != 1 && $OSVer != "Other" ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
-        sudo bash -c "$python -m SimpleHTTPServer 80 &"
+        $SimpleHTTPServer
         ServerRunning=1
         cd ..
     fi

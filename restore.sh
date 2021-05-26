@@ -20,8 +20,8 @@ Clean() {
     ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
     kill $iproxyPID 2>/dev/null
     if [[ $ServerRunning == 1 ]]; then
-        Log "Stopping local server... (Enter root password of your PC/Mac when prompted)"
-        ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+        Log "Stopping local server..."
+        ps aux | awk '/python/ {print "kill -9 "$2" 2>/dev/null"}' | bash
     fi
     echo
 }
