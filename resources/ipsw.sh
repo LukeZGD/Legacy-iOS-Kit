@@ -61,9 +61,9 @@ IPSW64() {
     if [[ $ProductType == "iPad4"* ]]; then
         $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
         $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
-        mv $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+        mv -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
     fi
-    mv $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+    mv -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
     cd $IPSW
     zip ../$IPSWCustom.ipsw -rq0 *
     cd ..

@@ -86,6 +86,7 @@ Main() {
     if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo ||! $irecoverychk || ! $python ]] ||
        [[ $platform == "macos" && ! -d ./resources/libimobiledevice ]] ||
        [[ $platform == "linux" && ! -d ./resources/libirecovery ]]; then
+        Clean
         InstallDepends
     fi
     

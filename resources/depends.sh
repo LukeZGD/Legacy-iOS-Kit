@@ -56,16 +56,6 @@ SetToolPaths() {
     Log "Running on platform: $platform $macver"
 }
 
-Compile() {
-    Log "Compiling $2..."
-    $git clone --depth 1 https://github.com/$1/$2.git
-    cd $2
-    ./autogen.sh --prefix="$(cd ../.. && pwd)/resources/$2"
-    make install
-    cd ..
-    sudo rm -rf $2
-}
-
 SaveExternal() {
     ExternalURL="https://github.com/LukeZGD/$1.git"
     External=$1
@@ -116,7 +106,7 @@ InstallDepends() {
     elif [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $UBUNTU_CODENAME == "focal" ]] ||
          [[ $UBUNTU_CODENAME == "groovy" ]] || [[ $UBUNTU_CODENAME == "hirsute" ]] ||
          [[ $VERSION == "10 (buster)" ]] || [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
-        [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository universe
+        [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
         sudo apt install -y autoconf automake bsdiff build-essential curl git libglib2.0-dev libimobiledevice6 libimobiledevice-utils libreadline-dev libtool-bin libusb-1.0-0-dev libusbmuxd-tools openssh-client usbmuxd usbutils
         SavePkg
@@ -162,20 +152,33 @@ InstallDepends() {
     elif [[ $OSTYPE == "darwin"* ]]; then
         xcode-select --install
         SaveFile https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip libimobiledevice.zip 328e809dea350ae68fb644225bbf8469c0f0634b
+        mkdir ../resources/libimobiledevice
+        unzip libimobiledevice.zip -d ../resources/libimobiledevice
+        chmod +x ../resources/libimobiledevice/*
     
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
     
     if [[ $platform == "linux" ]]; then
-        Compile libimobiledevice libirecovery
-        ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery-1.0.so.3
-        ln -sf ../libirecovery/lib/libirecovery.so.3 ../resources/lib/libirecovery.so.3
-    else
-        mkdir ../resources/libimobiledevice
-        unzip libimobiledevice.zip -d ../resources/libimobiledevice
-        chmod +x ../resources/libimobiledevice/*
+        local dest="../../resources/libirecovery"
+        local lib="../libirecovery/lib/libirecovery-1.0.so.3.0.0"
+        Log "Downloading libirecovery..."
+        $git clone --depth 1 git://github.com/libimobiledevice/libirecovery.git
+        cd libirecovery
+        Log "Compiling libirecovery..."
+        ./autogen.sh
+        make
+        mkdir -p $dest/bin
+        mkdir $dest/lib
+        mv tools/.libs/irecovery $dest/bin
+        mv src/.libs/libirecovery-1.0.so.3.0.0 $dest/lib
+        cd ../../resources/lib
+        ln -sf $lib libirecovery-1.0.so.3
+        ln -sf $lib libirecovery.so.3
+        cd ..
     fi
+    cd ..
     
     Log "Install script done! Please run the script again to proceed"
     exit

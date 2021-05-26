@@ -27,12 +27,10 @@ GetDeviceValues() {
     fi
     
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
-        local ProdDetect
         local ProdCut=7
         ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
-        ProdDetect=$(echo $ProductType | cut -c 3)
-        [[ $ProdDetect == 'h' ]] && ProdCut=9
-        ProductType=$(echo $ProductType | cut -c -${ProdCut})
+        [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
+        ProductType=$(echo $ProductType | cut -c -$ProdCut)
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
         ProductVer="Unknown"
     else
@@ -132,7 +130,7 @@ GetDeviceValues() {
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
     
-    Log "Found an $ProductType in $DeviceState mode"
+    Log "Found $ProductType in $DeviceState mode"
 }
 
 CheckM8() {
@@ -172,7 +170,6 @@ CheckM8() {
 
 Recovery() {
     local RecoveryDFU
-    local VerDetect=$(echo $ProductVer | cut -c 1)
     
     if [[ $DeviceState != "Recovery" ]]; then
         Log "Entering recovery mode..."
@@ -200,14 +197,13 @@ Recovery() {
     done
     
     FindDevice "DFU"
-    if [[ $DeviceState == "DFU" ]]; then
-        CheckM8
-    else
-        Error "Failed to detect device in DFU mode. Please run the script again"
-    fi
+    CheckM8
 }
 
 kDFU() {
+    local kloader
+    local VerDetect=$(echo $ProductVer | cut -c 1)
+    
     if [[ ! -e saved/$ProductType/$iBSS.dfu ]]; then
         Log "Downloading iBSS..."
         $partialzip $(cat $Firmware/$iBSSBuildVer/url) Firmware/dfu/$iBSS.dfu $iBSS.dfu
@@ -226,7 +222,7 @@ kDFU() {
         cd resources/ipwndfu
         Log "Sending iBSS..."
         $ipwndfu -l ../../tmp/pwnediBSS
-        ret=$?
+        local ret=$?
         cd ../..
         return $ret
     fi
