@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IPSW32() {
-    local JBFile
+    local JBFiles
     local JBMemory
     local JBSHA1
     local JBS
@@ -12,11 +12,11 @@ IPSW32() {
     fi
     
     if [[ $OSVer == 8.4.1 ]]; then
-        JBFile="Cydia8.tar"
+        JBFiles=(fstab.tar etasonJB-untether.tar Cydia8.tar)
         JBSHA1=6459dbcbfe871056e6244d23b33c9b99aaeca970
         JBS=2305
     else
-        JBFile="Cydia6.tar"
+        JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
         JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
         JBS=1260
     fi
