@@ -80,13 +80,13 @@ Downgrade() {
     
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
         read -p "$(Input 'Jailbreak the selected iOS version? (y/N):')" Jailbreak
-        [[ ${Jailbreak^} == 'Y' ]] && Jailbreak=1
+        [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1
         
         if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
               $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
             Echo "* A5 Rev A device detected. Enabling the jailbreak option might not work for you"
             read -p "$(Input 'Select Y to continue anyway, N to cancel and exit (y/N):')" Jailbreak
-            [[ ${Jailbreak^} == 'Y' ]] && Jailbreak=1 || exit
+            [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1 || exit
         fi
     fi
     
@@ -95,7 +95,7 @@ Downgrade() {
         Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "* There are potential network issues that with the latest baseband when used on iOS 8.4.1"
         read -p "$(Input 'Flash the latest baseband? (y/N) (press Enter/Return if unsure):')" Baseband5
-        if [[ ${Baseband5^} == 'Y' ]]; then
+        if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
             Baseband5=0
         else
             BasebandURL=$(cat $Firmware/12H321/url)

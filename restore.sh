@@ -101,7 +101,7 @@ Main() {
         if [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
-            [[ ${Selection^} == 'Y' ]] && Recovery || exit
+            [[ $Selection == 'Y' || $Selection == 'y' ]] && Recovery || exit
         elif [[ $DeviceState == "Recovery" ]]; then
             Recovery
         elif [[ $DeviceState == "DFU" ]]; then
@@ -141,7 +141,7 @@ Main() {
             Echo "* Please put the device in normal mode and jailbroken before proceeding."
             Echo "* For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
             read -p "$(Input 'Attempt to exit recovery mode? (Y/n)')" Selection
-            if [[ ${Selection^} != 'N' ]]; then
+            if [[ $Selection != 'N' && $Selection != 'n' ]]; then
                 Log "Exiting recovery mode."
                 $irecovery -n
             fi

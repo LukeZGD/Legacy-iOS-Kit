@@ -185,7 +185,7 @@ Recovery() {
     
     Log "Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
-    if [[ ${RecoveryDFU^} == 'N' ]]; then
+    if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."
         $irecovery -n
         exit
