@@ -92,6 +92,8 @@ GetDeviceValues() {
     elif [[ $ProductType != "iPad2"* && $ProductType != "iPad3"* && $ProductType != "iPad4,1" &&
             $ProductType != "iPad4,4" && $ProductType != "iPod5,1" && $ProductType != "iPhone5"* ]]; then
         Error "Your device $ProductType is not supported."
+    else
+        BasebandURL=0
     fi
     
     if [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
