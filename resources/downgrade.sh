@@ -9,7 +9,7 @@ iDeviceRestore() {
     if [[ $platform == "macos" && $? != 0 ]]; then
         Log "An error seems to have occurred when running idevicerestore."
         Echo "* If this is the 'Killed: 9' error or similar, try these steps:"
-        Echo "* cd to where the script is located, then run"
+        Echo "* Using Terminal, cd to where the script is located, then run"
         Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
     fi
 }
@@ -19,7 +19,7 @@ FRBaseband() {
     
     if [[ $DeviceProc == 7 ]]; then
         mkdir -p saved/baseband 2>/dev/null
-        cp -n $IPSW/Firmware/$Baseband saved/baseband
+        cp -f $IPSW/Firmware/$Baseband saved/baseband
     elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
         unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
     elif [[ ! -e saved/baseband/$Baseband ]]; then
@@ -148,7 +148,7 @@ Downgrade() {
         IPSWExtract=$IPSW
     fi
     
-    Log "Extracting IPSW: $IPSWExtract"
+    Log "Extracting IPSW: $IPSWExtract.ipsw"
     unzip -q $IPSWExtract.ipsw -d $IPSWExtract/
     
     if [[ $DeviceProc == 7 ]]; then
