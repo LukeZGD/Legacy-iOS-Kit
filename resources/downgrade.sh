@@ -35,8 +35,8 @@ FRBaseband() {
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
     
-    BasebandSHA1L=$(shasum ./$Baseband | awk '{print $1}')
-    if [[ ! -e $(ls *.bbfw) || $BasebandSHA1L != $BasebandSHA1 ]]; then
+    BasebandSHA1L=$(shasum saved/baseband/$Baseband | awk '{print $1}')
+    if [[ ! -e $(ls saved/baseband/$Baseband) || $BasebandSHA1L != $BasebandSHA1 ]]; then
         rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
         Error "Downloading/verifying baseband failed. Please run the script again"
     fi
@@ -118,7 +118,7 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if [[ $Jailbreak != 1 && ! -e "$IPSWCustom.ipsw" ]]; then
+        if  [[ $Jailbreak == 1 && ! -e "$IPSWCustom.ipsw" ]] || [[ -z $Jailbreak ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
@@ -158,7 +158,7 @@ Downgrade() {
     elif [[ $Jailbreak != 1 && $OSVer != "Other" ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
-        $SimpleHTTPServer
+        $SimpleHTTPServer &
         ServerRunning=1
         cd ..
     fi

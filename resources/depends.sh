@@ -19,7 +19,7 @@ SetToolPaths() {
         tsschecker="env LD_LIBRARY_PATH=./resources/lib ./resources/tools/tsschecker_linux"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
-        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80 &"
+        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80"
         if [[ $UBUNTU_CODENAME == "bionic" ]] || [[ $VERSION == "10 (buster)" ]] ||
            [[ $PRETTY_NAME == "openSUSE Leap 15.2" ]]; then
             futurerestore2="${futurerestore2}_bionic"
@@ -45,7 +45,7 @@ SetToolPaths() {
         tsschecker="./resources/tools/tsschecker_macos"
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
-        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80 &"
+        SimpleHTTPServer="$python -m SimpleHTTPServer 80"
     fi
     bspatch="$(which bspatch)"
     git="$(which git)"

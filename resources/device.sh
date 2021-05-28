@@ -248,6 +248,7 @@ kDFU() {
     else
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"
+        Echo "* Alternatively, you may use kDFUApp by tihmstar (from my repo, see README)"
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
