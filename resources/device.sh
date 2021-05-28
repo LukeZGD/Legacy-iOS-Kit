@@ -130,7 +130,7 @@ GetDeviceValues() {
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
     
-    Log "Found $ProductType in $DeviceState mode"
+    Log "Found $ProductType in $DeviceState mode."
 }
 
 CheckM8() {
@@ -195,6 +195,7 @@ Recovery() {
         echo -n "$i "
         sleep 1
     done
+    echo
     
     FindDevice "DFU"
     CheckM8
