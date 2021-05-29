@@ -70,6 +70,7 @@ Downgrade() {
     local IPSWSHA1
     local IPSWSHA1L
     local Jailbreak
+    local Verify
     
     if [[ $OSVer == "Other" ]]; then
         Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
@@ -118,7 +119,7 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if  [[ ($Jailbreak == 1 || $DeviceProc=7) && ! -e "$IPSWCustom.ipsw" ]] || [[ -z $Jailbreak ]]; then
+        if [[ ($Jailbreak == 1 || $DeviceProc == 7) && ! -e "$IPSWCustom.ipsw" ]] || [[ -z $Jailbreak ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
