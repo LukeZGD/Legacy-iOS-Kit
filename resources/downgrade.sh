@@ -119,7 +119,13 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if [[ ($Jailbreak == 1 || $DeviceProc == 7) && ! -e "$IPSWCustom.ipsw" ]] || [[ -z $Jailbreak ]]; then
+        if [[ $Jailbreak == 1 || $DeviceProc == 7 ]]; then
+            [[ ! -e "$IPSWCustom.ipsw" ]] && Verify=1
+        elif [[ -z $Jailbreak ]]; then
+            Verify=1
+        fi
+        
+        if [[ $Verify == 1 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
