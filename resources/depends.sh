@@ -123,7 +123,7 @@ InstallDepends() {
     
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
-        libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.17/libimobiledevice.1.2.1-r1122-osx-x64.zip" "d4202fbc4612bb3ef48f60f82799f517b210ac02")
+        libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip" "328e809dea350ae68fb644225bbf8469c0f0634b")
     
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
