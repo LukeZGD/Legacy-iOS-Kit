@@ -21,7 +21,12 @@ Clean() {
     kill $iproxyPID 2>/dev/null
     if [[ $ServerRunning == 1 ]]; then
         Log "Stopping local server..."
-        ps aux | awk '/python/ {print "kill -9 "$2" 2>/dev/null"}' | bash
+        if [[ $platform == "macos" ]]; then
+            ps aux | awk '/python/ {print "kill -9 "$2" 2>/dev/null"}' | bash
+        elif [[ $platform == "linux" ]]; then
+            Echo "* Enter root password of your PC when prompted"
+            ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
+        fi
     fi
     echo
 }

@@ -43,7 +43,7 @@ GetDeviceValues() {
     
     if [[ ! $ProductType ]]; then
         Error "No device detected. Please put the device in normal mode before proceeding. Recovery or DFU mode is also applicable" \
-        "For more details regarding alternatives, read the 'Other Notes' section of the README"
+        "For more details regarding alternative methods, read the 'Other Notes' section of the README"
     fi
     
     Firmware=resources/firmware/$ProductType
@@ -241,7 +241,8 @@ kDFU() {
     Echo "* To make sure that SSH is successful, try these steps:"
     Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
     echo
-    Input "Enter the root password of your iOS device when prompted, default is 'alpine'"
+    Input "Enter the root password of your iOS device when prompted"
+    Echo "* The default password is 'alpine'"
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
         $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &

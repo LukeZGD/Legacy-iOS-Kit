@@ -60,7 +60,6 @@ FutureRestore() {
         $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
     else
         FRBaseband
-        Log "Proceeding to futurerestore..."
         $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
     fi
 }
@@ -124,7 +123,7 @@ Downgrade() {
         elif [[ -z $Jailbreak ]]; then
             Verify=1
         fi
-        
+    
         if [[ $Verify == 1 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
