@@ -77,22 +77,21 @@
 - **Ubuntu** [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora** 33 to 34](https://getfedora.org/)
-- [**Debian** Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
+- [**Debian** Testing, Unstable](https://www.debian.org/)
 - **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed)
-- **macOS** 10.12 to 11
+- **macOS** 10.13 to 11
 
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
 - **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
-  - Alternatively, delete the `libimobiledevice` or `libirecovery` folder in `resources` then run the script again
+  - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
-  - For Mac users, selecting iPwnder32 instead of ipwndfu is highly recommended for entering pwnDFU mode
-  - checkm8 ipwndfu is unfortunately pretty unreliable, you may have to try multiple times (Linux users may also try in a live USB)
+  - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
   - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by hard-resetting and re-entering recovery/DFU mode
   - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
-  - Other than the above, unfortunately there's not much else I can do to help regarding entering pwnDFU mode.
+  - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
   - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
@@ -104,8 +103,8 @@
 - **For DFU advanced menu:**
   - To enter DFU advanced menu, put your iOS device in recovery (A6 only), normal DFU (also A6 only), kDFU, or pwnDFU mode before running the script
   - There are three options that can be used for the DFU advanced menu
-  - Only select the "kDFU mode" option if your device is already in kDFU mode beforehand (example is using kDFUApp from tihmstar)
-  - For A6/A6X devices, "DFU mode (A6)" option should be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
+  - Select the "kDFU mode" option if your device is already in kDFU mode beforehand. Example of this is using kDFUApp by tihmstar; kDFUApp can also be installed from my repo
+  - For A6/A6X devices, "DFU mode (A6)" option can be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
   - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield (checkm8-a5)
 - **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
@@ -115,7 +114,7 @@
 - **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
   - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
   - **A5X devices:** iPad 3
-  - The jailbreak option **might not work** on A5 Rev A devices (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70))
+  - The jailbreak option **might not work** on A5 Rev A devices. (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70)) The script will warn you if you enable the jailbreak option on one of these devices
   - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
   - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
 - **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection, kDFUApp
@@ -125,10 +124,10 @@
 - bspatch
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32)
-- [irecovery](https://github.com/LukeZGD/libirecovery)
+- [irecovery](https://github.com/libimobiledevice/libirecovery)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
-- [idevicerestore](https://github.com/LukeZGD/idevicerestore)
+- [idevicerestore](https://github.com/LukeeGD/idevicerestore)
 - ipsw tool from OdysseusOTA/2
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker)
@@ -136,10 +135,10 @@
 - [futurerestore 251 (Linux)](https://github.com/LukeeGD/futurerestore) (A7)
 - [futurerestore 245 (macOS)](https://github.com/MatthewPierson/Vieux/blob/master/resources/bin/futurerestore) (A7)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
-- [kloader5 for iOS 5](https://mtmdev.org/pmbonneau-archive)
+- [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
-- 32-bit iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
-- A7 iBSS and iBEC patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
+- 32-bit bundles are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
+- A7 patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
