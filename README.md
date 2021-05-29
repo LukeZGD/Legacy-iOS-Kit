@@ -74,11 +74,11 @@
 6. Follow instructions
 
 ## Supported OS versions/distros:
-- **Ubuntu** [18.04](https://releases.ubuntu.com/bionic/), [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- **Ubuntu** [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora** 32 to 34](https://getfedora.org/)
-- [**Debian** Buster, Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
-- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
+- [**Fedora** 33 to 34](https://getfedora.org/)
+- [**Debian** Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
+- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed)
 - **macOS** 10.12 to 11
 
 ## Other notes:
@@ -118,7 +118,7 @@
   - The jailbreak option **might not work** on A5 Rev A devices (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70))
   - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
   - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
-- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection
+- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection, kDFUApp
 
 ## Tools and other stuff used by this script:
 - cURL
@@ -139,7 +139,7 @@
 - [kloader5 for iOS 5](https://mtmdev.org/pmbonneau-archive)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
-- 32-bit iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://files.fm/u/fcbqqdnw)
+- 32-bit iBSS patches are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
 - A7 iBSS and iBEC patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
