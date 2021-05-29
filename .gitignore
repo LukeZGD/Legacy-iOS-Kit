@@ -13,6 +13,6 @@ saved/
 resources/FirmwareBundles
 resources/firmware/
 resources/ipwndfu/
-resources/libimobiledevice/
+resources/libimobiledevice*/
 resources/libirecovery/
 tmp/

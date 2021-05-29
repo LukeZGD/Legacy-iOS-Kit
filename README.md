@@ -74,11 +74,11 @@
 6. Follow instructions
 
 ## Supported OS versions/distros:
-- **Ubuntu** [18.04](https://releases.ubuntu.com/bionic/), [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- **Ubuntu** [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora** 32 to 34](https://getfedora.org/)
-- [**Debian** Buster, Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
-- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed), [Leap 15.2](https://software.opensuse.org/distributions/leap)
+- [**Fedora** 33 to 34](https://getfedora.org/)
+- [**Debian** Bullseye, Sid](https://www.debian.org/); and Debian-based distros like [MX Linux](https://mxlinux.org/)
+- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed)
 - **macOS** 10.12 to 11
 
 ## Other notes:
