@@ -157,7 +157,7 @@ CheckM8() {
         pwnDFUDevice=$?
     fi
     
-    if [[ $pwnDFUDevice == 1 ]] || [[ $pwnDFUDevice == 255 ]]; then
+    if [[ $pwnDFUDevice == 1 || $pwnDFUDevice == 255 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
@@ -274,6 +274,7 @@ pwnREC() {
     fi
     Log "Entering pwnREC mode..."
     Log "Sending iBSS..."
+    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
     $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
     Log "Sending iBEC..."
     $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
