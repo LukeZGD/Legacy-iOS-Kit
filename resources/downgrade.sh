@@ -86,11 +86,11 @@ Downgrade() {
               $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
             Log "Warning - A5 Rev A device detected. Enabling the jailbreak option might not work for you"
             read -p "$(Input 'Select Y to continue anyway, N to cancel and exit (y/N):')" Jailbreak
-            [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1 || exit
+            [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1 || exit 0
         fi
     fi
     
-    if [[ $Mode == "Downgrade" && $ProductType == iPhone5,1 && $Jailbreak != 1 ]]; then
+    if [[ $Mode == "Downgrade" && $ProductType == "iPhone5,1" && $Jailbreak != 1 ]]; then
         Echo "* By default, iOS-OTA-Downgrader now flashes the iOS 8.4.1 baseband to iPhone5,1"
         Echo "* Flashing the latest baseband is still available as an option but beware of problems it may cause"
         Echo "* There are potential network issues that with the latest baseband when used on iOS 8.4.1"

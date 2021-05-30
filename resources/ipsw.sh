@@ -4,7 +4,7 @@ IPSW32() {
     local JBFiles
     local JBMemory
     local JBSHA1
-    local JBS
+    local JBPartSize
     
     if [[ $IPSWRestore == $IPSWCustom ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -12,13 +12,13 @@ IPSW32() {
     fi
     
     if [[ $OSVer == 8.4.1 ]]; then
-        JBFiles=(fstab.tar etasonJB-untether.tar Cydia8.tar)
-        JBSHA1=6459dbcbfe871056e6244d23b33c9b99aaeca970
-        JBS=2305
+        JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
+        JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
+        JBPartSize=2305
     else
-        JBFiles=(fstab_rw.tar p0sixspwn.tar Cydia6.tar)
-        JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
-        JBS=1260
+        JBFiles=("fstab_rw.tar" "p0sixspwn.tar" "Cydia6.tar")
+        JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
+        JBPartSize=1260
     fi
     if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
         cd tmp
@@ -38,7 +38,7 @@ IPSW32() {
         Log "Preparing custom IPSW..."
         cd resources
         ln -sf firmware/FirmwareBundles FirmwareBundles
-        $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -bbupdate -s $JBS ${JBFiles[@]}
+        $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -bbupdate -s $JBPartSize ${JBFiles[@]}
         cd ..
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then
@@ -68,7 +68,9 @@ IPSW64() {
     zip ../$IPSWCustom.ipsw -rq0 *
     cd ..
     mv $IPSW $IPSWCustom
-    [[ ! -e $IPSWCustom.ipsw ]] && Error "Failed to find custom IPSW. Please run the script again"
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again"
+    fi
     Log "Setting restore IPSW to: $IPSWCustom.ipsw"
     IPSWRestore=$IPSWCustom
 }

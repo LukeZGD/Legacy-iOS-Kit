@@ -1,5 +1,5 @@
 #!/bin/bash
-trap "Clean; exit" INT TERM EXIT
+trap "Clean" EXIT INT TERM
 
 . ./resources/blobs.sh
 . ./resources/depends.sh
@@ -28,7 +28,6 @@ Clean() {
             ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
         fi
     fi
-    echo
 }
 
 Echo() {
@@ -131,7 +130,7 @@ Main() {
                 Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
                 read -s;
                 kDFU iBSS; break;;
-            * ) exit;;
+            * ) exit 0;;
         esac
         done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
@@ -174,7 +173,7 @@ Main() {
             "Save OTA blobs" ) Mode="SaveOTABlobs"; break;;
             "Just put device in kDFU mode" ) Mode="kDFU"; break;;
             "(Re-)Install Dependencies" ) InstallDepends;;
-            * ) exit;;
+            * ) exit 0;;
         esac
         done
     fi
@@ -185,7 +184,7 @@ Main() {
     [[ $Mode == "Downgrade" ]] && Downgrade
     [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs
     [[ $Mode == "kDFU" ]] && kDFU
-    exit
+    exit 0
 }
 
 SelectVersion() {
@@ -217,7 +216,7 @@ SelectVersion() {
         "iOS 8.4.1" ) OSVer="8.4.1"; BuildVer="12H321"; break;;
         "iOS 6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
         "Other (use SHSH blobs)" ) OSVer="Other"; break;;
-        *) exit;;
+        *) exit 0;;
     esac
     done
 }

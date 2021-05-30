@@ -11,7 +11,6 @@ SetToolPaths() {
         ipsw="env LD_LIBRARY_PATH=./lib ./tools/ipsw_linux"
         partialzip="./resources/tools/partialzip_linux"
         python="$(which python2)"
-        tsschecker="./resources/tools/tsschecker_linux"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80"
@@ -27,7 +26,6 @@ SetToolPaths() {
         ipwnder32="./resources/tools/ipwnder32_macos"
         partialzip="./resources/tools/partialzip_macos"
         python="/usr/bin/python"
-        tsschecker="./resources/tools/tsschecker_macos"
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
@@ -43,6 +41,7 @@ SetToolPaths() {
     SSH="-F ./resources/ssh_config"
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
+    tsschecker="./resources/tools/tsschecker_$platform"
     
     Log "Running on platform: $platform $macver"
 }
@@ -142,5 +141,5 @@ InstallDepends() {
     
     cd ..
     Log "Install script done! Please run the script again to proceed"
-    exit
+    exit 0
 }

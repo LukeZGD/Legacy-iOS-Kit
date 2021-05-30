@@ -103,7 +103,7 @@ GetDeviceValues() {
     HWModel=$(cat $Firmware/hwmodel)
     
     if [[ ! $BasebandURL || ! $HWModel ]]; then
-        Error "GetDeviceValues: Missing BasebandURL and/or HWModel values. Is the firmware folder missing?" \
+        Error "Missing BasebandURL and/or HWModel values. Is the firmware folder missing?" \
         "Reinstall dependencies and try again. For more details, read the 'Other Notes' section of the README"
     fi
     
@@ -182,7 +182,7 @@ Recovery() {
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."
         $irecovery -n
-        exit
+        exit 0
     fi
     
     Echo "* Hold POWER and HOME button for 8 seconds."
@@ -258,7 +258,10 @@ kDFU() {
         read -p "$(Input 'Enter the IP Address of your device:')" IPAddress
         Log "Copying stuff to device via SSH..."
         $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
-        [[ $? == 1 ]] && Error "Cannot connect to device via SSH." "Please try the steps above to make sure that SSH is successful"
+        if [[ $? == 1 ]]; then
+            Error "Cannot connect to device via SSH." \
+            "Please try the steps above to make sure that SSH is successful"
+        fi
         $SSH root@$IPAddress "/tmp/$kloader /tmp/pwnediBSS" &
     fi
     

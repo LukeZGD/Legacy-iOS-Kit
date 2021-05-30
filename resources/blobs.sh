@@ -21,7 +21,7 @@ SaveOTABlobs() {
         Error "Saving $OSVer blobs failed. Please run the script again" \
         "It is also possible that $OSVer for $ProductType is no longer signed"
     elif [[ ! $SHSH ]]; then
-        Log "Saving $OSVer blobs failed, but detected existing saved SHSH blobs. Continuing..."
+        Log "Saving $OSVer blobs failed, but found existing saved SHSH blobs. Continuing..."
         cp $SHSHExisting .
         SHSH=$(ls $SHSHChk)
     else
