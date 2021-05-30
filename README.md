@@ -1,6 +1,6 @@
 # iOS-OTA-Downgrader
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
-- **Linux and macOS** are supported by this downgrade script/tool
+- **Linux and macOS** are supported
   - Windows users can create a Linux live USB (see Requirements)
 - iOS 8.4.1 and 6.1.3 downgrades have the option to **jailbreak** the install
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
@@ -53,7 +53,7 @@
   - The script can also download it for you
 - A **64-bit Linux install/live USB** or a supported **macOS** version
   - See supported OS versions and Linux distros below
-  - A Linux live USB can be easily created with tools like [balenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/)
+  - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
   - Normal method - **jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
   - DFU method - for alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
@@ -69,7 +69,7 @@
 2. Plug in your iOS device
 3. Open a Terminal window
 4. `cd` to where the zip archive is extracted, and run `./restore.sh`
-    - You can also drag `restore.sh` to the Terminal window and press ENTER
+    - You can also drag `restore.sh` to the Terminal window and press Enter/Return
 5. Select options to be used
 6. Follow instructions
 
