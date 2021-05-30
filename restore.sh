@@ -149,7 +149,7 @@ Main() {
                 Log "Exiting recovery mode."
                 $irecovery -n
             fi
-            exit
+            exit 0
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
         Mode="Downgrade"
