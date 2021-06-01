@@ -1,6 +1,7 @@
 #!/bin/bash
 trap "Clean" EXIT INT TERM
 
+cd "$(dirname $0)"
 . ./resources/blobs.sh
 . ./resources/depends.sh
 . ./resources/device.sh
@@ -221,5 +222,4 @@ SelectVersion() {
     done
 }
 
-cd "$(dirname $0)"
 Main $1
