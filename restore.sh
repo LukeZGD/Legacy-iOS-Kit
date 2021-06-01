@@ -1,5 +1,6 @@
 #!/bin/bash
-trap "Clean" EXIT INT TERM
+trap "Clean" EXIT
+trap "Clean; exit 1" INT TERM
 
 cd "$(dirname $0)"
 . ./resources/blobs.sh
@@ -8,7 +9,7 @@ cd "$(dirname $0)"
 . ./resources/downgrade.sh
 . ./resources/ipsw.sh
 
-if [[ $1 != 'NoColor' && $2 != 'NoColor' ]]; then
+if [[ $1 != "NoColor" && $2 != "NoColor" ]]; then
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
     Color_B=$(tput setaf 12)
