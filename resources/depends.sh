@@ -5,11 +5,10 @@ SetToolPaths() {
         . /etc/os-release 2>/dev/null
         platform="linux"
     
-        futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=resources/lib ./resources/tools/futurerestore1_linux"
-        futurerestore2="sudo LD_LIBRARY_PATH=resources/lib ./resources/tools/futurerestore2_linux"
-        idevicerestore="sudo LD_LIBRARY_PATH=resources/lib ./resources/tools/idevicerestore_linux"
+        futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore1_linux"
+        futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
+        idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
         ipsw="env LD_LIBRARY_PATH=./lib ./tools/ipsw_linux"
-        partialzip="./resources/tools/partialzip_linux"
         python="$(which python2)"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
@@ -24,7 +23,6 @@ SetToolPaths() {
         idevicerestore="./resources/tools/idevicerestore_macos"
         ipsw="./tools/ipsw_macos"
         ipwnder32="./resources/tools/ipwnder32_macos"
-        partialzip="./resources/tools/partialzip_macos"
         python="/usr/bin/python"
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
@@ -38,6 +36,7 @@ SetToolPaths() {
     irecoverychk="./resources/libimobiledevice_$platform/irecovery"
     irecovery="$irecoverychk"
     [[ $platform == "linux" ]] && irecovery="sudo $irecovery"
+    partialzip="./resources/tools/partialzip_$platform"
     SSH="-F ./resources/ssh_config"
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
@@ -117,7 +116,7 @@ InstallDepends() {
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
     
     elif [[ $ID == "opensuse-tumbleweed" ]]; then
-        sudo zypper -n in git imobiledevice-tools libusbmuxd-tools libimobiledevice libpng12-0 libopenssl1_0_0 python-base
+        sudo zypper -n in bsdiff git libimobiledevice libpng12-0 libopenssl1_0_0 python-base
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $platform == "macos" ]]; then
