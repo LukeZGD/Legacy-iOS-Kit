@@ -8,7 +8,7 @@ iDeviceRestore() {
     $idevicerestore -ewy $IPSWRestore.ipsw
     if [[ $platform == "macos" && $? != 0 ]]; then
         Log "An error seems to have occurred when running idevicerestore."
-        Echo "* If this is the 'Killed: 9' error or similar, try these steps:"
+        Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
         Echo "* Using Terminal, cd to where the script is located, then run"
         Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
     fi

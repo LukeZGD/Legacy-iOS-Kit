@@ -8,7 +8,6 @@ SetToolPaths() {
         futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
         idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
-        ipsw="env LD_LIBRARY_PATH=./lib ./tools/ipsw_linux"
         python="$(which python2)"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
@@ -21,7 +20,6 @@ SetToolPaths() {
         futurerestore1="./resources/tools/futurerestore1_macos"
         futurerestore2="./resources/tools/futurerestore2_macos"
         idevicerestore="./resources/tools/idevicerestore_macos"
-        ipsw="./tools/ipsw_macos"
         ipwnder32="./resources/tools/ipwnder32_macos"
         python="/usr/bin/python"
         ipwndfu="$python ipwndfu"
@@ -33,6 +31,7 @@ SetToolPaths() {
     ideviceenterrecovery="./resources/libimobiledevice_$platform/ideviceenterrecovery"
     ideviceinfo="./resources/libimobiledevice_$platform/ideviceinfo"
     iproxy="./resources/libimobiledevice_$platform/iproxy"
+    ipsw="./tools/ipsw_$platform"
     irecoverychk="./resources/libimobiledevice_$platform/irecovery"
     irecovery="$irecoverychk"
     [[ $platform == "linux" ]] && irecovery="sudo $irecovery"
@@ -116,7 +115,7 @@ InstallDepends() {
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
     
     elif [[ $ID == "opensuse-tumbleweed" ]]; then
-        sudo zypper -n in bsdiff git libimobiledevice libpng12-0 libopenssl1_0_0 python-base
+        sudo zypper -n in bsdiff curl git libimobiledevice libpng12-0 libopenssl1_0_0 python-base
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $platform == "macos" ]]; then

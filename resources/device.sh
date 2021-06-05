@@ -43,7 +43,7 @@ GetDeviceValues() {
     
     if [[ ! $ProductType ]]; then
         Error "No device detected. Please put the device in normal mode before proceeding. Recovery or DFU mode is also applicable" \
-        "For more details regarding alternative methods, read the 'Other Notes' section of the README"
+        "For more details regarding alternative methods, read the \"Other Notes\" section of the README"
     fi
     
     Firmware=resources/firmware/$ProductType
@@ -104,7 +104,7 @@ GetDeviceValues() {
     
     if [[ ! $BasebandURL || ! $HWModel ]]; then
         Error "Missing BasebandURL and/or HWModel values. Is the firmware folder missing?" \
-        "Reinstall dependencies and try again. For more details, read the 'Other Notes' section of the README"
+        "Reinstall dependencies and try again. For more details, read the \"Other Notes\" section of the README"
     fi
     
     if [[ $ProductType == "iPod5,1" ]]; then
@@ -161,7 +161,7 @@ CheckM8() {
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
-        Echo "* For more details, read the 'Other Notes' section of the README"
+        Echo "* For more details, read the \"Other Notes\" section of the README"
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
@@ -242,7 +242,7 @@ kDFU() {
     Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
     echo
     Input "Enter the root password of your iOS device when prompted"
-    Echo "* The default password is 'alpine'"
+    Echo "* The default password is \"alpine\""
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
         $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &
@@ -272,7 +272,7 @@ kDFU() {
 
 pwnREC() {
     if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
-        Log "iPad mini 2 device detected. Setting iBSS and iBEC to 'ipad4b'"
+        Log "iPad mini 2 device detected. Setting iBSS and iBEC to \"ipad4b\""
         iBEC=$iBECb
         iBSS=$iBSSb
     fi
