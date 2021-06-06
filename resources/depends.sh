@@ -80,7 +80,6 @@ SavePkg() {
 
 
 InstallDepends() {
-    local iproxy
     local libimobiledevice
     
     mkdir resources/lib tmp 2>/dev/null
