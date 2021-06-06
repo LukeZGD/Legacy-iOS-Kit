@@ -114,7 +114,7 @@ InstallDepends() {
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
     
     elif [[ $ID == "opensuse-tumbleweed" ]]; then
-        sudo zypper -n in bsdiff curl git libimobiledevice libpng12-0 libopenssl1_0_0 python-base
+        sudo zypper -n in bsdiff curl git libimobiledevice-1_0-6 libpng12-0 libopenssl1_0_0 libzip5 python-base
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $platform == "macos" ]]; then
