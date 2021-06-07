@@ -74,12 +74,12 @@
 6. Follow instructions
 
 ## Supported OS versions/distros:
-- **Ubuntu** [20.04](https://releases.ubuntu.com/focal/), [20.10](https://releases.ubuntu.com/groovy/), [21.04](https://releases.ubuntu.com/hirsute/); and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora** 33 to 34](https://getfedora.org/)
-- [**Debian** Testing, Unstable](https://www.debian.org/)
-- **openSUSE** [Tumbleweed](https://software.opensuse.org/distributions/tumbleweed)
-- **macOS** 10.13 to 11
+- [**Fedora**](https://getfedora.org/) 33 and newer
+- [**Debian**](https://www.debian.org/) Testing and Unstable
+- [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
+- **macOS** 10.13 and newer
 
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
