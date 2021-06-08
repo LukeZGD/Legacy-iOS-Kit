@@ -135,6 +135,7 @@ GetDeviceValues() {
 
 CheckM8() {
     local pwnDFUTool
+    local pwnDFUDevice
     
     [[ $platform == macos ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
     Log "Entering pwnDFU mode with $pwnDFUTool..."

@@ -46,8 +46,8 @@ SetToolPaths() {
 }
 
 SaveExternal() {
-    ExternalURL="https://github.com/LukeZGD/$1.git"
-    External=$1
+    local ExternalURL="https://github.com/LukeZGD/$1.git"
+    local External=$1
     [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
     cd resources
     if [[ ! -d $External || ! -d $External/.git ]]; then

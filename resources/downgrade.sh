@@ -17,11 +17,9 @@ iDeviceRestore() {
 FRBaseband() {
     local BasebandSHA1L
     
-    if [[ $DeviceProc == 7 ]]; then
+    if [[ $DeviceProc == 7 ]] || [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
         mkdir -p saved/baseband 2>/dev/null
         cp -f $IPSWRestore/Firmware/$Baseband saved/baseband
-    elif [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
-        unzip -o -j $IPSW.ipsw Firmware/$Baseband -d .
     elif [[ ! -e saved/baseband/$Baseband ]]; then
         Log "Downloading baseband..."
         $partialzip $BasebandURL Firmware/$Baseband $Baseband
