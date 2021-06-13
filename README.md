@@ -105,12 +105,12 @@
   - There are three options that can be used for the DFU advanced menu
   - Select the "kDFU mode" option if your device is already in kDFU mode beforehand. Example of this is using kDFUApp by tihmstar; kDFUApp can also be installed from my repo
   - For A6/A6X devices, "DFU mode (A6)" option can be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
-  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield (checkm8-a5)
+  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield ([checkm8-a5](https://github.com/synackuk/checkm8-a5))
 - **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
   - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
 - **For the jailbreak option (iOS 8.4.1 only):**
-  - Stashing is already enabled and `nosuid` is removed from `fstab`, so no need to install "Stashing for #etasonJB" package
+  - Stashing is already enabled and `nosuid` is removed from `fstab`, so there is no need to install "Stashing for #etasonJB" package
 - **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
   - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
   - **A5X devices:** iPad 3
