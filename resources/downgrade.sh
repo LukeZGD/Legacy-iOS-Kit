@@ -120,7 +120,7 @@ Downgrade() {
     
         if [[ $Jailbreak == 1 || $DeviceProc == 7 ]]; then
             [[ ! -e "$IPSWCustom.ipsw" ]] && Verify=1
-        elif [[ -z $Jailbreak ]]; then
+        elif [[ $Jailbreak != 1 ]]; then
             Verify=1
         fi
     
@@ -132,7 +132,7 @@ Downgrade() {
                 Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
                 "Delete/replace the IPSW and run the script again"
             fi
-        elif [[ -e "$IPSWCustom.ipsw" ]]; then
+        elif [[ $Jailbreak == 1 && -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW. Skipping verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
