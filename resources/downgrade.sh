@@ -24,8 +24,7 @@ FRBaseband() {
         Log "Downloading baseband..."
         $partialzip $BasebandURL Firmware/$Baseband $Baseband
         $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
-        mkdir -p saved/$ProductType 2>/dev/null
-        mkdir -p saved/baseband 2>/dev/null
+        mkdir -p saved/$ProductType saved/baseband 2>/dev/null
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"

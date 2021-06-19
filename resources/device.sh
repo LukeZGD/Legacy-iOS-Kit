@@ -93,8 +93,7 @@ GetDeviceValues() {
     if [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
           $ProductType == "iPad3,3" || $ProductType == "iPhone4,1" || $ProductType == "iPod5,1" ]]; then
         DeviceProc=5
-    elif [[ $ProductType == "iPad3,4" || $ProductType == "iPad3,5" ||
-            $ProductType == "iPad3,6" || $ProductType == "iPhone5"* ]]; then
+    elif [[ $ProductType == "iPhone5"* || $ProductType == "iPad3"* ]]; then
         DeviceProc=6
     elif [[ $ProductType == "iPhone6"* || $ProductType == "iPad4"* ]]; then
         DeviceProc=7

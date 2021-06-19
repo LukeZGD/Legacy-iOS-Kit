@@ -89,8 +89,8 @@ Main() {
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
     
-    if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo ||! $irecoverychk || ! $python ||
-          ! -d ./resources/libimobiledevice_$platform ]]; then
+    if [[ $1 == "Install" || ! $bspatch || ! $git ||
+          ! $ideviceinfo || ! $irecoverychk || ! $python ]]; then
         Clean
         InstallDepends
     fi
