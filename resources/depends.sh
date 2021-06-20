@@ -6,6 +6,7 @@ SetToolPaths() {
         platform="linux"
         platformver="$PRETTY_NAME"
     
+        bspatch="$(which bspatch)"
         futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
         idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
@@ -13,11 +14,12 @@ SetToolPaths() {
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80"
-
+    
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platformver="${1:-$(sw_vers -productVersion)}"
     
+        bspatch="/usr/bin/bspatch"
         futurerestore1="./resources/tools/futurerestore1_macos"
         futurerestore2="./resources/tools/futurerestore2_macos"
         idevicerestore="./resources/tools/idevicerestore_macos"
@@ -27,7 +29,6 @@ SetToolPaths() {
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
     fi
-    bspatch="$(which bspatch)"
     git="$(which git)"
     ideviceenterrecovery="./resources/libimobiledevice_$platform/ideviceenterrecovery"
     ideviceinfo="./resources/libimobiledevice_$platform/ideviceinfo"

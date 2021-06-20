@@ -11,25 +11,27 @@ IPSW32() {
         return
     fi
     
-    if [[ $OSVer == 8.4.1 ]]; then
-        JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
-        JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
-        JBPartSize=2305
-    else
-        JBFiles=("fstab_rw.tar" "p0sixspwn.tar" "Cydia6.tar")
-        JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
-        JBPartSize=1260
+    if [[ $Jailbreak == 1 ]]; then
+        if [[ $OSVer == 8.4.1 ]]; then
+            JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
+            JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
+            JBPartSize="-s 2305"
+        else
+            JBFiles=("fstab_rw.tar" "p0sixspwn.tar" "Cydia6.tar")
+            JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
+            JBPartSize="-s 1260"
+        fi
+        if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
+            cd tmp
+            Log "Downloading jailbreak files..."
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
+            mv ${JBFiles[2]} ../resources/jailbreak
+            cd ..
+        fi
+        for i in {0..2}; do
+            JBFiles[$i]=jailbreak/${JBFiles[$i]}
+        done
     fi
-    if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
-        cd tmp
-        Log "Downloading jailbreak files..."
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
-        mv ${JBFiles[2]} ../resources/jailbreak
-        cd ..
-    fi
-    for i in {0..2}; do
-        JBFiles[$i]=jailbreak/${JBFiles[$i]}
-    done
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
         Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
@@ -38,7 +40,7 @@ IPSW32() {
         Log "Preparing custom IPSW..."
         cd resources
         ln -sf firmware/FirmwareBundles FirmwareBundles
-        $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -bbupdate -s $JBPartSize ${JBFiles[@]}
+        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $JBMemory -bbupdate $JBPartSize ${JBFiles[@]}
         cd ..
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then

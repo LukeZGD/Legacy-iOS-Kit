@@ -62,6 +62,7 @@ FutureRestore() {
 }
 
 Downgrade() {
+    local IPSWCustomW
     local IPSWExtract
     local IPSWSHA1
     local IPSWSHA1L
@@ -76,9 +77,9 @@ Downgrade() {
         read -p "$(Input 'Path to SHSH (drag SHSH to terminal window):')" SHSH
     
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
-        read -p "$(Input 'Jailbreak the selected iOS version? (y/N):')" Jailbreak
+        read -p "$(Input 'Jailbreak the selected iOS version? (Y/n):')" Jailbreak
         
-        if [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]]; then
+        if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             Jailbreak=1
             if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
                 $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
@@ -108,6 +109,19 @@ Downgrade() {
     
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+        if [[ $Jailbreak != 1 && $DeviceProc != 7 ]]; then
+            Selection=("futurerestore" "idevicerestore")
+            Echo "* Select 1 (futurerestore) if unsure"
+            Echo "* Select 2 (idevicerestore) if you experience issues with futurerestore"
+            Input "Select restore tool to use:"
+            select opt in "${Selection[@]}"; do
+            case $opt in
+                "idevicerestore" ) IPSWCustom="${IPSWCustom}W"; IPSWCustomW=1; break;;
+                *) break;;
+                esac
+            done
+        fi
+
         if [[ ! -e "$IPSW.ipsw" && ! -e "$IPSWCustom.ipsw" ]]; then
             Log "iOS $OSVer IPSW cannot be found."
             Echo "* If you already downloaded the IPSW, did you put it in the same directory as the script?"
@@ -117,9 +131,11 @@ Downgrade() {
             mv tmp/$IPSW.ipsw .
         fi
     
-        if [[ $Jailbreak == 1 || $DeviceProc == 7 ]]; then
+        if [[ ! -e "$IPSWCustom.ipsw" && $IPSWCustomW == 1 ]]; then
+            Verify=1
+        elif [[ $Jailbreak == 1 || $DeviceProc == 7 ]]; then
             [[ ! -e "$IPSWCustom.ipsw" ]] && Verify=1
-        elif [[ $Jailbreak != 1 ]]; then
+        elif [[ $Jailbreak != 1 && $IPSWCustomW != 1 ]]; then
             Verify=1
         fi
     
@@ -131,7 +147,7 @@ Downgrade() {
                 Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
                 "Delete/replace the IPSW and run the script again"
             fi
-        elif [[ $Jailbreak == 1 && -e "$IPSWCustom.ipsw" ]]; then
+        elif [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW. Skipping verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
@@ -146,8 +162,8 @@ Downgrade() {
     
     [[ $DeviceState == "Normal" ]] && kDFU
     
-    if [[ $Jailbreak == 1 || $IPSWRestore == $IPSWCustom ]]; then
-        [[ $Jailbreak == 1 ]] && IPSW32
+    if [[ $Jailbreak == 1 || $IPSWRestore == $IPSWCustom || $IPSWCustomW == 1 ]]; then
+        [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] && IPSW32
         IPSWExtract=$IPSWCustom
     else
         IPSWExtract=$IPSW
@@ -160,7 +176,7 @@ Downgrade() {
         IPSW64
         pwnREC
         SaveOTABlobs
-    elif [[ $Jailbreak != 1 && $OSVer != "Other" ]]; then
+    elif [[ $Jailbreak != 1 && $OSVer != "Other" && $IPSWCustomW != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         $SimpleHTTPServer &
@@ -173,7 +189,7 @@ Downgrade() {
         IPSWRestore="$IPSW"
     fi
     
-    if [[ $Jailbreak == 1 ]]; then
+    if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
         iDeviceRestore
     else
         FutureRestore
