@@ -28,12 +28,19 @@ SetToolPaths() {
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
+    
+    elif [[ $OSTYPE == "msys" ]]; then
+        platform="win"
+        bspatch="./resources/tools/bspatch_win"
+        idevicerestore="./resources/tools/idevicerestore_win"
+        python=/
     fi
     git="$(which git)"
     ideviceenterrecovery="./resources/libimobiledevice_$platform/ideviceenterrecovery"
     ideviceinfo="./resources/libimobiledevice_$platform/ideviceinfo"
     iproxy="./resources/libimobiledevice_$platform/iproxy"
     ipsw="./tools/ipsw_$platform"
+    [[ $platform == "win" ]] && ipsw="cmd //c $(dirname $0)/resources/tools/ipsw_win.exe"
     irecoverychk="./resources/libimobiledevice_$platform/irecovery"
     irecovery="$irecoverychk"
     [[ $platform == "linux" ]] && irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
@@ -129,6 +136,12 @@ InstallDepends() {
         xcode-select --install
         libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip" "328e809dea350ae68fb644225bbf8469c0f0634b")
     
+    elif [[ $platform == "win" ]]; then
+        pacman -Sy --noconfirm --needed git openssh unzip
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 2b30b3ae1ac063ca0dfdc6a21d8abaa72d929e01
+        unzip tools_win.zip -d ../resources/tools
+        libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-win-x64.zip" "35201b70af6059f95becc80635bccf408b5cdbb2")
+
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
@@ -144,6 +157,12 @@ InstallDepends() {
         chmod +x ../resources/libimobiledevice_$platform/*
     fi
     
+    if [[ $platform == "win" ]]; then
+        for file in ../resources/libimobiledevice_win/*.exe; do
+            mv -- "$file" "${file%%.exe}"
+        done
+    fi
+
     cd ..
     Log "Install script done! Please run the script again to proceed"
     exit 0

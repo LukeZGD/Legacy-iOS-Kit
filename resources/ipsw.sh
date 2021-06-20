@@ -39,7 +39,11 @@ IPSW32() {
         [[ $JBMemory != 'N' && $JBMemory != 'n' ]] && JBMemory="-memory" || JBMemory=
         Log "Preparing custom IPSW..."
         cd resources
-        ln -sf firmware/FirmwareBundles FirmwareBundles
+        if [[ $platform == "win" ]]; then
+            cp firmware/FirmwareBundles .
+        else
+            ln -sf firmware/FirmwareBundles FirmwareBundles
+        fi
         $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $JBMemory -bbupdate $JBPartSize ${JBFiles[@]}
         cd ..
     fi
