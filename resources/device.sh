@@ -141,23 +141,21 @@ CheckM8() {
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
         $ipwndfu -p
+        if  [[ $DeviceProc == 7 ]]; then
+            Log "Running rmsigchks.py..."
+            $rmsigchks
+        else
+            Log "Sending iBSS..."
+            kDFU iBSS || echo
+        fi
+        pwnDFUDevice=$?
+        cd ../..
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
-        cd resources/ipwndfu
-    fi
-    
-    if [[ $DeviceProc == 7 ]]; then
-        Log "Running rmsigchks.py..."
-        $rmsigchks
-        pwnDFUDevice=$?
-        cd ../..
-    else
-        cd ../..
-        [[ $pwnDFUTool == "ipwndfu" ]] && kDFU iBSS || echo
         pwnDFUDevice=$?
     fi
     
-    if [[ $pwnDFUDevice == 1 || $pwnDFUDevice == 255 ]]; then
+    if [[ $pwnDFUDevice != 0 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
@@ -177,7 +175,7 @@ Recovery() {
         FindDevice "Recovery"
     fi
     
-    Log "Get ready to enter DFU mode."
+    Echo "Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."

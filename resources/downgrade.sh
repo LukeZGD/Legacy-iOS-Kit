@@ -179,7 +179,7 @@ Downgrade() {
     elif [[ $Jailbreak != 1 && $OSVer != "Other" && $IPSWCustomW != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
-        $SimpleHTTPServer &
+        [[ $platform == "linux" ]] && $SimpleHTTPServer || $SimpleHTTPServer &
         ServerRunning=1
         cd ..
     fi

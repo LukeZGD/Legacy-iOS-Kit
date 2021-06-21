@@ -13,7 +13,7 @@ SetToolPaths() {
         python="$(which python2)"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
-        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80"
+        SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 80"
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
