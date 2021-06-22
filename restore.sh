@@ -80,11 +80,7 @@ Main() {
     fi
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-        Log "M1 Mac detected. Support is limited, the script may or may not work for you"
-        Echo "* M1 macs can still proceed but I cannot support it if things break"
-        Echo "* Proceed at your own risk."
-        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-        read -s
+        Log "M1 Mac detected. Support is limited, proceed at your own risk."
     elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
