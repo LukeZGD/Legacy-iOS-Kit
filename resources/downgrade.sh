@@ -54,7 +54,7 @@ FutureRestore() {
     Log "Proceeding to futurerestore..."
     if [[ $Baseband == 0 ]]; then
         Log "Device $ProductType has no baseband"
-        $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
+        $futurerestore -t $SHSH --no-baseband $ExtraArgs "$IPSWRestore.ipsw"
     else
         FRBaseband
         $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
