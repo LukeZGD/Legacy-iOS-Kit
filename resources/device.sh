@@ -136,7 +136,21 @@ CheckM8() {
     local pwnDFUTool
     local pwnDFUDevice
     
-    [[ $platform == "macos" ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
+    if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+        pwnDFUTool="iPwnder32"
+    elif [[ $platform == "macos" ]]; then
+        Selection=("iPwnder32" "ipwndfu")
+        Input "Select pwnDFU tool to use (Select 1 if unsure):"
+        select opt in "${Selection[@]}"; do
+            case $opt in
+                "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
+                *) pwnDFUTool="iPwnder32"; break;;
+            esac
+        done
+    else
+        pwnDFUTool="ipwndfu"
+    fi
+    
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
@@ -175,7 +189,7 @@ Recovery() {
         FindDevice "Recovery"
     fi
     
-    Echo "Get ready to enter DFU mode."
+    Echo "* Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."
