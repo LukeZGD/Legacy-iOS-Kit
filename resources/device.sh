@@ -166,10 +166,9 @@ CheckM8() {
         cd ../..
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
-        pwnDFUDevice=$?
     fi
     
-    if [[ $pwnDFUDevice != 0 ]]; then
+    if [[ $pwnDFUDevice != 0 && $($irecovery -q | grep -c "PWND") != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or M1 device, and to try multiple times ${Color_N}"
