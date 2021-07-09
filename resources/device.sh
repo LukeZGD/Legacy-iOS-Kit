@@ -295,7 +295,7 @@ pwnREC() {
     $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
     sleep 5
     Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device to attempt to continue"
-    Echo "* If not, you may have to hard-reset your device and start over entering pwnDFU mode again"
+    Echo "* If not, you may have to force restart your device and start over entering pwnDFU mode again"
     Echo "* You can press Ctrl+C to cancel finding device"
     FindDevice "Recovery"
 }
