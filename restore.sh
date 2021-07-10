@@ -59,19 +59,22 @@ Main() {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
+    if [[ ! -d ./resources ]]; then
+        Error "resources folder cannot be found. Replace resources folder and try again." \
+        "If resources folder is present try removing spaces from path/folder name"
+    fi
+    
     SetToolPaths
+    if [[ $? != 0 ]]; then
+        Error "Setting tool paths failed. Your copy of iOS-OTA-Downgrader seems to be incomplete."
+    fi
     
     if [[ ! $platform ]]; then
         Error "Platform unknown/not supported."
     fi
     
-    if [[ ! -d ./resources ]]; then
-        Error "resources folder cannot be found. Replace resources folder and try again" \
-        "If resources folder is present try removing spaces from path/folder name"
-    fi
-    
     chmod +x ./resources/*.sh ./resources/tools/*
-    if [[ $? == 1 ]]; then
+    if [[ $? != 0 ]]; then
         Log "Warning - An error occurred in chmod. This might cause problems..."
     fi
     
