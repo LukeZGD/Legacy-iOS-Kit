@@ -22,8 +22,11 @@ SetToolPaths() {
     
         MPath="./resources/libimobiledevice_$platform"
         if [[ -e /usr/local/bin/idevicedate && -e /usr/local/bin/irecovery ]]; then
-            Log "Detected libimobiledevice and libirecovery installed from Homebrew"
+            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Intel Mac)"
             MPath="/usr/local/bin"
+        elif [[ -e /opt/homebrew//bin/idevicedate && -e /opt/homebrew//bin/irecovery ]]; then
+            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Apple Silicon)"
+            MPath="/opt/homebrew/bin"
         fi
         bspatch="/usr/bin/bspatch"
         futurerestore1="./resources/tools/futurerestore1_macos"

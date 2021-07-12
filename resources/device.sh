@@ -22,10 +22,7 @@ FindDevice() {
     
     if [[ $DeviceIn != 1 ]]; then
         [[ $2 == "error" ]] && Error "Failed to find device in $1 mode. (Timed out)"
-        Log "Failed to find device in $1 mode. (Timed out)"
-        Echo "* You may still attempt to continue but things might not work properly"
-        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
-        read -s
+        return 1
     fi
 }
 
@@ -186,7 +183,7 @@ CheckM8() {
     if [[ $pwnDFUDevice != 0 && $($irecovery -q | grep -c "PWND") != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
-        echo "${Color_Y}* The only option is to make sure you are using an Intel or M1 device, and to try multiple times ${Color_N}"
+        echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
         Echo "* For more details, read the \"Other Notes\" section of the README"
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
@@ -297,19 +294,29 @@ kDFU() {
 }
 
 pwnREC() {
+    local Attempt=1
+    
     if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
         Log "iPad mini 2 device detected. Setting iBSS and iBEC to \"ipad4b\""
         iBEC=$iBECb
         iBSS=$iBSSb
     fi
-    Log "Entering pwnREC mode..."
-    Log "Sending iBSS..."
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-    Log "Sending iBEC..."
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
-    sleep 5
-    Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device to attempt to continue"
-    Echo "* If not, you may have to force restart your device and start over entering pwnDFU mode again"
-    FindDevice "Recovery" timeout
+    
+    while (( $Attempt < 5 )); do
+        Log "Entering pwnREC mode... (Attempt $Attempt)"
+        Log "Sending iBSS..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        Log "Sending iBEC..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
+        sleep 5
+        FindDevice "Recovery" timeout
+        [[ $? == 0 ]] && break
+        ((Attempt++))
+    done
+    
+    if (( $Attempt == 5 )); then
+        Error "Failed to enter pwnREC mode." \
+        "You may have to force restart your device and start over entering pwnDFU mode again"
+    fi
 }
