@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SetToolPaths() {
-    local MPath="./resources/libimobiledevice_$platform"
+    local MPath
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
@@ -20,6 +20,7 @@ SetToolPaths() {
         platform="macos"
         platformver="${1:-$(sw_vers -productVersion)}"
     
+        MPath="./resources/libimobiledevice_$platform"
         if [[ -e /usr/local/bin/idevicedate && -e /usr/local/bin/irecovery ]]; then
             Log "Detected libimobiledevice and libirecovery installed from Homebrew"
             MPath="/usr/local/bin"
