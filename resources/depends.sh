@@ -14,6 +14,7 @@ SetToolPaths() {
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 80"
+        tsschecker2="env LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/tsschecker2_linux"
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -28,6 +29,7 @@ SetToolPaths() {
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
+        tsschecker2="./resources/tools/tsschecker2_macos"
     fi
     git="$(which git)"
     ideviceenterrecovery="./resources/libimobiledevice_$platform/ideviceenterrecovery"
