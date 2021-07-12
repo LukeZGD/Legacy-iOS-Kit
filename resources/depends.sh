@@ -42,7 +42,7 @@ SetToolPaths() {
     git="$(which git)"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
-    iproxy="./resources/libimobiledevice_$platform/iproxy"
+    iproxy="$MPath/iproxy"
     ipsw="./tools/ipsw_$platform"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
