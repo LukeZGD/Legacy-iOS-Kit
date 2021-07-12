@@ -302,21 +302,21 @@ pwnREC() {
         iBSS=$iBSSb
     fi
     
-    while (( $Attempt < 5 )); do
+    while (( $Attempt < 4 )); do
         Log "Entering pwnREC mode... (Attempt $Attempt)"
         Log "Sending iBSS..."
         $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
         $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
         Log "Sending iBEC..."
         $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
-        sleep 5
+        sleep 3
         FindDevice "Recovery" timeout
         [[ $? == 0 ]] && break
         ((Attempt++))
     done
     
-    if (( $Attempt == 5 )); then
-        Error "Failed to enter pwnREC mode." \
-        "You may have to force restart your device and start over entering pwnDFU mode again"
+    if (( $Attempt == 4 )); then
+        Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again" \
+        "macOS users may have to install libimobiledevice and libirecovery from Homebrew. For more details, read the \"Other Notes\" section of the README"
     fi
 }
