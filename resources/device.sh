@@ -1,17 +1,32 @@
 #!/bin/bash
 
 FindDevice() {
+    local DeviceIn
+    local i=0
+    local Timeout=999
     local USB
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
+    [[ ! -z $2 ]] && Timeout=3
     
     Log "Finding device in $1 mode..."
-    while [[ $DeviceState != "$1" ]]; do
-        [[ $platform == "linux" ]] && DeviceState=$(lsusb | grep -c $USB)
-        [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "$1" ]] && DeviceState=1
-        [[ $DeviceState == 1 ]] && DeviceState="$1"
+    while (( $i < $Timeout )); do
+        [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
+        if [[ $DeviceIn == 1 ]]; then
+            Log "Found device in $1 mode."
+            DeviceState="$1"
+            break
+        fi
         sleep 1
+        ((i++))
     done
-    Log "Found device in $1 mode."
+    
+    if [[ $DeviceIn != 1 ]]; then
+        [[ $2 == "error" ]] && Error "Failed to find device in $1 mode. (Timed out)"
+        Log "Failed to find device in $1 mode. (Timed out)"
+        Echo "* You may still attempt to continue but things might not work properly"
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+        read -s
+    fi
 }
 
 GetDeviceValues() {
@@ -208,7 +223,7 @@ Recovery() {
     done
     echo
     
-    FindDevice "DFU"
+    FindDevice "DFU" error
     CheckM8
 }
 
@@ -296,6 +311,5 @@ pwnREC() {
     sleep 5
     Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device to attempt to continue"
     Echo "* If not, you may have to force restart your device and start over entering pwnDFU mode again"
-    Echo "* You can press Ctrl+C to cancel finding device"
-    FindDevice "Recovery"
+    FindDevice "Recovery" timeout
 }
