@@ -90,6 +90,8 @@
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
   - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/en-ph/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
+  - macOS users may also try installing libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
+    - The script will detect this automatically and will use the Homebrew versions of the tools
   - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
