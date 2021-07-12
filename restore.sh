@@ -83,7 +83,7 @@ Main() {
     fi
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-        Log "M1 Mac detected. Support is limited, proceed at your own risk."
+        Log "Apple Silicon Mac detected. Support may be limited, proceed at your own risk."
     elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
