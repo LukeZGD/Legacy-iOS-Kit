@@ -33,7 +33,7 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-"
+        DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     else
         DeviceState="Normal"
     fi
