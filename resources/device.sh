@@ -170,12 +170,14 @@ CheckM8() {
         if  [[ $DeviceProc == 7 ]]; then
             Log "Running rmsigchks.py..."
             $rmsigchks
+            pwnDFUDevice=$?
+            cd ../..
         else
+            cd ../..
             Log "Sending iBSS..."
             kDFU iBSS || echo
+            pwnDFUDevice=$?
         fi
-        pwnDFUDevice=$?
-        cd ../..
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
     fi
