@@ -10,7 +10,7 @@ FindDevice() {
     
     Log "Finding device in $1 mode..."
     while (( $i < $Timeout )); do
-        [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
+        [[ $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7- | head -n 1) == "$1" ]] && DeviceIn=1
         if [[ $DeviceIn == 1 ]]; then
             Log "Found device in $1 mode."
             DeviceState="$1"
@@ -33,7 +33,7 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-)"
+        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7- | head -n 1)"
     else
         DeviceState="Normal"
     fi
