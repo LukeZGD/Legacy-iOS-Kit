@@ -10,7 +10,7 @@ FindDevice() {
     
     Log "Finding device in $1 mode..."
     while (( $i < $Timeout )); do
-        [[ $platform == "linux" ]] && DeviceIn=$(lsusb | grep -c $USB)
+        [[ $platform == "linux" ]] && DeviceIn=$(lsusb | grep -c "05ac:$USB")
         [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
         if [[ $DeviceIn == 1 ]]; then
             Log "Found device in $1 mode."
