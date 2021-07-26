@@ -108,16 +108,16 @@ InstallDepends() {
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ ! -z $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
-         [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
+         [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 usbmuxd usbutils
+        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils
         SavePkg
         cp libcrypto.so.1.0.0 libcurl.so.3 libpng12.so.0 libssl.so.1.0.0 ../resources/lib
-        if [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" || $VERSION_ID != "20"* ]]; then
-            sudo apt install -y libzip4
-        else
+        if [[ $VERSION_ID == "20"* ]]; then
             cp libzip.so.4 ../resources/lib
+        else
+            sudo apt install -y libzip4
         fi
     
     elif [[ $ID == "fedora" ]] && (( $VERSION_ID >= 33 )); then

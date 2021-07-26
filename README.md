@@ -77,7 +77,7 @@
 - [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 33 and newer
-- [**Debian**](https://www.debian.org/) Testing and Unstable
+- [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
 
