@@ -153,7 +153,7 @@ InstallDepends() {
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "4344b3ca95d7433d5a49dcacc840d47770ba34c4")
     fi
     
-    if [[ ! -d ../resources/libimobiledevice_$platform ]]; then
+    if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
         Log "Downloading libimobiledevice..."
         SaveFile ${libimobiledevice[0]} libimobiledevice.zip ${libimobiledevice[1]}
         mkdir ../resources/libimobiledevice_$platform
