@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SetToolPaths() {
-    local MPath="./resources/libimobiledevice_"
+    MPath="./resources/libimobiledevice_"
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
