@@ -93,6 +93,7 @@
   - macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
     - The script will detect this automatically and will use the Homebrew versions of the tools
   - Use an Intel or Apple Silicon PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
+  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see issue [#114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again

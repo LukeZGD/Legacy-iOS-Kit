@@ -102,6 +102,12 @@ InstallDepends() {
     cd ../tmp
     
     Log "Installing dependencies..."
+    if [[ $platform == "linux" ]]; then
+        Echo "* iOS-OTA-Downgrader will be installing dependencies from your distribution's package manager"
+        Echo "* Enter root password of your PC when prompted"
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
+    fi
     if [[ $ID == "arch" || $ID_LIKE == "arch" ]]; then
         sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3

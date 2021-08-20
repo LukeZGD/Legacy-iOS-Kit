@@ -148,6 +148,7 @@ GetDeviceValues() {
 CheckM8() {
     local pwnDFUTool
     local pwnDFUDevice
+    local pwnD=1
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
         pwnDFUTool="iPwnder32"
@@ -172,6 +173,7 @@ CheckM8() {
             Log "Running rmsigchks.py..."
             $rmsigchks
             pwnDFUDevice=$?
+            pwnD=$($irecovery -q | grep -c "PWND")
             cd ../..
         else
             cd ../..
@@ -183,7 +185,7 @@ CheckM8() {
         $ipwnder32 -p
     fi
     
-    if [[ $pwnDFUDevice != 0 && $($irecovery -q | grep -c "PWND") != 1 ]]; then
+    if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
@@ -191,6 +193,10 @@ CheckM8() {
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
+    else
+        Log "Warning - Failed to detect device in pwnDFU mode."
+        Echo "* If the device entered pwnDFU mode successfully, you may continue"
+        Echo "* If entering pwnDFU failed, you may have to force restart your device and start over"
     fi
 }
 
