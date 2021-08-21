@@ -142,7 +142,9 @@ Downgrade() {
         if [[ $Verify == 1 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
+            Log "Expected SHA1sum: $IPSWSHA1"
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
+            Log "Actual SHA1sum:   $IPSWSHA1L"
             if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
                 Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
                 "Delete/replace the IPSW and run the script again"
