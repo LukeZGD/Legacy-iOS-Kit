@@ -267,6 +267,15 @@ kDFU() {
     $iproxy 2222 22 &
     iproxyPID=$!
     
+    if [[ $JBDaibutsu == 1 && ! -e saved/$ProductType/dyld_shared_cache_armv7 ]]; then
+        Log "Copying dyld cache from device..."
+        Echo "* This file is for daibutsu jailbreak"
+        Input "Enter the root password of your iOS device when prompted"
+        Echo "* The default password is \"alpine\""
+        $SCP -P 2222 root@127.0.0.1:/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7 saved/$ProductType
+        [[ ! -e saved/$ProductType/dyld_shared_cache_armv7 ]] && Error "dyld cache missing. Your device must be jailbroken with daibutsu before proceeding."
+    fi
+
     Log "Copying stuff to device via SSH..."
     Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
     Echo "* Dropbear is only needed for devices on iOS 10"

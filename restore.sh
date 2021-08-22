@@ -1,6 +1,6 @@
 #!/bin/bash
 trap "Clean" EXIT
-trap "Clean; exit 1" INT TERM
+trap "Clean && exit 1" INT TERM
 
 cd "$(dirname $0)"
 . ./resources/blobs.sh
@@ -18,6 +18,11 @@ if [[ $1 != "NoColor" && $2 != "NoColor" ]]; then
 fi
 
 Clean() {
+    if [[ -d tmp/root ]]; then
+        Log "Cleaning up..."
+        Echo "* Enter root password of your PC when prompted"
+        sudo rm -rf tmp/
+    fi
     rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
     ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
     kill $iproxyPID 2>/dev/null

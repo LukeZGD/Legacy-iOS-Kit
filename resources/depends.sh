@@ -41,7 +41,9 @@ SetToolPaths() {
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
         tsschecker2="./resources/tools/tsschecker2_macos"
     fi
+    dmg="./resources/tools/dmg_$platform"
     git="$(which git)"
+    hfsplus="./resources/tools/hfsplus_$platform"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     iproxy="$MPath/iproxy"

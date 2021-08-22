@@ -1,6 +1,8 @@
 *.bbfw
 *.dfu
+*.dmg
 *.im4p
+*.ipa
 *.ipsw
 *.json
 *.shsh

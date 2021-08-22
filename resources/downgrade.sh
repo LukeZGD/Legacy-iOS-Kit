@@ -82,10 +82,9 @@ Downgrade() {
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             Jailbreak=1
             if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
-                $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
-                Log "Warning - A5 Rev A device detected. Enabling the jailbreak option might not work for you"
-                read -p "$(Input 'Select Y to continue anyway, N to cancel and exit (y/N):')" Jailbreak
-                [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1 || exit 0
+                $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+               [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
+                JBDaibutsu=1
             fi
         fi
     fi
