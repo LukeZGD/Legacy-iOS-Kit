@@ -32,7 +32,7 @@ IPSW32() {
         mv ../Payload/daibutsu.app/untether.deb private/var/root/media/Cydia/Autoinstall
         sudo chown -R 0:0 * .cydia_no_stash .installed_daibutsu
         sudo chmod -R 0644 * .cydia_no_stash .installed_daibutsu
-        sudo chmod 0755 daibutsu usr/libexec/dirhelper usr/lib/exec/CrashHousekeeping_s
+        sudo chmod 0755 daibutsu usr/libexec/dirhelper
         #sudo ln -sf /daibutsu usr/libexec/CrashHousekeeping_s
         sudo tar -cvf ../daibutsu.tar * .cydia_no_stash .installed_daibutsu
         sudo rm -rf *
