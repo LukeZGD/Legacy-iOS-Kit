@@ -22,8 +22,9 @@ SaveOTABlobs() {
     SHSH=$(ls $SHSHChk)
     SHSHExisting=$(ls saved/shsh/$SHSHChk 2>/dev/null)
     if [[ ! $SHSH && ! $SHSHExisting ]]; then
-        Log "Saving $OSVer blobs failed. Trying again with fallback tsschecker..."
-        $tsschecker2 $ExtraArgs
+        Log "Saving $OSVer blobs failed. Trying again with fallback..."
+        ExtraArgs+=" --no-baseband"
+        $tsschecker $ExtraArgs
     
         SHSH=$(ls $SHSHChk)
         if [[ ! $SHSH ]]; then
