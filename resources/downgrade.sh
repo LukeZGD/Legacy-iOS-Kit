@@ -70,12 +70,21 @@ Downgrade() {
     local Verify
     
     if [[ $OSVer == "Other" ]]; then
-        Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
-        Echo "* Remember to create a backup of the SHSH"
-        read -p "$(Input 'Path to IPSW (drag IPSW to terminal window):')" IPSW
-        IPSW="$(basename $IPSW .ipsw)"
-        read -p "$(Input 'Path to SHSH (drag SHSH to terminal window):')" SHSH
-    
+        if [[ $platform == "linux" ]]; then
+            IPSW="$(zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
+            IPSW="${IPSW%?????}"
+            Log "Selected IPSW file: $IPSW"
+            SHSH="$(zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select SHSH file")"
+            Log "Selected SHSH file: $SHSH"
+        else
+            Echo "* Move/copy the IPSW and SHSH files to the directory where the script is located"
+            Echo "* When entering the names of IPSW and SHSH, enter the full name including the file extension"
+            Echo "* Remember to create a backup of the SHSH"
+            read -p "$(Input 'Enter name of IPSW file:')" IPSW
+            IPSW="$(basename $IPSW .ipsw)"
+            read -p "$(Input 'Enter name of SHSH file:')" SHSH
+        fi
+
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
         read -p "$(Input 'Jailbreak the selected iOS version? (Y/n):')" Jailbreak
         
