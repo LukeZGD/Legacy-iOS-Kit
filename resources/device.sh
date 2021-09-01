@@ -173,8 +173,8 @@ CheckM8() {
             Log "Running rmsigchks.py..."
             $rmsigchks
             pwnDFUDevice=$?
-            pwnD=$($irecovery -q | grep -c "PWND")
             cd ../..
+            pwnD=$($irecovery -q | grep -c "PWND")
         else
             cd ../..
             Log "Sending iBSS..."
