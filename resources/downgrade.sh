@@ -169,19 +169,21 @@ Downgrade() {
             mkdir -p saved/$ProductType 2>/dev/null
             unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
         fi
+    else
+        IPSWCustom=0
     fi
     
     [[ $DeviceState == "Normal" ]] && kDFU
-    
+
     if [[ $Jailbreak == 1 || $IPSWRestore == $IPSWCustom || $IPSWCustomW == 1 ]]; then
         [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] && IPSW32
-        IPSWExtract=$IPSWCustom
+        IPSWExtract="$IPSWCustom"
     else
-        IPSWExtract=$IPSW
+        IPSWExtract="$IPSW"
     fi
-    
+
     Log "Extracting IPSW: $IPSWExtract.ipsw"
-    unzip -q $IPSWExtract.ipsw -d $IPSWExtract/
+    unzip -q "$IPSWExtract.ipsw" -d "$IPSWExtract"/
     
     if [[ $DeviceProc == 7 ]]; then
         IPSW64
