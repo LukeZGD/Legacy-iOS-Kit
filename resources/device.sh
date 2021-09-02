@@ -183,6 +183,7 @@ CheckM8() {
         fi
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
+        pwnDFUDevice=$?
     fi
     
     if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then

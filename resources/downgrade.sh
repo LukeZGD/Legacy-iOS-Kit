@@ -44,7 +44,7 @@ FutureRestore() {
     local futurerestore
     
     if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs="-s $IPSWCustom/Firmware/all_flash/$SEP -m $BuildManifest"
+        ExtraArgs="-s $IPSWRestore/Firmware/all_flash/$SEP -m $BuildManifest"
         futurerestore=$futurerestore2
     else
         ExtraArgs="--use-pwndfu"
