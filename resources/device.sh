@@ -173,8 +173,8 @@ CheckM8() {
             Log "Running rmsigchks.py..."
             $rmsigchks
             pwnDFUDevice=$?
-            pwnD=$($irecovery -q | grep -c "PWND")
             cd ../..
+            pwnD=$($irecovery -q | grep -c "PWND")
         else
             cd ../..
             Log "Sending iBSS..."
@@ -183,6 +183,7 @@ CheckM8() {
         fi
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
+        pwnDFUDevice=$?
     fi
     
     if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then

@@ -7,7 +7,7 @@ SetToolPaths() {
         platform="linux"
         platformver="$PRETTY_NAME"
         MPath+="$platform"
-    
+
         bspatch="$(which bspatch)"
         futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
@@ -16,7 +16,6 @@ SetToolPaths() {
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 80"
-        tsschecker2="env LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/tsschecker2_linux"
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -39,7 +38,6 @@ SetToolPaths() {
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
-        tsschecker2="./resources/tools/tsschecker2_macos"
     fi
     dmg="./resources/tools/dmg_$platform"
     git="$(which git)"
@@ -110,8 +108,8 @@ InstallDepends() {
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
     fi
-    if [[ $ID == "arch" || $ID_LIKE == "arch" ]]; then
-        sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils
+    if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+        sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils zenity
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
     
@@ -119,7 +117,7 @@ InstallDepends() {
          [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils
+        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils zenity
         SavePkg
         cp libcrypto.so.1.0.0 libcurl.so.3 libpng12.so.0 libssl.so.1.0.0 ../resources/lib
         if [[ $VERSION_ID == "20"* ]]; then
@@ -129,7 +127,7 @@ InstallDepends() {
         fi
     
     elif [[ $ID == "fedora" ]] && (( $VERSION_ID >= 33 )); then
-        sudo dnf install -y bsdiff git libimobiledevice libpng12 libzip perl-Digest-SHA python2
+        sudo dnf install -y bsdiff git libimobiledevice libpng12 libzip perl-Digest-SHA python2 zenity
         SavePkg
         cp libcrypto.so.1.0.0 libssl.so.1.0.0 ../resources/lib
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
@@ -142,7 +140,7 @@ InstallDepends() {
             libimobiledevice="libimobiledevice6"
             ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
         fi
-        sudo zypper -n in bsdiff curl git $libimobiledevice libpng12-0 libopenssl1_0_0 libzip5 python-base
+        sudo zypper -n in bsdiff curl git $libimobiledevice libpng12-0 libopenssl1_0_0 libzip5 python-base zenity
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $platform == "macos" ]]; then
@@ -168,6 +166,8 @@ InstallDepends() {
         Log "Extracting libimobiledevice..."
         unzip -q libimobiledevice.zip -d ../resources/libimobiledevice_$platform
         chmod +x ../resources/libimobiledevice_$platform/*
+    elif [[ $MPath != "./resources"* ]]; then
+        mkdir ../resources/libimobiledevice_$platform
     fi
     
     cd ..
