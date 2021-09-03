@@ -174,7 +174,6 @@ CheckM8() {
             $rmsigchks
             pwnDFUDevice=$?
             cd ../..
-            pwnD=$($irecovery -q | grep -c "PWND")
         else
             cd ../..
             Log "Sending iBSS..."
@@ -185,6 +184,7 @@ CheckM8() {
         $ipwnder32 -p
         pwnDFUDevice=$?
     fi
+    [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
     
     if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
