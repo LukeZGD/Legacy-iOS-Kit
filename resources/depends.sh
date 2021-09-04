@@ -1,11 +1,13 @@
 #!/bin/bash
 
 SetToolPaths() {
+    MPath="./resources/libimobiledevice_"
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
         platformver="$PRETTY_NAME"
-    
+        MPath+="$platform"
+
         bspatch="$(which bspatch)"
         futurerestore1="sudo LD_PRELOAD=./resources/lib/libcurl.so.3 LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore1_linux"
         futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
@@ -13,11 +15,19 @@ SetToolPaths() {
         python="$(which python2)"
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
-        SimpleHTTPServer="sudo $python -m SimpleHTTPServer 80"
+        SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 80"
     
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platformver="${1:-$(sw_vers -productVersion)}"
+        MPath+="$platform"
+        if [[ -e /usr/local/bin/idevicedate && -e /usr/local/bin/irecovery ]]; then
+            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Intel Mac)"
+            MPath="/usr/local/bin"
+        elif [[ -e /opt/homebrew/bin/idevicedate && -e /opt/homebrew/bin/irecovery ]]; then
+            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Apple Silicon)"
+            MPath="/opt/homebrew/bin"
+        fi
     
         bspatch="/usr/bin/bspatch"
         futurerestore1="./resources/tools/futurerestore1_macos"
@@ -31,17 +41,18 @@ SetToolPaths() {
     
     elif [[ $OSTYPE == "msys" ]]; then
         platform="win"
+        MPath+="$platform"
         bspatch="./resources/tools/bspatch_win"
         idevicerestore="./resources/tools/idevicerestore_win"
         python=/
     fi
     git="$(which git)"
-    ideviceenterrecovery="./resources/libimobiledevice_$platform/ideviceenterrecovery"
-    ideviceinfo="./resources/libimobiledevice_$platform/ideviceinfo"
-    iproxy="./resources/libimobiledevice_$platform/iproxy"
+    ideviceenterrecovery="$MPath/ideviceenterrecovery"
+    ideviceinfo="$MPath/ideviceinfo"
+    iproxy="$MPath/iproxy"
     ipsw="./tools/ipsw_$platform"
     [[ $platform == "win" ]] && ipsw="cmd //c $(dirname $0)/resources/tools/ipsw_win.exe"
-    irecoverychk="./resources/libimobiledevice_$platform/irecovery"
+    irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
     [[ $platform == "linux" ]] && irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
     partialzip="./resources/tools/partialzip_$platform"
@@ -97,26 +108,32 @@ InstallDepends() {
     cd ../tmp
     
     Log "Installing dependencies..."
-    if [[ $ID == "arch" || $ID_LIKE == "arch" ]]; then
-        sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils
+    if [[ $platform == "linux" ]]; then
+        Echo "* iOS-OTA-Downgrader will be installing dependencies from your distribution's package manager"
+        Echo "* Enter root password of your PC when prompted"
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
+    fi
+    if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+        sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils zenity
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ ! -z $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
-         [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" ]]; then
+         [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 usbmuxd usbutils
+        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils zenity
         SavePkg
         cp libcrypto.so.1.0.0 libcurl.so.3 libpng12.so.0 libssl.so.1.0.0 ../resources/lib
-        if [[ $PRETTY_NAME == "Debian GNU/Linux bullseye/sid" || $VERSION_ID != "20"* ]]; then
-            sudo apt install -y libzip4
-        else
+        if [[ $VERSION_ID == "20"* ]]; then
             cp libzip.so.4 ../resources/lib
+        else
+            sudo apt install -y libzip4
         fi
     
     elif [[ $ID == "fedora" ]] && (( $VERSION_ID >= 33 )); then
-        sudo dnf install -y bsdiff git libimobiledevice libpng12 libzip perl-Digest-SHA python2
+        sudo dnf install -y bsdiff git libimobiledevice libpng12 libzip perl-Digest-SHA python2 zenity
         SavePkg
         cp libcrypto.so.1.0.0 libssl.so.1.0.0 ../resources/lib
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
@@ -129,12 +146,16 @@ InstallDepends() {
             libimobiledevice="libimobiledevice6"
             ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
         fi
-        sudo zypper -n in bsdiff curl git $libimobiledevice libpng12-0 libopenssl1_0_0 libzip5 python-base
+        sudo zypper -n in bsdiff curl git $libimobiledevice libpng12-0 libopenssl1_0_0 libzip5 python-base zenity
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
     
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
         libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip" "328e809dea350ae68fb644225bbf8469c0f0634b")
+        Echo "* iOS-OTA-Downgrader provides a copy of libimobiledevice and libirecovery by default"
+        Echo "* In case that problems occur, try installing them from Homebrew"
+        Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"
+        Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
     
     elif [[ $platform == "win" ]]; then
         pacman -Sy --noconfirm --needed git openssh unzip
@@ -150,11 +171,15 @@ InstallDepends() {
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "4344b3ca95d7433d5a49dcacc840d47770ba34c4")
     fi
     
-    if [[ ! -d ../resources/libimobiledevice_$platform ]]; then
+    if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
+        Log "Downloading libimobiledevice..."
         SaveFile ${libimobiledevice[0]} libimobiledevice.zip ${libimobiledevice[1]}
         mkdir ../resources/libimobiledevice_$platform
-        unzip libimobiledevice.zip -d ../resources/libimobiledevice_$platform
+        Log "Extracting libimobiledevice..."
+        unzip -q libimobiledevice.zip -d ../resources/libimobiledevice_$platform
         chmod +x ../resources/libimobiledevice_$platform/*
+    elif [[ $MPath != "./resources"* ]]; then
+        mkdir ../resources/libimobiledevice_$platform
     fi
     
     if [[ $platform == "win" ]]; then

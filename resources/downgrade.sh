@@ -44,7 +44,7 @@ FutureRestore() {
     local futurerestore
     
     if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs="-s $IPSWCustom/Firmware/all_flash/$SEP -m $BuildManifest"
+        ExtraArgs="-s $IPSWRestore/Firmware/all_flash/$SEP -m $BuildManifest"
         futurerestore=$futurerestore2
     else
         ExtraArgs="--use-pwndfu"
@@ -54,7 +54,7 @@ FutureRestore() {
     Log "Proceeding to futurerestore..."
     if [[ $Baseband == 0 ]]; then
         Log "Device $ProductType has no baseband"
-        $futurerestore -t $SHSH --no-baseband $ExtraArgs $IPSWRestore.ipsw
+        $futurerestore -t $SHSH --no-baseband $ExtraArgs "$IPSWRestore.ipsw"
     else
         FRBaseband
         $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
@@ -70,12 +70,21 @@ Downgrade() {
     local Verify
     
     if [[ $OSVer == "Other" ]]; then
-        Echo "* Move/copy the IPSW and SHSH to the directory where the script is located"
-        Echo "* Remember to create a backup of the SHSH"
-        read -p "$(Input 'Path to IPSW (drag IPSW to terminal window):')" IPSW
-        IPSW="$(basename $IPSW .ipsw)"
-        read -p "$(Input 'Path to SHSH (drag SHSH to terminal window):')" SHSH
-    
+        if [[ $platform == "linux" ]]; then
+            IPSW="$(zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
+            IPSW="${IPSW%?????}"
+            Log "Selected IPSW file: $IPSW"
+            SHSH="$(zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select SHSH file")"
+            Log "Selected SHSH file: $SHSH"
+        else
+            Echo "* Move/copy the IPSW and SHSH files to the directory where the script is located"
+            Echo "* When entering the names of IPSW and SHSH, enter the full name including the file extension"
+            Echo "* Remember to create a backup of the SHSH"
+            read -p "$(Input 'Enter name of IPSW file:')" IPSW
+            IPSW="$(basename $IPSW .ipsw)"
+            read -p "$(Input 'Enter name of SHSH file:')" SHSH
+        fi
+
     elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
         read -p "$(Input 'Jailbreak the selected iOS version? (Y/n):')" Jailbreak
         
@@ -142,7 +151,9 @@ Downgrade() {
         if [[ $Verify == 1 ]]; then
             Log "Verifying IPSW..."
             IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
+            Log "Expected SHA1sum: $IPSWSHA1"
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
+            Log "Actual SHA1sum:   $IPSWSHA1L"
             if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
                 Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
                 "Delete/replace the IPSW and run the script again"
@@ -158,19 +169,21 @@ Downgrade() {
             mkdir -p saved/$ProductType 2>/dev/null
             unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
         fi
+    else
+        IPSWCustom=0
     fi
     
     [[ $DeviceState == "Normal" ]] && kDFU
-    
+
     if [[ $Jailbreak == 1 || $IPSWRestore == $IPSWCustom || $IPSWCustomW == 1 ]]; then
         [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] && IPSW32
-        IPSWExtract=$IPSWCustom
+        IPSWExtract="$IPSWCustom"
     else
-        IPSWExtract=$IPSW
+        IPSWExtract="$IPSW"
     fi
-    
+
     Log "Extracting IPSW: $IPSWExtract.ipsw"
-    unzip -q $IPSWExtract.ipsw -d $IPSWExtract/
+    unzip -q "$IPSWExtract.ipsw" -d "$IPSWExtract"/
     
     if [[ $DeviceProc == 7 ]]; then
         IPSW64
@@ -179,7 +192,7 @@ Downgrade() {
     elif [[ $Jailbreak != 1 && $OSVer != "Other" && $IPSWCustomW != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
-        $SimpleHTTPServer &
+        [[ $platform == "linux" ]] && $SimpleHTTPServer || $SimpleHTTPServer &
         ServerRunning=1
         cd ..
     fi

@@ -77,7 +77,7 @@
 - [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 33 and newer
-- [**Debian**](https://www.debian.org/) Testing and Unstable
+- [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
 
@@ -89,8 +89,11 @@
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
-  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by hard-resetting and re-entering recovery/DFU mode
-  - Use an Intel PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
+  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/en-ph/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
+  - macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
+    - The script will detect this automatically and will use the Homebrew versions of the tools
+  - Use an Intel or Apple Silicon PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
+  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see issue [#114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again

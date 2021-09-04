@@ -59,19 +59,22 @@ Main() {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
+    if [[ ! -d ./resources ]]; then
+        Error "resources folder cannot be found. Replace resources folder and try again." \
+        "If resources folder is present try removing spaces from path/folder name"
+    fi
+    
     SetToolPaths
+    if [[ $? != 0 ]]; then
+        Error "Setting tool paths failed. Your copy of iOS-OTA-Downgrader seems to be incomplete."
+    fi
     
     if [[ ! $platform ]]; then
         Error "Platform unknown/not supported."
     fi
     
-    if [[ ! -d ./resources ]]; then
-        Error "resources folder cannot be found. Replace resources folder and try again" \
-        "If resources folder is present try removing spaces from path/folder name"
-    fi
-    
     chmod +x ./resources/*.sh ./resources/tools/*
-    if [[ $? == 1 ]]; then
+    if [[ $? != 0 ]]; then
         Log "Warning - An error occurred in chmod. This might cause problems..."
     fi
     
@@ -80,11 +83,7 @@ Main() {
     fi
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-        Log "M1 Mac detected. Support is limited, the script may or may not work for you"
-        Echo "* M1 macs can still proceed but I cannot support it if things break"
-        Echo "* Proceed at your own risk."
-        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-        read -s
+        Log "Apple Silicon Mac detected. Support may be limited, proceed at your own risk."
     elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only 64-bit (x86_64) distributions are supported."
     fi

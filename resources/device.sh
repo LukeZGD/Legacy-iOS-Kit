@@ -1,17 +1,30 @@
 #!/bin/bash
 
 FindDevice() {
+    local DeviceIn
+    local i=0
+    local Timeout=999
     local USB
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
+    [[ ! -z $2 ]] && Timeout=3
     
     Log "Finding device in $1 mode..."
-    while [[ $DeviceState != "$1" ]]; do
-        [[ $platform == "linux" ]] && DeviceState=$(lsusb | grep -c $USB)
-        [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-) == "$1" ]] && DeviceState=1
-        [[ $DeviceState == 1 ]] && DeviceState="$1"
+    while (( $i < $Timeout )); do
+        [[ $platform == "linux" ]] && DeviceIn=$(lsusb | grep -c "05ac:$USB")
+        [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
+        if [[ $DeviceIn == 1 ]]; then
+            Log "Found device in $1 mode."
+            DeviceState="$1"
+            break
+        fi
         sleep 1
+        ((i++))
     done
-    Log "Found device in $1 mode."
+    
+    if [[ $DeviceIn != 1 ]]; then
+        [[ $2 == "error" ]] && Error "Failed to find device in $1 mode. (Timed out)"
+        return 1
+    fi
 }
 
 GetDeviceValues() {
@@ -21,7 +34,7 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep "MODE" | cut -c 7-)"
+        DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     else
         DeviceState="Normal"
     fi
@@ -135,36 +148,56 @@ GetDeviceValues() {
 CheckM8() {
     local pwnDFUTool
     local pwnDFUDevice
+    local pwnD=1
     
-    [[ $platform == macos ]] && pwnDFUTool="iPwnder32" || pwnDFUTool="ipwndfu"
+    if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+        pwnDFUTool="iPwnder32"
+    elif [[ $platform == "macos" ]]; then
+        Selection=("iPwnder32" "ipwndfu")
+        Input "Select pwnDFU tool to use (Select 1 if unsure):"
+        select opt in "${Selection[@]}"; do
+        case $opt in
+            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
+            *) pwnDFUTool="iPwnder32"; break;;
+        esac
+        done
+    else
+        pwnDFUTool="ipwndfu"
+    fi
+    
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
         $ipwndfu -p
+        if  [[ $DeviceProc == 7 ]]; then
+            Log "Running rmsigchks.py..."
+            $rmsigchks
+            pwnDFUDevice=$?
+            cd ../..
+        else
+            cd ../..
+            Log "Sending iBSS..."
+            kDFU iBSS || echo
+            pwnDFUDevice=$?
+        fi
     elif [[ $pwnDFUTool == "iPwnder32" ]]; then
         $ipwnder32 -p
-        cd resources/ipwndfu
-    fi
-    
-    if [[ $DeviceProc == 7 ]]; then
-        Log "Running rmsigchks.py..."
-        $rmsigchks
-        pwnDFUDevice=$?
-        cd ../..
-    else
-        cd ../..
-        [[ $pwnDFUTool == "ipwndfu" ]] && kDFU iBSS || echo
         pwnDFUDevice=$?
     fi
+    [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
     
-    if [[ $pwnDFUDevice == 1 || $pwnDFUDevice == 255 ]]; then
+    if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
-        echo "${Color_Y}* The only option is to make sure you are using an Intel device, and to try multiple times ${Color_N}"
+        echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
         Echo "* For more details, read the \"Other Notes\" section of the README"
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
+    else
+        Log "Warning - Failed to detect device in pwnDFU mode."
+        Echo "* If the device entered pwnDFU mode successfully, you may continue"
+        Echo "* If entering pwnDFU failed, you may have to force restart your device and start over"
     fi
 }
 
@@ -177,7 +210,7 @@ Recovery() {
         FindDevice "Recovery"
     fi
     
-    Log "Get ready to enter DFU mode."
+    Echo "* Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."
@@ -197,7 +230,7 @@ Recovery() {
     done
     echo
     
-    FindDevice "DFU"
+    FindDevice "DFU" error
     CheckM8
 }
 
@@ -271,20 +304,29 @@ kDFU() {
 }
 
 pwnREC() {
+    local Attempt=1
+    
     if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
         Log "iPad mini 2 device detected. Setting iBSS and iBEC to \"ipad4b\""
         iBEC=$iBECb
         iBSS=$iBSSb
     fi
-    Log "Entering pwnREC mode..."
-    Log "Sending iBSS..."
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-    Log "Sending iBEC..."
-    $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
-    sleep 5
-    Echo "* If your device has backlight turned on, you may try unplugging and re-plugging in your device to attempt to continue"
-    Echo "* If not, you may have to hard-reset your device and start over entering pwnDFU mode again"
-    Echo "* You can press Ctrl+C to cancel finding device"
-    FindDevice "Recovery"
+    
+    while (( $Attempt < 4 )); do
+        Log "Entering pwnREC mode... (Attempt $Attempt)"
+        Log "Sending iBSS..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        Log "Sending iBEC..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
+        sleep 3
+        FindDevice "Recovery" timeout
+        [[ $? == 0 ]] && break
+        ((Attempt++))
+    done
+    
+    if (( $Attempt == 4 )); then
+        Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again" \
+        "macOS users may have to install libimobiledevice and libirecovery from Homebrew. For more details, read the \"Other Notes\" section of the README"
+    fi
 }
