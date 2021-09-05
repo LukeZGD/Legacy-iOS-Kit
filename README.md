@@ -86,14 +86,15 @@
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
 - **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
+- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
+  - The script will detect this automatically and will use the Homebrew versions of the tools
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
   - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/en-ph/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
-  - macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
-    - The script will detect this automatically and will use the Homebrew versions of the tools
   - Use an Intel or Apple Silicon PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
   - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see issue [#114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
+  - For more troubleshooting steps for entering pwnDFU mode, see issue [#126](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/126)
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
@@ -109,17 +110,10 @@
   - Select the "kDFU mode" option if your device is already in kDFU mode beforehand. Example of this is using kDFUApp by tihmstar; kDFUApp can also be installed from my repo
   - For A6/A6X devices, "DFU mode (A6)" option can be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
   - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield ([checkm8-a5](https://github.com/synackuk/checkm8-a5))
-- **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
+- **For the jailbreak option:**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
-  - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
-- **For the jailbreak option (iOS 8.4.1 only):**
-  - Stashing is already enabled and `nosuid` is removed from `fstab`, so there is no need to install "Stashing for #etasonJB" package
-- **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
-  - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
-  - **A5X devices:** iPad 3
-  - The jailbreak option **might not work** on A5 Rev A devices. (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70)) The script will warn you if you enable the jailbreak option on one of these devices
-  - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
-  - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
+  - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package as stashing is already enabled
+  - For devices jailbroken with daibutsu, add the system repo for future updates to the untether: https://dora2ios.github.io/repo/
 - **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection, kDFUApp
 
 ## Tools and other stuff used by this script:
@@ -131,7 +125,7 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice (macOS binaries)
-- [idevicerestore](https://github.com/LukeeGD/idevicerestore)
+- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
 - ipsw tool from [xpwn](https://github.com/LukeeGD/xpwn) (OdysseusOTA/2) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
