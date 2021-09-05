@@ -90,9 +90,11 @@ Downgrade() {
         
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             Jailbreak=1
-            if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
-                $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+            if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" ||
+                  $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
+                  $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
                [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
+                Log "Using daibutsu jailbreak"
                 JBDaibutsu=1
             fi
         fi
@@ -158,7 +160,7 @@ Downgrade() {
                 "Delete/replace the IPSW and run the script again"
             fi
         elif [[ -e "$IPSWCustom.ipsw" ]]; then
-            Log "Found existing Custom IPSW. Skipping verification."
+            Log "Found existing Custom IPSW. Skipping IPSW verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
         fi

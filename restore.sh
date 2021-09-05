@@ -99,8 +99,8 @@ Main() {
         InstallDepends
     fi
     
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
+    SaveExternal LukeZGD iOS-OTA-Downgrader-Keys
+    SaveExternal LukeZGD ipwndfu
     
     GetDeviceValues
     
