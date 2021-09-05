@@ -125,17 +125,18 @@
 ## Tools and other stuff used by this script:
 - cURL
 - bspatch
-- [ipwndfu](https://github.com/LukeZGD/ipwndfu)
-- [iPwnder32](https://github.com/dora2-iOS/iPwnder32)
-- [irecovery](https://github.com/libimobiledevice/libirecovery)
+- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
+- [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
+- [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
-- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
+- [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice (macOS binaries)
 - [idevicerestore](https://github.com/LukeeGD/idevicerestore)
-- ipsw tool from [xpwn](https://github.com/LukeeGD/xpwn) (OdysseusOTA/2)
+- ipsw tool from [xpwn](https://github.com/LukeeGD/xpwn) (OdysseusOTA/2) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
-- [tsschecker](https://github.com/tihmstar/tsschecker)
-- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices
-- [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices
+- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
+- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
+- [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
