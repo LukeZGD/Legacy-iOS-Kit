@@ -57,18 +57,18 @@ SetToolPaths() {
 }
 
 SaveExternal() {
-    local ExternalURL="https://github.com/LukeZGD/$1.git"
-    local External=$1
-    [[ $1 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
+    local ExternalURL="https://github.com/$1/$2.git"
+    local External=$2
+    [[ $2 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
     cd resources
     if [[ ! -d $External || ! -d $External/.git ]]; then
         Log "Downloading $External..."
         rm -rf $External
         $git clone $ExternalURL $External
     fi
-    if [[ ! -e $External/README.md || ! -d $External/.git ]]; then
+    if [[ ! $(ls $External/*.md) || ! -d $External/.git ]]; then
         rm -rf $External
-        Error "Downloading/updating $1 failed. Please run the script again"
+        Error "Downloading/updating $2 failed. Please run the script again"
     fi
     cd ..
 }

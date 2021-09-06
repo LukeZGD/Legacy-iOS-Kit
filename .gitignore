@@ -1,6 +1,8 @@
 *.bbfw
 *.dfu
+*.dmg
 *.im4p
+*.ipa
 *.ipsw
 *.json
 *.shsh
@@ -10,6 +12,7 @@
 Cydia*
 iP*
 saved/
+resources/daibutsuCFW
 resources/FirmwareBundles
 resources/firmware/
 resources/ipwndfu/
