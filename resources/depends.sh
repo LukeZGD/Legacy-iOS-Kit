@@ -39,9 +39,7 @@ SetToolPaths() {
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
     fi
-    dmg="./resources/tools/dmg_$platform"
     git="$(which git)"
-    hfsplus="./resources/tools/hfsplus_$platform"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     iproxy="$MPath/iproxy"
