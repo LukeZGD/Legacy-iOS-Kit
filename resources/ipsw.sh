@@ -1,6 +1,7 @@
 #!/bin/bash
 
 IPSW32() {
+    local Bundle="resources/firmware/FirmwareBundles/Down_${ProductType}_${OSVer}_${BuildVer}.bundle"
     local JBFiles
     local JBMemory
     local JBSHA1
@@ -11,8 +12,12 @@ IPSW32() {
         return
     fi
 
+    if [[ -e $Bundle/Info.plist.bak ]]; then
+        rm $Bundle/Info.plist
+        mv $Bundle/Info.plist.bak $Bundle/Info.plist
+    fi
+
     if [[ $JBDaibutsu == 1 ]]; then
-        ipsw="./tools/daibutsuCFW_$platform"
         JBPartSize="-daibutsu"
         SaveExternal dora2-iOS daibutsuCFW
         echo '#!/bin/bash' > tmp/reboot.sh
@@ -21,6 +26,8 @@ IPSW32() {
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
 
     elif [[ $Jailbreak == 1 ]]; then
+        cp $Bundle/Info.plist $Bundle/Info.plist.bak
+        sed -z -i "s|</dict>\n</plist>|\t<key>needPref</key>\n\t<true/>\n</dict>\n</plist>|g" $Bundle/Info.plist
         if [[ $OSVer == 8.4.1 ]]; then
             JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
             JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
