@@ -112,9 +112,11 @@
   - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield ([checkm8-a5](https://github.com/synackuk/checkm8-a5))
 - **For the jailbreak option:**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
-  - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package as stashing is already enabled
+  - p0sixspwn will be used for iOS 6.1.3, and EtasonJB or daibutsu for iOS 8.4.1
+  - For some devices, EtasonJB untether is unstable and not working properly, so daibutsu jailbreak will be used. See PR [#129](https://github.com/LukeZGD/iOS-OTA-Downgrader/pull/129) for more details
+  - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package, as stashing is already enabled
   - For devices jailbroken with daibutsu, add the system repo for future updates to the untether: https://dora2ios.github.io/repo/
-- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection, kDFUApp
+- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear and kDFUApp if needed
 
 ## Tools and other stuff used by this script:
 - cURL
