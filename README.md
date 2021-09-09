@@ -128,7 +128,7 @@
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice (macOS binaries)
 - [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
-- ipsw tool from [xpwn](https://github.com/LukeeGD/xpwn) (OdysseusOTA/2) - LukeZGD fork
+- ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
 - [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
