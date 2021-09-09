@@ -94,8 +94,10 @@ Downgrade() {
                   $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
                   $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
                [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
-                Log "Using daibutsu jailbreak"
-                JBDaibutsu=1
+                if [[ $OSVer == 8.4.1 ]]; then
+                    Log "Using daibutsu jailbreak"
+                    JBDaibutsu=1
+                fi
             fi
         fi
     fi
