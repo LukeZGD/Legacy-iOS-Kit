@@ -86,8 +86,10 @@
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
 - **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
-- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
-  - The script will detect this automatically and will use the Homebrew versions of the tools
+- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/)
+  - For Homebrew: `brew install libimobiledevice libirecovery`
+  - For MacPorts: `sudo port install libimobiledevice libirecovery`
+  - The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)

@@ -27,6 +27,9 @@ SetToolPaths() {
         elif [[ -e /opt/homebrew/bin/idevicedate && -e /opt/homebrew/bin/irecovery ]]; then
             Log "Detected libimobiledevice and libirecovery installed from Homebrew (Apple Silicon)"
             MPath="/opt/homebrew/bin"
+        elif [[ -e /opt/local/bin/idevicedate && -e /opt/local/bin/irecovery ]]; then
+            Log "Detected libimobiledevice and libirecovery installed from MacPorts"
+            MPath="/opt/local/bin"
         fi
     
         bspatch="/usr/bin/bspatch"
