@@ -55,9 +55,9 @@
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
-  - Normal method - **jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
-  - DFU method - for alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
-- **A7 devices** - jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
+  - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
+  - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
+- **A7 devices** - Jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
 
 <details>
   <summary>For Pangu 32-bit users:</summary>
@@ -65,10 +65,10 @@
 </details>
 
 ## Usage:
-1. [Download iOS-OTA-Downgrader here](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) and extract the zip archive
+1. [Download iOS-OTA-Downgrader here](https://api.github.com/repos/LukeZGD/iOS-OTA-Downgrader/zipball) and extract the zip archive
 2. Plug in your iOS device
 3. Open a Terminal window
-4. `cd` to where the zip archive is extracted, and run `./restore.sh`
+4. `cd` to where the extracted files are located, and run `./restore.sh`
     - You can also drag `restore.sh` to the Terminal window and press Enter/Return
 5. Select options to be used
 6. Follow instructions
@@ -84,7 +84,7 @@
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
-- **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
+- **For users having issues with missing libraries/tools:** To re-install dependencies, run `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
 - macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/)
   - For Homebrew: `brew install libimobiledevice libirecovery`
@@ -93,14 +93,14 @@
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
-  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/en-ph/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
+  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
   - Use an Intel or Apple Silicon PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
-  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see issue [#114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
-  - For more troubleshooting steps for entering pwnDFU mode, see issue [#126](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/126)
+  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see [issue #114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
+  - For more troubleshooting steps for entering pwnDFU mode, see [issue #126](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/126)
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
-  - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
+  - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 where there were reported issues)
   - This script can also be used to just enter kDFU mode for all supported devices
   - This script can work on virtual machines, but I will not provide support for them
   - If you want to use other manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named `shsh`. You can then put your blob inside that folder.
@@ -108,14 +108,14 @@
     - Example with path: `saved/shsh/123456789012_iPad2,1_8.4.1-12H321.shsh`
 - **For DFU advanced menu:**
   - To enter DFU advanced menu, put your iOS device in recovery (A6 only), normal DFU (also A6 only), kDFU, or pwnDFU mode before running the script
-  - There are three options that can be used for the DFU advanced menu
+  - There are two options that can be used in the DFU advanced menu
   - Select the "kDFU mode" option if your device is already in kDFU mode beforehand. Example of this is using kDFUApp by tihmstar; kDFUApp can also be installed from my repo
   - For A6/A6X devices, "DFU mode (A6)" option can be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
-  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield ([checkm8-a5](https://github.com/synackuk/checkm8-a5))
+  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with [checkm8-a5](https://github.com/synackuk/checkm8-a5) using an Arduino and USB Host Shield
 - **For the jailbreak option:**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
   - p0sixspwn will be used for iOS 6.1.3, and EtasonJB or daibutsu for iOS 8.4.1
-  - For some devices, EtasonJB untether is unstable and not working properly, so daibutsu jailbreak will be used. See PR [#129](https://github.com/LukeZGD/iOS-OTA-Downgrader/pull/129) for more details
+  - For some devices, EtasonJB untether is unstable and not working properly, so daibutsu jailbreak will be used. See [PR #129](https://github.com/LukeZGD/iOS-OTA-Downgrader/pull/129) for more details
   - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package, as stashing is already enabled
   - For devices jailbroken with daibutsu, add the system repo for future updates to the untether: https://dora2ios.github.io/repo/
 - **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear and kDFUApp if needed

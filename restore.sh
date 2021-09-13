@@ -182,9 +182,7 @@ Main() {
     SelectVersion
     
     Log "Option: $Mode"
-    [[ $Mode == "Downgrade" ]] && Downgrade
-    [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs
-    [[ $Mode == "kDFU" ]] && kDFU
+    $Mode
     exit 0
 }
 

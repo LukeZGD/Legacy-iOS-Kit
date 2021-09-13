@@ -39,7 +39,7 @@ GetDeviceValues() {
     elif [[ ! -z $ideviceinfo2 ]]; then
         DeviceState="Normal"
     fi
-    
+
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         local ProdCut=7
         ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)

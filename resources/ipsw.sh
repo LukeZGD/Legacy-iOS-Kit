@@ -2,10 +2,9 @@
 
 IPSW32() {
     local Bundle="resources/firmware/FirmwareBundles/Down_${ProductType}_${OSVer}_${BuildVer}.bundle"
+    local ExtraArgs
     local JBFiles
-    local JBMemory
     local JBSHA1
-    local JBPartSize
 
     if [[ $IPSWRestore == $IPSWCustom ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -18,7 +17,7 @@ IPSW32() {
     fi
 
     if [[ $JBDaibutsu == 1 ]]; then
-        JBPartSize="-daibutsu"
+        ExtraArgs+="-daibutsu "
         SaveExternal dora2-iOS daibutsuCFW
         echo '#!/bin/bash' > tmp/reboot.sh
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
@@ -28,14 +27,14 @@ IPSW32() {
     elif [[ $Jailbreak == 1 ]]; then
         cp $Bundle/Info.plist $Bundle/Info.plist.bak
         sed -z -i "s|</dict>\n</plist>|\t<key>needPref</key>\n\t<true/>\n</dict>\n</plist>|g" $Bundle/Info.plist
-        if [[ $OSVer == 8.4.1 ]]; then
+        if [[ $OSVer == "8.4.1" ]]; then
             JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
             JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
-            JBPartSize="-s 2305"
-        elif [[ $OSVer == 6.1.3 ]]; then
+            ExtraArgs+="-s 2305 "
+        elif [[ $OSVer == "6.1.3" ]]; then
             JBFiles=("fstab_rw.tar" "p0sixspwn.tar" "Cydia6.tar")
             JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
-            JBPartSize="-s 1260"
+            ExtraArgs+="-s 1260 "
         else
             Error "No OSVer selected?"
         fi
@@ -50,12 +49,13 @@ IPSW32() {
             JBFiles[$i]=jailbreak/${JBFiles[$i]}
         done
     fi
+    ExtraArgs+="-bbupdate"
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
         Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
         read -p "$(Input 'Memory option? (press Enter/Return if unsure) (Y/n):')" JBMemory
-        [[ $JBMemory != 'N' && $JBMemory != 'n' ]] && JBMemory="-memory" || JBMemory=
+        [[ $JBMemory != 'N' && $JBMemory != 'n' ]] && ExtraArgs+=" -memory"
         Log "Preparing custom IPSW..."
         cd resources
         rm -rf FirmwareBundles
@@ -64,7 +64,7 @@ IPSW32() {
         else
             ln -sf firmware/FirmwareBundles FirmwareBundles
         fi
-        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $JBMemory -bbupdate $JBPartSize ${JBFiles[@]}
+        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs ${JBFiles[@]}
         cd ..
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then
