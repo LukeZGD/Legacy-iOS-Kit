@@ -70,8 +70,10 @@ IPSW32() {
     ExtraArgs+="-bbupdate"
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
-        Echo "* By default, memory option is set to Y, you may select N later if you encounter problems"
-        Echo "* If it doesn't work with both, you might not have enough RAM and/or tmp storage"
+        Echo "* By default, memory option is set to Y."
+        Echo "* Make sure that you have at least 8GB of RAM for it to work!"
+        Echo "* If it freezes or fails, this may mean that you do not have enough RAM."
+        Echo "* You may select N if this happens, but make sure that you have enough storage space."
         read -p "$(Input 'Memory option? (press Enter/Return if unsure) (Y/n):')" JBMemory
         [[ $JBMemory != 'N' && $JBMemory != 'n' ]] && ExtraArgs+=" -memory"
         Log "Preparing custom IPSW..."
