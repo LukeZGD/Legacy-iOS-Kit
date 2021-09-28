@@ -186,6 +186,9 @@ Main() {
     
     Log "Option: $Mode"
     $Mode
+
+    Input "Press any key to exit."
+    read -s
     exit 0
 }
 
