@@ -170,7 +170,7 @@ InstallDepends() {
     fi
 
     if [[ $platform == "linux" ]]; then
-        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "fadc36d669255b0faa1ed242f9a1aad451c3b657")
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "4344b3ca95d7433d5a49dcacc840d47770ba34c4")
     fi
 
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
