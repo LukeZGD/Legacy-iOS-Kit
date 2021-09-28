@@ -94,8 +94,8 @@ Main() {
         InstallDepends
     fi
     
-    SaveExternal iOS-OTA-Downgrader-Keys
-    SaveExternal ipwndfu
+    SaveExternal LukeZGD iOS-OTA-Downgrader-Keys
+    SaveExternal LukeZGD ipwndfu
     
     GetDeviceValues
     
@@ -185,9 +185,7 @@ Main() {
     SelectVersion
     
     Log "Option: $Mode"
-    [[ $Mode == "Downgrade" ]] && Downgrade
-    [[ $Mode == "SaveOTABlobs" ]] && SaveOTABlobs
-    [[ $Mode == "kDFU" ]] && kDFU
+    $Mode
     exit 0
 }
 

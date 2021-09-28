@@ -31,20 +31,28 @@ GetDeviceValues() {
     local ideviceinfo2
     
     Log "Finding device in Normal mode..."
+    DeviceState=
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
-    else
+    elif [[ ! -z $ideviceinfo2 ]]; then
         DeviceState="Normal"
     fi
-    
+
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         local ProdCut=7
         ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
         [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
         ProductType=$(echo $ProductType | cut -c -$ProdCut)
+        if [[ ! $ProductType ]]; then
+            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
+        fi
+
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
+        if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
+            read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
+        fi
         ProductVer="Unknown"
     else
         ProductType=$(echo "$ideviceinfo2" | grep "ProductType" | cut -c 14-)
@@ -54,7 +62,7 @@ GetDeviceValues() {
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep "UniqueDeviceID" | cut -c 17-)
     fi
     
-    if [[ ! $ProductType ]]; then
+    if [[ ! $DeviceState ]]; then
         Error "No device detected. Please put the device in normal mode before proceeding. Recovery or DFU mode is also applicable" \
         "For more details regarding alternative methods, read the \"Other Notes\" section of the README"
     fi
@@ -267,7 +275,7 @@ kDFU() {
     
     $iproxy 2222 22 &
     iproxyPID=$!
-    
+
     Log "Copying stuff to device via SSH..."
     Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
     Echo "* Dropbear is only needed for devices on iOS 10"

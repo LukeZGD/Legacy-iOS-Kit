@@ -55,9 +55,9 @@
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
-  - Normal method - **jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my [Cydia repo](https://lukezgd.github.io/repo/)
-  - DFU method - for alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
-- **A7 devices** - jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
+  - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
+  - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
+- **A7 devices** - Jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
 
 <details>
   <summary>For Pangu 32-bit users:</summary>
@@ -65,10 +65,10 @@
 </details>
 
 ## Usage:
-1. [Download iOS-OTA-Downgrader here](https://github.com/LukeZGD/iOS-OTA-Downgrader/archive/master.zip) and extract the zip archive
+1. [Download iOS-OTA-Downgrader here](https://api.github.com/repos/LukeZGD/iOS-OTA-Downgrader/zipball) and extract the zip archive
 2. Plug in your iOS device
 3. Open a Terminal window
-4. `cd` to where the zip archive is extracted, and run `./restore.sh`
+4. `cd` to where the extracted files are located, and run `./restore.sh`
     - You can also drag `restore.sh` to the Terminal window and press Enter/Return
 5. Select options to be used
 6. Follow instructions
@@ -84,20 +84,23 @@
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
-- **For users having issues with missing libraries/tools:** Re-install dependencies with `./restore.sh Install`
+- **For users having issues with missing libraries/tools:** To re-install dependencies, run `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
+- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/)
+  - For Homebrew: `brew install libimobiledevice libirecovery`
+  - For MacPorts: `sudo port install libimobiledevice libirecovery`
+  - The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
-  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/en-ph/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
-  - macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) with this command: `brew install libimobiledevice libirecovery`
-    - The script will detect this automatically and will use the Homebrew versions of the tools
+  - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
   - Use an Intel or Apple Silicon PC/Mac as entering pwnDFU (checkm8) may be a lot more unreliable on AMD devices
-  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see issue [#114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
+  - Apple Silicon Mac users running macOS 11.3 and newer may encounter issues entering pwnDFU mode (see [issue #114](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/114))
+  - For more troubleshooting steps for entering pwnDFU mode, see [issue #126](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/126)
   - Other than the above, unfortunately there is not much else I can do to help regarding entering pwnDFU mode.
 - **For 32-bit devices:**
   - To make sure that SSH is successful, try these steps: Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again
-  - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 as there are reported issues)
+  - To devices with baseband, this script will restore your device with the latest baseband (except when jailbreak is enabled, and on iPhone5,1 where there were reported issues)
   - This script can also be used to just enter kDFU mode for all supported devices
   - This script can work on virtual machines, but I will not provide support for them
   - If you want to use other manually saved blobs for 6.1.3/8.4.1, create a folder named `saved`, then within it create another folder named `shsh`. You can then put your blob inside that folder.
@@ -105,37 +108,33 @@
     - Example with path: `saved/shsh/123456789012_iPad2,1_8.4.1-12H321.shsh`
 - **For DFU advanced menu:**
   - To enter DFU advanced menu, put your iOS device in recovery (A6 only), normal DFU (also A6 only), kDFU, or pwnDFU mode before running the script
-  - There are three options that can be used for the DFU advanced menu
+  - There are two options that can be used in the DFU advanced menu
   - Select the "kDFU mode" option if your device is already in kDFU mode beforehand. Example of this is using kDFUApp by tihmstar; kDFUApp can also be installed from my repo
   - For A6/A6X devices, "DFU mode (A6)" option can be used. This will use ipwndfu (or iPwnder32 for Mac) to put your device in pwnDFU mode, send pwned iBSS, and proceed with the downgrade/restore
-  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with an Arduino and USB Host Shield ([checkm8-a5](https://github.com/synackuk/checkm8-a5))
-- **For the jailbreak option (iOS 6.1.3 and 8.4.1):**
+  - For A5/A5X devices, "pwnDFU mode (A5)" option can be used, BUT ONLY IF the device is put in pwnDFU mode beforehand, with [checkm8-a5](https://github.com/synackuk/checkm8-a5) using an Arduino and USB Host Shield
+- **For the jailbreak option:**
   - If you have problems with Cydia, remove the ultrasn0w repo and close Cydia using the app switcher, then try opening Cydia again
-  - If you cannot find Cydia in your home screen, try accessing Cydia through Safari with `cydia://` and install "Jailbreak App Icons Fix" package from my Cydia repo
-- **For the jailbreak option (iOS 8.4.1 only):**
-  - Stashing is already enabled and `nosuid` is removed from `fstab`, so there is no need to install "Stashing for #etasonJB" package
-- **For users with A5 Rev A ([8942](https://www.theiphonewiki.com/wiki/S5L8942)) and A5X ([8945](https://www.theiphonewiki.com/wiki/S5L8945)) devices:**
-  - **A5 Rev A devices:** iPad2,4, iPad mini 1, iPod touch 5
-  - **A5X devices:** iPad 3
-  - The jailbreak option **might not work** on A5 Rev A devices. (see issue [#70](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/70)) The script will warn you if you enable the jailbreak option on one of these devices
-  - For users that downgraded **without** jailbreak option, and have manually jailbroken with the EtasonJB app, it is recommended to install "EtasonJB Disable Bootloop Protection" from my Cydia repo
-  - For users that downgraded **with** the jailbreak option, and to users that have installed "EtasonJB Disable Bootloop Protection", your device might take a very long time to boot, possibly 20 minutes or more
-- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear, Jailbreak App Icons Fix, EtasonJB Disable Bootloop Protection, kDFUApp
+  - p0sixspwn will be used for iOS 6.1.3, and EtasonJB or daibutsu for iOS 8.4.1
+  - For some devices, EtasonJB untether is unstable and not working properly, so daibutsu jailbreak will be used. See [PR #129](https://github.com/LukeZGD/iOS-OTA-Downgrader/pull/129) for more details
+  - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package, as stashing is already enabled
+  - For devices jailbroken with daibutsu, add the system repo for future updates to the untether: https://dora2ios.github.io/repo/
+- **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear and kDFUApp if needed
 
 ## Tools and other stuff used by this script:
 - cURL
 - bspatch
-- [ipwndfu](https://github.com/LukeZGD/ipwndfu)
-- [iPwnder32](https://github.com/dora2-iOS/iPwnder32)
-- [irecovery](https://github.com/libimobiledevice/libirecovery)
-- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice)
-- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) (macOS)
-- [idevicerestore](https://github.com/LukeeGD/idevicerestore)
-- ipsw tool from [xpwn](https://github.com/LukeeGD/xpwn) (OdysseusOTA/2)
+- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
+- [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
+- [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios
+- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
+- [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice (macOS binaries)
+- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
+- ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
-- [tsschecker](https://github.com/tihmstar/tsschecker)
-- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices
-- [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices
+- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
+- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
+- [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)

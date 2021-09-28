@@ -90,11 +90,14 @@ Downgrade() {
         
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             Jailbreak=1
-            if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
-                $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]]; then
-                Log "Warning - A5 Rev A device detected. Enabling the jailbreak option might not work for you"
-                read -p "$(Input 'Select Y to continue anyway, N to cancel and exit (y/N):')" Jailbreak
-                [[ $Jailbreak == 'Y' || $Jailbreak == 'y' ]] && Jailbreak=1 || exit 0
+            if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" ||
+                  $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
+                  $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+               [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
+                if [[ $OSVer == "8.4.1" ]]; then
+                    Log "Using daibutsu jailbreak"
+                    JBDaibutsu=1
+                fi
             fi
         fi
     fi
@@ -162,7 +165,7 @@ Downgrade() {
                 "Delete/replace the IPSW and run the script again"
             fi
         elif [[ -e "$IPSWCustom.ipsw" ]]; then
-            Log "Found existing Custom IPSW. Skipping verification."
+            Log "Found existing Custom IPSW. Skipping IPSW verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
             IPSWRestore=$IPSWCustom
         fi

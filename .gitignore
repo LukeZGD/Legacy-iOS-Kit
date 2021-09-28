@@ -1,6 +1,8 @@
 *.bbfw
 *.dfu
+*.dmg
 *.im4p
+*.ipa
 *.ipsw
 *.json
 *.shsh
@@ -10,9 +12,12 @@
 Cydia*
 iP*
 saved/
-resources/FirmwareBundles
+resources/FirmwareBundles/
 resources/firmware/
 resources/ipwndfu/
+resources/jailbreak/bin.tar
+resources/jailbreak/cydia.tar
+resources/jailbreak/untether.tar
 resources/libimobiledevice*/
 resources/libirecovery/
 tmp/
