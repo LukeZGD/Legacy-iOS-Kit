@@ -5,7 +5,7 @@ iDeviceRestore() {
     [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
     mkdir shsh
     mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-    $idevicerestore -ew $IPSWRestore.ipsw
+    $idevicerestore -ewy $IPSWRestore.ipsw
     if [[ $platform == "macos" && $? != 0 ]]; then
         Log "An error seems to have occurred when running idevicerestore."
         Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"

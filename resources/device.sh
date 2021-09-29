@@ -52,7 +52,7 @@ GetDeviceValues() {
             read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
         fi
 
-        [[ $platform != "win" ]] && UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
+        UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
         if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
             read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
         fi

@@ -187,7 +187,9 @@ InstallDepends() {
     cd ..
     Log "Install script done! Please run the script again to proceed"
 
-    Input "Press Enter/Return to exit."
-    read -s
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 0
 }

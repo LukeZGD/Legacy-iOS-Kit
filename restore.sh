@@ -40,8 +40,10 @@ Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
-    Input "Press Enter/Return to exit."
-    read -s
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 1
 }
 
@@ -189,8 +191,10 @@ Main() {
     Log "Option: $Mode"
     $Mode
 
-    Input "Press Enter/Return to exit."
-    read -s
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 0
 }
 
