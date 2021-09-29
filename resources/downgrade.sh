@@ -161,9 +161,10 @@ Downgrade() {
             IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
             Log "Actual SHA1sum:   $IPSWSHA1L"
             if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
-                Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete." \
-                "Delete/replace the IPSW and run the script again"
+                Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Delete/replace the IPSW and run the script again" \
+                "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
             fi
+            Log "IPSW SHA1sum matches."
         elif [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW. Skipping IPSW verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"

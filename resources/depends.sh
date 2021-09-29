@@ -85,8 +85,10 @@ SaveExternal() {
 
 SaveFile() {
     curl -L $1 -o $2
-    if [[ $(shasum $2 | awk '{print $1}') != $3 ]]; then
-        Error "Verifying failed. Please run the script again" "./restore.sh Install"
+    local SHA1=$(shasum $2 | awk '{print $1}')
+    if [[ $SHA1 != $3 ]]; then
+        Error "Verifying $2 failed. The downloaded file may be corrupted or incomplete. Please run the script again" \
+        "SHA1sum mismatch. Expected $3, got $SHA1"
     fi
 }
 
@@ -160,9 +162,11 @@ InstallDepends() {
         Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
 
     elif [[ $platform == "win" ]]; then
-        pacman -Sy --noconfirm --needed git openssh unzip
+        pacman -Sy --noconfirm --needed ca-certificates curl git openssh unzip
+        Log "Downloading Windows tools..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a7de26af8f2e94ebd44f5080d973c03035cf91f8
-        unzip tools_win.zip -d ../resources/tools
+        Log "Extracting Windows tools..."
+        unzip -fq tools_win.zip -d ../resources/tools
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "669dec0d0c257066f22a0664dcef2f58cebbcadf")
 
     else
