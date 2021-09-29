@@ -161,9 +161,9 @@ InstallDepends() {
 
     elif [[ $platform == "win" ]]; then
         pacman -Sy --noconfirm --needed git openssh unzip
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 94749112454f448af7b8631231fc2ee73985fa33
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a7de26af8f2e94ebd44f5080d973c03035cf91f8
         unzip tools_win.zip -d ../resources/tools
-        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "56a53c999edb83f7ec85e164ecf4d947e66f81ff")
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "669dec0d0c257066f22a0664dcef2f58cebbcadf")
 
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"

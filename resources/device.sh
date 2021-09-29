@@ -45,7 +45,7 @@ GetDeviceValues() {
 
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         local ProdCut=7
-        ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
+        ProductType=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
         [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
         ProductType=$(echo $ProductType | cut -c -$ProdCut)
         if [[ ! $ProductType ]]; then

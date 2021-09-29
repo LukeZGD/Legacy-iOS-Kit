@@ -1,15 +1,19 @@
 # iOS-OTA-Downgrader
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
-
-- **Limited Windows support branch: 64-bit only. MSYS2 and iTunes 64-bit are required. To run the script, click `restore.bat`.**
+- **Linux, macOS, and Windows** are supported
+  - Windows support is limited. [MSYS2](https://www.msys2.org/#installation) and iTunes 64-bit are required. To run the script, click `restore.cmd`.**
+  - Windows users can also create a Linux live USB (see Requirements)
 - iOS 8.4.1 and 6.1.3 downgrades have the option to **jailbreak** the install
+  - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - **You do NOT need blobs to use this**, the script will get them for you
+- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, listed under Supported devices)
 - **Please read the "Other notes" section for tips, frequent questions, and troubleshooting**
 
 ## Supported devices:
 
 - You can identify your device [here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported** (OTA versions for them are not signed)
+- iPhone 5C can still be restored to versions that you have SHSH blobs for
 - **A7 devices are not supported on Windows.**
 - **Restoring to other versions with SHSH blobs is not supported on Windows.**
 
@@ -21,6 +25,13 @@
         </tr>
     </thead>
     <tbody>
+        <tr>
+            <td rowspan=4>iOS 10.3.3</td>
+            <td><b>A7 devices:</b></td>
+        </tr>
+        <tr><td>iPhone 5S</td></tr>
+        <tr><td>iPad Air 1</td></tr>
+        <tr><td>iPad mini 2 (except iPad4,6)</td></tr>
         <tr>
             <td rowspan=6>iOS 8.4.1</td>
             <td><b>32-bit devices:</b></td>
@@ -41,11 +52,15 @@
 ## Requirements:
 - **A supported device in any iOS version (listed above)**
 - The IPSW firmware for the version you want to downgrade to
-  - Links: [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3) (ignore the signing statuses in the site)
+  - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3) (ignore the signing statuses in the site)
   - The script can also download it for you
+- A **64-bit Linux install/live USB** or a supported **macOS** version
+  - See supported OS versions and Linux distros below
+  - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
   - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
   - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
+- **A7 devices** - Jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
 
 <details>
   <summary>For Pangu 32-bit users:</summary>
@@ -55,10 +70,21 @@
 ## Usage:
 1. [Download iOS-OTA-Downgrader here](https://api.github.com/repos/LukeZGD/iOS-OTA-Downgrader/zipball) and extract the zip archive
 2. Plug in your iOS device
-3. Install requirements: MSYS2 and iTunes 64-bit
-4. Click `restore.bat`
+3. Open a Terminal window
+4. `cd` to where the extracted files are located, and run `./restore.sh`
+    - You can also drag `restore.sh` to the Terminal window and press Enter/Return
+    - For Windows users, click `restore.cmd` to run the script
 5. Select options to be used
 6. Follow instructions
+
+## Supported OS versions/distros:
+- [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
+- [**Fedora**](https://getfedora.org/) 33 and newer
+- [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
+- [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
+- **macOS** 10.13 and newer
+- Windows 10 (8.1 and lower may also work but this is untested)
 
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
