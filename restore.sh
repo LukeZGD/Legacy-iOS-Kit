@@ -40,6 +40,10 @@ Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 1
 }
 
@@ -103,6 +107,9 @@ Main() {
     mkdir tmp
     
     if [[ $DeviceProc == 7 ]]; then
+        if [[ $platform == "win" ]]; then
+            Error "A7 devices are not supported in Windows."
+        fi
         if [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
@@ -183,6 +190,11 @@ Main() {
     
     Log "Option: $Mode"
     $Mode
+
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 0
 }
 
@@ -206,7 +218,7 @@ SelectVersion() {
         Selection+=("iOS 6.1.3")
     fi
     
-    [[ $Mode == "Downgrade" ]] && Selection+=("Other (use SHSH blobs)")
+    [[ $Mode == "Downgrade" && $platform != "win" ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     
     Input "Select iOS version:"

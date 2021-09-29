@@ -16,7 +16,7 @@ SetToolPaths() {
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 80"
-    
+
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platformver="${1:-$(sw_vers -productVersion)}"
@@ -31,7 +31,7 @@ SetToolPaths() {
             Log "Detected libimobiledevice and libirecovery installed from MacPorts"
             MPath="/opt/local/bin"
         fi
-    
+
         bspatch="/usr/bin/bspatch"
         futurerestore1="./resources/tools/futurerestore1_macos"
         futurerestore2="./resources/tools/futurerestore2_macos"
@@ -41,6 +41,13 @@ SetToolPaths() {
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 80"
+
+    elif [[ $OSTYPE == "msys" ]]; then
+        platform="win"
+        MPath+="$platform"
+        bspatch="./resources/tools/bspatch_win"
+        idevicerestore="./resources/tools/idevicerestore_win"
+        python=/
     fi
     git="$(which git)"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
@@ -55,7 +62,7 @@ SetToolPaths() {
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     tsschecker="./resources/tools/tsschecker_$platform"
-    
+
     Log "Running on platform: $platform ($platformver)"
 }
 
@@ -96,12 +103,12 @@ SavePkg() {
 
 InstallDepends() {
     local libimobiledevice
-    
+
     mkdir resources/lib tmp 2>/dev/null
     cd resources
     rm -rf firmware ipwndfu lib/*
     cd ../tmp
-    
+
     Log "Installing dependencies..."
     if [[ $platform == "linux" ]]; then
         Echo "* iOS-OTA-Downgrader will be installing dependencies from your distribution's package manager"
@@ -113,7 +120,7 @@ InstallDepends() {
         sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libcurl-compat libpng12 libimobiledevice libzip openssh openssl-1.0 python2 unzip usbutils zenity
         ln -sf /usr/lib/libcurl.so.3 ../resources/lib/libcurl.so.3
         ln -sf /usr/lib/libzip.so.5 ../resources/lib/libzip.so.4
-    
+
     elif [[ ! -z $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
         [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
@@ -126,14 +133,14 @@ InstallDepends() {
         else
             sudo apt install -y libzip4
         fi
-    
+
     elif [[ $ID == "fedora" ]] && (( $VERSION_ID >= 33 )); then
         sudo dnf install -y bsdiff git libimobiledevice libpng12 libzip perl-Digest-SHA python2 zenity
         SavePkg
         cp libcrypto.so.1.0.0 libssl.so.1.0.0 ../resources/lib
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-    
+
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == "openSUSE Leap 15.3" ]]; then
         if [[ $ID == "opensuse-tumbleweed" ]]; then
             libimobiledevice="libimobiledevice-1_0-6"
@@ -143,7 +150,7 @@ InstallDepends() {
         fi
         sudo zypper -n in bsdiff curl git $libimobiledevice libpng12-0 libopenssl1_0_0 libzip5 python-base zenity
         ln -sf /usr/lib64/libzip.so.5 ../resources/lib/libzip.so.4
-    
+
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
         libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip" "328e809dea350ae68fb644225bbf8469c0f0634b")
@@ -151,15 +158,21 @@ InstallDepends() {
         Echo "* In case that problems occur, try installing them from Homebrew"
         Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"
         Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
-    
+
+    elif [[ $platform == "win" ]]; then
+        pacman -Sy --noconfirm --needed git openssh unzip
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a7de26af8f2e94ebd44f5080d973c03035cf91f8
+        unzip tools_win.zip -d ../resources/tools
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "669dec0d0c257066f22a0664dcef2f58cebbcadf")
+
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
-    
+
     if [[ $platform == "linux" ]]; then
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "4344b3ca95d7433d5a49dcacc840d47770ba34c4")
     fi
-    
+
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
         Log "Downloading libimobiledevice..."
         SaveFile ${libimobiledevice[0]} libimobiledevice.zip ${libimobiledevice[1]}
@@ -170,8 +183,13 @@ InstallDepends() {
     elif [[ $MPath != "./resources"* ]]; then
         mkdir ../resources/libimobiledevice_$platform
     fi
-    
+
     cd ..
     Log "Install script done! Please run the script again to proceed"
+
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
     exit 0
 }

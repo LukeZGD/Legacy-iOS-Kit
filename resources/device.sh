@@ -10,8 +10,11 @@ FindDevice() {
     
     Log "Finding device in $1 mode..."
     while (( $i < $Timeout )); do
-        [[ $platform == "linux" ]] && DeviceIn=$(lsusb | grep -c "05ac:$USB")
-        [[ $platform == "macos" && $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
+        if [[ $platform == "linux" ]]; then
+            DeviceIn=$(lsusb | grep -c "05ac:$USB")
+        else
+            [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
+        fi
         if [[ $DeviceIn == 1 ]]; then
             Log "Found device in $1 mode."
             DeviceState="$1"
@@ -42,7 +45,7 @@ GetDeviceValues() {
 
     if [[ $DeviceState == "DFU" || $DeviceState == "Recovery" ]]; then
         local ProdCut=7
-        ProductType=$($irecovery -qv 2>&1 | grep "iP" | cut -c 14-)
+        ProductType=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
         [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
         ProductType=$(echo $ProductType | cut -c -$ProdCut)
         if [[ ! $ProductType ]]; then
@@ -286,7 +289,7 @@ kDFU() {
     Echo "* The default password is \"alpine\""
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
-        $SSH -p 2222 root@127.0.0.1 "/tmp/$kloader /tmp/pwnediBSS" &
+        $SSH -p 2222 root@127.0.0.1 "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &
     else
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"

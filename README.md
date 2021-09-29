@@ -1,7 +1,8 @@
 # iOS-OTA-Downgrader
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
-- **Linux and macOS** are supported
-  - Windows users can create a Linux live USB (see Requirements)
+- **Linux, macOS, and Windows** are supported
+  - Windows support is limited. [MSYS2](https://www.msys2.org/#installation) and iTunes 64-bit are required. To run the script, click `restore.cmd`.
+  - Windows users can also create a Linux live USB (see Requirements)
 - iOS 8.4.1 and 6.1.3 downgrades have the option to **jailbreak** the install
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - **You do NOT need blobs to use this**, the script will get them for you
@@ -13,6 +14,8 @@
 - You can identify your device [here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported** (OTA versions for them are not signed)
 - iPhone 5C can still be restored to versions that you have SHSH blobs for
+- **A7 devices are not supported on Windows.**
+- **Restoring to other versions with SHSH blobs is not supported on Windows.**
 
 <table>
     <thead>
@@ -70,6 +73,7 @@
 3. Open a Terminal window
 4. `cd` to where the extracted files are located, and run `./restore.sh`
     - You can also drag `restore.sh` to the Terminal window and press Enter/Return
+    - For Windows users, click `restore.cmd` to run the script
 5. Select options to be used
 6. Follow instructions
 
@@ -80,6 +84,7 @@
 - [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
+- Windows 10 (8.1 and lower may also work but this is untested)
 
 ## Other notes:
 - **If something in the process does not work for you:** try unplugging/replugging the device, switching between different USB ports/cables, also try USB 2.0 ports
