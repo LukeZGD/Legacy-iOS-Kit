@@ -133,11 +133,12 @@
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
-- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice (macOS binaries)
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice-win32 (macOS build)
 - [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
+- [tsschecker](https://github.com/DanTheMann15/tsschecker) - DanTheMann15 fork (Windows build)
 - [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
 - [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
