@@ -10,6 +10,7 @@ cd "$(dirname $0)"
 . ./resources/ipsw.sh
 
 if [[ $1 != "NoColor" && $2 != "NoColor" ]]; then
+    TERM=xterm-256color
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
     Color_B=$(tput setaf 12)

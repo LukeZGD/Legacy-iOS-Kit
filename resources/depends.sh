@@ -166,7 +166,7 @@ InstallDepends() {
         Log "Downloading Windows tools..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a7de26af8f2e94ebd44f5080d973c03035cf91f8
         Log "Extracting Windows tools..."
-        unzip -fq tools_win.zip -d ../resources/tools
+        unzip -oq tools_win.zip -d ../resources/tools
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "669dec0d0c257066f22a0664dcef2f58cebbcadf")
 
     else
