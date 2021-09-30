@@ -108,7 +108,7 @@ Main() {
     mkdir tmp
     
     if [[ $DeviceProc == 7 && $platform == "win" ]]; then
-        local Message="If you want to restore your A7 device on Windows, put the iOS device in pwnDFU mode."
+        local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
         if [[ $DeviceState == "Normal" ]]; then
             Error "$Message"
         elif [[ $DeviceState == "Recovery" ]]; then
@@ -118,7 +118,7 @@ Main() {
         elif [[ $DeviceState == "DFU" ]]; then
             Log "A7 device detected in DFU mode."
             Echo "* Make sure that your device is already in pwnDFU mode with signature checks disabled."
-            Echo "* If your device is not in pwnDFU mode, the restore will NOT proceed!"
+            Echo "* If your device is not in pwnDFU mode, the restore will not proceed!"
             Echo "* Entering pwnDFU mode is not supported on Windows. You need to use a Mac/Linux machine or another iOS device to do so."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
@@ -140,8 +140,10 @@ Main() {
         Echo "* Advanced Options Menu"
         Input "This device is in:"
         Selection=("kDFU mode")
-        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)")
-        [[ $DeviceProc == 6 ]] && Selection+=("DFU mode (A6)")
+        if [[ $platform != "win" ]]; then
+            [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)")
+            [[ $DeviceProc == 6 ]] && Selection+=("DFU mode (A6)")
+        fi
         Selection+=("Any other key to exit")
         select opt in "${Selection[@]}"; do
         case $opt in
@@ -149,7 +151,7 @@ Main() {
             "DFU mode (A6)" ) CheckM8; break;;
             "pwnDFU mode (A5)" )
                 Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
-                Echo "* This option will NOT work if your device is not in pwnDFU mode.";
+                Echo "* This option will not work if your device is not in pwnDFU mode.";
                 Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
                 read -s;
                 kDFU iBSS; break;;
@@ -161,12 +163,12 @@ Main() {
         SkipMainMenu=1
     
     elif [[ $DeviceState == "Recovery" ]]; then
-        if [[ $DeviceProc == 6 ]]; then
+        if [[ $DeviceProc == 6 && $platform != "win" ]]; then
             Recovery
         else
-            Log "32-bit A5 device detected in recovery mode."
+            Log "32-bit A${DeviceProc} device detected in recovery mode."
             Echo "* Please put the device in normal mode and jailbroken before proceeding."
-            Echo "* For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
+            Echo "* For usage of advanced DFU options, put the device in kDFU or pwnDFU mode"
             RecoveryExit
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
