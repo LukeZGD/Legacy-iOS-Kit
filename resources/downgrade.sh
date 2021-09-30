@@ -121,7 +121,7 @@ Downgrade() {
     
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
-        if [[ $Jailbreak != 1 && $platform == "win" ]]; then
+        if [[ $Jailbreak != 1 && $DeviceProc != 7 && $platform == "win" ]]; then
             IPSWCustom="${IPSWCustom}W"
             IPSWCustomW=1
         elif [[ $Jailbreak != 1 && $DeviceProc != 7 ]]; then

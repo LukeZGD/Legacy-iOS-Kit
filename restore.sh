@@ -107,10 +107,24 @@ Main() {
     Clean
     mkdir tmp
     
-    if [[ $DeviceProc == 7 ]]; then
-        if [[ $platform == "win" ]]; then
-            Error "A7 devices are not supported in Windows."
+    if [[ $DeviceProc == 7 && $platform == "win" ]]; then
+        local Message="If you want to restore your A7 device on Windows, put the iOS device in pwnDFU mode."
+        if [[ $DeviceState == "Normal" ]]; then
+            Error "$Message"
+        elif [[ $DeviceState == "Recovery" ]]; then
+            Log "A7 device detected in recovery mode."
+            Log "$Message"
+            RecoveryExit
+        elif [[ $DeviceState == "DFU" ]]; then
+            Log "A7 device detected in DFU mode."
+            Echo "* Make sure that your device is already in pwnDFU mode with signature checks disabled."
+            Echo "* If your device is not in pwnDFU mode, the restore will NOT proceed!"
+            Echo "* Entering pwnDFU mode is not supported on Windows. You need to use a Mac/Linux machine or another iOS device to do so."
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+            read -s
         fi
+
+    elif [[ $DeviceProc == 7 ]]; then
         if [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
@@ -153,12 +167,7 @@ Main() {
             Log "32-bit A5 device detected in recovery mode."
             Echo "* Please put the device in normal mode and jailbroken before proceeding."
             Echo "* For usage of advanced DFU options, put the device in kDFU mode (or pwnDFU mode using Arduino + USB Host Shield)"
-            read -p "$(Input 'Attempt to exit recovery mode? (Y/n)')" Selection
-            if [[ $Selection != 'N' && $Selection != 'n' ]]; then
-                Log "Exiting recovery mode."
-                $irecovery -n
-            fi
-            exit 0
+            RecoveryExit
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
         Mode="Downgrade"

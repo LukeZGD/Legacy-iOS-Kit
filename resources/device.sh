@@ -245,6 +245,15 @@ Recovery() {
     CheckM8
 }
 
+RecoveryExit() {
+    read -p "$(Input 'Attempt to exit recovery mode? (Y/n)')" Selection
+    if [[ $Selection != 'N' && $Selection != 'n' ]]; then
+        Log "Exiting recovery mode."
+        $irecovery -n
+    fi
+    exit 0
+}
+
 kDFU() {
     local kloader
     local VerDetect=$(echo $ProductVer | cut -c 1)

@@ -1,9 +1,9 @@
 # iOS-OTA-Downgrader
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
 - **Linux, macOS, and Windows** are supported
-  - Windows support is limited. [MSYS2](https://www.msys2.org/#installation) and iTunes 64-bit are required. To run the script, click `restore.cmd`
+  - Windows support is limited to iOS 6.1.3 and 8.4.1 downgrades only
   - Windows users can also create a Linux live USB (see Requirements)
-- iOS 8.4.1 and 6.1.3 downgrades have the option to **jailbreak** the install
+- iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - **You do NOT need blobs to use this**, the script will get them for you
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, listed under Supported devices)
@@ -54,9 +54,10 @@
 - The IPSW firmware for the version you want to downgrade to
   - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3) (ignore the signing statuses in the site)
   - The script can also download it for you
-- A **64-bit Linux install/live USB** or a supported **macOS** version
+- A **64-bit Linux install/live USB** or a supported **macOS/Windows** version
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
+- **Windows** users need to install [MSYS2](https://www.msys2.org/#installation) and iTunes 64-bit
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
   - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
   - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
@@ -138,7 +139,7 @@
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
-- [tsschecker](https://github.com/DanTheMann15/tsschecker) - DanTheMann15 fork (Windows build)
+- [tsschecker](https://github.com/1Conan/tsschecker) - 1Conan fork (Windows build)
 - [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
 - [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
