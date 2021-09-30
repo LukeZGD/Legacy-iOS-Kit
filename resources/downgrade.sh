@@ -6,11 +6,16 @@ iDeviceRestore() {
     mkdir shsh
     mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     $idevicerestore -ewy $IPSWRestore.ipsw
-    if [[ $platform == "macos" && $? != 0 ]]; then
+    if [[ $? != 0 && $platform != "linux" ]]; then
         Log "An error seems to have occurred when running idevicerestore."
-        Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
-        Echo "* Using Terminal, cd to where the script is located, then run"
-        Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+        if [[ $platform == "macos" ]]; then
+            Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
+            Echo "* Using Terminal, cd to where the script is located, then run"
+            Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+        elif [[ $platform == "win" ]]; then
+            Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
+            Echo "* To fix this, follow steps 1 to 5 here: https://github.com/m1stadev/futurerestore/tree/test#unable-to-send-ibec-error--8"
+        fi
     fi
 }
 

@@ -96,6 +96,7 @@
   - For Homebrew: `brew install libimobiledevice libirecovery`
   - For MacPorts: `sudo port install libimobiledevice libirecovery`
   - The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools
+- Windows users may encounter errors like `Unable to send APTicket` or `Unable to send iBEC` in the restore process. To fix this, [follow steps 1 to 5 here](https://github.com/m1stadev/futurerestore/tree/test#unable-to-send-ibec-error--8) then run the script again
 - **For A7 devices:**
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
