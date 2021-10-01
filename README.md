@@ -14,7 +14,7 @@
 - You can identify your device [here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported** (OTA versions for them are not signed)
 - iPhone 5C can still be restored to versions that you have SHSH blobs for
-- **A7 devices are not supported on Windows.**
+- **A7 devices are not fully supported on Windows.**
 - **Restoring to other versions with SHSH blobs is not supported on Windows.**
 
 <table>
@@ -62,6 +62,7 @@
   - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
   - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
 - **A7 devices** - Jailbreak is not required. The script will assist in helping the user put the device to pwnDFU mode
+  - Note that entering pwnDFU mode is not supported on Windows. See "Other notes" for more details
 
 <details>
   <summary>For Pangu 32-bit users:</summary>
@@ -98,6 +99,7 @@
   - The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools
 - Windows users may encounter errors like `Unable to send APTicket` or `Unable to send iBEC` in the restore process. To fix this, [follow steps 1 to 5 here](https://github.com/m1stadev/futurerestore/tree/test#unable-to-send-ibec-error--8) then run the script again
 - **For A7 devices:**
+  - If you want to restore your A7 device on Windows, you need to first put the device in pwnDFU mode with signature checks disabled. Since entering pwnDFU mode is not supported on Windows, you need to use a Mac/Linux machine or another iOS device to do so. If your device is not in pwnDFU mode, the restore will NOT proceed! For entering pwnDFU mode, use ipwndfu, iPwnder32, or iPwnder Lite ([Tutorial](https://www.reddit.com/r/LegacyJailbreak/comments/pyzyc2/tutorial_short_tutorial_to_downgrade_most_a7_to/))
   - Do not use USB-C to lightning cables as this can prevent a successful restore
   - ipwndfu is unfortunately very unreliable on Linux, you may have to try multiple times (Linux users may also try in a live USB)
   - If the script cannot find your device in pwnREC mode or gets stuck, you may have to start over by [force restarting](https://support.apple.com/guide/iphone/iph8903c3ee6/ios) and re-entering recovery/DFU mode
