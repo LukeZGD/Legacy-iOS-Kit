@@ -1,2 +1,3 @@
 StrictHostKeyChecking no
 UserKnownHostsFile tmp/known_hosts
+HostKeyAlgorithms=+ssh-rsa
