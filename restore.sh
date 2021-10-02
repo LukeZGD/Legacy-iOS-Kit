@@ -64,6 +64,10 @@ Main() {
     Echo "   Downgrader script by LukeZGD   "
     echo
     
+    if [[ $EUID == 0 ]]; then
+        Error "Running the script as root is not allowed."
+    fi
+
     if [[ ! -d ./resources ]]; then
         Error "resources folder cannot be found. Replace resources folder and try again." \
         "If resources folder is present try removing spaces from path/folder name"

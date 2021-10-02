@@ -66,8 +66,10 @@ GetDeviceValues() {
     fi
     
     if [[ ! $DeviceState ]]; then
-        Error "No device detected. Please put the device in normal mode before proceeding. Recovery or DFU mode is also applicable" \
-        "For more details regarding alternative methods, read the \"Other Notes\" section of the README"
+        echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
+        echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
+        echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Other Notes\" section of the README ${Color_N}"
+        exit 1
     fi
     
     Firmware=resources/firmware/$ProductType

@@ -57,7 +57,7 @@
 - A **64-bit Linux install/live USB** or a supported **macOS/Windows** version
   - See supported OS versions and Linux distros below
   - A Linux live USB can be easily created with tools like [Ventoy](https://www.ventoy.net/en/index.html)
-- **Windows** users need to install [MSYS2](https://www.msys2.org/#installation) and iTunes 64-bit
+- **Windows** users need to install [MSYS2](https://www.msys2.org/#installation) and [iTunes](https://support.apple.com/kb/DL2065) (12.10.11 or newer, and not the Microsoft Store version)
 - **32-bit devices** - The device needs to be put in kDFU/pwnDFU mode as part of the process. There are a few options:
   - Normal method - **Jailbreak is required**. Users must install [OpenSSH](https://cydia.saurik.com/package/openssh/). Users in iOS 10 (A6/A6X) must also install Dropbear from my Cydia repo: https://lukezgd.github.io/repo/
   - DFU method - For alternatives, the DFU advanced menu can also be used. See "Other notes" for more details
@@ -93,7 +93,8 @@
 - **IPSW file integrity** will be verified before restoring and/or creating custom IPSW (if custom IPSW is already created, this will be skipped)
 - **For users having issues with missing libraries/tools:** To re-install dependencies, run `./restore.sh Install`
   - Alternatively, delete the `libimobiledevice` folder in `resources` then run the script again
-- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/)
+- If your device is not being detected in normal mode, make sure to also trust the computer by selecting "Trust" at the pop-up. For Windows/macOS users, double-check if the device is being detected by iTunes/Finder.
+- macOS users may have to install libimobiledevice and libirecovery from [Homebrew](https://brew.sh/) or [MacPorts](https://www.macports.org/) (this is optional, but recommended)
   - For Homebrew: `brew install libimobiledevice libirecovery`
   - For MacPorts: `sudo port install libimobiledevice libirecovery`
   - The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools
@@ -127,6 +128,7 @@
   - For some devices, EtasonJB untether is unstable and not working properly, so daibutsu jailbreak will be used. See [PR #129](https://github.com/LukeZGD/iOS-OTA-Downgrader/pull/129) for more details
   - For devices jailbroken with EtasonJB, there is no need to install "Stashing for #etasonJB" package, as stashing is already enabled
   - For devices jailbroken with daibutsu, add the system repo for future updates to the untether: https://dora2ios.github.io/repo/
+  - For devices jailbroken with daibutsu and want to use Coolbooter Untetherer, [apply this fix/workaround](https://github.com/LukeZGD/iOS-OTA-Downgrader/issues/131#issuecomment-920022171) using Terminal (the commands need to be run as root)
 - **My Cydia repo**: https://lukezgd.github.io/repo/ - for installing Dropbear and kDFUApp if needed
 
 ## Tools and other stuff used by this script:
