@@ -1,7 +1,6 @@
 # iOS-OTA-Downgrader
 ### Downgrade/restore and jailbreak iOS devices to signed OTA firmwares
 - **Linux, macOS, and Windows** are supported
-  - Windows support is limited to iOS 6.1.3 and 8.4.1 downgrades only
   - Windows users can also create a Linux live USB (see Requirements)
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
   - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
