@@ -68,7 +68,7 @@ GetDeviceValues() {
     if [[ ! $DeviceState ]]; then
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
-        echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Other Notes\" section of the README ${Color_N}"
+        echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read TROUBLESHOOTING.md ${Color_N}"
         exit 1
     fi
     
@@ -129,7 +129,7 @@ GetDeviceValues() {
     
     if [[ ! $BasebandURL || ! $HWModel ]]; then
         Error "Missing BasebandURL and/or HWModel values. Is the firmware folder missing?" \
-        "Reinstall dependencies and try again. For more details, read the \"Other Notes\" section of the README"
+        "Reinstall dependencies and try again. For more details, read TROUBLESHOOTING.md"
     fi
     
     if [[ $ProductType == "iPod5,1" ]]; then
@@ -203,7 +203,7 @@ CheckM8() {
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
-        Echo "* For more details, read the \"Other Notes\" section of the README"
+        Echo "* For more details, read TROUBLESHOOTING.md"
         exit 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
@@ -349,6 +349,6 @@ pwnREC() {
     
     if (( $Attempt == 4 )); then
         Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again" \
-        "macOS users may have to install libimobiledevice and libirecovery from Homebrew. For more details, read the \"Other Notes\" section of the README"
+        "macOS users may have to install libimobiledevice and libirecovery from Homebrew. For more details, read TROUBLESHOOTING.md"
     fi
 }
