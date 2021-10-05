@@ -7,7 +7,7 @@
 - **You do NOT need blobs to use this**, the script will get them for you
 - This script can also restore your device to other iOS versions that you have SHSH blobs for
     - 32-bit devices only, iOS 10 blobs/versions are not supported
-- **Please read [TROUBLESHOOTING.md](https://github.com/LukeZGD/iOS-OTA-Downgrader/blob/master/TROUBLESHOOTING.md) for tips, frequent questions, and troubleshooting!**
+- **Please read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting!**
 
 ## Supported devices
 
@@ -48,7 +48,7 @@
 </table>
 
 ## Requirements
-- **Read [HOW-TO-USE.md](https://github.com/LukeZGD/iOS-OTA-Downgrader/blob/master/HOW-TO-USE.md) for a step-by-step tutorial**
+- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **A supported device in any iOS version (listed above)**
 - A **64-bit Linux install/live USB** or a supported **macOS/Windows** version
 - The IPSW firmware for the version you want to downgrade to
