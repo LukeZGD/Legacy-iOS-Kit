@@ -14,7 +14,7 @@ iDeviceRestore() {
             Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
         elif [[ $platform == "win" ]]; then
             Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-            Echo "* To fix this, follow steps 1 to 5 here: https://github.com/m1stadev/futurerestore/tree/test#unable-to-send-ibec-error--8"
+            Echo "* To fix this, follow troubleshooting steps here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
         fi
     fi
 }
