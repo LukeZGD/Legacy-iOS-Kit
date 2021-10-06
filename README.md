@@ -1,16 +1,19 @@
 # iOS-OTA-Downgrader
 
-- iOS-OTA-Downgrader can **downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**.
+- **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
 - **Linux, macOS, and Windows** are supported
+- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
+- **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
+
+## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
-- **You do NOT need blobs to use this**, the script will get them for you
 - This script can also restore your device to other iOS versions that you have SHSH blobs for
     - 32-bit devices only, iOS 10 blobs/versions are not supported
-- **Please read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting!**
+    - This feature is not supported on Windows
+- This script can also be used to just enter kDFU mode for all supported 32-bit devices
 
 ## Supported devices
-
 - [Identify your device here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
@@ -47,17 +50,9 @@
     </tbody>
 </table>
 
-## Requirements
-- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
-- **A supported device in any iOS version (listed above)**
-- A **64-bit Linux install/live USB** or a supported **macOS/Windows** version
-- The IPSW firmware for the version you want to downgrade to
-    - Links: [iOS 10.3.3](https://ipsw.me/10.3.3), [iOS 8.4.1](https://ipsw.me/8.4.1), [iOS 6.1.3](https://ipsw.me/6.1.3) (ignore the signing statuses in the site)
-    - The script can also download it for you
-
 <details>
-  <summary>For Pangu 32-bit users:</summary>
-  <ul><li>For 32-bit users using Pangu and normal method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
+    <summary>For Pangu 32-bit users:</summary>
+    <ul><li>For 32-bit users using Pangu and normal method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
 </details>
 
 ## Supported OS versions/distros
@@ -67,9 +62,9 @@
 - [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
-- Windows 10 or 8.1 (7 may also work)
+- **Windows** 7 and newer, including 8.1 and 10
 
-## Tools and other stuff used by this script
+## Tools and other stuff used
 - cURL
 - bspatch
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
