@@ -109,7 +109,7 @@ InstallDepends() {
 
     mkdir resources/lib tmp 2>/dev/null
     cd resources
-    rm -rf firmware ipwndfu lib/*
+    rm -rf ipwndfu lib/*
     cd ../tmp
 
     Log "Installing dependencies..."
@@ -163,7 +163,7 @@ InstallDepends() {
         Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
 
     elif [[ $platform == "win" ]]; then
-        pacman -Sy --noconfirm --needed ca-certificates curl git openssh unzip zip
+        pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
         Log "Downloading Windows tools..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools2_win.zip tools_win.zip 1929c04f6f699f5e423bd9ca7ecc855a9b4f8f7c
         Log "Extracting Windows tools..."

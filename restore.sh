@@ -97,15 +97,16 @@ Main() {
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
     
-    if [[ $1 == "Install" || ! $bspatch || ! $git || ! $ideviceinfo || ! $irecoverychk || ! $python ||
+    if [[ $1 == "Install" || ! $bspatch || ! $ideviceinfo || ! $irecoverychk || ! $python ||
           ! -d ./resources/libimobiledevice_$platform ]]; then
         Clean
         InstallDepends
     fi
     
-    SaveExternal LukeZGD iOS-OTA-Downgrader-Keys
-    SaveExternal LukeZGD ipwndfu
-    
+    if [[ $platform != "win" ]]; then
+        SaveExternal LukeZGD ipwndfu
+    fi
+
     GetDeviceValues
     
     Clean
