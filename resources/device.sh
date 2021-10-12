@@ -67,7 +67,8 @@ GetDeviceValues() {
     
     if [[ ! $DeviceState ]]; then
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
-        echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
+        echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
+        echo "${Color_Y}* For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
         echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         exit 1
     fi
@@ -156,6 +157,7 @@ GetDeviceValues() {
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
     
     Log "Found $ProductType in $DeviceState mode."
+    Log "Device ECID: $UniqueChipID"
 }
 
 CheckM8() {
@@ -296,7 +298,8 @@ kDFU() {
     Echo "* To make sure that SSH is successful, try these steps:"
     Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
     echo
-    Input "Enter the root password of your iOS device when prompted"
+    Input "Enter the root password of your iOS device when prompted."
+    Echo "* Note that you will be prompted twice. Do not worry that your input is not visible, it is still being entered."
     Echo "* The default password is \"alpine\""
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
@@ -304,7 +307,7 @@ kDFU() {
     else
         Log "Cannot connect to device via USB SSH."
         Echo "* Please try the steps above to make sure that SSH is successful"
-        Echo "* Alternatively, you may use kDFUApp by tihmstar (from my repo, see README)"
+        Echo "* Alternatively, you may use kDFUApp by tihmstar (from my repo, see \"Troubleshooting\" wiki page)"
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
@@ -321,7 +324,7 @@ kDFU() {
     fi
     
     Log "Entering kDFU mode..."
-    Echo "* Press POWER or HOME button when screen goes black on the device"
+    Echo "* Press POWER or HOME button when the device disconnects and its screen goes black"
     FindDevice "DFU"
 }
 

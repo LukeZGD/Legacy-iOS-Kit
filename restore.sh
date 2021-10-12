@@ -87,6 +87,7 @@ Main() {
         Log "Warning - An error occurred in chmod. This might cause problems..."
     fi
     
+    Log "Checking Internet connection..."
     if [[ ! $(ping -c1 1.1.1.1 2>/dev/null) ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
@@ -205,6 +206,7 @@ Main() {
     
     SelectVersion
     
+    echo
     Log "Option: $Mode"
     $Mode
 
@@ -238,6 +240,7 @@ SelectVersion() {
     [[ $Mode == "Downgrade" && $platform != "win" ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     
+    echo
     Input "Select iOS version:"
     select opt in "${Selection[@]}"; do
     case $opt in
