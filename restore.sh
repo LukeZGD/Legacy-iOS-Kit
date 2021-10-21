@@ -199,8 +199,6 @@ Main() {
         esac
         done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
-        Mode="Downgrade"
-        SkipMainMenu=1
     
     elif [[ $DeviceState == "Recovery" ]]; then
         if [[ $DeviceProc == 6 && $platform != "win" ]]; then
@@ -212,8 +210,6 @@ Main() {
             RecoveryExit
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
-        Mode="Downgrade"
-        SkipMainMenu=1
     fi
     
     Downgrade
