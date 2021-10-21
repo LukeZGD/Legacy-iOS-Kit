@@ -113,6 +113,40 @@ Main() {
     Clean
     mkdir tmp
     
+    [[ ! -z $1 ]] && SkipMainMenu=1
+
+    if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
+        Mode="$1"
+    else
+        Selection=("Downgrade device" "Save OTA blobs")
+        if [[ $DeviceProc != 7 && $DeviceState == "Normal" ]]; then
+            Selection+=("Just put device in kDFU mode")
+        fi
+        Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
+        Echo "*** Main Menu ***"
+        Input "Select an option:"
+        select opt in "${Selection[@]}"; do
+        case $opt in
+            "Downgrade device" ) Mode="Downgrade"; break;;
+            "Save OTA blobs" ) Mode="SaveOTABlobs"; break;;
+            "Just put device in kDFU mode" ) Mode="kDFU"; break;;
+            "(Re-)Install Dependencies" ) InstallDepends;;
+            * ) exit 0;;
+        esac
+        done
+    fi
+
+    SelectVersion
+
+    if [[ $Mode != "Downgrade" ]]; then
+        $Mode
+        if [[ $platform == "win" ]]; then
+            Input "Press Enter/Return to exit."
+            read -s
+        fi
+        exit 0
+    fi
+
     if [[ $DeviceProc == 7 && $platform == "win" ]]; then
         local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
         if [[ $DeviceState == "Normal" ]]; then
@@ -182,33 +216,7 @@ Main() {
         SkipMainMenu=1
     fi
     
-    [[ ! -z $1 ]] && SkipMainMenu=1
-    
-    if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
-        [[ ! -z $1 ]] && Mode="$1"
-    else
-        Selection=("Downgrade device")
-        [[ $DeviceProc != 7 ]] && Selection+=("Save OTA blobs" "Just put device in kDFU mode")
-    
-        Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
-        Echo "*** Main Menu ***"
-        Input "Select an option:"
-        select opt in "${Selection[@]}"; do
-        case $opt in
-            "Downgrade device" ) Mode="Downgrade"; break;;
-            "Save OTA blobs" ) Mode="SaveOTABlobs"; break;;
-            "Just put device in kDFU mode" ) Mode="kDFU"; break;;
-            "(Re-)Install Dependencies" ) InstallDepends;;
-            * ) exit 0;;
-        esac
-        done
-    fi
-    
-    SelectVersion
-    
-    echo
-    Log "Option: $Mode"
-    $Mode
+    Downgrade
 
     if [[ $platform == "win" ]]; then
         Input "Press Enter/Return to exit."
