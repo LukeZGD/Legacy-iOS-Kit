@@ -70,7 +70,7 @@ Downgrade() {
     local IPSWSHA1L
     local Jailbreak
     local JBName
-    local Verify
+    local Verify=1
     
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
@@ -151,11 +151,8 @@ Downgrade() {
             fi
         fi
 
-        if [[ ! -e "$IPSWCustom.ipsw" ]] &&
-           [[ ! -z $Jailbreak || ! -z $IPSWCustomW ]]; then
-            Verify=1
-        elif [[ -z $Jailbreak && -z $IPSWCustomW ]]; then
-            Verify=1
+        if [[ $Jailbreak == 1 || ! -z $IPSWCustomW ]]; then
+            [[ -e "$IPSWCustom.ipsw" ]] && Verify=
         fi
 
         if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] &&
