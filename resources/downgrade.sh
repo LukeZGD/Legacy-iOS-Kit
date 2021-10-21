@@ -45,35 +45,32 @@ FRBaseband() {
 }
 
 FutureRestore() {
-    local ExtraArgs
-    local futurerestore
-    
+    local ExtraArgs=()
+
+    [[ $IPSWCustomW != 2 ]] && ExtraArgs=("--use-pwndfu")
     if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs="-s $IPSWRestore/Firmware/all_flash/$SEP -m $BuildManifest"
-        futurerestore=$futurerestore2
+        ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
     else
-        ExtraArgs="--use-pwndfu"
-        futurerestore=$futurerestore1
+        ExtraArgs+=("--no-ibss" "--boot-args" "rd=md0 -restore -v")
     fi
-    
+
     Log "Proceeding to futurerestore..."
     if [[ $Baseband == 0 ]]; then
         Log "Device $ProductType has no baseband"
-        $futurerestore -t $SHSH --no-baseband $ExtraArgs "$IPSWRestore.ipsw"
+        $futurerestore -t "$SHSH" --no-baseband "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
     else
         FRBaseband
-        $futurerestore -t $SHSH -b saved/baseband/$Baseband -p $BuildManifest $ExtraArgs "$IPSWRestore.ipsw"
+        $futurerestore -t "$SHSH" -b saved/baseband/$Baseband -p $BuildManifest "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
     fi
 }
 
 Downgrade() {
-    local IPSWCustomW
     local IPSWExtract
     local IPSWSHA1
     local IPSWSHA1L
     local Jailbreak
     local JBName
-    local Verify
+    local Verify=1
     
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
@@ -145,28 +142,17 @@ Downgrade() {
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
-        if [[ $Jailbreak != 1 && $DeviceProc != 7 && $platform == "win" ]]; then
-            IPSWCustom="${IPSWCustom}W"
-            IPSWCustomW=1
-        elif [[ $Jailbreak != 1 && $DeviceProc != 7 ]]; then
-            local opt
-            Input "Restore Tool Option"
-            Echo "* This option is set to futurerestore (Y) by default."
-            Echo "* You may select idevicerestore (N) later if you experience issues with futurerestore."
-            read -p "$(Input 'Enable this option? (Y/n):')" opt
-            if [[ $opt == 'N' || $opt == 'n' ]]; then
+        if [[ $Jailbreak != 1 && $platform == "win" ]]; then
+            if [[ $DeviceProc == 7 ]]; then
+                IPSWCustomW=2
+            else
                 IPSWCustom="${IPSWCustom}W"
                 IPSWCustomW=1
             fi
-            echo
         fi
 
-        if [[ ! -e "$IPSWCustom.ipsw" && $IPSWCustomW == 1 ]]; then
-            Verify=1
-        elif [[ $Jailbreak == 1 || $DeviceProc == 7 ]]; then
-            [[ ! -e "$IPSWCustom.ipsw" ]] && Verify=1
-        elif [[ $Jailbreak != 1 && $IPSWCustomW != 1 ]]; then
-            Verify=1
+        if [[ $Jailbreak == 1 || ! -z $IPSWCustomW ]]; then
+            [[ -e "$IPSWCustom.ipsw" ]] && Verify=
         fi
 
         if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] &&
@@ -179,7 +165,9 @@ Downgrade() {
             echo
         fi
 
-        if [[ ! -e "$IPSW.ipsw" && ! -e "$IPSWCustom.ipsw" ]]; then
+        [[ $IPSWCustomW != 2 ]] && SaveOTABlobs
+
+        if [[ ! -e "$IPSW.ipsw" && $Verify == 1 ]]; then
             Log "iOS $OSVer IPSW for $ProductType cannot be found."
             Echo "* If you already downloaded the IPSW, move/copy it to the directory where the script is located."
             Echo "* Do NOT rename the IPSW as the script will fail to detect it."
@@ -211,8 +199,6 @@ Downgrade() {
             mkdir -p saved/$ProductType 2>/dev/null
             unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
         fi
-
-        [[ $DeviceProc != 7 ]] && SaveOTABlobs
     else
         IPSWCustom=0
     fi
@@ -227,12 +213,14 @@ Downgrade() {
     fi
 
     Log "Extracting IPSW: $IPSWExtract.ipsw"
-    unzip -q "$IPSWExtract.ipsw" -d "$IPSWExtract"/
-    
-    if [[ $DeviceProc == 7 ]]; then
+    unzip -oq "$IPSWExtract.ipsw" -d "$IPSWExtract"/
+
+    if [[ $IPSWCustomW == 2 ]]; then
         IPSW64
         pwnREC
-        SaveOTABlobs
+        local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
+        Log "APNonce: $APNonce"
+        SaveOTABlobs $APNonce
     elif [[ $Jailbreak != 1 && $OSVer != "Other" && $IPSWCustomW != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources

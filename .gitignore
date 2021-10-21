@@ -10,7 +10,8 @@
 *.so*
 *.txt
 Cydia*
-saved/
+iP*Custom*/
+iP*Restore/
 resources/FirmwareBundles/
 resources/ipwndfu/
 resources/jailbreak/bin.tar
@@ -18,4 +19,5 @@ resources/jailbreak/cydia.tar
 resources/jailbreak/untether.tar
 resources/libimobiledevice*/
 resources/libirecovery/
+saved/
 tmp/

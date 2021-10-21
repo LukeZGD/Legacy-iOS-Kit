@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SaveOTABlobs() {
+    local APNonce=$1
     local ExtraArgs
     local SHSHChk
     local SHSHContinue
@@ -8,14 +9,15 @@ SaveOTABlobs() {
     
     Log "Saving $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s"
+    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap"
+    SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}*.shsh*
     if [[ $DeviceProc == 7 ]]; then
-        local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
-        Log "APNonce: $APNonce"
-        ExtraArgs+=" -B ${HWModel}ap --apnonce $APNonce"
-        SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh*
-    else
-        SHSHChk=${UniqueChipID}_${ProductType}_${OSVer}-${BuildVer}*.shsh*
+        if [[ ! -z $APNonce ]]; then
+            ExtraArgs+=" --apnonce $APNonce"
+            SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh*
+        else
+            ExtraArgs+=" --generator 0x1111111111111111"
+        fi
     fi
     $tsschecker $ExtraArgs
     
@@ -41,7 +43,7 @@ SaveOTABlobs() {
     
     if [[ ! -z $SHSH && $SHSHContinue != 1 ]]; then
         mkdir -p saved/shsh 2>/dev/null
-        [[ ! $SHSHExisting ]] && cp "$SHSH" saved/shsh
+        [[ -z $APNonce ]] && cp "$SHSH" saved/shsh
         Log "Successfully saved $OSVer blobs."
     fi
 }

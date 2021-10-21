@@ -96,7 +96,7 @@ IPSW64() {
         Log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
-    
+
     Log "Preparing custom IPSW..."
     $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
     $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
