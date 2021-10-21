@@ -9,8 +9,7 @@
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - This script can also restore your device to other iOS versions that you have SHSH blobs for
-    - 32-bit devices only, iOS 10 blobs/versions are not supported
-    - This feature is not supported on Windows
+    - 32-bit devices only. This feature is also not supported on Windows
 - This script can also be used to just enter kDFU mode for all supported 32-bit devices
 
 ## Supported devices
