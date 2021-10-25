@@ -43,7 +43,7 @@ SaveOTABlobs() {
     
     if [[ ! -z $SHSH && $SHSHContinue != 1 ]]; then
         mkdir -p saved/shsh 2>/dev/null
-        [[ -z $APNonce ]] && cp "$SHSH" saved/shsh
+        [[ -z $APNonce && ! $SHSHExisting ]] && cp "$SHSH" saved/shsh
         Log "Successfully saved $OSVer blobs."
     fi
 }

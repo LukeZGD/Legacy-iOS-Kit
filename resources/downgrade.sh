@@ -64,6 +64,16 @@ FutureRestore() {
     fi
 }
 
+SetIPSWCustomW() {
+    if [[ $DeviceProc == 7 ]]; then
+        IPSWCustomW=2
+        futurerestore=$futurerestore2
+    else
+        IPSWCustom="${IPSWCustom}W"
+        IPSWCustomW=1
+    fi
+}
+
 Downgrade() {
     local IPSWExtract
     local IPSWSHA1
@@ -143,12 +153,17 @@ Downgrade() {
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
         if [[ $Jailbreak != 1 && $platform == "win" ]]; then
-            if [[ $DeviceProc == 7 ]]; then
-                IPSWCustomW=2
-            else
-                IPSWCustom="${IPSWCustom}W"
-                IPSWCustomW=1
+            SetIPSWCustomW
+        elif [[ $Jailbreak != 1 ]]; then
+            Input "Custom IPSW Option"
+            Echo "* When this option is enabled, a custom IPSW will be made for the restore."
+            Echo "* Enable this option later if you experience issues with futurerestore."
+            Echo "* This option is disabled by default (N)."
+            read -p "$(Input 'Enable this option? (y/N):')" IPSWCustomW
+            if [[ $IPSWCustomW == 'Y' || $IPSWCustomW == 'y' ]]; then
+                SetIPSWCustomW
             fi
+            echo
         fi
 
         if [[ $Jailbreak == 1 || ! -z $IPSWCustomW ]]; then
@@ -208,6 +223,8 @@ Downgrade() {
     if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
         IPSW32
         IPSWExtract="$IPSWCustom"
+    elif [[ $IPSWCustomW == 2 && $Verify != 1 ]]; then
+        IPSWExtract="$IPSWCustom"
     else
         IPSWExtract="$IPSW"
     fi
@@ -233,7 +250,7 @@ Downgrade() {
         Log "Setting restore IPSW to: $IPSW.ipsw"
         IPSWRestore="$IPSW"
     fi
-    
+
     if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
         iDeviceRestore
     else
