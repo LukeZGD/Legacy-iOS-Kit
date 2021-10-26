@@ -160,6 +160,28 @@ GetDeviceValues() {
     Log "Device ECID: $UniqueChipID"
 }
 
+Baseband841() {
+    BasebandURL=$(cat $Firmware/12H321/url)
+    if [[ $ProductType == "iPad2,3" ]]; then
+        Baseband="Phoenix-3.0.04.Release.bbfw"
+        BasebandSHA1="a507ee2fe061dfbf8bee7e512df52ade8777e113"
+
+    elif [[ $ProductType == "iPad3,2" || $ProductType == "iPad3,3" ]]; then
+        Baseband="Mav4-5.4.00.Release.bbfw"
+        BasebandSHA1="b51f10bda04cd51f673a75d064c18af1ccb661fe"
+
+    elif [[ $ProductType == "iPhone4,1" ]]; then
+        Baseband="Trek-5.5.00.Release.bbfw"
+        BasebandSHA1="24849fa866a855e7e640c72c1cb2af6a0e30c742"
+
+    elif [[ $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ||
+            $ProductType == "iPad3,5" || $ProductType == "iPad3,6" ||
+            $ProductType == "iPhone5,1" || $ProductType == "iPhone5,2" ]]; then
+        Baseband="Mav5-8.02.00.Release.bbfw"
+        BasebandSHA1="db71823841ffab5bb41341576e7adaaeceddef1c"
+    fi
+}
+
 CheckM8() {
     local pwnDFUTool
     local pwnDFUDevice

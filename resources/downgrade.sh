@@ -22,10 +22,12 @@ iDeviceRestore() {
 FRBaseband() {
     local BasebandSHA1L
     
-    if [[ $DeviceProc == 7 ]] || [[ $ProductType == "iPhone5,1" && $Baseband5 != 0 ]]; then
+    if [[ $DeviceProc == 7 ]] || [[ $Baseband5 != 0 && $OSVer == "8.4.1" ]]; then
         mkdir -p saved/baseband 2>/dev/null
         cp -f $IPSWRestore/Firmware/$Baseband saved/baseband
-    elif [[ ! -e saved/baseband/$Baseband ]]; then
+    fi
+
+    if [[ ! -e saved/baseband/$Baseband ]]; then
         Log "Downloading baseband..."
         $partialzip $BasebandURL Firmware/$Baseband $Baseband
         $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
@@ -33,7 +35,7 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    else
+    elif [[ $DeviceProc != 7 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
     
@@ -136,7 +138,7 @@ Downgrade() {
         echo
     fi
     
-    if [[ $Mode == "Downgrade" && $ProductType == "iPhone5,1" && $Jailbreak != 1 ]]; then
+    if [[ $ProductType == "iPhone5,1" && $Jailbreak != 1 ]]; then
         Input "Latest Baseband Option"
         Echo "* iOS-OTA-Downgrader flashes the iOS 8.4.1 baseband to iPhone5,1."
         Echo "* When this option is enabled, the latest baseband will be flashed instead, but beware of problems it may cause."
@@ -145,9 +147,19 @@ Downgrade() {
         if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
             Baseband5=0
         else
-            BasebandURL=$(cat $Firmware/12H321/url)
-            Baseband="Mav5-8.02.00.Release.bbfw"
-            BasebandSHA1="db71823841ffab5bb41341576e7adaaeceddef1c"
+            Baseband841
+        fi
+        echo
+    elif [[ $DeviceProc != 7 && $ProductType != "iPad2,2" && $Jailbreak != 1 ]]; then
+        Input "Latest Baseband Option"
+        Echo "* iOS-OTA-Downgrader flashes the latest baseband to 32-bit devices."
+        Echo "* When this option is disabled, iOS 8.4.1 baseband will be flashed instead, but beware of problems it may cause."
+        Echo "* This option is enabled by default (Y)."
+        read -p "$(Input 'Enable this option? (Y/n):')" Baseband5
+        if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
+            Baseband841
+        else
+            Baseband5=0
         fi
         echo
     fi
