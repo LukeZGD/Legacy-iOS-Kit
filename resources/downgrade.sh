@@ -104,7 +104,13 @@ Downgrade() {
             read -p "$(Input 'Enter name of SHSH file:')" SHSH
         fi
 
-    elif [[ $Mode == "Downgrade" && $DeviceProc != 7 ]]; then
+    elif [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
+        Echo "* Jailbreak Option is disabled on iPad mini 1 devices."
+        Echo "* If you want to jailbreak your device, you need to sideload EtasonJB, HomeDepot, or daibutsu manually."
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
+
+    elif [[ $DeviceProc != 7 ]]; then
         Input "Jailbreak Option"
         Echo "* When this option is enabled, your device will be jailbroken on restore."
         Echo "* This option is enabled by default (Y)."
@@ -112,9 +118,7 @@ Downgrade() {
         
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             Jailbreak=1
-            if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" ||
-                  $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
-                  $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+            if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" || $ProductType == "iPod5,1" ]] ||
                [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
                 [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
             fi
