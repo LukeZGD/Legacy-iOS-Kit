@@ -77,8 +77,7 @@
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
 - [tsschecker](https://github.com/1Conan/tsschecker) - 1Conan fork (Windows build)
-- [futurerestore](http://api.tihmstar.net/builds/futurerestore/futurerestore-latest.zip) used for 32-bit devices - tihmstar
-- [futurerestore](https://github.com/m1stadev/futurerestore) used for A7 devices - m1stadev fork
+- [futurerestore](https://github.com/m1stadev/futurerestore/tree/test) - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)

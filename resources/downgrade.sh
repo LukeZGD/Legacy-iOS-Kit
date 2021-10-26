@@ -51,7 +51,7 @@ FutureRestore() {
     if [[ $DeviceProc == 7 ]]; then
         ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
     else
-        ExtraArgs+=("--no-ibss" "--boot-args" "rd=md0 -restore -v")
+        ExtraArgs+=("--no-ibss")
     fi
 
     Log "Proceeding to futurerestore..."
@@ -249,6 +249,12 @@ Downgrade() {
     if [[ ! $IPSWRestore ]]; then
         Log "Setting restore IPSW to: $IPSW.ipsw"
         IPSWRestore="$IPSW"
+    fi
+
+    if [[ $DeviceProc == 7 && $IPSWCustomW != 2 ]]; then
+        Log "Sending dummy file"
+        $irecovery -f restore.cmd
+        sleep 2
     fi
 
     if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
