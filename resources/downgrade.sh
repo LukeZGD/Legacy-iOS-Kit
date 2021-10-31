@@ -105,6 +105,12 @@ Downgrade() {
             IPSW="$(basename "$IPSW" .ipsw)"
             read -p "$(Input 'Enter name of SHSH file:')" SHSH
         fi
+        unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
+        BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+        Log "Getting firmware keys for $ProductType-$BuildVer"
+        mkdir resources/firmware/$ProductType/$BuildVer 2>/dev/null
+        curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
+        mv tmp/index.html resources/firmware/$ProductType/$BuildVer
 
     elif [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
         Echo "* Jailbreak Option is disabled on iPad mini 1 devices."
@@ -254,7 +260,7 @@ Downgrade() {
         local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
         Log "APNonce: $APNonce"
         SaveOTABlobs $APNonce
-    elif [[ $Jailbreak != 1 && $OSVer != "Other" && $IPSWCustomW != 1 ]]; then
+    elif [[ $Jailbreak != 1 && $IPSWCustomW != 1 ]]; then
         Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
         cd resources
         [[ $platform == "linux" ]] && $SimpleHTTPServer || $SimpleHTTPServer &
