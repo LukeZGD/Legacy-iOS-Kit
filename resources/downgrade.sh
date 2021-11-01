@@ -88,23 +88,16 @@ Downgrade() {
     echo
 
     if [[ $OSVer == "Other" ]]; then
-        if [[ $platform == "linux" ]]; then
-            Input "Select your IPSW file in the file selection window."
-            IPSW="$(zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
-            IPSW="${IPSW%?????}"
-            Log "Selected IPSW file: $IPSW.ipsw"
-            Input "Select your SHSH file in the file selection window."
-            SHSH="$(zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select SHSH file")"
-            Log "Selected SHSH file: $SHSH"
-        else
-            Input "Enter the names of your IPSW and SHSH files below."
-            Echo "* Move/copy the IPSW and SHSH files to the directory where the script is located"
-            Echo "* When entering the names of IPSW and SHSH, enter the full name including the file extension"
-            Echo "* Make sure to create a backup of the SHSH"
-            read -p "$(Input 'Enter name of IPSW file:')" IPSW
-            IPSW="$(basename "$IPSW" .ipsw)"
-            read -p "$(Input 'Enter name of SHSH file:')" SHSH
-        fi
+        Input "Select your IPSW file in the file selection window."
+        IPSW="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
+        [[ ! -s "$IPSW" ]] && Error "No IPSW selected, or IPSW file not found."
+        IPSW="${IPSW%?????}"
+        Log "Selected IPSW file: $IPSW.ipsw"
+        Input "Select your SHSH file in the file selection window."
+        SHSH="$($zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select SHSH file")"
+        [[ ! -s "$SHSH" ]] && Error "No SHSH selected, or SHSH file not found."
+        Log "Selected SHSH file: $SHSH"
+
         unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
         BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         Log "Getting firmware keys for $ProductType-$BuildVer"

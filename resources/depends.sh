@@ -15,6 +15,7 @@ SetToolPaths() {
         ipwndfu="sudo $python ipwndfu"
         rmsigchks="sudo $python rmsigchks.py"
         SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 8888"
+        zenity="$(which zenity)"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -40,6 +41,7 @@ SetToolPaths() {
         ipwndfu="$python ipwndfu"
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
+        zenity="./resources/tools/zenity_macos"
 
     elif [[ $OSTYPE == "msys" ]]; then
         platform="win"
