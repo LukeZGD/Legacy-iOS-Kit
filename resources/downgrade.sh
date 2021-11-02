@@ -1,24 +1,5 @@
 #!/bin/bash
 
-iDeviceRestore() {
-    Log "Proceeding to idevicerestore... (Enter root password of your PC/Mac when prompted)"
-    [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
-    mkdir shsh
-    mv $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-    $idevicerestore -ewy $IPSWRestore.ipsw
-    if [[ $? != 0 && $platform != "linux" ]]; then
-        Log "An error seems to have occurred when running idevicerestore."
-        if [[ $platform == "macos" ]]; then
-            Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
-            Echo "* Using Terminal, cd to where the script is located, then run"
-            Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
-        elif [[ $platform == "win" ]]; then
-            Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-            Echo "* To fix this, follow troubleshooting steps here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
-        fi
-    fi
-}
-
 FRBaseband() {
     local BasebandSHA1L
     
@@ -47,9 +28,8 @@ FRBaseband() {
 }
 
 FutureRestore() {
-    local ExtraArgs=()
+    local ExtraArgs=("--use-pwndfu")
 
-    [[ $IPSWCustomW != 2 ]] && ExtraArgs=("--use-pwndfu")
     if [[ $DeviceProc == 7 ]]; then
         ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
     else
@@ -63,16 +43,6 @@ FutureRestore() {
     else
         FRBaseband
         $futurerestore -t "$SHSH" -b saved/baseband/$Baseband -p $BuildManifest "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
-    fi
-}
-
-SetIPSWCustomW() {
-    if [[ $DeviceProc == 7 ]]; then
-        IPSWCustomW=2
-        futurerestore=$futurerestore2
-    else
-        IPSWCustom="${IPSWCustom}W"
-        IPSWCustomW=1
     fi
 }
 
@@ -137,7 +107,7 @@ Downgrade() {
         echo
     fi
     
-    if [[ $ProductType == "iPhone5,1" && $Jailbreak != 1 ]]; then
+    if [[ $ProductType == "iPhone5,1" ]]; then
         Input "Latest Baseband Option"
         Echo "* iOS-OTA-Downgrader flashes the iOS 8.4.1 baseband to iPhone5,1."
         Echo "* When this option is enabled, the latest baseband will be flashed instead, but beware of problems it may cause."
@@ -149,7 +119,7 @@ Downgrade() {
             Baseband841
         fi
         echo
-    elif [[ $DeviceProc != 7 && $ProductType != "iPad2,2" && $Jailbreak != 1 ]]; then
+    elif [[ $DeviceProc != 7 && $ProductType != "iPad2,2" ]]; then
         Input "Latest Baseband Option"
         Echo "* iOS-OTA-Downgrader flashes the latest baseband to 32-bit devices."
         Echo "* When this option is disabled, iOS 8.4.1 baseband will be flashed instead, but beware of problems it may cause."
@@ -167,26 +137,11 @@ Downgrade() {
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
-        if [[ $Jailbreak != 1 && $platform == "win" ]]; then
-            SetIPSWCustomW
-        elif [[ $Jailbreak != 1 ]]; then
-            Input "Custom IPSW Option"
-            Echo "* When this option is enabled, a custom IPSW will be made for the restore."
-            Echo "* Enable this option later if you experience issues with futurerestore."
-            Echo "* This option is disabled by default (N)."
-            read -p "$(Input 'Enable this option? (y/N):')" IPSWCustomW
-            if [[ $IPSWCustomW == 'Y' || $IPSWCustomW == 'y' ]]; then
-                SetIPSWCustomW
-            fi
-            echo
-        fi
-
-        if [[ $Jailbreak == 1 || ! -z $IPSWCustomW ]]; then
+        if [[ $Jailbreak == 1 ]]; then
             [[ -e "$IPSWCustom.ipsw" ]] && Verify=
         fi
 
-        if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]] &&
-           [[ $Verify == 1 && $platform != "win" ]]; then
+        if [[ $Jailbreak == 1 && $Verify == 1 ]]; then
             Input "Memory Option for creating custom IPSW"
             Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
             Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
@@ -195,7 +150,7 @@ Downgrade() {
             echo
         fi
 
-        [[ $IPSWCustomW != 2 ]] && SaveOTABlobs
+        SaveOTABlobs
 
         if [[ ! -e "$IPSW.ipsw" && $Verify == 1 ]]; then
             Log "iOS $OSVer IPSW for $ProductType cannot be found."
@@ -235,10 +190,8 @@ Downgrade() {
 
     [[ $DeviceState == "Normal" ]] && kDFU
 
-    if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
+    if [[ $Jailbreak == 1 ]]; then
         IPSW32
-        IPSWExtract="$IPSWCustom"
-    elif [[ $IPSWCustomW == 2 && $Verify != 1 ]]; then
         IPSWExtract="$IPSWCustom"
     else
         IPSWExtract="$IPSW"
@@ -247,37 +200,29 @@ Downgrade() {
     Log "Extracting IPSW: $IPSWExtract.ipsw"
     unzip -oq "$IPSWExtract.ipsw" -d "$IPSWExtract"/
 
-    if [[ $IPSWCustomW == 2 ]]; then
-        IPSW64
-        pwnREC
-        local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
-        Log "APNonce: $APNonce"
-        SaveOTABlobs $APNonce
-    elif [[ $Jailbreak != 1 && $IPSWCustomW != 1 ]]; then
-        Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
-        cd resources
-        [[ $platform == "linux" ]] && $SimpleHTTPServer || $SimpleHTTPServer &
-        ServerRunning=1
-        cd ..
+    Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
+    cd resources
+    if [[ $platform == "linux" ]]; then
+        $SimpleHTTPServer
+    else
+        $SimpleHTTPServer &
     fi
+    ServerRunning=1
+    cd ..
     
     if [[ ! $IPSWRestore ]]; then
         Log "Setting restore IPSW to: $IPSW.ipsw"
         IPSWRestore="$IPSW"
     fi
 
-    if [[ $DeviceProc == 7 && $IPSWCustomW != 2 ]]; then
+    if [[ $DeviceProc == 7 ]]; then
         Log "Sending dummy file"
-        $irecovery -f restore.cmd
+        $irecovery -f README.md
         sleep 2
     fi
 
-    if [[ $Jailbreak == 1 || $IPSWCustomW == 1 ]]; then
-        iDeviceRestore
-    else
-        FutureRestore
-    fi
-    
+    FutureRestore
+
     echo
     Log "Restoring done!"
     Log "Downgrade script done!"

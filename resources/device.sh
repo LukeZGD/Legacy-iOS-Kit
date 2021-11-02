@@ -38,6 +38,9 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
+        if [[ $platform == "linux" ]]; then
+            Echo "* Enter root password of your PC when prompted"
+        fi
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     elif [[ ! -z $ideviceinfo2 ]]; then
         DeviceState="Normal"
@@ -68,7 +71,7 @@ GetDeviceValues() {
     if [[ ! $DeviceState ]]; then
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
-        echo "${Color_Y}* For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
+        echo "${Color_Y}* For macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
         echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         exit 1
     fi
@@ -348,32 +351,4 @@ kDFU() {
     Log "Entering kDFU mode..."
     Echo "* Press POWER or HOME button when the device disconnects and its screen goes black"
     FindDevice "DFU"
-}
-
-pwnREC() {
-    local Attempt=1
-    
-    if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
-        Log "iPad mini 2 device detected. Setting iBSS and iBEC to \"ipad4b\""
-        iBEC=$iBECb
-        iBSS=$iBSSb
-    fi
-    
-    while (( $Attempt < 4 )); do
-        Log "Entering pwnREC mode... (Attempt $Attempt)"
-        Log "Sending iBSS..."
-        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
-        Log "Sending iBEC..."
-        $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
-        sleep 3
-        FindDevice "Recovery" timeout
-        [[ $? == 0 ]] && break
-        ((Attempt++))
-    done
-    
-    if (( $Attempt == 4 )); then
-        Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again" \
-        "macOS users may have to install libimobiledevice and libirecovery from Homebrew. For more details, read the \"Troubleshooting\" wiki page in GitHub"
-    fi
 }

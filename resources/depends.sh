@@ -9,7 +9,6 @@ SetToolPaths() {
         MPath+="$platform"
         bspatch="$(which bspatch)"
         futurerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore_linux"
-        futurerestore2="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore2_linux"
         idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
         python="$(which python2)"
         ipwndfu="sudo $python ipwndfu"
@@ -34,7 +33,6 @@ SetToolPaths() {
         bspatch="/usr/bin/bspatch"
         futurerestore="./resources/tools/futurerestore_macos_$(uname -m)"
         [[ ! -e $futurerestore ]] && futurerestore="./resources/tools/futurerestore_macos_arm64"
-        futurerestore2="./resources/tools/futurerestore2_macos"
         idevicerestore="./resources/tools/idevicerestore_macos"
         ipwnder32="./resources/tools/ipwnder32_macos"
         python="/usr/bin/python"
@@ -42,14 +40,6 @@ SetToolPaths() {
         rmsigchks="$python rmsigchks.py"
         SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
         zenity="./resources/tools/zenity_macos"
-
-    elif [[ $OSTYPE == "msys" ]]; then
-        platform="win"
-        MPath+="$platform"
-        bspatch="./resources/tools/bspatch_win"
-        futurerestore2="./resources/tools/futurerestore2_win"
-        idevicerestore="./resources/tools/idevicerestore_win"
-        python=/
     fi
     git="$(which git)"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
@@ -139,14 +129,6 @@ InstallDepends() {
         Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"
         Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
 
-    elif [[ $platform == "win" ]]; then
-        pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
-        Log "Downloading Windows tools..."
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 1929c04f6f699f5e423bd9ca7ecc855a9b4f8f7c
-        Log "Extracting Windows tools..."
-        unzip -oq tools_win.zip -d ../resources/tools
-        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "3ed553415cc669b5c467a5f3cd78f692f7149adb")
-
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
@@ -168,10 +150,5 @@ InstallDepends() {
 
     cd ..
     Log "Install script done! Please run the script again to proceed"
-
-    if [[ $platform == "win" ]]; then
-        Input "Press Enter/Return to exit."
-        read -s
-    fi
     exit 0
 }

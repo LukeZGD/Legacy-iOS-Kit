@@ -1,7 +1,6 @@
 #!/bin/bash
 
 SaveOTABlobs() {
-    local APNonce=$1
     local ExtraArgs
     local SHSHChk
     local SHSHContinue
@@ -12,12 +11,7 @@ SaveOTABlobs() {
     ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap"
     SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}*.shsh*
     if [[ $DeviceProc == 7 ]]; then
-        if [[ ! -z $APNonce ]]; then
-            ExtraArgs+=" --apnonce $APNonce"
-            SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_${APNonce}.shsh*
-        else
-            ExtraArgs+=" --generator 0x1111111111111111"
-        fi
+        ExtraArgs+=" --generator 0x1111111111111111"
     fi
     $tsschecker $ExtraArgs
     
@@ -43,7 +37,7 @@ SaveOTABlobs() {
     
     if [[ ! -z $SHSH && $SHSHContinue != 1 ]]; then
         mkdir -p saved/shsh 2>/dev/null
-        [[ -z $APNonce && ! $SHSHExisting ]] && cp "$SHSH" saved/shsh
+        [[ ! $SHSHExisting ]] && cp "$SHSH" saved/shsh
         Log "Successfully saved $OSVer blobs."
     fi
 }

@@ -2,19 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BuildIdentitiesPatches</key>
-	<dict>
-		<key>UniqueBuildID</key>
-		<data>KIbYgNGP7qPe4cvyJblXevSlRjs=</data>
-		<key>Manifest</key>
-		<dict>
-			<key>RestoreRamDisk</key>
-			<dict>
-				<key>Digest</key>
-				<data>dKo3Kn9R8PeR5H6YncOmfEwm8ug=</data>
-			</dict>
-		</dict>
-	</dict>
 	<key>DownloadUrl</key>
 	<string></string>
 	<key>Filename</key>
@@ -33,71 +20,6 @@
 			<string>923259891cffc81f2332c7b08414be0f</string>
 			<key>Key</key>
 			<string>98c6c3c9aebee967b021350547e12064804ded2cfb8a5c6d587fe1b26a8f1678</string>
-			<key>TypeFlag</key>
-			<integer>8</integer>
-		</dict>
-		<key>RestoreDeviceTree</key>
-		<dict>
-			<key>DecryptPath</key>
-			<string>Downgrade/DeviceTree.p102ap.img3</string>
-			<key>File</key>
-			<string>Firmware/all_flash/all_flash.p102ap.production/DeviceTree.p102ap.img3</string>
-			<key>IV</key>
-			<string>93a05abd1c925866fe610be1c7951f6a</string>
-			<key>Key</key>
-			<string>ed82f4764c704f1a441d1e9ce6c021d869c263ead509626c2194b8ccbcb32bce</string>
-		</dict>
-		<key>RestoreKernelCache</key>
-		<dict>
-			<key>DecryptPath</key>
-			<string>Downgrade/kernelcache.release.p102</string>
-			<key>File</key>
-			<string>kernelcache.release.p102</string>
-			<key>IV</key>
-			<string>db33c789914a1c5b6aa78edc87852716</string>
-			<key>Key</key>
-			<string>3edb2a54b611034334df77fd06b44cd2824e53e3db59521f4759e624ca1cab14</string>
-			<key>TypeFlag</key>
-			<integer>4</integer>
-		</dict>
-		<key>RestoreLogo</key>
-		<dict>
-			<key>DecryptPath</key>
-			<string>Downgrade/applelogo@2x~ipad.s5l8955x.img3</string>
-			<key>File</key>
-			<string>Firmware/all_flash/all_flash.p102ap.production/applelogo@2x~ipad.s5l8955x.img3</string>
-			<key>IV</key>
-			<string>adf49517c9d99ba14466e24628cf68db</string>
-			<key>Key</key>
-			<string>54db70d5cd7dc3c3dc5acbe408a91f0faf7061a9ef6b070da2cb1feb2e7bb04b</string>
-		</dict>
-		<key>iBEC</key>
-		<dict>
-			<key>Decrypt</key>
-			<true/>
-			<key>File</key>
-			<string>Firmware/dfu/iBEC.p102.RELEASE.dfu</string>
-			<key>IV</key>
-			<string>e0215af209f1de638d82fc2f0850b7e1</string>
-			<key>Key</key>
-			<string>7f4ebb46f7b6f5936bc7a3af20b389adc923d69db0b4bcae58ac728502bbb8fb</string>
-			<key>Patch</key>
-			<string>iBEC.p102.RELEASE.patch</string>
-			<key>TypeFlag</key>
-			<integer>8</integer>
-		</dict>
-		<key>iBSS</key>
-		<dict>
-			<key>Decrypt</key>
-			<true/>
-			<key>File</key>
-			<string>Firmware/dfu/iBSS.p102.RELEASE.dfu</string>
-			<key>IV</key>
-			<string>fba6d9aaec7237891c80390e6ffa88bf</string>
-			<key>Key</key>
-			<string>92909dca9bfdb9193131f9ad9b628b1a4971b1cbab52c0ddd114a6253fad96c0</string>
-			<key>Patch</key>
-			<string>iBSS.p102.RELEASE.patch</string>
 			<key>TypeFlag</key>
 			<integer>8</integer>
 		</dict>
