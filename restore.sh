@@ -112,18 +112,19 @@ Main() {
     if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
         Mode="$1"
     else
-        Selection=("Downgrade device" "Save OTA blobs")
+        Selection=("Downgrade Device" "Save OTA Blobs")
         if [[ $DeviceProc != 7 && $DeviceState == "Normal" ]]; then
-            Selection+=("Just put device in kDFU mode")
+            Selection+=("Create Custom IPSW" "Put Device in kDFU Mode")
         fi
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
         Echo "*** Main Menu ***"
         Input "Select an option:"
         select opt in "${Selection[@]}"; do
         case $opt in
-            "Downgrade device" ) Mode="Downgrade"; break;;
-            "Save OTA blobs" ) Mode="SaveOTABlobs"; break;;
-            "Just put device in kDFU mode" ) Mode="kDFU"; break;;
+            "Downgrade Device" ) Mode="Downgrade"; break;;
+            "Save OTA Blobs" ) Mode="SaveOTABlobs"; break;;
+            "Create Custom IPSW" ) Mode="IPSW32"; break;;
+            "Put Device in kDFU Mode" ) Mode="kDFU"; break;;
             "(Re-)Install Dependencies" ) InstallDepends;;
             * ) exit 0;;
         esac
@@ -132,7 +133,23 @@ Main() {
 
     SelectVersion
 
-    if [[ $Mode != "Downgrade" ]]; then
+    if [[ $Mode == "IPSW32" ]]; then
+        IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
+        IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+        echo
+        Input "Memory Option for creating custom IPSW"
+        Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
+        Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
+        Echo "* This option is enabled by default (Y)."
+        read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
+        echo
+        IPSW32
+        Log "Custom IPSW has been created: $IPSWCustom.ipsw"
+        Echo "* This custom IPSW has a jailbreak built in."
+        Echo "* Run the script again and select Downgrade device to use the custom IPSW."
+        Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
+
+    elif [[ $Mode != "Downgrade" ]]; then
         $Mode
         exit 0
     fi
