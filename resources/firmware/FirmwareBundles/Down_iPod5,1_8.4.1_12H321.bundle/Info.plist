@@ -54,5 +54,7 @@
 	<string>cc08267089f5294884a7bfec8bb10dcb197fc20a</string>
 	<key>SubPlatform</key>
 	<integer>6</integer>
+	<key>needPref</key>
+	<true/>
 </dict>
 </plist>

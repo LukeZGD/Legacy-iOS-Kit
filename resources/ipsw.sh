@@ -1,7 +1,6 @@
 #!/bin/bash
 
 IPSW32() {
-    local BundlePath="resources/firmware/FirmwareBundles"
     local Bundle="Down_${ProductType}_${OSVer}_${BuildVer}.bundle"
     local ExtraArgs
     local JBFiles
@@ -10,13 +9,6 @@ IPSW32() {
     if [[ $IPSWRestore == $IPSWCustom ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    fi
-
-    if [[ -e $BundlePath/$Bundle/Info.plist.bak ]]; then
-        cd $BundlePath/$Bundle
-        rm Info.plist
-        mv Info.plist.bak Info.plist
-        cd ../../../..
     fi
 
     if [[ $JBDaibutsu == 1 ]]; then
@@ -41,10 +33,6 @@ IPSW32() {
         cd ..
 
     elif [[ $Jailbreak == 1 ]]; then
-        cd $BundlePath/$Bundle
-        cp Info.plist Info.plist.bak
-        sed -z -i "s|</dict>\n</plist>|\t<key>needPref</key>\n\t<true/>\n</dict>\n</plist>|g" Info.plist
-        cd ../../../..
         if [[ $OSVer == "8.4.1" ]]; then
             JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
             JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"

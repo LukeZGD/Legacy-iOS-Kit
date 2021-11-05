@@ -84,6 +84,5 @@
 - [zenity](https://github.com/GNOME/zenity)
 - [zenity](https://github.com/ncruces/zenity) (macOS)
 - 32-bit bundles are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
-- A7 patches are from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)

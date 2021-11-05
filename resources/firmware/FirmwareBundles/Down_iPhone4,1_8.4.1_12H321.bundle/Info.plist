@@ -54,5 +54,7 @@
 	</dict>
 	<key>RootFilesystemKey</key>
 	<string>8fd9823be521060b9160272962fc2f65520de7b5ab55fe574953997e3ee5306d7bab5e02</string>
+	<key>needPref</key>
+	<true/>
 </dict>
 </plist>
