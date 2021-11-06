@@ -21,16 +21,7 @@ fi
 Clean() {
     rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
     ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
-    kill $iproxyPID 2>/dev/null
-    if [[ $ServerRunning == 1 ]]; then
-        Log "Stopping local server..."
-        if [[ $platform == "macos" ]]; then
-            ps aux | awk '/python/ {print "kill -9 "$2" 2>/dev/null"}' | bash
-        elif [[ $platform == "linux" ]]; then
-            Echo "* Enter root password of your PC when prompted"
-            ps aux | awk '/python/ {print "sudo kill -9 "$2" 2>/dev/null"}' | bash
-        fi
-    fi
+    kill $iproxyPID $ServerPID 2>/dev/null
 }
 
 Echo() {
@@ -146,7 +137,7 @@ Main() {
         IPSW32
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
         Echo "* This custom IPSW has a jailbreak built in."
-        Echo "* Run the script again and select Downgrade device to use the custom IPSW."
+        Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
         Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
 
     elif [[ $Mode != "Downgrade" ]]; then

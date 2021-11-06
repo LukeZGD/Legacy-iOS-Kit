@@ -32,15 +32,14 @@ FindDevice() {
 
 GetDeviceValues() {
     local ideviceinfo2
+    local version
     
     Log "Finding device in Normal mode..."
     DeviceState=
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 ]]; then
         Log "Finding device in DFU/recovery mode..."
-        if [[ $platform == "linux" ]]; then
-            Echo "* Enter root password of your PC when prompted"
-        fi
+        [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     elif [[ ! -z $ideviceinfo2 ]]; then
         DeviceState="Normal"
@@ -66,6 +65,7 @@ GetDeviceValues() {
         ProductVer=$(echo "$ideviceinfo2" | grep "ProductVer" | cut -c 17-)
         UniqueChipID=$(echo "$ideviceinfo2" | grep "UniqueChipID" | cut -c 15-)
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep "UniqueDeviceID" | cut -c 17-)
+        version="(iOS $ProductVer) "
     fi
     
     if [[ ! $DeviceState ]]; then
@@ -115,7 +115,7 @@ GetDeviceValues() {
     
     elif [[ $ProductType != "iPad2"* && $ProductType != "iPad3"* && $ProductType != "iPad4,1" &&
             $ProductType != "iPad4,4" && $ProductType != "iPod5,1" && $ProductType != "iPhone5"* ]]; then
-        Error "Your device $ProductType is not supported."
+        Error "Your device $ProductType ${version}is not supported."
     else
         BasebandURL=0
     fi
@@ -153,14 +153,11 @@ GetDeviceValues() {
         iBSSBuildVer="12H321"
     fi
     [[ ! $IPSWType ]] && IPSWType="$ProductType"
-    iBEC="iBEC.$iBSS.RELEASE"
-    iBECb="iBEC.${iBSS}b.RELEASE"
-    iBSSb="iBSS.${iBSS}b.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
     
-    Log "Found $ProductType in $DeviceState mode."
-    Log "Device ECID: $UniqueChipID"
+    Log "$ProductType ${version}connected in $DeviceState mode."
+    Log "ECID: $UniqueChipID"
 }
 
 Baseband841() {
@@ -208,6 +205,7 @@ CheckM8() {
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
+        [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
         $ipwndfu -p
         if  [[ $DeviceProc == 7 ]]; then
             Log "Running rmsigchks.py..."
@@ -345,7 +343,7 @@ kDFU() {
             Error "Cannot connect to device via SSH." \
             "Please try the steps above to make sure that SSH is successful"
         fi
-        $SSH root@$IPAddress "/tmp/$kloader /tmp/pwnediBSS" &
+        $SSH root@$IPAddress "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &
     fi
     
     Log "Entering kDFU mode..."

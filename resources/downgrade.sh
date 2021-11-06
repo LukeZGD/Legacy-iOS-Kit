@@ -27,26 +27,8 @@ FRBaseband() {
     fi
 }
 
-FutureRestore() {
-    local ExtraArgs=("--use-pwndfu")
-
-    if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
-    else
-        ExtraArgs+=("--no-ibss")
-    fi
-
-    Log "Proceeding to futurerestore..."
-    if [[ $Baseband == 0 ]]; then
-        Log "Device $ProductType has no baseband"
-        $futurerestore -t "$SHSH" --no-baseband "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
-    else
-        FRBaseband
-        $futurerestore -t "$SHSH" -b saved/baseband/$Baseband -p $BuildManifest "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
-    fi
-}
-
 Downgrade() {
+    local ExtraArgs=("--use-pwndfu")
     local IPSWExtract
     local IPSWSHA1
     local IPSWSHA1L
@@ -200,28 +182,34 @@ Downgrade() {
     Log "Extracting IPSW: $IPSWExtract.ipsw"
     unzip -oq "$IPSWExtract.ipsw" -d "$IPSWExtract"/
 
-    Log "Preparing for futurerestore... (Enter root password of your PC/Mac when prompted)"
-    cd resources
-    if [[ $platform == "linux" ]]; then
-        $SimpleHTTPServer
-    else
-        $SimpleHTTPServer &
-    fi
-    ServerRunning=1
-    cd ..
-    
     if [[ ! $IPSWRestore ]]; then
         Log "Setting restore IPSW to: $IPSW.ipsw"
         IPSWRestore="$IPSW"
     fi
 
+    Log "Proceeding to futurerestore..."
+    [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
+    cd resources
+    $SimpleHTTPServer &
+    ServerPID=$!
+    cd ..
+
     if [[ $DeviceProc == 7 ]]; then
-        Log "Sending dummy file"
+        # Send dummy file for device detection
         $irecovery -f README.md
         sleep 2
+        ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
+    else
+        ExtraArgs+=("--no-ibss")
     fi
 
-    FutureRestore
+    if [[ $Baseband == 0 ]]; then
+        Log "Device $ProductType has no baseband"
+        $futurerestore -t "$SHSH" --no-baseband "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
+    else
+        FRBaseband
+        $futurerestore -t "$SHSH" -b saved/baseband/$Baseband -p $BuildManifest "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
+    fi
 
     echo
     Log "Restoring done!"

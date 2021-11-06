@@ -1,19 +1,17 @@
 #!/bin/bash
 
 SetToolPaths() {
-    MPath="./resources/libimobiledevice_"
+    local Detect="Detected libimobiledevice and libirecovery installed from "
+    local MPath="./resources/libimobiledevice_"
+
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
         platform="linux"
         platformver="$PRETTY_NAME"
         MPath+="$platform"
         bspatch="$(which bspatch)"
-        futurerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/futurerestore_linux"
-        idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_linux"
+        futurerestore="./resources/tools/futurerestore_linux"
         python="$(which python2)"
-        ipwndfu="sudo $python ipwndfu"
-        rmsigchks="sudo $python rmsigchks.py"
-        SimpleHTTPServer="sudo -b $python -m SimpleHTTPServer 8888"
         zenity="$(which zenity)"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -21,39 +19,49 @@ SetToolPaths() {
         platformver="${1:-$(sw_vers -productVersion)}"
         MPath+="$platform"
         if [[ -e /usr/local/bin/idevicedate && -e /usr/local/bin/irecovery ]]; then
-            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Intel Mac)"
+            Detect+="Homebrew (Intel Mac)"
             MPath="/usr/local/bin"
         elif [[ -e /opt/homebrew/bin/idevicedate && -e /opt/homebrew/bin/irecovery ]]; then
-            Log "Detected libimobiledevice and libirecovery installed from Homebrew (Apple Silicon)"
+            Detect+="Homebrew (Apple Silicon)"
             MPath="/opt/homebrew/bin"
         elif [[ -e /opt/local/bin/idevicedate && -e /opt/local/bin/irecovery ]]; then
-            Log "Detected libimobiledevice and libirecovery installed from MacPorts"
+            Detect+="MacPorts"
             MPath="/opt/local/bin"
+        else
+            Detect=
         fi
+        [[ ! -z $Detect ]] && Log "$Detect"
         bspatch="/usr/bin/bspatch"
         futurerestore="./resources/tools/futurerestore_macos_$(uname -m)"
         [[ ! -e $futurerestore ]] && futurerestore="./resources/tools/futurerestore_macos_arm64"
-        idevicerestore="./resources/tools/idevicerestore_macos"
         ipwnder32="./resources/tools/ipwnder32_macos"
         python="/usr/bin/python"
-        ipwndfu="$python ipwndfu"
-        rmsigchks="$python rmsigchks.py"
-        SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
         zenity="./resources/tools/zenity_macos"
     fi
+
     git="$(which git)"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     iproxy="$MPath/iproxy"
     ipsw="./tools/ipsw_$platform"
+    ipwndfu="$python ipwndfu"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
-    [[ $platform == "linux" ]] && irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
     partialzip="./resources/tools/partialzip_$platform"
+    rmsigchks="$python rmsigchks.py"
+    SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     tsschecker="./resources/tools/tsschecker_$platform"
+
+    if [[ $platform == "linux" ]]; then
+        # these need to run as root for device detection
+        futurerestore="sudo $futurerestore"
+        ipwndfu="sudo $ipwndfu"
+        irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
+        rmsigchks="sudo $rmsigchks"
+    fi
 
     Log "Running on platform: $platform ($platformver)"
 }
