@@ -37,10 +37,13 @@ GetDeviceValues() {
     Log "Finding device in Normal mode..."
     DeviceState=
     ideviceinfo2=$($ideviceinfo -s)
-    if [[ $? != 0 ]]; then
+    if [[ $? != 0 && $1 != "NoDevice" ]]; then
         Log "Finding device in DFU/recovery mode..."
         [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
+    elif [[ $1 == "NoDevice" ]]; then
+        Log "NoDevice argument detected. Skipping device detection"
+        DeviceState="NoDevice"
     elif [[ ! -z $ideviceinfo2 ]]; then
         DeviceState="Normal"
     fi
@@ -50,16 +53,9 @@ GetDeviceValues() {
         ProductType=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
         [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
         ProductType=$(echo $ProductType | cut -c -$ProdCut)
-        if [[ ! $ProductType ]]; then
-            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
-        fi
-
         UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
-        if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
-            read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
-        fi
         ProductVer="Unknown"
-    else
+    elif [[ $DeviceState == "Normal" ]]; then
         ProductType=$(echo "$ideviceinfo2" | grep "ProductType" | cut -c 14-)
         [[ ! $ProductType ]] && ProductType=$($ideviceinfo | grep "ProductType" | cut -c 14-)
         ProductVer=$(echo "$ideviceinfo2" | grep "ProductVer" | cut -c 17-)
@@ -67,13 +63,21 @@ GetDeviceValues() {
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep "UniqueDeviceID" | cut -c 17-)
         version="(iOS $ProductVer) "
     fi
-    
+
     if [[ ! $DeviceState ]]; then
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
         echo "${Color_Y}* For macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
         echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+        echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. Example: ./restore.sh NoDevice ${Color_N}"
         exit 1
+    elif [[ ! -z $DeviceState ]]; then
+        if [[ ! $ProductType ]]; then
+            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
+        fi
+        if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
+            read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
+        fi
     fi
     
     Firmware=resources/firmware/$ProductType

@@ -44,6 +44,7 @@ Log() {
 }
 
 Main() {
+    local Selection=()
     local SkipMainMenu
     
     clear
@@ -71,7 +72,7 @@ Main() {
     
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? != 0 ]]; then
-        Log "Warning - An error occurred in chmod. This might cause problems..."
+        Error "A problem with file permissions has been detected, cannot proceed."
     fi
     
     Log "Checking Internet connection..."
@@ -93,19 +94,25 @@ Main() {
     
     SaveExternal LukeZGD ipwndfu
 
-    GetDeviceValues
+    GetDeviceValues $1
     
     Clean
     mkdir tmp
     
     [[ ! -z $1 ]] && SkipMainMenu=1
 
-    if [[ $SkipMainMenu == 1 && $1 != "NoColor" ]]; then
+    if [[ $SkipMainMenu == 1 && $1 != "NoColor" && $1 != "NoDevice" ]]; then
         Mode="$1"
     else
-        Selection=("Downgrade Device" "Save OTA Blobs")
+        if [[ $1 != "NoDevice" ]]; then
+            Selection+=("Downgrade Device")
+        fi
+        Selection+=("Save OTA Blobs")
+        if [[ $DeviceProc != 7 ]] && [[ $DeviceState == "Normal" || $1 == "NoDevice" ]]; then
+            Selection+=("Create Custom IPSW")
+        fi
         if [[ $DeviceProc != 7 && $DeviceState == "Normal" ]]; then
-            Selection+=("Create Custom IPSW" "Put Device in kDFU Mode")
+            Selection+=("Put Device in kDFU Mode")
         fi
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
         Echo "*** Main Menu ***"
