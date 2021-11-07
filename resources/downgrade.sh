@@ -16,14 +16,19 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    elif [[ $DeviceProc != 7 ]]; then
+    elif [[ $DeviceProc != 7 && $Baseband5 == 0 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
-    
+
     BasebandSHA1L=$(shasum saved/baseband/$Baseband | awk '{print $1}')
     if [[ ! -e $(ls saved/baseband/$Baseband) || $BasebandSHA1L != $BasebandSHA1 ]]; then
         rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
-        Error "Downloading/verifying baseband failed. Please run the script again"
+        if [[ $DeviceProc == 7 ]]; then
+            Error "Downloading/verifying baseband failed. Please run the script again"
+        else
+            Log "Downloading/verifying baseband failed, will proceed with --latest-baseband flag"
+            return 1
+        fi
     fi
 }
 
@@ -107,7 +112,7 @@ Downgrade() {
         Echo "* When this option is disabled, iOS 8.4.1 baseband will be flashed instead, but beware of problems it may cause."
         Echo "* This option is enabled by default (Y)."
         read -p "$(Input 'Enable this option? (Y/n):')" Baseband5
-        if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
+        if [[ $Baseband5 == 'N' || $Baseband5 == 'n' ]]; then
             Baseband841
         else
             Baseband5=0
@@ -205,11 +210,16 @@ Downgrade() {
 
     if [[ $Baseband == 0 ]]; then
         Log "Device $ProductType has no baseband"
-        $futurerestore -t "$SHSH" --no-baseband "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
+        ExtraArgs+=("--no-baseband")
     else
         FRBaseband
-        $futurerestore -t "$SHSH" -b saved/baseband/$Baseband -p $BuildManifest "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
+        if [[ $? == 1 ]]; then
+            ExtraArgs+=("--latest-baseband")
+        else
+            ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
+        fi
     fi
+    $futurerestore -t "$SHSH" "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
 
     echo
     Log "Restoring done!"
