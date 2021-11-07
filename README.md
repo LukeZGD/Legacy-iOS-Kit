@@ -1,16 +1,15 @@
 # iOS-OTA-Downgrader
 
 - **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
-- **Linux, macOS, and Windows** are supported
+- **Linux and macOS** are supported
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
-- This script can also restore your device to other iOS versions that you have SHSH blobs for
-    - 32-bit devices only. This feature is also not supported on Windows
-- This script can also be used to just enter kDFU mode for all supported 32-bit devices
+- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only)
+- This script can also be used to just enter kDFU mode (32-bit devices only)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -61,7 +60,6 @@
 - [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
-- **Windows** 7 and newer, including 8.1 and 10
 
 ## Tools and other stuff used
 - cURL
@@ -75,7 +73,6 @@
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
-- [tsschecker](https://github.com/1Conan/tsschecker) - 1Conan fork (Windows build)
 - [futurerestore](https://github.com/m1stadev/futurerestore/tree/test) - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
