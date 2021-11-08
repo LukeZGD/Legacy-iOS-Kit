@@ -16,7 +16,7 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    elif [[ $DeviceProc != 7 && $Baseband5 == 0 ]]; then
+    elif [[ $Baseband5 == 0 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
 
@@ -90,6 +90,8 @@ Downgrade() {
             fi
 
             Log "Jailbreak option enabled. Using $JBName for the jailbreak"
+        else
+            Log "Jailbreak option disabled by user."
         fi
         echo
     fi
@@ -102,10 +104,13 @@ Downgrade() {
         read -p "$(Input 'Enable this option? (y/N):')" Baseband5
         if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
             Baseband5=0
+            Log "Latest baseband enabled by user."
         else
             Baseband841
+            Log "Latest baseband disabled. Using iOS 8.4.1 baseband"
         fi
         echo
+
     elif [[ $DeviceProc != 7 && $ProductType != "iPad2,2" ]]; then
         Input "Latest Baseband Option"
         Echo "* iOS-OTA-Downgrader flashes the latest baseband to 32-bit devices."
@@ -114,8 +119,10 @@ Downgrade() {
         read -p "$(Input 'Enable this option? (Y/n):')" Baseband5
         if [[ $Baseband5 == 'N' || $Baseband5 == 'n' ]]; then
             Baseband841
+            Log "Latest baseband disabled by user. Using iOS 8.4.1 baseband"
         else
             Baseband5=0
+            Log "Latest baseband enabled."
         fi
         echo
     fi
@@ -134,6 +141,11 @@ Downgrade() {
             Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
             Echo "* This option is enabled by default (Y)."
             read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
+            if [[ $JBMemory == 'N' || $JBMemory == 'n' ]]; then
+                Log "Memory option disabled by user."
+            else
+                Log "Memory option enabled."
+            fi
             echo
         fi
 
