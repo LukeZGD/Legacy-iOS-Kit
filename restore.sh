@@ -104,15 +104,11 @@ Main() {
     if [[ $SkipMainMenu == 1 && $1 != "NoColor" && $1 != "NoDevice" ]]; then
         Mode="$1"
     else
-        if [[ $1 != "NoDevice" ]]; then
-            Selection+=("Downgrade Device")
-        fi
+        [[ $1 != "NoDevice" ]] && Selection+=("Downgrade Device")
         Selection+=("Save OTA Blobs")
-        if [[ $DeviceProc != 7 ]] && [[ $DeviceState == "Normal" || $1 == "NoDevice" ]]; then
+        if [[ $DeviceProc != 7 ]]; then
             Selection+=("Create Custom IPSW")
-        fi
-        if [[ $DeviceProc != 7 && $DeviceState == "Normal" ]]; then
-            Selection+=("Put Device in kDFU Mode")
+            [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
         fi
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
         Echo "*** Main Menu ***"

@@ -61,7 +61,7 @@ Downgrade() {
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
         mv tmp/index.html resources/firmware/$ProductType/$BuildVer
 
-    if [[ $DeviceProc != 7 ]]; then
+    elif [[ $DeviceProc != 7 ]]; then
         Input "Jailbreak Option"
         Echo "* When this option is enabled, your device will be jailbroken on restore."
         if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
