@@ -1,5 +1,38 @@
 #!/bin/bash
 
+JailbreakSet() {
+    Jailbreak=1
+    if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" || $ProductType == "iPad2,5" ||
+          $ProductType == "iPad2,6" || $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+        [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
+        [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
+    fi
+
+    if [[ $JBDaibutsu == 1 ]]; then
+        JBName="daibutsu"
+    elif [[ $OSVer == "8.4.1" ]]; then
+        JBName="EtasonJB"
+    elif [[ $OSVer == "6.1.3" ]]; then
+        JBName="p0sixspwn"
+    fi
+}
+
+MemoryOption() {
+    if [[ $Jailbreak == 1 && $Verify == 1 ]]; then
+        Input "Memory Option for creating custom IPSW"
+        Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
+        Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
+        Echo "* This option is enabled by default (Y)."
+        read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
+        if [[ $JBMemory == 'N' || $JBMemory == 'n' ]]; then
+            Log "Memory option disabled by user."
+        else
+            Log "Memory option enabled."
+        fi
+        echo
+    fi
+}
+
 IPSW32() {
     local Bundle="Down_${ProductType}_${OSVer}_${BuildVer}.bundle"
     local ExtraArgs

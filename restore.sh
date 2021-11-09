@@ -134,16 +134,14 @@ Main() {
     if [[ $Mode == "IPSW32" ]]; then
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+        Verify=1
         echo
-        Input "Memory Option for creating custom IPSW"
-        Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
-        Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
-        Echo "* This option is enabled by default (Y)."
-        read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
-        echo
+        JailbreakSet
+        Log "Using $JBName for the jailbreak"
+        MemoryOption
         IPSW32
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
-        Echo "* This custom IPSW has a jailbreak built in."
+        Echo "* This custom IPSW has a jailbreak built in ($JBName)"
         Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
         Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
 

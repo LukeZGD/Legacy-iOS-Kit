@@ -38,7 +38,6 @@ Downgrade() {
     local IPSWSHA1
     local IPSWSHA1L
     local Jailbreak
-    local JBName
     local Verify=1
     
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
@@ -62,33 +61,18 @@ Downgrade() {
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
         mv tmp/index.html resources/firmware/$ProductType/$BuildVer
 
-    elif [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
-        Echo "* Jailbreak Option is disabled on iPad mini 1 devices."
-        Echo "* If you want to jailbreak your device, you need to sideload EtasonJB, HomeDepot, or daibutsu manually."
-        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-        read -s
-
-    elif [[ $DeviceProc != 7 ]]; then
+    if [[ $DeviceProc != 7 ]]; then
         Input "Jailbreak Option"
         Echo "* When this option is enabled, your device will be jailbroken on restore."
+        if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
+            Echo "* Based on some reported issues, Jailbreak Option might be broken for iPad mini 1 devices."
+            Echo "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
+        fi
         Echo "* This option is enabled by default (Y)."
         read -p "$(Input 'Enable this option? (Y/n):')" Jailbreak
         
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
-            Jailbreak=1
-            if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" || $ProductType == "iPod5,1" ]] ||
-               [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
-                [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
-            fi
-
-            if [[ $JBDaibutsu == 1 ]]; then
-                JBName="daibutsu"
-            elif [[ $OSVer == "8.4.1" ]]; then
-                JBName="EtasonJB"
-            elif [[ $OSVer == "6.1.3" ]]; then
-                JBName="p0sixspwn"
-            fi
-
+            JailbreakSet
             Log "Jailbreak option enabled. Using $JBName for the jailbreak"
         else
             Log "Jailbreak option disabled by user."
@@ -96,25 +80,14 @@ Downgrade() {
         echo
     fi
     
-    if [[ $ProductType == "iPhone5,1" ]]; then
-        Input "Latest Baseband Option"
-        Echo "* iOS-OTA-Downgrader flashes the iOS 8.4.1 baseband to iPhone5,1."
-        Echo "* When this option is enabled, the latest baseband will be flashed instead, but beware of problems it may cause."
-        Echo "* This option is disabled by default (N)."
-        read -p "$(Input 'Enable this option? (y/N):')" Baseband5
-        if [[ $Baseband5 == 'Y' || $Baseband5 == 'y' ]]; then
-            Baseband5=0
-            Log "Latest baseband enabled by user."
-        else
-            Baseband841
-            Log "Latest baseband disabled. Using iOS 8.4.1 baseband"
-        fi
-        echo
-
-    elif [[ $DeviceProc != 7 && $ProductType != "iPad2,2" ]]; then
+    if [[ $DeviceProc != 7 && $ProductType != "iPad2,2" ]]; then
         Input "Latest Baseband Option"
         Echo "* iOS-OTA-Downgrader flashes the latest baseband to 32-bit devices."
         Echo "* When this option is disabled, iOS 8.4.1 baseband will be flashed instead, but beware of problems it may cause."
+        if [[ $ProductType == "iPhone5,1" ]]; then
+            Echo "* Based on some reported issues, the iPhone5,1 in particular may experience issues with the latest baseband."
+            Echo "* I recommend to disable the option for these devices to flash the iOS 8.4.1 baseband."
+        fi
         Echo "* This option is enabled by default (Y)."
         read -p "$(Input 'Enable this option? (Y/n):')" Baseband5
         if [[ $Baseband5 == 'N' || $Baseband5 == 'n' ]]; then
@@ -135,19 +108,7 @@ Downgrade() {
             [[ -e "$IPSWCustom.ipsw" ]] && Verify=
         fi
 
-        if [[ $Jailbreak == 1 && $Verify == 1 ]]; then
-            Input "Memory Option for creating custom IPSW"
-            Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
-            Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
-            Echo "* This option is enabled by default (Y)."
-            read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
-            if [[ $JBMemory == 'N' || $JBMemory == 'n' ]]; then
-                Log "Memory option disabled by user."
-            else
-                Log "Memory option enabled."
-            fi
-            echo
-        fi
+        MemoryOption
 
         SaveOTABlobs
 
