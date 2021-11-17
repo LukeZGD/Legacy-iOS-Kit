@@ -30,7 +30,7 @@ SetToolPaths() {
         else
             Detect=
         fi
-        [[ ! -z $Detect ]] && Log "$Detect"
+        [[ -n $Detect ]] && Log "$Detect"
         bspatch="/usr/bin/bspatch"
         futurerestore="./resources/tools/futurerestore_macos_$(uname -m)"
         [[ ! -e $futurerestore ]] && futurerestore="./resources/tools/futurerestore_macos_arm64"
@@ -110,13 +110,13 @@ InstallDepends() {
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
         sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 unzip usbutils zenity
 
-    elif [[ ! -z $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
+    elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
-        [[ ! -z $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
+        [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
         sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils zenity
 
-    elif [[ $ID == "fedora" ]] && (( $VERSION_ID >= 33 )); then
+    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 33 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         sudo dnf install -y bsdiff git libimobiledevice perl-Digest-SHA python2 zenity
 

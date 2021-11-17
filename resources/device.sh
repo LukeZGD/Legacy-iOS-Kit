@@ -6,10 +6,10 @@ FindDevice() {
     local Timeout=999
     local USB
     [[ $1 == "DFU" ]] && USB=1227 || USB=1281
-    [[ ! -z $2 ]] && Timeout=3
+    [[ -n $2 ]] && Timeout=3
     
     Log "Finding device in $1 mode..."
-    while (( $i < $Timeout )); do
+    while (( i < Timeout )); do
         if [[ $platform == "linux" ]]; then
             DeviceIn=$(lsusb | grep -c "05ac:$USB")
         else
@@ -44,7 +44,7 @@ GetDeviceValues() {
     elif [[ $1 == "NoDevice" ]]; then
         Log "NoDevice argument detected. Skipping device detection"
         DeviceState="NoDevice"
-    elif [[ ! -z $ideviceinfo2 ]]; then
+    elif [[ -n $ideviceinfo2 ]]; then
         DeviceState="Normal"
     fi
 
@@ -71,7 +71,7 @@ GetDeviceValues() {
         echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. Example: ./restore.sh NoDevice ${Color_N}"
         exit 1
-    elif [[ ! -z $DeviceState ]]; then
+    elif [[ -n $DeviceState ]]; then
         if [[ ! $ProductType ]]; then
             read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
         fi
@@ -291,7 +291,7 @@ kDFU() {
     
     if [[ ! -e saved/$ProductType/$iBSS.dfu ]]; then
         Log "Downloading iBSS..."
-        $partialzip $(cat $Firmware/$iBSSBuildVer/url) Firmware/dfu/$iBSS.dfu $iBSS.dfu
+        $partialzip "$(cat $Firmware/$iBSSBuildVer/url)" Firmware/dfu/$iBSS.dfu $iBSS.dfu
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi

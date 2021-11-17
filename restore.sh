@@ -30,7 +30,7 @@ Echo() {
 
 Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
-    [[ ! -z $2 ]] && echo "${Color_R}* $2 ${Color_N}"
+    [[ -n $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
     exit 1
 }
@@ -99,7 +99,7 @@ Main() {
     Clean
     mkdir tmp
     
-    [[ ! -z $1 ]] && SkipMainMenu=1
+    [[ -n $1 ]] && SkipMainMenu=1
 
     if [[ $SkipMainMenu == 1 && $1 != "NoColor" && $1 != "NoDevice" ]]; then
         Mode="$1"

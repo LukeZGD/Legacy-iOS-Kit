@@ -55,7 +55,7 @@ IPSW32() {
         cd tmp
         for i in {0..2}; do
             local URL="https://github.com/dora2-iOS/daibutsuCFW/raw/main/build/src/"
-            (( $i > 0 )) && URL+="daibutsu/${JBFiles2[$i]}" || URL+="${JBFiles2[$i]}"
+            (( i > 0 )) && URL+="daibutsu/${JBFiles2[$i]}" || URL+="${JBFiles2[$i]}"
             if [[ ! -e ../resources/jailbreak/${JBFiles2[$i]} ]]; then
                 Log "Downloading ${JBFiles2[$i]}..."
                 SaveFile $URL ${JBFiles2[$i]} ${JBSHA1[$i]}
@@ -100,7 +100,7 @@ IPSW32() {
         else
             cp -R firmware/FirmwareBundles FirmwareBundles
         fi
-        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs ${JBFiles[@]}
+        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs "${JBFiles[@]}"
         cd ..
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then
