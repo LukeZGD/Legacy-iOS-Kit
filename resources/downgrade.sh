@@ -3,7 +3,7 @@
 FRBaseband() {
     local BasebandSHA1L
     
-    if [[ $DeviceProc == 7 ]] || [[ $Baseband5 != 0 && $OSVer == "8.4.1" ]]; then
+    if [[ $DeviceProc == 7 ]] || [[ $Baseband8 == 1 && $OSVer == "8.4.1" ]]; then
         mkdir -p saved/baseband 2>/dev/null
         cp -f $IPSWRestore/Firmware/$Baseband saved/baseband
     fi
@@ -16,7 +16,7 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    elif [[ $Baseband5 == 0 ]]; then
+    elif [[ $Baseband8 != 1 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
 
@@ -89,12 +89,11 @@ Downgrade() {
             Echo "* I recommend to disable the option for these devices to flash the iOS 8.4.1 baseband."
         fi
         Echo "* This option is enabled by default (Y)."
-        read -p "$(Input 'Enable this option? (Y/n):')" Baseband5
-        if [[ $Baseband5 == 'N' || $Baseband5 == 'n' ]]; then
+        read -p "$(Input 'Enable this option? (Y/n):')" Baseband8
+        if [[ $Baseband8 == 'N' || $Baseband8 == 'n' ]]; then
             Baseband841
             Log "Latest baseband disabled by user. Using iOS 8.4.1 baseband"
         else
-            Baseband5=0
             Log "Latest baseband enabled."
         fi
         echo

@@ -4,31 +4,37 @@ SaveOTABlobs() {
     local ExtraArgs
     local SHSHChk
     local SHSHContinue
+    local SHSHLatest
     local SHSHExisting
     
-    Log "Saving $OSVer blobs with tsschecker..."
+    if [[ $DeviceProc != 7 && $Baseband != 0 && $Baseband8 != 1 ]]; then
+        Log "Checking signing status of iOS $LatestVer..."
+        SHSHChk=*_${ProductType}_${HWModel}ap_${LatestVer}*.shsh*
+        $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -s -B ${HWModel}ap
+        SHSHLatest=$(ls $SHSHChk)
+        if [[ ! -e $SHSHLatest ]]; then
+            Error "For some reason, the latest version for your device (iOS $LatestVer) is not signed. Cannot continue."
+        fi
+        Log "Latest version for $ProductType (iOS $LatestVer) is signed."
+        rm $SHSHLatest
+    fi
+
+    Log "Saving iOS $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap"
-    SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}*.shsh*
-    if [[ $DeviceProc == 7 ]]; then
-        ExtraArgs+=" --generator 0x1111111111111111"
+    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap --generator 0x1111111111111111"
+    SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_3a88b7c3802f2f0510abc432104a15ebd8bd7154.shsh*
+    if [[ $Baseband8 != 1 ]]; then
+        ExtraArgs+=" --no-baseband"
     fi
     $tsschecker $ExtraArgs
     
     SHSH=$(ls $SHSHChk)
     SHSHExisting=$(ls saved/shsh/$SHSHChk 2>/dev/null)
-    if [[ ! $SHSH && ! $SHSHExisting ]]; then
-        Log "Saving $OSVer blobs failed. Trying again with fallback..."
-        ExtraArgs+=" --no-baseband"
-        $tsschecker $ExtraArgs
+    if [[ ! -e $SHSH && ! -e $SHSHExisting ]]; then
+        Error "Saving $OSVer blobs failed. Please run the script again" \
+        "It is also possible that $OSVer for $ProductType is no longer signed"
     
-        SHSH=$(ls $SHSHChk)
-        if [[ ! $SHSH ]]; then
-            Error "Saving $OSVer blobs failed. Please run the script again" \
-            "It is also possible that $OSVer for $ProductType is no longer signed"
-        fi
-    
-    elif [[ ! $SHSH ]]; then
+    elif [[ ! -e $SHSH ]]; then
         Log "Saving $OSVer blobs failed, but found existing saved SHSH blobs. Continuing..."
         cp $SHSHExisting .
         SHSH=$(ls $SHSHChk)
@@ -37,7 +43,7 @@ SaveOTABlobs() {
     
     if [[ -n $SHSH && $SHSHContinue != 1 ]]; then
         mkdir -p saved/shsh 2>/dev/null
-        [[ ! $SHSHExisting ]] && cp "$SHSH" saved/shsh
+        cp "$SHSH" saved/shsh
         Log "Successfully saved $OSVer blobs."
     fi
 }

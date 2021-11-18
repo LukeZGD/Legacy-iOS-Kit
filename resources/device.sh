@@ -83,11 +83,13 @@ GetDeviceValues() {
     Firmware=resources/firmware/$ProductType
     Baseband=0
     BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
+    LatestVer="9.3.6"
     
     if [[ $ProductType == "iPad2,2" ]]; then
         BasebandURL=$(cat $Firmware/13G36/url)
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
+        LatestVer="9.3.5"
     
     elif [[ $ProductType == "iPad2,3" ]]; then
         Baseband="Phoenix-3.6.03.Release.bbfw"
@@ -110,6 +112,7 @@ GetDeviceValues() {
         BasebandURL=$(cat $Firmware/14G61/url)
         Baseband="Mav5-11.80.00.Release.bbfw"
         BasebandSHA1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
+        LatestVer="10.3.4"
     
     elif [[ $ProductType == "iPad4,2" || $ProductType == "iPad4,3" || $ProductType == "iPad4,5" ||
             $ProductType == "iPhone6,1" || $ProductType == "iPhone6,2" ]]; then
@@ -165,7 +168,9 @@ GetDeviceValues() {
 }
 
 Baseband841() {
+    Baseband8=1
     BasebandURL=$(cat $Firmware/12H321/url)
+
     if [[ $ProductType == "iPad2,3" ]]; then
         Baseband="Phoenix-3.0.04.Release.bbfw"
         BasebandSHA1="a507ee2fe061dfbf8bee7e512df52ade8777e113"

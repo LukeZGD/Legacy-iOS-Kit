@@ -140,6 +140,7 @@ Main() {
         Echo "* This custom IPSW has a jailbreak built in ($JBName)"
         Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
         Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
+        exit 0
 
     elif [[ $Mode != "Downgrade" ]]; then
         $Mode
