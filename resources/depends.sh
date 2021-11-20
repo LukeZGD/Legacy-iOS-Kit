@@ -74,7 +74,7 @@ SaveExternal() {
     if [[ ! -d $External || ! -d $External/.git ]]; then
         Log "Downloading $External..."
         rm -rf $External
-        $git clone $ExternalURL $External
+        $git clone --depth 1 $ExternalURL $External
     fi
     if [[ ! $(ls $External/*.md) || ! -d $External/.git ]]; then
         rm -rf $External
@@ -142,7 +142,7 @@ InstallDepends() {
     fi
 
     if [[ $platform == "linux" ]]; then
-        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "4344b3ca95d7433d5a49dcacc840d47770ba34c4")
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "95e2ffc86b35c71039fcf3ef732e30dd766112ce")
     fi
 
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then

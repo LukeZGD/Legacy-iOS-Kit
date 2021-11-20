@@ -76,7 +76,8 @@ Main() {
     fi
     
     Log "Checking Internet connection..."
-    if [[ ! $(ping -c1 1.1.1.1 2>/dev/null) ]]; then
+    ping -c1 8.8.8.8 >/dev/null
+    if [[ $? != 0 ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
     
@@ -85,9 +86,14 @@ Main() {
     elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
-    
-    if [[ $1 == "Install" || ! $bspatch || ! $ideviceinfo || ! $irecoverychk || ! $python ||
+
+    if [[ $1 == "Install" || -z $bspatch || ! -e $ideviceinfo || ! -e $irecoverychk ||
+          ! -e $ideviceenterrecovery || ! -e $iproxy || -z $python ||
           ! -d ./resources/libimobiledevice_$platform ]]; then
+        if [[ ! -e $ideviceinfo || ! -e $irecoverychk ||
+              ! -e $ideviceenterrecovery || ! -e $iproxy ]]; then
+            rm -rf ./resources/libimobiledevice_$platform
+        fi
         Clean
         InstallDepends
     fi
