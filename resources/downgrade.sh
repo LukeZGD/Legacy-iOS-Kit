@@ -16,7 +16,7 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    elif [[ $Baseband8 != 1 ]]; then
+    elif [[ $DeviceProc != 7 && $Baseband8 != 1 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
 
