@@ -69,7 +69,8 @@ GetDeviceValues() {
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
         echo "${Color_Y}* For macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
         echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
-        echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. Example: ./restore.sh NoDevice ${Color_N}"
+        echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
+        echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         exit 1
     elif [[ -n $DeviceState ]]; then
         if [[ ! $ProductType ]]; then
@@ -234,7 +235,8 @@ CheckM8() {
     [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
     
     if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
-        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again: ./restore.sh Downgrade ${Color_N}"
+        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
+        echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
         Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
@@ -265,12 +267,12 @@ Recovery() {
         exit 0
     fi
     
-    Echo "* Hold POWER and HOME button for 8 seconds."
+    Echo "* Hold TOP and HOME buttons for 8 seconds."
     for i in {08..01}; do
         echo -n "$i "
         sleep 1
     done
-    echo -e "\n$(Echo '* Release POWER and hold HOME button for 8 seconds.')"
+    echo -e "\n$(Echo '* Release TOP button and hold HOME button for 8 seconds.')"
     for i in {08..01}; do
         echo -n "$i "
         sleep 1
@@ -324,6 +326,7 @@ kDFU() {
     $iproxy 2222 22 &
     iproxyPID=$!
 
+    echo
     Log "Copying stuff to device via SSH..."
     Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
     Echo "* Dropbear is only needed for devices on iOS 10"
@@ -356,6 +359,6 @@ kDFU() {
     fi
     
     Log "Entering kDFU mode..."
-    Echo "* Press POWER or HOME button when the device disconnects and its screen goes black"
+    Echo "* Press TOP or HOME button when the device disconnects and its screen goes black"
     FindDevice "DFU"
 }

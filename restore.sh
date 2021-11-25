@@ -45,7 +45,6 @@ Log() {
 
 Main() {
     local Selection=()
-    local SkipMainMenu
     
     clear
     Echo "******* iOS-OTA-Downgrader *******"
@@ -104,10 +103,8 @@ Main() {
     
     Clean
     mkdir tmp
-    
-    [[ -n $1 ]] && SkipMainMenu=1
 
-    if [[ $SkipMainMenu == 1 && $1 != "NoColor" && $1 != "NoDevice" ]]; then
+    if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
         Mode="$1"
     else
         [[ $1 != "NoDevice" ]] && Selection+=("Downgrade Device")
@@ -165,9 +162,20 @@ Main() {
         fi
     
     elif [[ $DeviceState == "DFU" ]]; then
+        if [[ $1 != "PwnedDevice" ]]; then
+            echo -e "\n${Color_R}[Error] 32-bit A${DeviceProc} device detected in DFU mode. ${Color_N}"
+            echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
+            echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
+            echo "${Color_Y}* For usage of the DFU Advanced Menu, add PwnedDevice as an argument. ${Color_N}"
+            echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+            exit 1
+        fi
         Mode="Downgrade"
-        Echo "* Advanced Options Menu"
-        Input "This device is in:"
+        echo
+        Echo "* DFU Advanced Menu"
+        Echo "* This menu is for ADVANCED USERS ONLY."
+        Echo "* If you do not know what you are doing, EXIT NOW by pressing Ctrl+C and restart your device in normal mode."
+        Input "Select the mode that your device is currently in:"
         Selection=("kDFU mode")
         [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)")
         [[ $DeviceProc == 6 ]] && Selection+=("DFU mode (A6)")
@@ -193,7 +201,7 @@ Main() {
         else
             Log "32-bit A${DeviceProc} device detected in recovery mode."
             Echo "* Please put the device in normal mode and jailbroken before proceeding."
-            Echo "* For usage of advanced DFU options, put the device in kDFU or pwnDFU mode"
+            Echo "* For usage of the DFU Advanced Menu, put the device in kDFU or pwnDFU mode"
             RecoveryExit
         fi
         Log "Downgrading $ProductType in pwnDFU mode..."
