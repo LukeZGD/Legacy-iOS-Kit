@@ -108,7 +108,7 @@ InstallDepends() {
         read -s
     fi
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
-        sudo pacman -Syu --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 unzip usbutils zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 unzip usbutils zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
