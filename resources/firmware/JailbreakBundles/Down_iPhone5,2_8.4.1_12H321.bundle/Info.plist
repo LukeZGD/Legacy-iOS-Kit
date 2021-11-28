@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>RootFilesystem</key>
+	<string>058-24110-023.dmg</string>
+	<key>RootFilesystemSize</key>
+	<integer>2058</integer>
+	<key>Filename</key>
+	<string>iPhone5,2_8.4.1_12H321_Restore.ipsw</string>
+	<key>RamdiskMountVolume</key>
+	<string>ramdisk</string>
+	<key>Name</key>
+	<string>iPhone5,2_8.4.1_12H321</string>
+	<key>hwmodel</key>
+	<string>N42</string>
+	<key>SubPlatform</key>
+	<integer>6</integer>
+	<key>Platform</key>
+	<integer>1</integer>
+	<key>RamdiskOptionsPath</key>
+	<string>/usr/local/share/restore/options.n42.plist</string>
+	<key>SHA1</key>
+	<string>da4e50bf721d91bbd0b4a90ba9df9cdf2e8b9f53</string>
+	<key>RamdiskPatches</key>
+	<dict>
+		<key>asr</key>
+		<dict>
+			<key>File</key>
+			<string>usr/sbin/asr</string>
+			<key>Patch</key>
+			<string>asr.patch</string>
+		</dict>
+	</dict>
+	<key>DownloadUrl</key>
+	<string></string>
+	<key>FilesystemPatches</key>
+	<dict>
+		<key>Filesystem Jailbreak</key>
+		<array>
+			<dict>
+				<key>Action</key>
+				<string>Patch</string>
+				<key>File</key>
+				<string>etc/fstab</string>
+				<key>Name</key>
+				<string>Remove nosuid and nodev from /private/var</string>
+				<key>Patch</key>
+				<string>fstab.patch</string>
+			</dict>
+		</array>
+	</dict>
+	<key>RootFilesystemMountVolume</key>
+	<string>Donner12H321.N42OS</string>
+	<key>FirmwarePatches</key>
+	<dict>
+		<key>Restore Ramdisk</key>
+		<dict>
+			<key>File</key>
+			<string>058-23947-023.dmg</string>
+			<key>Key</key>
+			<string>9bde35e15c13939b0e910e30f45109103cacabc3c5535a20a79f87d35d4a8c35</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>TypeFlag</key>
+			<integer>8</integer>
+			<key>IV</key>
+			<string>9f3c9ed053e2057f7b2be54a80c3eec8</string>
+		</dict>
+	</dict>
+	<key>RootFilesystemKey</key>
+	<string>7f68bec2637d5ac0837e38878a8a411c72131fc6394b5a84fd0f878f54f97af3801f34fd</string>
+	<key>needPref</key>
+	<true/>
+	<key>PackagePath</key>
+	<string>jailbreak/cydia.tar</string>
+	<key>UntetherPath</key>
+	<string>jailbreak/untether.tar</string>
+	<key>RamdiskPackage</key>
+	<string>jailbreak/bin.tar</string>
+	<key>RamdiskReboot</key>
+	<string>../tmp/reboot.sh</string>
+</dict>
+</plist>

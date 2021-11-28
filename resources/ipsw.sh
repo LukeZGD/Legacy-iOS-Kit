@@ -2,7 +2,8 @@
 
 JailbreakSet() {
     Jailbreak=1
-    if [[ $ProductType == "iPhone4,1" || $ProductType == "iPad2,4" || $ProductType == "iPad2,5" ||
+    if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ||
+          $ProductType == "iPad2,4" || $ProductType == "iPad2,5" ||
           $ProductType == "iPad2,6" || $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
         [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
         [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
