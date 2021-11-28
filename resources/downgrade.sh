@@ -3,7 +3,7 @@
 FRBaseband() {
     local BasebandSHA1L
     
-    if [[ $DeviceProc == 7 ]] || [[ $Baseband8 == 1 && $OSVer == "8.4.1" ]]; then
+    if [[ $DeviceProc == 7 ]]; then
         mkdir -p saved/baseband 2>/dev/null
         cp -f $IPSWRestore/Firmware/$Baseband saved/baseband
     fi
@@ -16,7 +16,7 @@ FRBaseband() {
         mv $Baseband saved/baseband
         mv BuildManifest.plist saved/$ProductType
         BuildManifest="saved/$ProductType/BuildManifest.plist"
-    elif [[ $DeviceProc != 7 && $Baseband8 != 1 ]]; then
+    elif [[ $DeviceProc != 7 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
 
@@ -76,25 +76,6 @@ Downgrade() {
             Log "Jailbreak option enabled. Using $JBName for the jailbreak"
         else
             Log "Jailbreak option disabled by user."
-        fi
-        echo
-    fi
-    
-    if [[ $DeviceProc != 7 && $ProductType != "iPad2,2" ]]; then
-        Input "Latest Baseband Option"
-        Echo "* iOS-OTA-Downgrader flashes the latest baseband to 32-bit devices."
-        Echo "* When this option is disabled, iOS 8.4.1 baseband will be flashed instead, but beware of problems it may cause."
-        if [[ $ProductType == "iPhone5,1" ]]; then
-            Echo "* Based on some reported issues, the iPhone5,1 in particular may experience issues with the latest baseband."
-            Echo "* I recommend to disable the option for these devices to flash the iOS 8.4.1 baseband."
-        fi
-        Echo "* This option is enabled by default (Y)."
-        read -p "$(Input 'Enable this option? (Y/n):')" Baseband8
-        if [[ $Baseband8 == 'N' || $Baseband8 == 'n' ]]; then
-            Baseband841
-            Log "Latest baseband disabled by user. Using iOS 8.4.1 baseband"
-        else
-            Log "Latest baseband enabled."
         fi
         echo
     fi

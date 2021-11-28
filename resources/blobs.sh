@@ -7,7 +7,7 @@ SaveOTABlobs() {
     local SHSHLatest
     local SHSHExisting
     
-    if [[ $DeviceProc != 7 && $Baseband != 0 && $Baseband8 != 1 ]]; then
+    if [[ $DeviceProc != 7 && $Baseband != 0 ]]; then
         Log "Checking signing status of iOS $LatestVer..."
         SHSHChk=*_${ProductType}_${HWModel}ap_${LatestVer}*.shsh*
         $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -s -B ${HWModel}ap
@@ -21,11 +21,8 @@ SaveOTABlobs() {
 
     Log "Saving iOS $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap --generator 0x1111111111111111"
+    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap --generator 0x1111111111111111 --no-baseband"
     SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_3a88b7c3802f2f0510abc432104a15ebd8bd7154.shsh*
-    if [[ $Baseband8 != 1 ]]; then
-        ExtraArgs+=" --no-baseband"
-    fi
     $tsschecker $ExtraArgs
     
     SHSH=$(ls $SHSHChk)
