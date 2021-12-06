@@ -101,7 +101,7 @@ IPSW32() {
         else
             cp -R firmware/FirmwareBundles FirmwareBundles
         fi
-        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs "${JBFiles[@]}"
+        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs ${JBFiles[@]}
         cd ..
     fi
     if [[ ! -e $IPSWCustom.ipsw ]]; then
