@@ -1,3 +1,6 @@
-StrictHostKeyChecking no
-UserKnownHostsFile tmp/known_hosts
-HostKeyAlgorithms=+ssh-rsa
+Host *
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    HostKeyAlgorithms +ssh-rsa
