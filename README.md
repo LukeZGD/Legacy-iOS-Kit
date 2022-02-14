@@ -66,6 +66,7 @@
 - bspatch
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
+- [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice

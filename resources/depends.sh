@@ -35,6 +35,7 @@ SetToolPaths() {
         futurerestore="./resources/tools/futurerestore_macos_$(uname -m)"
         [[ ! -e $futurerestore ]] && futurerestore="./resources/tools/futurerestore_macos_arm64"
         ipwnder32="./resources/tools/ipwnder32_macos"
+        ipwnder_lite="./resources/tools/ipwnder_macos"
         python="/usr/bin/python"
         zenity="./resources/tools/zenity_macos"
     fi

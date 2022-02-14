@@ -173,15 +173,18 @@ CheckM8() {
     local pwnDFUDevice
     local pwnD=1
     
-    if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-        pwnDFUTool="iPwnder32"
-    elif [[ $platform == "macos" ]]; then
-        Selection=("iPwnder32" "ipwndfu")
-        Input "Select pwnDFU tool to use (Select 1 if unsure):"
+    if [[ $platform == "macos" ]]; then
+        Selection=("iPwnder32" "ipwnder_lite" "ipwndfu")
+        Input "PwnDFU Tool Option"
+        Echo "* This option selects what tool to use to put your device in pwnDFU mode."
+        Echo "* If unsure, select 1 for Intel Macs, select 2 for Apple Silicon (M1) Macs."
+        Echo "* This option is set to iPwnder32 by default (1)."
+        Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
+            "ipwnder_lite") pwnDFUTool="$ipwnder_lite"; break;;
             "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
-            *) pwnDFUTool="iPwnder32"; break;;
+            * ) pwnDFUTool="$ipwnder32"; break;;
         esac
         done
     else
@@ -204,8 +207,8 @@ CheckM8() {
             kDFU iBSS || echo
             pwnDFUDevice=$?
         fi
-    elif [[ $pwnDFUTool == "iPwnder32" ]]; then
-        $ipwnder32 -p
+    else
+        $pwnDFUTool -p
         pwnDFUDevice=$?
     fi
     [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
