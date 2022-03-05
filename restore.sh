@@ -241,7 +241,7 @@ SelectVersion() {
         "iOS 8.4.1" ) OSVer="8.4.1"; BuildVer="12H321"; break;;
         "iOS 6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
         "Other (use SHSH blobs)" ) OSVer="Other"; break;;
-        *) exit 0;;
+        * ) exit 0;;
     esac
     done
 }

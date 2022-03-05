@@ -146,7 +146,7 @@ Downgrade() {
     fi
 
     Log "Proceeding to futurerestore..."
-    [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
+    [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
     cd resources
     $SimpleHTTPServer &
     ServerPID=$!

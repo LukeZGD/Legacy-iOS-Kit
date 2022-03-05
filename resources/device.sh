@@ -39,7 +39,7 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 && $1 != "NoDevice" ]]; then
         Log "Finding device in DFU/recovery mode..."
-        [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
+        [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     elif [[ $1 == "NoDevice" ]]; then
         Log "NoDevice argument detected. Skipping device detection"
@@ -68,7 +68,7 @@ GetDeviceValues() {
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
         echo "${Color_Y}* For macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
-        echo "${Color_Y}* Recovery or DFU mode is also applicable. For more details regarding alternative methods, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+        echo "${Color_Y}* Recovery or DFU mode is also applicable. ${Color_N}"
         echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
         echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         exit 1
@@ -182,7 +182,7 @@ CheckM8() {
         Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
-            "ipwnder_lite") pwnDFUTool="$ipwnder_lite"; break;;
+            "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
             * ) pwnDFUTool="$ipwnder32"; break;;
         esac
@@ -194,7 +194,7 @@ CheckM8() {
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
-        [[ $platform == "linux" ]] && Echo "* Enter root password of your PC when prompted"
+        [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
         $ipwndfu -p
         if  [[ $DeviceProc == 7 ]]; then
             Log "Running rmsigchks.py..."

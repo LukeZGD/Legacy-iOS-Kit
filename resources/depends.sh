@@ -104,7 +104,7 @@ InstallDepends() {
     Log "Installing dependencies..."
     if [[ $platform == "linux" ]]; then
         Echo "* iOS-OTA-Downgrader will be installing dependencies from your distribution's package manager"
-        Echo "* Enter root password of your PC when prompted"
+        Echo "* Enter your user password when prompted"
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
     fi
