@@ -302,8 +302,10 @@ kDFU() {
     [[ $VerDetect == 5 ]] && kloader="kloader5"
     [[ ! $kloader ]] && kloader="kloader"
     
+    Log "Running iproxy for SSH..."
     $iproxy 2222 22 &
     iproxyPID=$!
+    sleep 2
 
     echo
     Log "Copying stuff to device via SSH..."
