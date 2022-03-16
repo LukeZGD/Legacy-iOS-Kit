@@ -73,6 +73,7 @@
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice-win32 (macOS build)
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
+- Python 3 (http.server)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
 - [futurerestore](https://github.com/m1stadev/futurerestore/tree/test) - m1stadev fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)

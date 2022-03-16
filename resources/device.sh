@@ -174,7 +174,7 @@ CheckM8() {
     local pwnD=1
     
     if [[ $platform == "macos" ]]; then
-        Selection=("iPwnder32" "ipwnder_lite" "ipwndfu")
+        Selection=("iPwnder32" "ipwnder_lite")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
         Echo "* If unsure, select 1 for Intel Macs, select 2 for Apple Silicon (M1) Macs."
@@ -203,6 +203,11 @@ CheckM8() {
             cd ../..
         else
             cd ../..
+            if [[ $platform == "macos" ]]; then
+                Echo "* Attempting to send pwned iBSS."
+                Echo "* This will fail on Apple Silicon Macs, as well as on macOS 12.3 and later."
+                Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+            fi
             Log "Sending iBSS..."
             kDFU iBSS || echo
             pwnDFUDevice=$?
