@@ -172,7 +172,7 @@ Downgrade() {
             ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
         fi
     fi
-    Log "Running futurerestore with command: $futurerestore -t \"$SHSH\" ${ExtraArgs[@]} \"$IPSWRestore.ipsw\""
+    Log "Running futurerestore with command: $futurerestore -t \"$SHSH\" ${ExtraArgs[*]} \"$IPSWRestore.ipsw\""
     $futurerestore -t "$SHSH" "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
     local opt=$?
 
