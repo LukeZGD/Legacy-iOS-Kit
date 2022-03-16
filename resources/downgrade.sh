@@ -172,9 +172,18 @@ Downgrade() {
             ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
         fi
     fi
+    Log "Running futurerestore with command: $futurerestore -t \"$SHSH\" ${ExtraArgs[@]} \"$IPSWRestore.ipsw\""
     $futurerestore -t "$SHSH" "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
+    local opt=$?
 
     echo
-    Log "Restoring done!"
+    if [[ $opt != 0 ]]; then
+        Log "An error seems to have occurred in futurerestore."
+        Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
+        Echo "* Your problem may have already been addressed within the page."
+        Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    else
+        Log "Restoring done!"
+    fi
     Log "Downgrade script done!"
 }
