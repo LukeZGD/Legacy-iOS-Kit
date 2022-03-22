@@ -194,7 +194,7 @@ CheckM8() {
     Log "Entering pwnDFU mode with $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
-        [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
+        Echo "* Enter your user password when prompted"
         $ipwndfu -p
         if  [[ $DeviceProc == 7 ]]; then
             Log "Running rmsigchks.py..."
@@ -203,12 +203,6 @@ CheckM8() {
             cd ../..
         else
             cd ../..
-            if [[ $platform == "macos" ]]; then
-                Echo "* Attempting to send pwned iBSS."
-                Echo "* This will fail on Apple Silicon Macs, as well as on macOS 12.3 and later."
-                Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-            fi
-            Log "Sending iBSS..."
             kDFU iBSS || echo
             pwnDFUDevice=$?
         fi
@@ -296,6 +290,12 @@ kDFU() {
     
     if [[ $1 == iBSS ]]; then
         cd resources/ipwndfu
+        if [[ $platform == "macos" ]]; then
+            Echo "* Attempting to send pwned iBSS."
+            Echo "* This will fail on Apple Silicon Macs, as well as on macOS 12.3 and later."
+            Echo "* If this is the case, you need to send pwned iBSS yourself before continuing."
+            Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+        fi
         Log "Sending iBSS..."
         $ipwndfu -l ../../tmp/pwnediBSS
         local ret=$?
