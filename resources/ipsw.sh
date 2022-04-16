@@ -2,11 +2,21 @@
 
 JailbreakSet() {
     Jailbreak=1
-    if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ||
-          $ProductType == "iPad2,4" || $ProductType == "iPad2,5" ||
-          $ProductType == "iPad2,6" || $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
-        [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
-        [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
+    if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ]] && [[ $OSVer == "8.4.1" ]]; then
+        Input "Jailbreak Tool Option"
+        Echo "* This option is set to daibutsu by default (1)."
+        Selection=("daibutsu" "EtasonJB")
+        Input "Select your option:"
+        select opt in "${Selection[@]}"; do
+        case $opt in
+            "EtasonJB" ) break;;
+            * ) JBDaibutsu=1; break;;
+        esac
+        done
+    elif [[ $ProductType == "iPad2,4" || $ProductType == "iPad2,5" || $ProductType == "iPad2,6" ||
+            $ProductType == "iPad2,7" || $ProductType == "iPod5,1" ]] ||
+         [[ $ProductType == "iPad3"* && $DeviceProc == 5 ]]; then
+         [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
     fi
 
     if [[ $JBDaibutsu == 1 ]]; then
