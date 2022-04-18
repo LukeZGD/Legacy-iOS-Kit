@@ -132,7 +132,6 @@ Main() {
 
     if [[ $Mode == "IPSW32" ]]; then
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
-        IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
         Verify=1
         echo
         JailbreakSet

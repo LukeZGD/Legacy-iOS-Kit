@@ -82,7 +82,7 @@ Downgrade() {
     
     if [[ $OSVer != "Other" ]]; then
         IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
-        IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+        [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
         if [[ $Jailbreak == 1 ]]; then
             [[ -e "$IPSWCustom.ipsw" ]] && Verify=

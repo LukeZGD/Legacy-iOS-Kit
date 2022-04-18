@@ -2,6 +2,7 @@
 
 JailbreakSet() {
     Jailbreak=1
+    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
     if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ]] && [[ $OSVer == "8.4.1" ]]; then
         Input "Jailbreak Tool Option"
         Echo "* This option is set to daibutsu by default (1)."
@@ -21,8 +22,10 @@ JailbreakSet() {
 
     if [[ $JBDaibutsu == 1 ]]; then
         JBName="daibutsu"
+        IPSWCustom="${IPSWCustom}D"
     elif [[ $OSVer == "8.4.1" ]]; then
         JBName="EtasonJB"
+        IPSWCustom="${IPSWCustom}E"
     elif [[ $OSVer == "6.1.3" ]]; then
         JBName="p0sixspwn"
     fi
