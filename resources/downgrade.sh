@@ -35,10 +35,7 @@ FRBaseband() {
 Downgrade() {
     local ExtraArgs=("--use-pwndfu")
     local IPSWExtract
-    local IPSWSHA1
-    local IPSWSHA1L
-    local Jailbreak
-    local Verify=1
+    Verify=1
     
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
@@ -73,7 +70,7 @@ Downgrade() {
         
         if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
             JailbreakSet
-            Log "Jailbreak option enabled. Using $JBName for the jailbreak"
+            Log "Jailbreak option enabled."
         else
             Log "Jailbreak option disabled by user."
         fi
@@ -81,38 +78,14 @@ Downgrade() {
     fi
     
     if [[ $OSVer != "Other" ]]; then
-        IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
-        if [[ $Jailbreak == 1 ]]; then
-            [[ -e "$IPSWCustom.ipsw" ]] && Verify=
-        fi
-
         MemoryOption
-
         SaveOTABlobs
-
-        if [[ ! -e "$IPSW.ipsw" && $Verify == 1 ]]; then
-            Log "iOS $OSVer IPSW for $ProductType cannot be found."
-            Echo "* If you already downloaded the IPSW, move/copy it to the directory where the script is located."
-            Echo "* Do NOT rename the IPSW as the script will fail to detect it."
-            Echo "* The script will now proceed to download it for you. If you want to download it yourself, here is the link: $(cat $Firmware/$BuildVer/url)"
-            Log "Downloading IPSW... (Press Ctrl+C to cancel)"
-            curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
-            mv tmp/$IPSW.ipsw .
-        fi
+        IPSWFind
 
         if [[ $Verify == 1 ]]; then
-            Log "Verifying IPSW..."
-            IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
-            Log "Expected SHA1sum: $IPSWSHA1"
-            IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
-            Log "Actual SHA1sum:   $IPSWSHA1L"
-            if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
-                Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Delete/replace the IPSW and run the script again" \
-                "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
-            fi
-            Log "IPSW SHA1sum matches."
+            IPSWVerify
         elif [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW. Skipping IPSW verification."
             Log "Setting restore IPSW to: $IPSWCustom.ipsw"
@@ -172,17 +145,16 @@ Downgrade() {
             ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
         fi
     fi
+
     Log "Running futurerestore with command: $futurerestore -t \"$SHSH\" ${ExtraArgs[*]} \"$IPSWRestore.ipsw\""
     $futurerestore -t "$SHSH" "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
-    local opt=$?
-
-    echo
-    if [[ $opt != 0 ]]; then
+    if [[ $? != 0 ]]; then
         Log "An error seems to have occurred in futurerestore."
         Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
-        Echo "* Your problem may have already been addressed within the page."
+        Echo "* Your problem may have already been addressed within the wiki page."
         Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
     else
+        echo
         Log "Restoring done!"
     fi
     Log "Downgrade script done!"

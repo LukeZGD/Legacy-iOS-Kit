@@ -3,6 +3,8 @@
 JailbreakSet() {
     Jailbreak=1
     IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+    [[ -e "$IPSWCustom.ipsw" ]] && Verify=
+
     if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ]] && [[ $OSVer == "8.4.1" ]]; then
         Input "Jailbreak Tool Option"
         Echo "* This option is set to daibutsu by default (1)."
@@ -29,6 +31,7 @@ JailbreakSet() {
     elif [[ $OSVer == "6.1.3" ]]; then
         JBName="p0sixspwn"
     fi
+    Log "Using $JBName for the jailbreak"
 }
 
 MemoryOption() {
@@ -45,6 +48,32 @@ MemoryOption() {
         fi
         echo
     fi
+}
+
+IPSWFind() {
+    IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
+    if [[ ! -e "$IPSW.ipsw" && $Verify == 1 ]]; then
+        Log "iOS $OSVer IPSW for $ProductType cannot be found."
+        Echo "* If you already downloaded the IPSW, move/copy it to the directory where the script is located."
+        Echo "* Do NOT rename the IPSW as the script will fail to detect it."
+        Echo "* The script will now proceed to download it for you. If you want to download it yourself, here is the link: $(cat $Firmware/$BuildVer/url)"
+        Log "Downloading IPSW... (Press Ctrl+C to cancel)"
+        curl -L $(cat $Firmware/$BuildVer/url) -o tmp/$IPSW.ipsw
+        mv tmp/$IPSW.ipsw .
+    fi
+}
+
+IPSWVerify() {
+    Log "Verifying IPSW..."
+    IPSWSHA1=$(cat $Firmware/$BuildVer/sha1sum)
+    Log "Expected SHA1sum: $IPSWSHA1"
+    IPSWSHA1L=$(shasum $IPSW.ipsw | awk '{print $1}')
+    Log "Actual SHA1sum:   $IPSWSHA1L"
+    if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
+        Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Delete/replace the IPSW and run the script again" \
+        "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
+    fi
+    Log "IPSW SHA1sum matches."
 }
 
 IPSW32() {

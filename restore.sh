@@ -48,7 +48,7 @@ Main() {
     
     clear
     Echo "******* iOS-OTA-Downgrader *******"
-    Echo "   Downgrader script by LukeZGD   "
+    Echo " - Downgrader script by LukeZGD - "
     echo
     
     if [[ $EUID == 0 ]]; then
@@ -131,12 +131,18 @@ Main() {
     SelectVersion
 
     if [[ $Mode == "IPSW32" ]]; then
-        IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
         Verify=1
         echo
         JailbreakSet
-        Log "Using $JBName for the jailbreak"
         MemoryOption
+        IPSWFind
+        if [[ $Verify == 1 ]]; then
+            IPSWVerify
+        elif [[ -e "$IPSWCustom.ipsw" ]]; then
+            Log "Found existing Custom IPSW, stopping here."
+            Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
+            exit 0
+        fi
         IPSW32
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
         Echo "* This custom IPSW has a jailbreak built in ($JBName)"
@@ -169,7 +175,6 @@ Main() {
             echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
             exit 1
         fi
-        Mode="Downgrade"
         echo
         Echo "* DFU Advanced Menu"
         Echo "* This menu is for ADVANCED USERS ONLY."

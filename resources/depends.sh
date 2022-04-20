@@ -63,8 +63,10 @@ SetToolPaths() {
         irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
         rmsigchks="sudo $rmsigchks"
     elif [[ $platform == "macos" ]]; then
+        # for macOS 12.3 and newer
         if (( ${platformver:0:2} > 11 )) && [[ -z $python ]]; then
             python="/usr/bin/python3"
+            ipwndfu="$(which python2) ipwndfu"
             rmsigchks="$(which python2) rmsigchks.py"
             SimpleHTTPServer="$python -m http.server 8888"
         fi
