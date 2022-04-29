@@ -68,7 +68,7 @@ Main() {
     if [[ ! $platform ]]; then
         Error "Platform unknown/not supported."
     fi
-    
+
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? != 0 ]]; then
         Error "A problem with file permissions has been detected, cannot proceed."
@@ -98,9 +98,7 @@ Main() {
     fi
     
     SaveExternal LukeZGD ipwndfu
-
     GetDeviceValues $1
-    
     Clean
     mkdir tmp
 

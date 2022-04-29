@@ -57,6 +57,8 @@ SetToolPaths() {
     tsschecker="./resources/tools/tsschecker_$platform"
 
     if [[ $platform == "linux" ]]; then
+        LDDver=$(ldd --version | awk '/ldd/{print $NF}' | cut -c 3-)
+        (( LDDver >= 34 )) && ipsw="${ipsw}2"
         # these need to run as root for device detection
         futurerestore="sudo $futurerestore"
         ipwndfu="sudo $ipwndfu"
@@ -151,7 +153,7 @@ InstallDepends() {
     fi
 
     if [[ $platform == "linux" ]]; then
-        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "95e2ffc86b35c71039fcf3ef732e30dd766112ce")
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "fc5e714adf6fa72328d3e1ddea4e633f370559a4")
     fi
 
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
