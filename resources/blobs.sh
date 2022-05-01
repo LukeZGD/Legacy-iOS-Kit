@@ -8,9 +8,18 @@ SaveOTABlobs() {
     local SHSHExisting
     
     if [[ $DeviceProc != 7 && $Baseband != 0 ]]; then
+        if [[ ! -e saved/$ProductType/BuildManifest.plist ]]; then
+            Log "Downloading BuildManifest of iOS $LatestVer..."
+            $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
+            mkdir -p saved/$ProductType 2>/dev/null
+            mv BuildManifest.plist saved/$ProductType
+        fi
+        if [[ ! -e saved/$ProductType/BuildManifest.plist ]]; then
+            Error "Downloading/verifying BuildManifest failed. Please run the script again"
+        fi
         Log "Checking signing status of iOS $LatestVer..."
         SHSHChk=*_${ProductType}_${HWModel}ap_${LatestVer}*.shsh*
-        $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -s -B ${HWModel}ap
+        $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -m saved/$ProductType/BuildManifest.plist -s -B ${HWModel}ap
         SHSHLatest=$(ls $SHSHChk)
         if [[ ! -e $SHSHLatest ]]; then
             Error "For some reason, the latest version for your device (iOS $LatestVer) is not signed. Cannot continue."
