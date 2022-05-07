@@ -116,13 +116,14 @@ GetDeviceValues() {
         LatestVer="10.3.4"
     
     elif [[ $ProductType == "iPad4,2" || $ProductType == "iPad4,3" || $ProductType == "iPad4,5" ||
-            $ProductType == "iPhone6,1" || $ProductType == "iPhone6,2" ]]; then
+            $ProductType == "iPhone6,1" || $ProductType == "iPhone6,2" ||
+            $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" ]]; then
         BasebandURL=$(cat $Firmware/14G60/url)
         Baseband="Mav7Mav8-7.60.00.Release.bbfw"
         BasebandSHA1="f397724367f6bed459cf8f3d523553c13e8ae12c"
     
     elif [[ $ProductType != "iPad2"* && $ProductType != "iPad3"* && $ProductType != "iPad4,1" &&
-            $ProductType != "iPad4,4" && $ProductType != "iPod5,1" && $ProductType != "iPhone5"* ]]; then
+            $ProductType != "iPad4,4" && $ProductType != "iPod5,1" ]]; then
         Error "Your device $ProductType ${version}is not supported."
     else
         BasebandURL=0
