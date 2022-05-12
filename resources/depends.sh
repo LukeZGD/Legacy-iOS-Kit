@@ -118,11 +118,21 @@ InstallDepends() {
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
     fi
+
+    if [[ -e /etc/debian_version ]]; then
+        DebianVer=$(cat /etc/debian_version)
+        if [[ $DebianVer == *"sid" ]]; then
+            DebianVer="sid"
+        else
+            DebianVer="$(echo $DebianVer | cut -c -2)"
+        fi
+    fi
+
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 unzip usbutils zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
-         [[ $VERSION == "11 (bullseye)" || $PRETTY_NAME == "Debian"*"sid" ]]; then
+         (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
         sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils zenity
