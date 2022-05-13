@@ -57,8 +57,6 @@ SetToolPaths() {
     tsschecker="./resources/tools/tsschecker_$platform"
 
     if [[ $platform == "linux" ]]; then
-        LDDver=$(ldd --version | awk '/ldd/{print $NF}' | cut -c 3-)
-        (( LDDver >= 34 )) && ipsw="${ipsw}2"
         # these need to run as root for device detection
         futurerestore="sudo $futurerestore"
         ipwndfu="sudo $ipwndfu"
