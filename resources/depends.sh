@@ -3,6 +3,7 @@
 SetToolPaths() {
     local Detect="Detected libimobiledevice and libirecovery installed from "
     MPath="./resources/libimobiledevice_"
+    cherrymac="./resources/ch3rryflower/Tools/macos/UNTETHERED"
 
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release 2>/dev/null
@@ -10,8 +11,10 @@ SetToolPaths() {
         platformver="$PRETTY_NAME"
         MPath+="$platform"
         bspatch="$(which bspatch)"
+        cherry="./resources/ch3rryflower/Tools/ubuntu/UNTETHERED"
         futurerestore="./resources/tools/futurerestore_linux"
         python="$(which python2)"
+        xmlstarlet="$(which xmlstarlet)"
         zenity="$(which zenity)"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -32,24 +35,30 @@ SetToolPaths() {
         fi
         [[ -n $Detect ]] && Log "$Detect"
         bspatch="/usr/bin/bspatch"
+        cherry="$cherrymac"
         futurerestore="./resources/tools/futurerestore_macos_$(uname -m)"
         [[ ! -e $futurerestore ]] && futurerestore="./resources/tools/futurerestore_macos_arm64"
         ipwnder32="./resources/tools/ipwnder32_macos"
         ipwnder_lite="./resources/tools/ipwnder_macos"
         python="/usr/bin/python"
+        xmlstarlet=/
         zenity="./resources/tools/zenity_macos"
     fi
 
+    expect="$(which expect)"
     git="$(which git)"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
+    idevicerestore="./resources/tools/idevicerestore_$platform"
     iproxy="$MPath/iproxy"
     ipsw="../resources/tools/ipsw_$platform"
     ipwndfu="$python ipwndfu"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
+    irecovery2="../tools/irecovery_$platform"
     partialzip="./resources/tools/partialzip_$platform"
     ping="ping -c1"
+    pwnedDFU="$cherry/pwnedDFU"
     rmsigchks="$python rmsigchks.py"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
@@ -59,9 +68,13 @@ SetToolPaths() {
 
     if [[ $platform == "linux" ]]; then
         # these need to run as root for device detection
+        expect="sudo $expect"
         futurerestore="sudo $futurerestore"
+        idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib $idevicerestore"
         ipwndfu="sudo $ipwndfu"
         irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
+        irecovery2="sudo LD_LIBRARY_PATH=./resources/lib $irecovery2"
+        pwnedDFU="sudo $pwnedDFU"
         rmsigchks="sudo $rmsigchks"
     elif [[ $platform == "macos" ]]; then
         # for macOS 12.3 and newer
@@ -106,7 +119,9 @@ InstallDepends() {
 
     mkdir resources/lib tmp 2>/dev/null
     cd resources
+    cp lib/*.so.1.1 ../tmp
     rm -rf ipwndfu lib/*
+    cp ../tmp/*.so.1.1 lib/
     cd ../tmp
 
     Log "Installing dependencies..."
@@ -127,17 +142,17 @@ InstallDepends() {
     fi
 
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 unzip usbutils zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl expect libimobiledevice openssh python2 unzip usbutils vim xmlstarlet zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils zenity
+        sudo apt install -y bsdiff curl expect git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 33 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff git libimobiledevice perl-Digest-SHA python2 zenity
+        sudo dnf install -y bsdiff expect git libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == "openSUSE Leap 15.3" ]]; then
         if [[ $ID == "opensuse-tumbleweed" ]]; then
@@ -146,7 +161,7 @@ InstallDepends() {
             libimobiledevice="libimobiledevice6"
             ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
         fi
-        sudo zypper -n in bsdiff curl git $libimobiledevice python-base zenity
+        sudo zypper -n in bsdiff curl expect git $libimobiledevice python-base vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install

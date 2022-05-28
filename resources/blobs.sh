@@ -53,3 +53,31 @@ SaveOTABlobs() {
         Log "Successfully saved $OSVer blobs."
     fi
 }
+
+Save712Blobs() {
+    local SHSHChk
+    SHSH="${UniqueChipID}-${ProductType}-${OSVer}.shsh"
+    SHSH7="${UniqueChipID}-${ProductType}-7.1.2.shsh"
+    BuildManifest="BuildManifest_${ProductType}_7.1.2.plist"
+
+    if [[ ! -e resources/manifests/$BuildManifest ]]; then
+        Log "Extracting BuildManifest from 7.1.2 IPSW..."
+        unzip -o -j $IPSW7.ipsw BuildManifest.plist -d .
+        mv BuildManifest.plist resources/manifests/$BuildManifest
+    fi
+
+    if [[ -e saved/shsh/$SHSH7 ]]; then
+        Log "Found existing saved 7.1.2 blobs."
+    else
+        Log "Saving 7.1.2 blobs with tsschecker..."
+        $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m resources/manifests/BuildManifest_${ProductType}_7.1.2.plist -s -b
+        SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
+        [[ ! $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
+        mkdir saved/shsh 2>/dev/null
+        mv $SHSHChk saved/shsh/$SHSH7
+        Log "Successfully saved 7.1.2 blobs."
+    fi
+
+    mkdir shsh
+    cp saved/shsh/$SHSH7 shsh/$SHSH
+}

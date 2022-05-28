@@ -102,14 +102,28 @@ Main() {
     Clean
     mkdir tmp
 
+    if [[ $ProductType == "iPhone3,1" && ! -d ./resources/ch3rryflower ]]; then
+        cd tmp
+        Log "Downloading ch3rryflower..."
+        SaveFile https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f ch3rryflower.zip 790d56db354151b9740c929e52c097ba57f2929d
+        cd ../resources
+        unzip -q ../tmp/ch3rryflower.zip -d .
+        mv ch3rryflower* ch3rryflower
+        cd ..
+    fi
+
     if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
         Mode="$1"
     else
         [[ $1 != "NoDevice" ]] && Selection+=("Downgrade Device")
         [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
 
+        if [[ $ProductType == "iPhone3,1" && $1 != "NoDevice" ]]; then
+            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2" "SSH Ramdisk")
+        fi
+
         if [[ $DeviceProc != 7 ]]; then
-            [[ $DeviceProc != 4 ]] && Selection+=("Create Custom IPSW")
+            Selection+=("Create Custom IPSW")
             [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
         fi
 
@@ -122,6 +136,9 @@ Main() {
             "Save OTA Blobs" ) Mode="SaveOTABlobs"; break;;
             "Create Custom IPSW" ) Mode="IPSW32"; break;;
             "Put Device in kDFU Mode" ) Mode="kDFU"; break;;
+            "Disable/Enable Exploit" ) Mode="Remove4"; break;;
+            "Restore to 7.1.2" ) Mode="Restore712"; break;;
+            "SSH Ramdisk" ) Mode="Ramdisk4"; break;;
             "(Re-)Install Dependencies" ) InstallDepends;;
             * ) exit 0;;
         esac
@@ -129,6 +146,7 @@ Main() {
     fi
 
     SelectVersion
+    [[ $OSVer == "Other" ]] && Mode="Downgrade"
 
     if [[ $Mode == "IPSW32" ]]; then
         echo
@@ -138,24 +156,34 @@ Main() {
             Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
             exit 0
         elif [[ $Jailbreak != 1 ]]; then
-            Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
-            exit 0
+            if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
+                Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
+                exit 0
+            else
+                Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
+                exit 0
+            fi
         fi
 
         IPSWFindVerify
-        IPSW32
+        if [[ $DeviceProc == 4 ]]; then
+            IPSWFindVerify 712
+            IPSW4
+        else
+            IPSW32
+        fi
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
-        Echo "* This custom IPSW has a jailbreak built in ($JBName)"
+        [[ $Jailbreak == 1 ]] && Echo "* This custom IPSW has a jailbreak built in ($JBName)"
         Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
-        Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
+        [[ $DeviceProc != 4 ]] && Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
         exit 0
 
-    elif [[ $Mode != "Downgrade" ]]; then
+    elif [[ $Mode != "Downgrade"* && $Mode != *"4" ]]; then
         $Mode
         exit 0
     fi
 
-    if [[ $DeviceProc == 7 ]]; then
+    if [[ $Mode == *"4" || $DeviceProc == 7 ]]; then
         if [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
@@ -164,6 +192,10 @@ Main() {
             Recovery
         elif [[ $DeviceState == "DFU" ]]; then
             EnterPwnDFU
+        fi
+        if [[ $Mode == *"4" ]]; then
+            $Mode
+            exit 0
         fi
 
     elif [[ $DeviceState == "DFU" ]]; then
@@ -181,15 +213,16 @@ Main() {
         Echo "* If you do not know what you are doing, EXIT NOW by pressing Ctrl+C and restart your device in normal mode."
         Input "Select the mode that your device is currently in:"
         Selection=("kDFU mode")
-        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A6)")
+        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A4/A6)")
         Selection+=("Any other key to exit")
         select opt in "${Selection[@]}"; do
         case $opt in
             "kDFU mode" ) break;;
-            "DFU mode (A6)" ) EnterPwnDFU; break;;
+            "DFU mode (A4/A6)" ) EnterPwnDFU; break;;
             "pwnDFU mode (A5)" )
                 Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
                 Echo "* This option will not work if your device is not in pwnDFU mode.";
+                Echo "* Sending pwned iBSS is not needed, futurerestore will handle that.";
                 Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
                 read -s;
                 SendiBSS=1; break;;
@@ -215,7 +248,9 @@ Main() {
 }
 
 SelectVersion() {
-    if [[ $Mode == "kDFU" ]]; then
+    if [[ $Mode == "Downgrade"* ]]; then
+        :
+    elif [[ $Mode == "kDFU" || $Mode == *"4" ]]; then
         return
     elif [[ $ProductType == "iPad4"* || $ProductType == "iPhone6"* ]]; then
         OSVer="10.3.3"
@@ -233,8 +268,26 @@ SelectVersion() {
           $ProductType == "iPad2,3" || $ProductType == "iPhone4,1" ]]; then
         Selection+=("iOS 6.1.3")
     fi
-    
-    [[ $Mode == "Downgrade" ]] && Selection+=("Other (use SHSH blobs)")
+
+    if [[ $ProductType == "iPhone3,1" ]]; then
+        [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
+        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)" "More versions (5.0-6.1.2)" "4.3.x (not supported)" "7.x (not supported)")
+        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+        Selection3=("7.1.1" "7.1" "7.0.6" "7.0.4" "7.0.3" "7.0.2" "7.0")
+        if [[ $Mode == "Restore712" ]]; then
+            Echo "* Make sure to disable the exploit first! See the README for more details."
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+            read -s
+            OSVer="7.1.2"
+            BuildVer="11D257"
+            Mode="Downgrade4"
+            return
+        elif [[ $Mode == "Downgrade" ]]; then
+            Mode="Downgrade4"
+        fi
+    fi
+
+    [[ $Mode == "Downgrade"* ]] && Selection+=("Other (use SHSH blobs)")
     Selection+=("(Any other key to exit)")
     
     echo
@@ -244,9 +297,55 @@ SelectVersion() {
         "iOS 8.4.1" ) OSVer="8.4.1"; BuildVer="12H321"; break;;
         "iOS 6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
         "Other (use SHSH blobs)" ) OSVer="Other"; break;;
+        "7.1.2" ) OSVer="7.1.2"; BuildVer="11D257"; break;;
+        "6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
+        "5.1.1 (9B208)" ) OSVer="5.1.1"; BuildVer="9B208"; break;;
+        "5.1.1 (9B206)" ) OSVer="5.1.1"; BuildVer="9B206"; break;;
+        "More versions (5.0-6.1.2)" ) OSVer="More"; break;;
+        "4.3.x (not supported)" ) OSVer="4.3.x"; break;;
+        "7.x (not supported)" ) OSVer="7.x"; break;;
         * ) exit 0;;
     esac
     done
+
+    if [[ $OSVer == "More" ]]; then
+        select opt in "${Selection2[@]}"; do
+        case $opt in
+            "6.1.2" ) OSVer="6.1.2"; BuildVer="10B146"; break;;
+            "6.1" ) OSVer="6.1"; BuildVer="10B144"; break;;
+            "6.0.1" ) OSVer="6.0.1"; BuildVer="10A523"; break;;
+            "6.0" ) OSVer="6.0"; BuildVer="10A403"; break;;
+            "5.1" ) OSVer="5.1"; BuildVer="9B176"; break;;
+            "5.0.1" ) OSVer="5.0.1"; BuildVer="9A405"; break;;
+            "5.0" ) OSVer="5.0"; BuildVer="9A334"; break;;
+            * ) exit 0;;
+        esac
+        done
+    elif [[ $OSVer == "4.3.x" ]]; then
+        Echo "* I can't verify if iOS 4.3.x works or not, let me know if it does work for you"
+        select opt in "4.3.5" "4.3.3" "4.3"; do
+        case $opt in
+            "4.3.5" ) OSVer="4.3.5"; BuildVer="8L1"; break;;
+            "4.3.3" ) OSVer="4.3.3"; BuildVer="8J2"; break;;
+            "4.3" ) OSVer="4.3"; BuildVer="8F190"; break;;
+            * ) exit 0;;
+        esac
+        done
+    elif [[ $OSVer == "7.x" ]]; then
+        Echo "* I don't think any iOS 7.x version works (gets stuck in recovery mode)"
+        select opt in "${Selection3[@]}"; do
+        case $opt in
+            "7.1.1" ) OSVer="7.1.1"; BuildVer="11D201"; break;;
+            "7.1" ) OSVer="7.1"; BuildVer="11D169"; break;;
+            "7.0.6" ) OSVer="7.0.6"; BuildVer="11B651"; break;;
+            "7.0.4" ) OSVer="7.0.4"; BuildVer="11B554a"; break;;
+            "7.0.3" ) OSVer="7.0.3"; BuildVer="11B511"; break;;
+            "7.0.2" ) OSVer="7.0.2"; BuildVer="11A501"; break;;
+            "7.0" ) OSVer="7.0"; BuildVer="11A465"; break;;
+            * ) exit 0;;
+        esac
+        done
+    fi
 }
 
 Main $1

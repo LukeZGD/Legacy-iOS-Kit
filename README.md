@@ -1,6 +1,7 @@
 # iOS-OTA-Downgrader
 
 - **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
+- **iPhone4Down: Downgrade your iPhone 4 on Linux (using ch3rryflower)**
 - **Linux and macOS** are supported
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
@@ -10,12 +11,15 @@
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only)
 - This script can also be used to just enter kDFU mode (32-bit devices only)
+- This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs (iOS 5 and newer only)
+- **iPhone4Down supports the iPhone 4 GSM (iPhone3,1) only**
+    - You are on your own if you attempt to restore to versions not within the supported range (except for iOS 7.1.2)
 
 <table>
     <thead>
@@ -46,6 +50,11 @@
             <td>iPhone 4S</td>
         </tr>
         <tr><td>iPad 2 (except iPad2,4)</td></tr>
+        <tr>
+            <td>iOS 7.1.2</td>
+            <td rowspan=2>iPhone 4 GSM (iPhone3,1)</td>
+        </tr>
+        <tr><td>iOS 5.0 to 6.1.3</td></tr></tr>
     </tbody>
 </table>
 
@@ -65,6 +74,7 @@
 ## Tools and other stuff used
 - cURL
 - bspatch
+- [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
@@ -72,6 +82,7 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
 - [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice-win32 (macOS build)
+- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - Python 3 (http.server)
@@ -86,4 +97,8 @@
 - [zenity](https://github.com/ncruces/zenity) (macOS)
 - 32-bit bundles are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
+- [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
+- [evasi0n7](https://www.theiphonewiki.com/wiki/Evasi0n7)
+- [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
+- [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)

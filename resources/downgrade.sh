@@ -121,3 +121,37 @@ Downgrade() {
     fi
     DowngradeOTA
 }
+
+iDeviceRestore() {
+    Log "Proceeding to idevicerestore..."
+    Echo "* Enter your user password when prompted"
+    [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
+    [[ $1 == "latest" ]] && ExtraArgs="-ey" || ExtraArgs="-ewy"
+    $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
+    if [[ $platform == "macos" && $? != 0 ]]; then
+        Log "An error seems to have occurred in idevicerestore."
+        Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
+        Echo "* Using Terminal, cd to where the script is located, then run"
+        Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+    else
+        echo
+        Log "Restoring done!"
+    fi
+    Log "Downgrade script done!"
+}
+
+Downgrade4() {
+    JailbreakOption
+    IPSWFindVerify
+    Save712Blobs
+    if [[ $OSVer == "7.1.2" && $Jailbreak != 1 ]]; then
+        IPSWSetExtract
+        iDeviceRestore latest
+        return
+    else
+        IPSWFindVerify 712
+    fi
+    IPSW4
+    IPSWSetExtract
+    iDeviceRestore
+}

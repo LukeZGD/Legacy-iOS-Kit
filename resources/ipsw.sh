@@ -27,8 +27,16 @@ JailbreakSet() {
     elif [[ $OSVer == "8.4.1" ]]; then
         JBName="EtasonJB"
         IPSWCustom="${IPSWCustom}E"
+    elif [[ $OSVer == "7.1"* ]]; then
+        JBName="Pangu7"
+    elif [[ $OSVer == "7"* ]]; then
+        JBName="evasi0n7"
     elif [[ $OSVer == "6.1.3" ]]; then
         JBName="p0sixspwn"
+    elif [[ $OSVer == "6"* ]]; then
+        JBName="evasi0n"
+    else
+        JBName="unthredeh4il"
     fi
     Log "Using $JBName for the jailbreak"
 }
@@ -49,7 +57,22 @@ JailbreakOption() {
         Log "Jailbreak option disabled by user."
     fi
 
+    [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"=
+    Echo "* This option is enabled by default (Y)."
+    read -p "$(Input 'Enable this option? (Y/n):')" Jailbreak
+    if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
+        JailbreakSet
+        Log "Jailbreak option enabled."
+    else
+        Log "Jailbreak option disabled by user."
+    fi
+
     [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+    if [[ $ProductType == "iPhone3"* ]]; then
+        [[ $Jailbreak == 1 ]] && Custom="Custom" || Custom="CustomN"
+        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_${Custom}"
+        [[ $OSVer == 4.3* ]] && IPSWCustom="$IPSWCustom-$UniqueChipID"
+    fi
     echo
 
     if [[ $Jailbreak != 1 ]]; then
@@ -72,9 +95,15 @@ JailbreakOption() {
 
 IPSWFindVerify() {
     IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
+    IPSW7="${ProductType}_7.1.2_11D257_Restore"
     local IPSWDL=$IPSW
     local OSVerDL=$OSVer
     local BuildVerDL=$BuildVer
+    if [[ $1 == 712 ]]; then
+        IPSWDL=$IPSW7
+        OSVerDL="7.1.2"
+        BuildVerDL="11D257"
+    fi
 
     if [[ -e "$IPSWCustom.ipsw" ]]; then
         Log "Found existing Custom IPSW. Skipping $OSVerDL IPSW verification."
@@ -183,6 +212,152 @@ IPSW32() {
         fi
         $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $JBMemory ${JBFiles[@]}
         cd ..
+    fi
+
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again" \
+        "You may try selecting N for memory option"
+    fi
+}
+
+IPSW4() {
+    if [[ -e $IPSWCustom.ipsw ]]; then
+        Log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    fi
+
+    if [[ $OSVer == 7.1.1 ]]; then
+        IV=b110991061d76f74c1fc05ddd7cff540
+        Key=c6fbf428e0105ab22b2abaefd20ca22c2084e200f74e8a3b08298a54f8bfe28f
+    elif [[ $OSVer == 7.1 ]]; then
+        IV=9fe5b6785126c8fc5787582df9efcf94
+        Key=b68612f21e377bd1f685e9031be159a724e931eff162db245c63b7b692cefa7e
+    elif [[ $OSVer == 7.0.6 ]]; then
+        IV=12af3a975f0346e89d3a34e73b4e0ae1
+        Key=d7b5bb9b90f19493449ab17fda63afdb16069ad5b65026bb11b4db223fdd4be1
+    elif [[ $OSVer == 7.0.4 ]]; then
+        IV=67087ac7f28c77cdf9110356f476540b
+        Key=2a6940252b5cb19b86efb9005cdd5fd713290e573dc760f5a3e05df9e868bb89
+    elif [[ $OSVer == 7.0.3 ]]; then
+        IV=7cb97df787dcc6367816b03492b225f9
+        Key=bd56f0886e21f233f519d4db20fd044b9208882a6fb791553a75eb4e0c45bbc5
+    elif [[ $OSVer == 7.0.2 ]]; then
+        IV=65db9a4e4f64bb79a55d76d98ce1457b
+        Key=5cd910c268813cb4008e5b33e01f761c0794ed1437737b4d386727d17fac79d1
+    elif [[ $OSVer == 7.0 ]]; then
+        IV=5bf099d9db5cf1009329e527a378c8be
+        Key=e1fef31c8aabcdca2a3887ba21c0e2113c41a5617380657ab6a487993b39f9a8
+    elif [[ $OSVer == 6.1.3 ]]; then
+        IV=b559a2c7dae9b95643c6610b4cf26dbd
+        Key=3dbe8be17af793b043eed7af865f0b843936659550ad692db96865c00171959f
+    elif [[ $OSVer == 6.1.2 ]]; then
+        IV=c939629e3473fdb67deae0c45582506d
+        Key=cbcd007712618cb6ab3be147f0317e22e7cceadb344e99ea1a076ef235c2c534
+    elif [[ $OSVer == 6.1 ]]; then
+        IV=4d76b7e25893839cfca478b44ddef3dd
+        Key=891ed50315763dac51434daeb8543b5975a555fb8388cc578d0f421f833da04d
+    elif [[ $OSVer == 6.0.1 ]]; then
+        IV=44ffe675d6f31167369787a17725d06c
+        Key=8d539232c0e906a9f60caa462f189530f745c4abd81a742b4d1ec1cb8b9ca6c3
+    elif [[ $OSVer == 6.0 ]]; then
+        IV=7891928b9dd0dd919778743a2c8ec6b3
+        Key=838270f668a05a60ff352d8549c06d2f21c3e4f7617c72a78d82c92a3ad3a045
+    elif [[ $BuildVer == 9B206 ]]; then
+        IV=b1846de299191186ce3bbb22432eca12
+        Key=e8e26976984e83f967b16bdb3a65a3ec45003cdf2aaf8d541104c26797484138
+    elif [[ $BuildVer == 9B208 ]]; then
+        IV=71fe96da25812ff341181ba43546ea4f
+        Key=6377d34deddf26c9b464f927f18b222be75f1b5547e537742e7dfca305660fea
+    elif [[ $OSVer == 5.1 ]]; then
+        IV=b1846de299191186ce3bbb22432eca12
+        Key=e8e26976984e83f967b16bdb3a65a3ec45003cdf2aaf8d541104c26797484138
+    elif [[ $OSVer == 5.0.1 ]]; then
+        IV=49eb54980a0024f91b079faf0ee87f67
+        Key=c3a49f0059075e1453dacec4c3e4d89bd7a433ee19c8d48e4695d89b4c84a373
+    elif [[ $OSVer == 5.0 ]]; then
+        IV=15dd404efbb24a842d08dcde21e777a0
+        Key=71614af73814c3a8e6724d592ecfccdbace766dad5eb39b0b8313387e94d2964
+    elif [[ $OSVer == 4.3.5 ]]; then
+        IV=986032eecd861c37ca2a86b6496a3c0d
+        Key=b4e300c54a9dd2e648ead50794e9bf2205a489c310a1c70a9fae687368229468
+        ios4="-ios4"
+    elif [[ $OSVer == 4.3.3 ]]; then
+        IV=bb3fc29dd226fac56086790060d5c744
+        Key=c2ead1d3b228a05b665c91b4b1ab54b570a81dffaf06eaf1736767bcb86e50de
+        ios4="-ios433"
+    elif [[ $OSVer == 4.3 ]]; then
+        IV=9f11c07bde79bdac4abb3f9707c4b13c
+        Key=0958d70e1a292483d4e32ed1e911d2b16b6260856be67d00a33b6a1801711d32
+        ios4="-ios433"
+    fi
+
+    if [[ $Jailbreak == 1 ]]; then
+        if [[ $OSVer == 7.1* ]]; then
+            JBFiles=(Cydia7.tar panguaxe.tar fstab7.tar)
+            JBSHA1=bba5022d6749097f47da48b7bdeaa3dc67cbf2c4
+        elif [[ $OSVer == 7.* ]]; then
+            JBFiles=(Cydia7.tar evasi0n7-untether.tar fstab7.tar)
+            JBSHA1=bba5022d6749097f47da48b7bdeaa3dc67cbf2c4
+        elif [[ $OSVer == 6.1.3 ]]; then
+            JBFiles=(Cydia6.tar p0sixspwn.tar)
+            JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
+        elif [[ $OSVer == 6.* ]]; then
+            JBFiles=(Cydia6.tar evasi0n6-untether.tar)
+            JBSHA1=1d5a351016d2546aa9558bc86ce39186054dc281
+        elif [[ $OSVer == 5.* || $OSVer == 4.3* ]]; then
+            JBFiles=(Cydia5.tar unthredeh4il.tar)
+            JBSHA1=f5b5565640f7e31289919c303efe44741e28543a
+        fi
+        [[ $OSVer != 7.* ]] && JBFiles+=(fstab_rw.tar)
+        if [[ ! -e resources/jailbreak/${JBFiles[0]} ]]; then
+            Log "Downloading ${JBFiles[0]}..."
+            cd tmp
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
+            cp ${JBFiles[0]} ../resources/jailbreak
+            cd ..
+        fi
+        for i in {0..2}; do
+            JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
+        done
+    fi
+
+    cd tmp
+    if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
+        Log "Preparing custom IPSW..."
+        cp -rf ../resources/firmware/FirmwareBundles FirmwareBundles
+        $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
+    elif [[ ! -e $IPSWCustom.ipsw ]]; then
+        Log "Preparing custom IPSW with ch3rryflower..."
+        sed -z -i "s|\n../bin|\n../$cherry/bin|g" ../$cherry/make_iBoot.sh
+        env LD_LIBRARY_PATH=../resources/lib ../$cherry/make_iBoot.sh ../$IPSW.ipsw -iv $IV -k $Key $ios4
+        cp -rf ../$cherrymac/FirmwareBundles FirmwareBundles
+        cp -rf ../$cherrymac/src src
+        env LD_LIBRARY_PATH=../resources/lib ../$cherry/cherry ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -derebusantiquis ../$IPSW7.ipsw iBoot ${JBFiles[@]}
+    fi
+    cd ..
+
+    if [[ $OSVer == 4.3* ]]; then
+        Log "iOS 4 Fix" # From ios4fix
+        zip -d $IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
+        cd tmp/src/n90ap/Firmware/all_flash/all_flash.n90ap.production
+        unzip -j ../../../../../../$IPSW.ipsw Firmware/all_flash/all_flash*/applelogo*
+        mv -v applelogo-640x960.s5l8930x.img3 applelogo4-640x960.s5l8930x.img3
+        echo "0000010: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
+        echo "0000020: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
+        if [[ $platform == macos ]]; then
+            plutil -extract 'APTicket' xml1 ../../../../../../shsh/$UniqueChipID-iPhone3,1-$OSVer.shsh -o 'apticket.plist'
+            cat apticket.plist | sed -ne '/<data>/,/<\/data>/p' | sed -e "s/<data>//" | sed "s/<\/data>//" | awk '{printf "%s",$0}' | base64 --decode > apticket.der
+        else
+            $xmlstarlet sel -t -m "/plist/dict/key[.='APTicket']" -v "following-sibling::data[1]" ../../../../../../shsh/$UniqueChipID-iPhone3,1-$OSVer.shsh > apticket.plist
+            sed -i -e 's/[ \t]*//' apticket.plist
+            cat apticket.plist | base64 --decode > apticket.der
+        fi
+        env LD_LIBRARY_PATH=../../../../../../resources/lib ../../../../../../$cherry/bin/xpwntool apticket.der applelogoT-640x960.s5l8930x.img3 -t scab_template.img3
+        cd ../../..
+        zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
+        zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
+        zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
+        cd ../../..
     fi
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then

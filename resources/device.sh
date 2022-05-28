@@ -9,6 +9,8 @@ FindDevice() {
         USB=1227
     elif [[ $1 == "Recovery" ]]; then
         USB=1281
+    elif [[ $1 == "Restore" ]]; then
+        USB=1297
     fi
     [[ -n $2 ]] && Timeout=5
     
@@ -16,6 +18,9 @@ FindDevice() {
     while (( i < Timeout )); do
         if [[ $platform == "linux" ]]; then
             DeviceIn=$(lsusb | grep -c "05ac:$USB")
+        elif [[ $1 == "Restore" ]]; then
+            ideviceinfo2=$($ideviceinfo -s)
+            [[ $? == 0 ]] && DeviceIn=1
         else
             [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]] && DeviceIn=1
         fi
@@ -133,6 +138,10 @@ GetDeviceValues() {
         BasebandURL=$(cat $Firmware/11D257/url)
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="007365a5655ac2f9fbd1e5b6dba8f4be0513e364"
+        if [[ $ProductType == "iPhone3,1" ]]; then
+            Log "iPhone 4 GSM detected. iPhone4Down functions enabled."
+            Echo "* This script uses ch3rryflower by dora2iOS"
+        fi
 
     elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3"* || $ProductType == "iPad4,1" ||
             $ProductType == "iPad4,4" || $ProductType == "iPod5,1" ]]; then
@@ -143,8 +152,10 @@ GetDeviceValues() {
     
     if [[ $ProductType == "iPhone3"* ]]; then
         DeviceProc=4
-        Log "$ProductType detected. Your device does not support OTA downgrades."
-        Echo "* Functions will be limited to entering kDFU and restoring with blobs."
+        if [[ $ProductType != "iPhone3,1" ]]; then
+            Log "$ProductType detected. Your device is not supported by ch3rryflower."
+            Echo "* Functions will be limited to entering kDFU and restoring with blobs."
+        fi
     elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
           $ProductType == "iPad3,3" || $ProductType == "iPhone4,1" || $ProductType == "iPod5,1" ]]; then
         DeviceProc=5
@@ -190,8 +201,9 @@ EnterPwnDFU() {
     local pwnDFUDevice
     local pwnD=1
     
-    if [[ $platform == "macos" ]]; then
+    if [[ $platform == "macos" || $ProductType == "iPhone3,1" ]]; then
         Selection=("ipwnder_lite" "iPwnder32")
+        [[ $ProductType == "iPhone3,1" ]] && Selection=("pwnedDFU" "ipwndfu")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
         Echo "* If unsure, select 1. Select 2 if 1 does not work."
@@ -201,6 +213,8 @@ EnterPwnDFU() {
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
+            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
+            "pwnedDFU" ) pwnDFUTool="$pwnedDFU"; break;;
         esac
         done
     else
@@ -359,4 +373,108 @@ kDFU() {
     Log "Entering kDFU mode..."
     Echo "* Press TOP or HOME button when the device disconnects and its screen goes black"
     FindDevice "DFU"
+}
+
+Remove4() {
+    Input "Select option:"
+    select opt in "Disable exploit" "Enable exploit" "(Any other key to exit)"; do
+    case $opt in
+        "Disable exploit" ) Rec=0; break;;
+        "Enable exploit" ) Rec=2; break;;
+        * ) exit 0;;
+    esac
+    done
+    if [[ ! -e saved/iPhone3,1/iBSS_8L1 ]]; then
+        Log "Downloading iBSS..."
+        $partialzip http://appldnld.apple.com/iPhone4/041-1966.20110721.V3Ufe/iPhone3,1_4.3.5_8L1_Restore.ipsw Firmware/dfu/iBSS.n90ap.RELEASE.dfu iBSS
+        mkdir -p saved/iPhone3,1 2>/dev/null
+        cp iBSS saved/iPhone3,1/iBSS_8L1
+        mv iBSS tmp
+    else
+        cp saved/iPhone3,1/iBSS_8L1 tmp/iBSS
+    fi
+    Log "Patching iBSS..."
+    $bspatch tmp/iBSS tmp/pwnediBSS resources/patches/iBSS.n90ap.8L1.patch
+    Log "Booting iBSS..."
+    $pwnedDFU -f tmp/pwnediBSS
+    sleep 2
+    Log "Running commands..."
+    $irecovery -c "setenv boot-partition $Rec"
+    $irecovery -c "saveenv"
+    $irecovery -c "setenv auto-boot true"
+    $irecovery -c "saveenv"
+    $irecovery -c "reset"
+    Log "Done!"
+    Echo "* If disabling the exploit did not work and the device is getting stuck after restore:"
+    Echo "* You may try another method for clearing NVRAM. See the \"Troubleshooting\" wiki page for more details"
+}
+
+Ramdisk4() {
+    Ramdisk=(
+    058-1056-002.dmg
+    DeviceTree.n90ap.img3
+    iBEC.n90ap.RELEASE.dfu
+    iBSS.n90ap.RELEASE.dfu
+    kernelcache.release.n90
+    )
+
+    Echo "Mode: Ramdisk"
+    Echo "* This uses files and script from 4tify by Zurac-Apps"
+    Echo "* Make sure that your device is already in DFU mode"
+
+    if [[ ! -d resources/ramdisk ]]; then
+        JailbreakLink=https://github.com/Zurac-Apps/4tify/raw/ad319e2774f54dc3a355812cc287f39f7c38cc66
+        cd tmp
+        mkdir ramdisk
+        cd ramdisk
+        Log "Downloading ramdisk files from 4tify repo..."
+        for file in "${Ramdisk[@]}"; do
+            curl -L $JailbreakLink/support_files/7.1.2/Ramdisk/$file -o $file
+        done
+        cd ..
+        cp -rf ramdisk ../resources
+        cd ..
+    fi
+    cd resources/ramdisk
+
+    Log "Sending iBSS..."
+    $irecovery2 -f iBSS.n90ap.RELEASE.dfu
+    sleep 2
+    Log "Sending iBEC..."
+    $irecovery2 -f iBEC.n90ap.RELEASE.dfu
+
+    FindDevice "Recovery" error
+
+    Log "Booting..."
+    $expect -c "
+    spawn $irecovery2 -s
+    expect \"iRecovery>\"
+    send \"/send DeviceTree.n90ap.img3\r\"
+    expect \"iRecovery>\"
+    send \"devicetree\r\"
+    expect \"iRecovery>\"
+    send \"/send 058-1056-002.dmg\r\"
+    expect \"iRecovery>\"
+    send \"ramdisk\r\"
+    expect \"iRecovery>\"
+    send \"/send kernelcache.release.n90\r\"
+    expect \"iRecovery>\"
+    send \"bootx\r\"
+    expect \"iRecovery>\"
+    send \"/exit\r\"
+    expect eof"
+    cd ../..
+
+    FindDevice "Restore" error
+
+    Log "Device should now be in SSH ramdisk mode."
+    echo
+    Echo "* To access SSH ramdisk, run iproxy first:"
+    Echo "    iproxy 2022 22"
+    Echo "* Then SSH to 127.0.0.1:2022"
+    Echo "    ssh -p 2022 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
+    Echo "* Enter root password: alpine"
+    Echo "* Mount filesystems with these commands:"
+    Echo "    mount_hfs /dev/disk0s1s1 /mnt1"
+    Echo "    mount_hfs /dev/disk0s1s2 /mnt1/private/var"
 }
