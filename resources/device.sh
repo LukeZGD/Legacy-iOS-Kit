@@ -5,8 +5,12 @@ FindDevice() {
     local i=0
     local Timeout=999
     local USB
-    [[ $1 == "DFU" ]] && USB=1227 || USB=1281
-    [[ -n $2 ]] && Timeout=3
+    if [[ $1 == "DFU" ]]; then
+        USB=1227
+    elif [[ $1 == "Recovery" ]]; then
+        USB=1281
+    fi
+    [[ -n $2 ]] && Timeout=5
     
     Log "Finding device in $1 mode..."
     while (( i < Timeout )); do
@@ -92,7 +96,7 @@ GetDeviceValues() {
         BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
         LatestVer="9.3.5"
     
-    elif [[ $ProductType == "iPad2,3" ]]; then
+    elif [[ $ProductType == "iPad2,3" || $ProductType == "iPhone3,3" ]]; then
         Baseband="Phoenix-3.6.03.Release.bbfw"
         BasebandSHA1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
     
@@ -114,22 +118,34 @@ GetDeviceValues() {
         Baseband="Mav5-11.80.00.Release.bbfw"
         BasebandSHA1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
         LatestVer="10.3.4"
-    
+
     elif [[ $ProductType == "iPad4,2" || $ProductType == "iPad4,3" || $ProductType == "iPad4,5" ||
-            $ProductType == "iPhone6,1" || $ProductType == "iPhone6,2" ||
-            $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" ]]; then
+            $ProductType == "iPhone5"* || $ProductType == "iPhone6"* ]]; then
         BasebandURL=$(cat $Firmware/14G60/url)
         Baseband="Mav7Mav8-7.60.00.Release.bbfw"
         BasebandSHA1="f397724367f6bed459cf8f3d523553c13e8ae12c"
-    
-    elif [[ $ProductType != "iPad2"* && $ProductType != "iPad3"* && $ProductType != "iPad4,1" &&
-            $ProductType != "iPad4,4" && $ProductType != "iPod5,1" ]]; then
-        Error "Your device $ProductType ${version}is not supported."
-    else
+        if [[ $ProductType == "iPhone5"* ]]; then
+            Log "iPhone 5C detected. Your device does not support OTA downgrades."
+            Echo "* Functions will be limited to entering kDFU and restoring with blobs."
+        fi
+
+    elif [[ $ProductType == "iPhone3"* ]]; then
+        BasebandURL=$(cat $Firmware/11D257/url)
+        Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
+        BasebandSHA1="007365a5655ac2f9fbd1e5b6dba8f4be0513e364"
+
+    elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3"* || $ProductType == "iPad4,1" ||
+            $ProductType == "iPad4,4" || $ProductType == "iPod5,1" ]]; then
         BasebandURL=0
+    else
+        Error "Your device $ProductType ${version}is not supported."
     fi
     
-    if [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
+    if [[ $ProductType == "iPhone3"* ]]; then
+        DeviceProc=4
+        Log "$ProductType detected. Your device does not support OTA downgrades."
+        Echo "* Functions will be limited to entering kDFU and restoring with blobs."
+    elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
           $ProductType == "iPad3,3" || $ProductType == "iPhone4,1" || $ProductType == "iPod5,1" ]]; then
         DeviceProc=5
     elif [[ $ProductType == "iPhone5"* || $ProductType == "iPad3"* ]]; then
@@ -148,7 +164,7 @@ GetDeviceValues() {
     if [[ $ProductType == "iPod5,1" ]]; then
         iBSS="${HWModel}ap"
         iBSSBuildVer="10B329"
-    elif [[ $ProductType == "iPad3,1" ]]; then
+    elif [[ $ProductType == "iPad3,1" || $ProductType == "iPhone3"* ]]; then
         iBSS="${HWModel}ap"
         iBSSBuildVer="11D257"
     elif [[ $ProductType == "iPhone6"* ]]; then
@@ -169,23 +185,22 @@ GetDeviceValues() {
     Log "ECID: $UniqueChipID"
 }
 
-CheckM8() {
+EnterPwnDFU() {
     local pwnDFUTool
     local pwnDFUDevice
     local pwnD=1
     
     if [[ $platform == "macos" ]]; then
-        Selection=("iPwnder32" "ipwnder_lite")
+        Selection=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
-        Echo "* If unsure, select 1 for Intel Macs, select 2 for Apple Silicon (M1) Macs."
-        Echo "* This option is set to iPwnder32 by default (1)."
+        Echo "* If unsure, select 1. Select 2 if 1 does not work."
+        Echo "* This option is set to ${Selection[0]} by default (1)."
         Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
-            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
-            * ) pwnDFUTool="$ipwnder32"; break;;
+            "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
         esac
         done
     else
@@ -197,21 +212,21 @@ CheckM8() {
         cd resources/ipwndfu
         Echo "* Enter your user password when prompted"
         $ipwndfu -p
-        if  [[ $DeviceProc == 7 ]]; then
+        pwnDFUDevice=$?
+        if [[ $DeviceProc == 7 ]]; then
             Log "Running rmsigchks.py..."
             $rmsigchks
             pwnDFUDevice=$?
-            cd ../..
         else
-            cd ../..
-            kDFU iBSS || echo
-            pwnDFUDevice=$?
+            SendiBSS=1
         fi
+        cd ../..
     else
         $pwnDFUTool -p
         pwnDFUDevice=$?
     fi
     [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
+    [[ $DeviceProc == 4 ]] && SendiBSS=1
     
     if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
@@ -246,8 +261,8 @@ Recovery() {
         exit 0
     fi
     
-    Echo "* Hold TOP and HOME buttons for 8 seconds."
-    for i in {08..01}; do
+    Echo "* Hold TOP and HOME buttons for 10 seconds."
+    for i in {10..01}; do
         echo -n "$i "
         sleep 1
     done
@@ -259,7 +274,7 @@ Recovery() {
     echo
     
     FindDevice "DFU" error
-    CheckM8
+    EnterPwnDFU
 }
 
 RecoveryExit() {
@@ -275,6 +290,17 @@ kDFU() {
     local kloader
     local VerDetect=$(echo $ProductVer | cut -c 1)
     
+    if [[ $DeviceState != "Normal" ]]; then
+        Log "Device is already in $DeviceState mode"
+        return
+    fi
+
+    if [[ $iBSSBuildVer == $BuildVer && -e "$IPSW.ipsw" ]]; then
+        Log "Extracting iBSS from IPSW..."
+        mkdir -p saved/$ProductType 2>/dev/null
+        unzip -o -j $IPSW.ipsw Firmware/dfu/$iBSS.dfu -d saved/$ProductType
+    fi
+
     if [[ ! -e saved/$ProductType/$iBSS.dfu ]]; then
         Log "Downloading iBSS..."
         $partialzip "$(cat $Firmware/$iBSSBuildVer/url)" Firmware/dfu/$iBSS.dfu $iBSS.dfu
@@ -288,22 +314,7 @@ kDFU() {
     
     Log "Patching iBSS..."
     $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
-    
-    if [[ $1 == iBSS ]]; then
-        cd resources/ipwndfu
-        if [[ $platform == "macos" ]]; then
-            Echo "* Attempting to send pwned iBSS."
-            Echo "* This will fail on Apple Silicon Macs, as well as on macOS 12.3 and later."
-            Echo "* If this is the case, you need to send pwned iBSS yourself before continuing."
-            Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-        fi
-        Log "Sending iBSS..."
-        $ipwndfu -l ../../tmp/pwnediBSS
-        local ret=$?
-        cd ../..
-        return $ret
-    fi
-    
+
     [[ $VerDetect == 1 ]] && kloader="kloader_hgsp"
     [[ $VerDetect == 5 ]] && kloader="kloader5"
     [[ ! $kloader ]] && kloader="kloader"

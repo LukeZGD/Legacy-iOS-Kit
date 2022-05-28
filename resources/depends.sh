@@ -44,11 +44,12 @@ SetToolPaths() {
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     iproxy="$MPath/iproxy"
-    ipsw="./tools/ipsw_$platform"
+    ipsw="../resources/tools/ipsw_$platform"
     ipwndfu="$python ipwndfu"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
     partialzip="./resources/tools/partialzip_$platform"
+    ping="ping -c1"
     rmsigchks="$python rmsigchks.py"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
@@ -78,7 +79,6 @@ SetToolPaths() {
 SaveExternal() {
     local ExternalURL="https://github.com/$1/$2.git"
     local External=$2
-    [[ $2 == "iOS-OTA-Downgrader-Keys" ]] && External="firmware"
     cd resources
     if [[ ! -d $External || ! -d $External/.git ]]; then
         Log "Downloading $External..."
@@ -150,7 +150,7 @@ InstallDepends() {
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
-        libimobiledevice=("https://github.com/libimobiledevice-win32/imobiledevice-net/releases/download/v1.3.14/libimobiledevice.1.2.1-r1116-osx-x64.zip" "328e809dea350ae68fb644225bbf8469c0f0634b")
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_macos.zip" "66a49e4f69757a3d9dc51109a8e4651020bfacb8")
         Echo "* iOS-OTA-Downgrader provides a copy of libimobiledevice and libirecovery by default"
         Echo "* In case that problems occur, try installing them from Homebrew"
         Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"

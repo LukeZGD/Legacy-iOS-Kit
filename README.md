@@ -15,6 +15,7 @@
 - [Identify your device here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
+    - iPhone 4 devices also support restoring with SHSH blobs (iOS 5 and newer only)
 
 <table>
     <thead>

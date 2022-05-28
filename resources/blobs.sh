@@ -30,7 +30,7 @@ SaveOTABlobs() {
 
     Log "Saving iOS $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap --generator 0x1111111111111111 --no-baseband"
+    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap -g 0x1111111111111111 -b"
     SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_3a88b7c3802f2f0510abc432104a15ebd8bd7154.shsh*
     $tsschecker $ExtraArgs
     
@@ -41,7 +41,7 @@ SaveOTABlobs() {
         "It is also possible that $OSVer for $ProductType is no longer signed"
     
     elif [[ ! -e $SHSH ]]; then
-        Log "Saving $OSVer blobs failed, but found existing saved SHSH blobs. Continuing..."
+        Log "Saving $OSVer blobs failed, but found existing saved SHSH blobs."
         cp $SHSHExisting .
         SHSH=$(ls $SHSHChk)
         SHSHContinue=1

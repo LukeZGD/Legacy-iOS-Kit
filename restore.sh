@@ -75,7 +75,7 @@ Main() {
     fi
     
     Log "Checking Internet connection..."
-    ping -c1 8.8.8.8 >/dev/null
+    $ping 8.8.8.8 >/dev/null
     if [[ $? != 0 ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
@@ -106,11 +106,13 @@ Main() {
         Mode="$1"
     else
         [[ $1 != "NoDevice" ]] && Selection+=("Downgrade Device")
-        Selection+=("Save OTA Blobs")
+        [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
+
         if [[ $DeviceProc != 7 ]]; then
-            Selection+=("Create Custom IPSW")
+            [[ $DeviceProc != 4 ]] && Selection+=("Create Custom IPSW")
             [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
         fi
+
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
         Echo "*** Main Menu ***"
         Input "Select an option:"
@@ -129,18 +131,18 @@ Main() {
     SelectVersion
 
     if [[ $Mode == "IPSW32" ]]; then
-        Verify=1
         echo
-        JailbreakSet
-        MemoryOption
-        IPSWFind
-        if [[ $Verify == 1 ]]; then
-            IPSWVerify
-        elif [[ -e "$IPSWCustom.ipsw" ]]; then
+        JailbreakOption
+        if [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW, stopping here."
             Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
             exit 0
+        elif [[ $Jailbreak != 1 ]]; then
+            Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
+            exit 0
         fi
+
+        IPSWFindVerify
         IPSW32
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
         Echo "* This custom IPSW has a jailbreak built in ($JBName)"
@@ -161,9 +163,9 @@ Main() {
         elif [[ $DeviceState == "Recovery" ]]; then
             Recovery
         elif [[ $DeviceState == "DFU" ]]; then
-            CheckM8
+            EnterPwnDFU
         fi
-    
+
     elif [[ $DeviceState == "DFU" ]]; then
         if [[ $1 != "PwnedDevice" ]]; then
             echo -e "\n${Color_R}[Error] 32-bit A${DeviceProc} device detected in DFU mode. ${Color_N}"
@@ -179,26 +181,25 @@ Main() {
         Echo "* If you do not know what you are doing, EXIT NOW by pressing Ctrl+C and restart your device in normal mode."
         Input "Select the mode that your device is currently in:"
         Selection=("kDFU mode")
-        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)")
-        [[ $DeviceProc == 6 ]] && Selection+=("DFU mode (A6)")
+        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A6)")
         Selection+=("Any other key to exit")
         select opt in "${Selection[@]}"; do
         case $opt in
             "kDFU mode" ) break;;
-            "DFU mode (A6)" ) CheckM8; break;;
+            "DFU mode (A6)" ) EnterPwnDFU; break;;
             "pwnDFU mode (A5)" )
                 Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
                 Echo "* This option will not work if your device is not in pwnDFU mode.";
                 Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
                 read -s;
-                kDFU iBSS; break;;
+                SendiBSS=1; break;;
             * ) exit 0;;
         esac
         done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
     
     elif [[ $DeviceState == "Recovery" ]]; then
-        if [[ $DeviceProc == 6 ]]; then
+        if [[ $DeviceProc == 4 || $DeviceProc == 6 ]]; then
             Recovery
         else
             Log "32-bit A${DeviceProc} device detected in recovery mode."
@@ -222,7 +223,7 @@ SelectVersion() {
         return
     fi
     
-    if [[ $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" ]]; then
+    if [[ $ProductType == "iPhone5,3" || $ProductType == "iPhone5,4" || $ProductType == "iPhone3"* ]]; then
         Selection=()
     else
         Selection=("iOS 8.4.1")
