@@ -3,6 +3,8 @@
 - **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
 - **iPhone4Down: Downgrade your iPhone 4 on Linux (using ch3rryflower)**
 - **Linux and macOS** are supported
+    - **Partial support for Windows** - usage is not recommended
+    - iPhone4Down is focused on Linux only - macOS is untested, Windows is unsupported
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
@@ -70,6 +72,7 @@
 - [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
 - **macOS** 10.13 and newer
+- **Windows** 7 and newer
 
 ## Tools and other stuff used
 - cURL
@@ -81,21 +84,22 @@
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
-- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice-win32 (macOS build)
-- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
+- [imobiledevice-net](https://github.com/libimobiledevice-win32/imobiledevice-net) - libimobiledevice-win32 (macOS/Windows builds)
 - ipsw tool from [xpwn](https://github.com/LukeZGD/xpwn) - LukeZGD fork
 - Python 2 (for ipwndfu, rmsigchks, SimpleHTTPServer)
 - Python 3 (http.server)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar
 - [tsschecker](https://github.com/1Conan/tsschecker) - 1Conan fork
-- [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta
+- [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore 194 and beta
+- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - [zenity](https://github.com/GNOME/zenity)
-- [zenity](https://github.com/ncruces/zenity) (macOS)
-- 32-bit bundles are from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
+- [zenity](https://github.com/ncruces/zenity) (macOS/Windows builds)
+- 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/)
+- A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [evasi0n7](https://www.theiphonewiki.com/wiki/Evasi0n7)

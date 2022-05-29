@@ -37,12 +37,14 @@ FutureRestore() {
 
     Log "Proceeding to futurerestore..."
     [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
-    cd resources
-    $SimpleHTTPServer &
-    ServerPID=$!
-    cd ..
+    if [[ $platform != "win" ]]; then
+        cd resources
+        $SimpleHTTPServer &
+        ServerPID=$!
+        cd ..
+    fi
 
-    if [[ $DeviceProc == 7 ]]; then
+    if [[ $DeviceProc == 7 && $platform != "win" ]]; then
         # Send dummy file for device detection
         $irecovery -f README.md
         sleep 2
@@ -112,10 +114,37 @@ DowngradeOTA() {
     FutureRestore
 }
 
+DowngradeOTAWin() {
+    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomWin"
+    if [[ $DeviceProc != 7 ]]; then
+        JailbreakOption
+        SaveOTABlobs
+    fi
+    IPSWFindVerify
+    if [[ $DeviceProc == 7 ]]; then
+        IPSWSetExtract extract
+        IPSW64
+        EnterPwnREC
+        local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
+        Log "APNONCE: $APNonce"
+        SaveOTABlobs $APNonce
+        IPSWSetExtract set
+        FutureRestore
+        return
+    fi
+    kDFU
+    IPSW32
+    IPSWSetExtract
+    iDeviceRestore
+}
+
 Downgrade() {
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
-    if [[ $OSVer == "Other" ]]; then
+    if [[ $platform == "win" ]]; then
+        DowngradeOTAWin
+        return
+    elif [[ $OSVer == "Other" ]]; then
         DowngradeOther
         return
     fi
@@ -123,6 +152,8 @@ Downgrade() {
 }
 
 iDeviceRestore() {
+    mkdir shsh
+    cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
     Echo "* Enter your user password when prompted"
     [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
@@ -133,6 +164,10 @@ iDeviceRestore() {
         Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
         Echo "* Using Terminal, cd to where the script is located, then run"
         Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+    elif [[ $platform == "win" && $? != 0 ]]; then
+        Log "An error seems to have occurred in idevicerestore."
+        Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
+        Echo "* To fix this, follow troubleshooting steps here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
     else
         echo
         Log "Restoring done!"

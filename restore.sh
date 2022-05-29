@@ -32,6 +32,7 @@ Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ -n $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
+    ExitWin
     exit 1
 }
 
@@ -41,6 +42,13 @@ Input() {
 
 Log() {
     echo "${Color_G}[Log] $1 ${Color_N}"
+}
+
+ExitWin() {
+    if [[ $platform == "win" ]]; then
+        Input "Press Enter/Return to exit."
+        read -s
+    fi
 }
 
 Main() {
@@ -97,7 +105,9 @@ Main() {
         InstallDepends
     fi
     
-    SaveExternal LukeZGD ipwndfu
+    if [[ $platform != "win" ]]; then
+        SaveExternal LukeZGD ipwndfu
+    fi
     GetDeviceValues $1
     Clean
     mkdir tmp
@@ -150,12 +160,13 @@ Main() {
 
     if [[ $Mode == "IPSW32" ]]; then
         echo
+        [[ $platform == "win" ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomWin"
         JailbreakOption
         if [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW, stopping here."
             Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
             exit 0
-        elif [[ $Jailbreak != 1 ]]; then
+        elif [[ $Jailbreak != 1 && $platform != "win" ]]; then
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
                 exit 0
@@ -175,15 +186,38 @@ Main() {
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
         [[ $Jailbreak == 1 ]] && Echo "* This custom IPSW has a jailbreak built in ($JBName)"
         Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
-        [[ $DeviceProc != 4 ]] && Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
+        if [[ $DeviceProc != 4 && $platform != "win" ]]; then
+            Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
+        fi
+        ExitWin
         exit 0
 
     elif [[ $Mode != "Downgrade"* && $Mode != *"4" ]]; then
         $Mode
+        ExitWin
         exit 0
     fi
 
-    if [[ $Mode == *"4" || $DeviceProc == 7 ]]; then
+    if [[ $DeviceProc == 4 && $platform == "win" ]]; then
+        Error "Your device ($ProductType) is unsupported on Windows."
+    elif [[ $DeviceProc == 7 && $platform == "win" ]]; then
+        local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
+        if [[ $DeviceState == "Normal" ]]; then
+            Error "$Message"
+        elif [[ $DeviceState == "Recovery" ]]; then
+            Log "A7 device detected in recovery mode."
+            Log "$Message"
+            RecoveryExit
+        elif [[ $DeviceState == "DFU" ]]; then
+            Log "A7 device detected in DFU mode."
+            Echo "* Make sure that your device is already in pwnDFU mode with signature checks disabled."
+            Echo "* If your device is not in pwnDFU mode, the restore will not proceed!"
+            Echo "* Entering pwnDFU mode is not supported on Windows. You need to use a Mac/Linux machine or another iOS device to do so."
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+            read -s
+        fi
+
+    elif [[ $Mode == *"4" || $DeviceProc == 7 ]]; then
         if [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
@@ -213,7 +247,9 @@ Main() {
         Echo "* If you do not know what you are doing, EXIT NOW by pressing Ctrl+C and restart your device in normal mode."
         Input "Select the mode that your device is currently in:"
         Selection=("kDFU mode")
-        [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A4/A6)")
+        if [[ $platform != "win" ]]; then
+            [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A4/A6)")
+        fi
         Selection+=("Any other key to exit")
         select opt in "${Selection[@]}"; do
         case $opt in
@@ -232,7 +268,7 @@ Main() {
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
     
     elif [[ $DeviceState == "Recovery" ]]; then
-        if [[ $DeviceProc == 4 || $DeviceProc == 6 ]]; then
+        if [[ $DeviceProc == 4 || $DeviceProc == 6 ]] && [[ $platform != "win" ]]; then
             Recovery
         else
             Log "32-bit A${DeviceProc} device detected in recovery mode."
@@ -244,6 +280,7 @@ Main() {
     fi
     
     Downgrade
+    ExitWin
     exit 0
 }
 
@@ -287,7 +324,9 @@ SelectVersion() {
         fi
     fi
 
-    [[ $Mode == "Downgrade"* ]] && Selection+=("Other (use SHSH blobs)")
+    if [[ $platform != "win" ]]; then
+        [[ $Mode == "Downgrade"* ]] && Selection+=("Other (use SHSH blobs)")
+    fi
     Selection+=("(Any other key to exit)")
     
     echo

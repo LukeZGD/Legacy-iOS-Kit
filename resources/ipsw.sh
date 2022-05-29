@@ -2,7 +2,7 @@
 
 JailbreakSet() {
     Jailbreak=1
-    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
+    [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
     if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ]] && [[ $OSVer == "8.4.1" ]]; then
         Input "Jailbreak Tool Option"
@@ -21,6 +21,7 @@ JailbreakSet() {
          [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
     fi
 
+    [[ $platform == "win" ]] && IPSWCustom="${IPSWCustom}JB"
     if [[ $JBDaibutsu == 1 ]]; then
         JBName="daibutsu"
         IPSWCustom="${IPSWCustom}D"
@@ -65,7 +66,7 @@ JailbreakOption() {
     fi
     echo
 
-    if [[ $Jailbreak != 1 ]]; then
+    if [[ $Jailbreak != 1 || $platform == "win" ]]; then
         return
     fi
     Input "Memory Option for creating custom IPSW"
@@ -123,16 +124,20 @@ IPSWFindVerify() {
 }
 
 IPSWSetExtract() {
-    if [[ -e "$IPSWCustom.ipsw" ]]; then
-        Log "Setting restore IPSW to: $IPSWCustom.ipsw"
-        IPSWRestore="$IPSWCustom"
-    elif [[ -z $IPSWRestore ]]; then
-        Log "Setting restore IPSW to: $IPSW.ipsw"
-        IPSWRestore="$IPSW"
+    if [[ $1 != "extract" ]]; then
+        if [[ -e "$IPSWCustom.ipsw" ]]; then
+            Log "Setting restore IPSW to: $IPSWCustom.ipsw"
+            IPSWRestore="$IPSWCustom"
+        elif [[ -z $IPSWRestore ]]; then
+            Log "Setting restore IPSW to: $IPSW.ipsw"
+            IPSWRestore="$IPSW"
+        fi
     fi
 
-    Log "Extracting IPSW: $IPSWRestore.ipsw"
-    unzip -oq "$IPSWRestore.ipsw" -d "$IPSWRestore"/
+    if [[ $1 != "set" ]]; then
+        Log "Extracting IPSW: $IPSWRestore.ipsw"
+        unzip -oq "$IPSWRestore.ipsw" -d "$IPSWRestore"/
+    fi
 }
 
 IPSW32() {
@@ -148,6 +153,7 @@ IPSW32() {
     fi
 
     if [[ $JBDaibutsu == 1 ]]; then
+        [[ $platform == "win" ]] && ipsw="${ipsw}2"
         ExtraArgs+="-daibutsu "
         echo '#!/bin/bash' > tmp/reboot.sh
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
@@ -190,15 +196,19 @@ IPSW32() {
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
     fi
-    ExtraArgs+="-bbupdate"
+    if [[ $platform == "win" ]]; then
+        WinBundles="windows/"
+    else
+        ExtraArgs+="-bbupdate"
+    fi
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."
         cd tmp
         if [[ $JBDaibutsu == 1 ]]; then
-            cp -R ../resources/firmware/JailbreakBundles FirmwareBundles
+            cp -R ../resources/firmware/${WinBundles}JailbreakBundles FirmwareBundles
         else
-            cp -R ../resources/firmware/FirmwareBundles FirmwareBundles
+            cp -R ../resources/firmware/${WinBundles}FirmwareBundles FirmwareBundles
         fi
         $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $JBMemory ${JBFiles[@]}
         cd ..
@@ -353,5 +363,30 @@ IPSW4() {
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Error "Failed to find custom IPSW. Please run the script again" \
         "You may try selecting N for memory option"
+    fi
+}
+
+IPSW64() {
+    if [[ -e $IPSWCustom.ipsw ]]; then
+        Log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    fi
+
+    Log "Preparing custom IPSW..."
+    $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
+    $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+    if [[ $ProductType == "iPad4"* ]]; then
+        $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
+        $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
+        mv -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+    fi
+    mv -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
+    cd $IPSW
+    zip -rq0 ../$IPSWCustom.ipsw *
+    cd ..
+    mv $IPSW $IPSWCustom
+
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again"
     fi
 }

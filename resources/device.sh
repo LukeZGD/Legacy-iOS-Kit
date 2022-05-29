@@ -76,10 +76,11 @@ GetDeviceValues() {
     if [[ ! $DeviceState ]]; then
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
-        echo "${Color_Y}* For macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
+        echo "${Color_Y}* For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
         echo "${Color_Y}* Recovery or DFU mode is also applicable. ${Color_N}"
         echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
         echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+        ExitWin
         exit 1
     elif [[ -n $DeviceState ]]; then
         if [[ ! $ProductType ]]; then
@@ -477,4 +478,31 @@ Ramdisk4() {
     Echo "* Mount filesystems with these commands:"
     Echo "    mount_hfs /dev/disk0s1s1 /mnt1"
     Echo "    mount_hfs /dev/disk0s1s2 /mnt1/private/var"
+}
+
+EnterPwnREC() {
+    local Attempt=1
+
+    if [[ $ProductType == "iPad4,4" || $ProductType == "iPad4,5" ]]; then
+        Log "iPad mini 2 device detected. Setting iBSS and iBEC to \"ipad4b\""
+        iBEC=$iBECb
+        iBSS=$iBSSb
+    fi
+
+    while (( $Attempt < 4 )); do
+        Log "Entering pwnREC mode... (Attempt $Attempt)"
+        Log "Sending iBSS..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
+        Log "Sending iBEC..."
+        $irecovery -f $IPSWCustom/Firmware/dfu/$iBEC.im4p
+        sleep 3
+        FindDevice "Recovery" timeout
+        [[ $? == 0 ]] && break
+        ((Attempt++))
+    done
+
+    if (( $Attempt == 4 )); then
+        Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again"
+    fi
 }

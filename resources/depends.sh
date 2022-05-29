@@ -43,10 +43,20 @@ SetToolPaths() {
         python="/usr/bin/python"
         xmlstarlet=/
         zenity="./resources/tools/zenity_macos"
+
+    elif [[ $OSTYPE == "msys" ]]; then
+        platform="win"
+        platformver="$(cmd /c ver)"
+        MPath+="$platform"
+        bspatch="./resources/tools/bspatch_win"
+        futurerestore="./resources/tools/futurerestore_win"
+        python=/
     fi
 
-    expect="$(which expect)"
-    git="$(which git)"
+    if [[ $platform != "win" ]]; then
+        expect="$(which expect)"
+        git="$(which git)"
+    fi
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     idevicerestore="./resources/tools/idevicerestore_$platform"
@@ -84,6 +94,9 @@ SetToolPaths() {
             rmsigchks="$(which python2) rmsigchks.py"
             SimpleHTTPServer="$python -m http.server 8888"
         fi
+    else
+        ping="ping -n 1"
+        zenity="./resources/tools/zenity_$platform"
     fi
 
     Log "Running on platform: $platform ($platformver)"
@@ -171,6 +184,14 @@ InstallDepends() {
         Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"
         Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
 
+    elif [[ $platform == "win" ]]; then
+        pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
+        Log "Downloading Windows tools..."
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a34cbce38d89f96b97e62199aece78a58dd00e15
+        Log "Extracting Windows tools..."
+        unzip -oq tools_win.zip -d ../resources
+        libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
+
     else
         Error "Distro not detected/supported by the install script." "See the repo README for supported OS versions/distros"
     fi
@@ -192,5 +213,6 @@ InstallDepends() {
 
     cd ..
     Log "Install script done! Please run the script again to proceed"
+    ExitWin
     exit 0
 }

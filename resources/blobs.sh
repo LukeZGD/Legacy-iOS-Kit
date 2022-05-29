@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SaveOTABlobs() {
+    local APNonce=$1
     local ExtraArgs
     local SHSHChk
     local SHSHContinue
@@ -30,8 +31,9 @@ SaveOTABlobs() {
 
     Log "Saving iOS $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
-    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap -g 0x1111111111111111 -b"
-    SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}_3a88b7c3802f2f0510abc432104a15ebd8bd7154.shsh*
+    ExtraArgs="-d $ProductType -i $OSVer -e $UniqueChipID -m $BuildManifest -o -s -B ${HWModel}ap -b "
+    [[ -n $APNonce ]] && ExtraArgs+="--apnonce $APNonce" || ExtraArgs+="-g 0x1111111111111111"
+    SHSHChk=${UniqueChipID}_${ProductType}_${HWModel}ap_${OSVer}-${BuildVer}*.shsh*
     $tsschecker $ExtraArgs
     
     SHSH=$(ls $SHSHChk)
@@ -49,15 +51,15 @@ SaveOTABlobs() {
     
     if [[ -n $SHSH && $SHSHContinue != 1 ]]; then
         mkdir -p saved/shsh 2>/dev/null
-        cp "$SHSH" saved/shsh
+        [[ -z $APNonce ]] && cp "$SHSH" saved/shsh
         Log "Successfully saved $OSVer blobs."
     fi
 }
 
 Save712Blobs() {
     local SHSHChk
-    SHSH="${UniqueChipID}-${ProductType}-${OSVer}.shsh"
     SHSH7="${UniqueChipID}-${ProductType}-7.1.2.shsh"
+    SHSH="saved/shsh/$SHSH7"
     BuildManifest="BuildManifest_${ProductType}_7.1.2.plist"
 
     if [[ ! -e resources/manifests/$BuildManifest ]]; then
@@ -68,16 +70,13 @@ Save712Blobs() {
 
     if [[ -e saved/shsh/$SHSH7 ]]; then
         Log "Found existing saved 7.1.2 blobs."
-    else
-        Log "Saving 7.1.2 blobs with tsschecker..."
-        $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m resources/manifests/BuildManifest_${ProductType}_7.1.2.plist -s -b
-        SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
-        [[ ! $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
-        mkdir saved/shsh 2>/dev/null
-        mv $SHSHChk saved/shsh/$SHSH7
-        Log "Successfully saved 7.1.2 blobs."
+        return
     fi
-
-    mkdir shsh
-    cp saved/shsh/$SHSH7 shsh/$SHSH
+    Log "Saving 7.1.2 blobs with tsschecker..."
+    $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m resources/manifests/BuildManifest_${ProductType}_7.1.2.plist -s -b
+    SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
+    [[ ! $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
+    mkdir saved/shsh 2>/dev/null
+    mv $SHSHChk saved/shsh/$SHSH7
+    Log "Successfully saved 7.1.2 blobs."
 }
