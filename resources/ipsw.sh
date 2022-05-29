@@ -57,16 +57,6 @@ JailbreakOption() {
         Log "Jailbreak option disabled by user."
     fi
 
-    [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"=
-    Echo "* This option is enabled by default (Y)."
-    read -p "$(Input 'Enable this option? (Y/n):')" Jailbreak
-    if [[ $Jailbreak != 'N' && $Jailbreak != 'n' ]]; then
-        JailbreakSet
-        Log "Jailbreak option enabled."
-    else
-        Log "Jailbreak option disabled by user."
-    fi
-
     [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
     if [[ $ProductType == "iPhone3"* ]]; then
         [[ $Jailbreak == 1 ]] && Custom="Custom" || Custom="CustomN"
