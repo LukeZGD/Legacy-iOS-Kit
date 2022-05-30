@@ -68,7 +68,7 @@ Save712Blobs() {
         mv BuildManifest.plist resources/manifests/$BuildManifest
     fi
 
-    if [[ -e saved/shsh/$SHSH7 ]]; then
+    if [[ -e $SHSH ]]; then
         Log "Found existing saved 7.1.2 blobs."
         return
     fi
@@ -77,6 +77,6 @@ Save712Blobs() {
     SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
     [[ ! $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
     mkdir saved/shsh 2>/dev/null
-    mv $SHSHChk saved/shsh/$SHSH7
+    mv $SHSHChk $SHSH
     Log "Successfully saved 7.1.2 blobs."
 }

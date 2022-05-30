@@ -190,6 +190,9 @@ GetDeviceValues() {
         iBSSBuildVer="12H321"
     fi
     [[ ! $IPSWType ]] && IPSWType="$ProductType"
+    iBEC="iBEC.$iBSS.RELEASE"
+    iBECb="iBEC.${iBSS}b.RELEASE"
+    iBSSb="iBSS.${iBSS}b.RELEASE"
     iBSS="iBSS.$iBSS.RELEASE"
     SEP="sep-firmware.$HWModel.RELEASE.im4p"
     
@@ -489,7 +492,7 @@ EnterPwnREC() {
         iBSS=$iBSSb
     fi
 
-    while (( $Attempt < 4 )); do
+    while (( Attempt < 4 )); do
         Log "Entering pwnREC mode... (Attempt $Attempt)"
         Log "Sending iBSS..."
         $irecovery -f $IPSWCustom/Firmware/dfu/$iBSS.im4p
@@ -502,7 +505,7 @@ EnterPwnREC() {
         ((Attempt++))
     done
 
-    if (( $Attempt == 4 )); then
+    if (( Attempt == 4 )); then
         Error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again"
     fi
 }

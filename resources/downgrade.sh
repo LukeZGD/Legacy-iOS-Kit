@@ -33,11 +33,12 @@ FRBaseband() {
 }
 
 FutureRestore() {
-    local ExtraArgs=("--use-pwndfu")
+    local ExtraArgs=()
 
     Log "Proceeding to futurerestore..."
     [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
     if [[ $platform != "win" ]]; then
+        ExtraArgs+=("--use-pwndfu")
         cd resources
         $SimpleHTTPServer &
         ServerPID=$!
@@ -122,7 +123,7 @@ DowngradeOTAWin() {
     fi
     IPSWFindVerify
     if [[ $DeviceProc == 7 ]]; then
-        IPSWSetExtract extract
+        IPSWSetExtract
         IPSW64
         EnterPwnREC
         local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)

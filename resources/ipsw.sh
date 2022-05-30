@@ -124,20 +124,19 @@ IPSWFindVerify() {
 }
 
 IPSWSetExtract() {
-    if [[ $1 != "extract" ]]; then
-        if [[ -e "$IPSWCustom.ipsw" ]]; then
-            Log "Setting restore IPSW to: $IPSWCustom.ipsw"
-            IPSWRestore="$IPSWCustom"
-        elif [[ -z $IPSWRestore ]]; then
-            Log "Setting restore IPSW to: $IPSW.ipsw"
-            IPSWRestore="$IPSW"
-        fi
+    if [[ -e "$IPSWCustom.ipsw" ]]; then
+        Log "Setting restore IPSW to: $IPSWCustom.ipsw"
+        IPSWRestore="$IPSWCustom"
+    elif [[ -z $IPSWRestore ]]; then
+        Log "Setting restore IPSW to: $IPSW.ipsw"
+        IPSWRestore="$IPSW"
     fi
 
-    if [[ $1 != "set" ]]; then
-        Log "Extracting IPSW: $IPSWRestore.ipsw"
-        unzip -oq "$IPSWRestore.ipsw" -d "$IPSWRestore"/
+    if [[ $1 == "set" ]]; then
+        return
     fi
+    Log "Extracting IPSW: $IPSWRestore.ipsw"
+    unzip -oq "$IPSWRestore.ipsw" -d "$IPSWRestore"/
 }
 
 IPSW32() {
