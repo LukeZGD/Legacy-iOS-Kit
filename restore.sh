@@ -285,13 +285,13 @@ Main() {
 }
 
 SelectVersion() {
-    if [[ $Mode == "Downgrade"* ]]; then
-        :
-    elif [[ $Mode == "kDFU" || $Mode == *"4" ]]; then
-        return
-    elif [[ $ProductType == "iPad4"* || $ProductType == "iPhone6"* ]]; then
+    if [[ $DeviceProc == 7 ]]; then
         OSVer="10.3.3"
         BuildVer="14G60"
+        return
+    elif [[ $Mode == "Downgrade"* ]]; then
+        :
+    elif [[ $Mode == "kDFU" || $Mode == *"4" ]]; then
         return
     fi
     
