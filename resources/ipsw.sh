@@ -197,7 +197,7 @@ IPSW32() {
     fi
     if [[ $platform == "win" ]]; then
         WinBundles="windows/"
-    else
+    elif [[ $BBUpdate != 0 ]]; then
         ExtraArgs+="-bbupdate"
     fi
 

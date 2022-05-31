@@ -108,11 +108,15 @@ DowngradeOther() {
 }
 
 DowngradeOTA() {
-    [[ $DeviceProc != 7 ]] && JailbreakOption
+    if [[ $DeviceProc != 7 ]]; then
+        JailbreakOption
+    fi
     SaveOTABlobs
     IPSWFindVerify
     kDFU
-    [[ $Jailbreak == 1 ]] && IPSW32
+    if [[ $Jailbreak == 1 || $BBUpdate == 0 ]]; then
+        IPSW32
+    fi
     IPSWSetExtract
     FutureRestore
 }

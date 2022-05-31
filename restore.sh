@@ -176,6 +176,7 @@ Main() {
             fi
         fi
 
+        SaveOTABlobs
         IPSWFindVerify
         if [[ $DeviceProc == 4 ]]; then
             IPSWFindVerify 712
