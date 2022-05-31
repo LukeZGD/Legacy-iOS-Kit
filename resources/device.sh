@@ -376,6 +376,7 @@ kDFU() {
     
     Log "Entering kDFU mode..."
     Echo "* Press TOP or HOME button when the device disconnects and its screen goes black"
+    Echo "* You may also try to unplug and replug your device"
     FindDevice "DFU"
 }
 
@@ -502,6 +503,7 @@ EnterPwnREC() {
         sleep 3
         FindDevice "Recovery" timeout
         [[ $? == 0 ]] && break
+        Echo "* You may also try to unplug and replug your device"
         ((Attempt++))
     done
 

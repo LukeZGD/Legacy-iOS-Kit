@@ -383,7 +383,7 @@ IPSW64() {
     cd $IPSW
     zip -rq0 ../$IPSWCustom.ipsw *
     cd ..
-    mv $IPSW $IPSWCustom
+    mv $IPSW/ $IPSWCustom/
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Error "Failed to find custom IPSW. Please run the script again"

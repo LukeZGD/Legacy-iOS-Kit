@@ -45,11 +45,13 @@ FutureRestore() {
         cd ..
     fi
 
-    if [[ $DeviceProc == 7 && $platform != "win" ]]; then
-        # Send dummy file for device detection
-        $irecovery -f README.md
-        sleep 2
+    if [[ $DeviceProc == 7 ]]; then
         ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
+        if [[ $platform != "win" ]]; then
+            # Send dummy file for device detection
+            $irecovery -f README.md
+            sleep 2
+        fi
     elif [[ $SendiBSS != 1 ]]; then
         ExtraArgs+=("--no-ibss")
     fi
