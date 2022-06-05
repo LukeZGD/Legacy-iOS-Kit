@@ -94,9 +94,9 @@ DowngradeOther() {
     Log "Selected SHSH file: $SHSH"
 
     if [[ ! -e resources/firmware/$ProductType/$BuildVer/index.html ]]; then
+        Log "Getting firmware keys for $ProductType-$BuildVer"
         unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
         BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-        Log "Getting firmware keys for $ProductType-$BuildVer"
         mkdir -p resources/firmware/$ProductType/$BuildVer 2>/dev/null
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
         mv tmp/index.html resources/firmware/$ProductType/$BuildVer
@@ -167,14 +167,15 @@ iDeviceRestore() {
     [[ $1 == "latest" ]] && ExtraArgs="-ey" || ExtraArgs="-ewy"
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     if [[ $platform == "macos" && $? != 0 ]]; then
-        Log "An error seems to have occurred in idevicerestore."
-        Echo "* If this is the \"Killed: 9\" error or similar, try these steps:"
+        Log "Restoring done! Read the message below if any error has occured:"
+        Echo "* If the \"Killed: 9\" or other similar error pops up, try these steps:"
         Echo "* Using Terminal, cd to where the script is located, then run"
         Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
+        Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
     elif [[ $platform == "win" && $? != 0 ]]; then
-        Log "An error seems to have occurred in idevicerestore."
+        Log "Restoring done! Read the message below if any error has occured:"
         Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-        Echo "* To fix this, follow troubleshooting steps here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
+        Echo "* To fix this, follow troubleshooting steps from here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
     else
         echo
         Log "Restoring done!"

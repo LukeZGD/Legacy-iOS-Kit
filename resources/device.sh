@@ -80,8 +80,7 @@ GetDeviceValues() {
         echo "${Color_Y}* Recovery or DFU mode is also applicable. ${Color_N}"
         echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
         echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
-        ExitWin
-        exit 1
+        ExitWin 1
     elif [[ -n $DeviceState ]]; then
         if [[ ! $ProductType ]]; then
             read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
@@ -252,7 +251,7 @@ EnterPwnDFU() {
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
         Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-        exit 1
+        ExitWin 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
     else

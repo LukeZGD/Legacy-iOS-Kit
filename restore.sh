@@ -32,8 +32,7 @@ Error() {
     echo -e "\n${Color_R}[Error] $1 ${Color_N}"
     [[ -n $2 ]] && echo "${Color_R}* $2 ${Color_N}"
     echo
-    ExitWin
-    exit 1
+    ExitWin 1
 }
 
 Input() {
@@ -46,9 +45,11 @@ Log() {
 
 ExitWin() {
     if [[ $platform == "win" ]]; then
+        echo
         Input "Press Enter/Return to exit."
         read -s
     fi
+    exit $1
 }
 
 Main() {
@@ -103,6 +104,7 @@ Main() {
         fi
         Clean
         InstallDepends
+        ExitWin 0
     fi
     
     if [[ $platform != "win" ]]; then
@@ -165,14 +167,14 @@ Main() {
         if [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW, stopping here."
             Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
-            exit 0
+            ExitWin 0
         elif [[ $Jailbreak != 1 && $platform != "win" ]]; then
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
-                exit 0
+                ExitWin 0
             else
                 Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
-                exit 0
+                ExitWin 0
             fi
         fi
 
@@ -190,13 +192,11 @@ Main() {
         if [[ $DeviceProc != 4 && $platform != "win" ]]; then
             Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
         fi
-        ExitWin
-        exit 0
+        ExitWin 0
 
     elif [[ $Mode != "Downgrade"* && $Mode != *"4" ]]; then
         $Mode
-        ExitWin
-        exit 0
+        ExitWin 0
     fi
 
     if [[ $DeviceProc == 4 && $platform == "win" ]]; then
@@ -240,7 +240,7 @@ Main() {
             echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
             echo "${Color_Y}* For usage of the DFU Advanced Menu, add PwnedDevice as an argument. ${Color_N}"
             echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
-            exit 1
+            ExitWin 1
         fi
         echo
         Echo "* DFU Advanced Menu"
@@ -281,8 +281,7 @@ Main() {
     fi
     
     Downgrade
-    ExitWin
-    exit 0
+    ExitWin 0
 }
 
 SelectVersion() {

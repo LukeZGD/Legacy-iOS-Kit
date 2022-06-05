@@ -213,6 +213,4 @@ InstallDepends() {
 
     cd ..
     Log "Install script done! Please run the script again to proceed"
-    ExitWin
-    exit 0
 }
