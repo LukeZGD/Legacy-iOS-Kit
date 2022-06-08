@@ -304,15 +304,7 @@ RecoveryExit() {
     exit 0
 }
 
-kDFU() {
-    local kloader
-    local VerDetect=$(echo $ProductVer | cut -c 1)
-    
-    if [[ $DeviceState != "Normal" ]]; then
-        Log "Device is already in $DeviceState mode"
-        return
-    fi
-
+PatchiBSS() {
     if [[ $iBSSBuildVer == $BuildVer && -e "$IPSW.ipsw" ]]; then
         Log "Extracting iBSS from IPSW..."
         mkdir -p saved/$ProductType 2>/dev/null
@@ -325,13 +317,62 @@ kDFU() {
         mkdir -p saved/$ProductType 2>/dev/null
         mv $iBSS.dfu saved/$ProductType
     fi
-    
+
     if [[ ! -e saved/$ProductType/$iBSS.dfu ]]; then
         Error "Failed to save iBSS. Please run the script again"
     fi
-    
+
     Log "Patching iBSS..."
     $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
+}
+
+SendPwnediBSS() {
+    Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!"
+    Echo "* This option will not work if your device is not in pwnDFU mode."
+    Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+    read -s
+    Input "No iBSS Option"
+    Echo "* If you already sent pwned iBSS to the device, select Y."
+    Echo "* This option is disabled by default (N)."
+    read -p "$(Input 'Enable this option? (y/N):')" SendiBSS
+    if [[ $SendiBSS == 'Y' || $SendiBSS == 'y' ]]; then
+        Log "No iBSS option enabled by user."
+        return
+    fi
+
+    echo
+    Input "Send iBSS Option"
+    Echo "* To let futurerestore send patched iBSS, select N."
+    Echo "* To send pwned iBSS using ipwndfu, select Y."
+    Echo "* For macOS >=12.3 and ARM Macs, install python2 first before selecting ipwndfu!"
+    Echo "* This option is enabled by default (Y)."
+    read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
+    if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then
+        Log "Send iBSS option disabled by user."
+        SendiBSS=1
+        return
+    fi
+
+    PatchiBSS
+    if [[ $platform == "macos" ]]; then
+        SaveExternal LukeZGD ipwndfu
+    fi
+    cd resources/ipwndfu
+    Log "Sending iBSS..."
+    $ipwndfu -l ../../tmp/pwnediBSS
+    cd ../..
+}
+
+kDFU() {
+    local kloader
+    local VerDetect=$(echo $ProductVer | cut -c 1)
+    
+    if [[ $DeviceState != "Normal" ]]; then
+        Log "Device is already in $DeviceState mode"
+        return
+    fi
+
+    PatchiBSS
 
     [[ $VerDetect == 1 ]] && kloader="kloader_hgsp"
     [[ $VerDetect == 5 ]] && kloader="kloader5"

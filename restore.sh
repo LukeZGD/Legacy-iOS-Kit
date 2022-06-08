@@ -78,7 +78,7 @@ Main() {
         Error "Platform unknown/not supported."
     fi
 
-    chmod +x ./resources/*.sh ./resources/tools/* ./resources/libimobiledevice_$platform/*
+    chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? != 0 ]]; then
         Error "A problem with file permissions has been detected, cannot proceed."
     fi
@@ -255,13 +255,7 @@ Main() {
         case $opt in
             "kDFU mode" ) break;;
             "DFU mode (A4/A6)" ) EnterPwnDFU; break;;
-            "pwnDFU mode (A5)" )
-                Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!";
-                Echo "* This option will not work if your device is not in pwnDFU mode.";
-                Echo "* Sending pwned iBSS is not needed, futurerestore will handle that.";
-                Input "Press Enter/Return to continue (or press Ctrl+C to cancel)";
-                read -s;
-                SendiBSS=1; break;;
+            "pwnDFU mode (A5)" ) SendPwnediBSS; break;;
             * ) exit 0;;
         esac
         done
