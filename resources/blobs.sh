@@ -7,32 +7,6 @@ SaveOTABlobs() {
     local SHSHContinue
     local SHSHLatest
     local SHSHExisting
-    
-    if [[ $DeviceProc != 7 && $Baseband != 0 && $platform != "win" ]]; then
-        if [[ ! -e saved/$ProductType/BuildManifest.plist ]]; then
-            Log "Downloading BuildManifest of iOS $LatestVer..."
-            $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
-            mkdir -p saved/$ProductType 2>/dev/null
-            mv BuildManifest.plist saved/$ProductType
-        fi
-        if [[ ! -e saved/$ProductType/BuildManifest.plist ]]; then
-            Error "Downloading/verifying BuildManifest failed. Please run the script again"
-        fi
-        Log "Checking signing status of iOS $LatestVer..."
-        SHSHChk=*_${ProductType}_${HWModel}ap_${LatestVer}*.shsh*
-        $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -m saved/$ProductType/BuildManifest.plist -s -B ${HWModel}ap
-        SHSHLatest=$(ls $SHSHChk 2>/dev/null)
-        if [[ -e $SHSHLatest ]]; then
-            Log "Latest version for $ProductType (iOS $LatestVer) is signed."
-        else
-            Log "For some reason, the latest version for your device (iOS $LatestVer) is not signed."
-            Log "Disabling baseband update for the custom IPSW."
-            BBUpdate=0
-            [[ $Jailbreak != 1 ]] && IPSWCustom+="N"
-            IPSWCustom+="B"
-        fi
-        rm $SHSHLatest 2>/dev/null
-    fi
 
     Log "Saving iOS $OSVer blobs with tsschecker..."
     BuildManifest="resources/manifests/BuildManifest_${ProductType}_${OSVer}.plist"
@@ -63,14 +37,14 @@ SaveOTABlobs() {
 
 Save712Blobs() {
     local SHSHChk
-    SHSH7="${UniqueChipID}-${ProductType}-7.1.2.shsh"
-    SHSH="saved/shsh/$SHSH7"
-    BuildManifest="BuildManifest_${ProductType}_7.1.2.plist"
+    BuildManifest="saved/iPhone3,1/BuildManifest.plist"
+    SHSH="saved/shsh/${UniqueChipID}-${ProductType}-7.1.2.shsh"
 
-    if [[ ! -e resources/manifests/$BuildManifest ]]; then
+    if [[ ! -e $BuildManifest ]]; then
         Log "Extracting BuildManifest from 7.1.2 IPSW..."
         unzip -o -j $IPSW7.ipsw BuildManifest.plist -d .
-        mv BuildManifest.plist resources/manifests/$BuildManifest
+        mkdir -p saved/iPhone3,1 2>/dev/null
+        mv BuildManifest.plist $BuildManifest
     fi
 
     if [[ -e $SHSH ]]; then
@@ -78,7 +52,7 @@ Save712Blobs() {
         return
     fi
     Log "Saving 7.1.2 blobs with tsschecker..."
-    $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m resources/manifests/BuildManifest_${ProductType}_7.1.2.plist -s -b
+    $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m $BuildManifest -s -b
     SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
     [[ ! $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
     mkdir saved/shsh 2>/dev/null

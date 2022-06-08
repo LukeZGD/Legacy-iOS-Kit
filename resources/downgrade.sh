@@ -114,8 +114,10 @@ DowngradeOTA() {
     SaveOTABlobs
     IPSWFindVerify
     kDFU
-    if [[ $Jailbreak == 1 || $BBUpdate == 0 ]]; then
+    if [[ $Jailbreak == 1 ]]; then
         IPSW32
+    else
+        IPSWCustom=0
     fi
     IPSWSetExtract
     FutureRestore

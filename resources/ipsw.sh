@@ -140,11 +140,11 @@ IPSWSetExtract() {
 }
 
 IPSW32() {
-    local Bundle="Down_${ProductType}_${OSVer}_${BuildVer}.bundle"
     local ExtraArgs
     local JBFiles
     local JBFiles2
     local JBSHA1
+    BBUpdate="-bbupdate"
 
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -197,8 +197,10 @@ IPSW32() {
     fi
     if [[ $platform == "win" ]]; then
         WinBundles="windows/"
-    elif [[ $BBUpdate != 0 ]]; then
-        ExtraArgs+="-bbupdate"
+    elif [[ $ProductType == "iPad2,3" ]]; then
+        BBUpdate=
+        [[ $Jailbreak != 1 ]] && IPSWCustom+="N"
+        IPSWCustom+="B"
     fi
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
@@ -209,7 +211,7 @@ IPSW32() {
         else
             cp -R ../resources/firmware/${WinBundles}FirmwareBundles FirmwareBundles
         fi
-        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $JBMemory ${JBFiles[@]}
+        $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $BBUpdate $JBMemory ${JBFiles[@]}
         cd ..
     fi
 

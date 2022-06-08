@@ -204,9 +204,10 @@ EnterPwnDFU() {
     local pwnDFUDevice
     local pwnD=1
     
-    if [[ $platform == "macos" || $ProductType == "iPhone3,1" ]]; then
+    if [[ $ProductType == "iPhone3,1" ]]; then
+        pwnDFUTool="$pwnedDFU"
+    elif [[ $platform == "macos" ]]; then
         Selection=("ipwnder_lite" "iPwnder32")
-        [[ $ProductType == "iPhone3,1" ]] && Selection=("pwnedDFU" "ipwndfu")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
         Echo "* If unsure, select 1. Select 2 if 1 does not work."
@@ -216,15 +217,13 @@ EnterPwnDFU() {
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
-            "ipwndfu" ) pwnDFUTool="ipwndfu"; break;;
-            "pwnedDFU" ) pwnDFUTool="$pwnedDFU"; break;;
         esac
         done
     else
         pwnDFUTool="ipwndfu"
     fi
     
-    Log "Entering pwnDFU mode with $pwnDFUTool..."
+    Log "Entering pwnDFU mode with: $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
         Echo "* Enter your user password when prompted"
@@ -245,7 +244,9 @@ EnterPwnDFU() {
     [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
     [[ $DeviceProc == 4 ]] && SendiBSS=1
     
-    if [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
+    if [[ $pwnDFUDevice != 0 && $ProductType == "iPhone3,1" ]]; then
+        Error "Failed to enter pwnDFU mode. Please run the script again"
+    elif [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
         echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"

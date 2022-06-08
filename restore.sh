@@ -78,7 +78,7 @@ Main() {
         Error "Platform unknown/not supported."
     fi
 
-    chmod +x ./resources/*.sh ./resources/tools/*
+    chmod +x ./resources/*.sh ./resources/tools/* ./resources/libimobiledevice_$platform/*
     if [[ $? != 0 ]]; then
         Error "A problem with file permissions has been detected, cannot proceed."
     fi
@@ -107,7 +107,7 @@ Main() {
         ExitWin 0
     fi
     
-    if [[ $platform != "win" ]]; then
+    if [[ $platform == "linux" ]]; then
         SaveExternal LukeZGD ipwndfu
     fi
     GetDeviceValues $1
@@ -178,7 +178,6 @@ Main() {
             fi
         fi
 
-        SaveOTABlobs
         IPSWFindVerify
         if [[ $DeviceProc == 4 ]]; then
             IPSWFindVerify 712
