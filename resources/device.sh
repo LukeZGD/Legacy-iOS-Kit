@@ -245,10 +245,11 @@ EnterPwnDFU() {
     [[ $DeviceProc == 4 ]] && SendiBSS=1
     
     if [[ $pwnDFUDevice != 0 && $ProductType == "iPhone3,1" ]]; then
-        Error "Failed to enter pwnDFU mode. Please run the script again"
+        Error "Failed to enter pwnDFU mode. Please run the script again" \
+        "Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
     elif [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
-        echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
+        echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds. ${Color_N}"
         echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
         echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
         Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
