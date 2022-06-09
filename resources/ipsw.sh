@@ -222,6 +222,8 @@ IPSW32() {
 }
 
 IPSW4() {
+    local ExtraArgs
+
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -281,15 +283,15 @@ IPSW4() {
     elif [[ $OSVer == 4.3.5 ]]; then
         IV=986032eecd861c37ca2a86b6496a3c0d
         Key=b4e300c54a9dd2e648ead50794e9bf2205a489c310a1c70a9fae687368229468
-        ios4="--logo4"
+        ExtraArgs="--logo4 "
     elif [[ $OSVer == 4.3.3 ]]; then
         IV=bb3fc29dd226fac56086790060d5c744
         Key=c2ead1d3b228a05b665c91b4b1ab54b570a81dffaf06eaf1736767bcb86e50de
-        ios4="--logo4 --433"
+        ExtraArgs="--logo4 --433 "
     elif [[ $OSVer == 4.3 ]]; then
         IV=9f11c07bde79bdac4abb3f9707c4b13c
         Key=0958d70e1a292483d4e32ed1e911d2b16b6260856be67d00a33b6a1801711d32
-        ios4="--logo4 --433"
+        ExtraArgs="--logo4 --433 "
     fi
 
     if [[ $Jailbreak == 1 ]]; then
@@ -328,12 +330,23 @@ IPSW4() {
         cp -rf ../resources/firmware/FirmwareBundles .
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
     elif [[ ! -e $IPSWCustom.ipsw ]]; then
+        echo
+        Input "Verbose Boot Option"
+        Echo "* When enabled, the device will have verbose boot on restore."
+        Echo "* This option is enabled by default (Y)."
+        read -p "$(Input 'Enable this option? (Y/n):')" opt
+        if [[ $opt != 'N' && $opt != 'n' ]]; then
+            ExtraArgs+="-b -v"
+            Log "Verbose boot option enabled."
+        else
+            Log "Verbose boot option disabled by user."
+        fi
         Log "Preparing custom IPSW with ch3rryflower..."
         cp -rf ../$cherry/bin/* ../$cherrymac/FirmwareBundles ../$cherrymac/src .
         unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
         mv iBoot.${HWModel}ap.RELEASE.img3 tmp
         env LD_LIBRARY_PATH=../resources/lib ./xpwntool tmp ibot.dec -iv $IV -k $Key
-        ./iBoot32Patcher ibot.dec ibot.pwned --rsa -b "-v" --boot-partition --boot-ramdisk $ios4
+        ./iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
         env LD_LIBRARY_PATH=../resources/lib ./xpwntool ibot.pwned iBoot -t tmp
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
