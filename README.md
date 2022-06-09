@@ -70,7 +70,7 @@
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 33 and newer
 - [**Debian**](https://www.debian.org/) 11 Bullseye, Testing and Unstable
-- [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3
+- [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3 to 15.4
 - **macOS** 10.13 and newer
 - **Windows** 7 and newer
 

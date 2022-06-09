@@ -167,12 +167,11 @@ InstallDepends() {
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         sudo dnf install -y bsdiff expect git libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
 
-    elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == "openSUSE Leap 15.3" ]]; then
-        if [[ $ID == "opensuse-tumbleweed" ]]; then
-            libimobiledevice="libimobiledevice-1_0-6"
-        else
-            libimobiledevice="libimobiledevice6"
+    elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.3" || $PRETTY_NAME == *"Leap 15.4" ]]; then
+        libimobiledevice="libimobiledevice-1_0-6"
+        if [[ $PRETTY_NAME == *"Leap"* ]]; then
             ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
+            [[ $VERSION == "15.3" ]] && libimobiledevice="libimobiledevice6"
         fi
         sudo zypper -n in bsdiff curl expect git $libimobiledevice python-base vim xmlstarlet zenity
 
