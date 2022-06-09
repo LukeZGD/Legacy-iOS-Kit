@@ -332,7 +332,7 @@ SendPwnediBSS() {
     Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
     read -s
     Input "No iBSS Option"
-    Echo "* If you already sent pwned iBSS to the device, select Y."
+    Echo "* If you already have sent pwned iBSS manually, select Y. If not, select N."
     Echo "* This option is disabled by default (N)."
     read -p "$(Input 'Enable this option? (y/N):')" SendiBSS
     if [[ $SendiBSS == 'Y' || $SendiBSS == 'y' ]]; then
@@ -342,9 +342,9 @@ SendPwnediBSS() {
 
     echo
     Input "Send iBSS Option"
-    Echo "* To let futurerestore send patched iBSS, select N."
-    Echo "* To send pwned iBSS using ipwndfu, select Y."
-    Echo "* For macOS >=12.3 and ARM Macs, install python2 first before selecting ipwndfu!"
+    Echo "* To send pwned iBSS using ipwndfu, select Y. (does not work on ARM Macs)"
+    Echo "* To let futurerestore send iBSS, select N. (likely does not work)"
+    Echo "* For macOS >=12.3, install python2 first before selecting ipwndfu."
     Echo "* This option is enabled by default (Y)."
     read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
     if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then
@@ -353,10 +353,10 @@ SendPwnediBSS() {
         return
     fi
 
-    PatchiBSS
     if [[ $platform == "macos" ]]; then
         SaveExternal LukeZGD ipwndfu
     fi
+    PatchiBSS
     cd resources/ipwndfu
     Log "Sending iBSS..."
     $ipwndfu -l ../../tmp/pwnediBSS
