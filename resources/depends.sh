@@ -55,7 +55,6 @@ SetToolPaths() {
 
     if [[ $platform != "win" ]]; then
         expect="$(which expect)"
-        git="$(which git)"
     fi
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
@@ -103,18 +102,15 @@ SetToolPaths() {
 }
 
 SaveExternal() {
-    local ExternalURL="https://github.com/$1/$2.git"
-    local External=$2
-    cd resources
-    if [[ ! -d $External || ! -d $External/.git ]]; then
-        Log "Downloading $External..."
-        rm -rf $External
-        $git clone --depth 1 $ExternalURL $External
+    if [[ -d ./resources/$2 ]]; then
+        return
     fi
-    if [[ ! $(ls $External/*.md) || ! -d $External/.git ]]; then
-        rm -rf $External
-        Error "Downloading/updating $2 failed. Please run the script again"
-    fi
+    cd tmp
+    Log "Downloading $2..."
+    SaveFile $1 $2.zip $3
+    cd ../resources
+    unzip -q ../tmp/$2.zip -d .
+    mv $2* $2
     cd ..
 }
 
@@ -161,11 +157,11 @@ InstallDepends() {
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl expect git libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 33 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff expect git libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff expect libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.3" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         libimobiledevice="libimobiledevice-1_0-6"
@@ -173,7 +169,7 @@ InstallDepends() {
             ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
             [[ $VERSION == "15.3" ]] && libimobiledevice="libimobiledevice6"
         fi
-        sudo zypper -n in bsdiff curl expect git $libimobiledevice python-base vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl expect $libimobiledevice python-base vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install

@@ -221,6 +221,7 @@ EnterPwnDFU() {
         done
     else
         pwnDFUTool="ipwndfu"
+        SaveExternal https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu 61333249eb58faebbb380c4709384034ce0e019a
     fi
     
     Log "Entering pwnDFU mode with: $pwnDFUTool..."
@@ -354,9 +355,7 @@ SendPwnediBSS() {
         return
     fi
 
-    if [[ $platform == "macos" ]]; then
-        SaveExternal LukeZGD ipwndfu
-    fi
+    SaveExternal https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu 61333249eb58faebbb380c4709384034ce0e019a
     PatchiBSS
     cd resources/ipwndfu
     Log "Sending iBSS..."

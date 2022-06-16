@@ -107,21 +107,12 @@ Main() {
         ExitWin 0
     fi
     
-    if [[ $platform == "linux" ]]; then
-        SaveExternal LukeZGD ipwndfu
-    fi
     GetDeviceValues $1
     Clean
     mkdir tmp
 
-    if [[ $ProductType == "iPhone3,1" && ! -d ./resources/ch3rryflower ]]; then
-        cd tmp
-        Log "Downloading ch3rryflower..."
-        SaveFile https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f ch3rryflower.zip 790d56db354151b9740c929e52c097ba57f2929d
-        cd ../resources
-        unzip -q ../tmp/ch3rryflower.zip -d .
-        mv ch3rryflower* ch3rryflower
-        cd ..
+    if [[ $ProductType == "iPhone3,1" ]]; then
+        SaveExternal https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f ch3rryflower 790d56db354151b9740c929e52c097ba57f2929d
     fi
 
     if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
