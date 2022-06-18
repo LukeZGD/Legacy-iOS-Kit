@@ -106,7 +106,6 @@ SaveExternal() {
         return
     fi
     cd tmp
-    Log "Downloading $2..."
     SaveFile $1 $2.zip $3
     cd ../resources
     unzip -q ../tmp/$2.zip -d .
@@ -115,6 +114,7 @@ SaveExternal() {
 }
 
 SaveFile() {
+    Log "Downloading $2..."
     curl -L $1 -o $2
     local SHA1=$(shasum $2 | awk '{print $1}')
     if [[ $SHA1 != $3 ]]; then
@@ -181,7 +181,6 @@ InstallDepends() {
 
     elif [[ $platform == "win" ]]; then
         pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
-        Log "Downloading Windows tools..."
         SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a34cbce38d89f96b97e62199aece78a58dd00e15
         Log "Extracting Windows tools..."
         unzip -oq tools_win.zip -d ../resources
@@ -196,7 +195,6 @@ InstallDepends() {
     fi
 
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
-        Log "Downloading libimobiledevice..."
         SaveFile ${libimobiledevice[0]} libimobiledevice.zip ${libimobiledevice[1]}
         mkdir ../resources/libimobiledevice_$platform
         Log "Extracting libimobiledevice..."

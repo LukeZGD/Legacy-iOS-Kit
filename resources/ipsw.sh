@@ -84,6 +84,23 @@ JailbreakOption() {
     echo
 }
 
+JailbreakFiles() {
+    local JBSHA1L
+    if [[ -e resources/jailbreak/$2 ]]; then
+        Log "Verifying $2..."
+        JBSHA1L=$(shasum resources/jailbreak/$2 | awk '{print $1}')
+        if [[ $JBSHA1L == $3 ]]; then
+            return
+        fi
+        Log "Verifying $2 failed. Deleting existing file for re-download."
+        rm resources/jailbreak/$2
+    fi
+    cd tmp
+    SaveFile $1 $2 $3
+    mv $2 ../resources/jailbreak
+    cd ..
+}
+
 IPSWFindVerify() {
     IPSW="${IPSWType}_${OSVer}_${BuildVer}_Restore"
     IPSW7="${ProductType}_7.1.2_11D257_Restore"
@@ -144,6 +161,7 @@ IPSW32() {
     local JBFiles
     local JBFiles2
     local JBSHA1
+    local JBURL
     BBUpdate="-bbupdate"
 
     if [[ -e $IPSWCustom.ipsw ]]; then
@@ -158,21 +176,17 @@ IPSW32() {
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> tmp/reboot.sh
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
+        #JBFiles=("../resources/jailbreak/sshdeb.tar") # uncomment to add openssh to custom ipsw
+        #JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
         JBFiles2=("bin.tar" "cydia.tar" "untether.tar")
         JBSHA1=("98034227c68610f4c7dd48ca9e622314a1e649e7" "2e9e662afe890e50ccf06d05429ca12ce2c0a3a3" "f88ec9a1b3011c4065733249363e9850af5f57c8")
-        cd tmp
-        mkdir jailbreak
+        mkdir -p tmp/jailbreak
         for i in {0..2}; do
-            local URL="https://github.com/dora2-iOS/daibutsuCFW/raw/main/build/src/"
-            (( i > 0 )) && URL+="daibutsu/${JBFiles2[$i]}" || URL+="${JBFiles2[$i]}"
-            if [[ ! -e ../resources/jailbreak/${JBFiles2[$i]} ]]; then
-                Log "Downloading ${JBFiles2[$i]}..."
-                SaveFile $URL ${JBFiles2[$i]} ${JBSHA1[$i]}
-                mv ${JBFiles2[$i]} ../resources/jailbreak
-            fi
-            cp ../resources/jailbreak/${JBFiles2[$i]} jailbreak/
+            JBURL="https://github.com/LukeZGD/daibutsuCFW/raw/main/build/src/"
+            (( i > 0 )) && JBURL+="daibutsu/${JBFiles2[$i]}" || JBURL+="${JBFiles2[$i]}"
+            JailbreakFiles $JBURL ${JBFiles2[$i]} ${JBSHA1[$i]}
+            cp resources/jailbreak/${JBFiles2[$i]} tmp/jailbreak/
         done
-        cd ..
 
     elif [[ $Jailbreak == 1 ]]; then
         if [[ $OSVer == "8.4.1" ]]; then
@@ -184,13 +198,7 @@ IPSW32() {
             JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
             ExtraArgs+="-s 1260"
         fi
-        if [[ ! -e resources/jailbreak/${JBFiles[2]} ]]; then
-            cd tmp
-            Log "Downloading ${JBFiles[2]}..."
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
-            mv ${JBFiles[2]} ../resources/jailbreak
-            cd ..
-        fi
+        JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
@@ -312,13 +320,7 @@ IPSW4() {
             JBSHA1=f5b5565640f7e31289919c303efe44741e28543a
         fi
         [[ $OSVer != 7.* ]] && JBFiles+=(fstab_rw.tar)
-        if [[ ! -e resources/jailbreak/${JBFiles[0]} ]]; then
-            Log "Downloading ${JBFiles[0]}..."
-            cd tmp
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
-            cp ${JBFiles[0]} ../resources/jailbreak
-            cd ..
-        fi
+        JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done

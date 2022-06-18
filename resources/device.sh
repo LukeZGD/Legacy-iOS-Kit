@@ -468,7 +468,7 @@ Ramdisk4() {
     Echo "* This uses files and script from 4tify by Zurac-Apps"
     Echo "* Make sure that your device is already in DFU mode"
 
-    if [[ ! -d resources/ramdisk ]]; then
+    if [[ ! $(ls resources/ramdisk) ]]; then
         JailbreakLink=https://github.com/Zurac-Apps/4tify/raw/ad319e2774f54dc3a355812cc287f39f7c38cc66
         cd tmp
         mkdir ramdisk
