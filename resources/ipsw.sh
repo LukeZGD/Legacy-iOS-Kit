@@ -2,6 +2,7 @@
 
 JailbreakSet() {
     Jailbreak=1
+    JBURL="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak"
     [[ -z $IPSWCustom ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_Custom"
 
     if [[ $ProductType == "iPhone4,1" || $ProductType == "iPhone5,2" ]] && [[ $OSVer == "8.4.1" ]]; then
@@ -161,7 +162,6 @@ IPSW32() {
     local JBFiles
     local JBFiles2
     local JBSHA1
-    local JBURL
     BBUpdate="-bbupdate"
 
     if [[ -e $IPSWCustom.ipsw ]]; then
@@ -177,7 +177,7 @@ IPSW32() {
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> tmp/reboot.sh
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
         #JBFiles=("../resources/jailbreak/sshdeb.tar") # uncomment to add openssh to custom ipsw
-        #JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
+        #JailbreakFiles $JBURL/sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
         JBFiles2=("bin.tar" "cydia.tar" "untether.tar")
         JBSHA1=("98034227c68610f4c7dd48ca9e622314a1e649e7" "2e9e662afe890e50ccf06d05429ca12ce2c0a3a3" "f88ec9a1b3011c4065733249363e9850af5f57c8")
         mkdir -p tmp/jailbreak
@@ -198,7 +198,7 @@ IPSW32() {
             JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
             ExtraArgs+="-s 1260"
         fi
-        JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
+        JailbreakFiles $JBURL/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
@@ -231,6 +231,10 @@ IPSW32() {
 
 IPSW4() {
     local ExtraArgs
+    local IV
+    local JBFiles
+    local JBSHA1
+    local Key
 
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -320,7 +324,7 @@ IPSW4() {
             JBSHA1=f5b5565640f7e31289919c303efe44741e28543a
         fi
         [[ $OSVer != 7.* ]] && JBFiles+=(fstab_rw.tar)
-        JailbreakFiles https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
+        JailbreakFiles $JBURL/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
