@@ -11,7 +11,7 @@
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
-- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only)
+- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, iOS 5 and newer only)
 - This script can also be used to just enter kDFU mode (32-bit devices only)
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
 
@@ -19,7 +19,7 @@
 - [Identify your device here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
-    - iPhone 4 devices also support restoring with SHSH blobs (iOS 5 and newer only)
+    - iPhone 4 devices also support restoring with SHSH blobs
 - **iPhone4Down supports the iPhone 4 GSM (iPhone3,1) only**
     - You are on your own if you attempt to restore to versions not within the supported range (except for iOS 7.1.2)
 
@@ -69,7 +69,7 @@
 - [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 33 and newer
-- [**Debian**](https://www.debian.org/) Bullseye, Bookworm/Sid, and Debian-based distros
+- [**Debian**](https://www.debian.org/) 11 Bullseye and newer, Sid, and Debian-based distros
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed and Leap 15.3 to 15.4
 - **macOS** 10.13 and newer
 - **Windows** 7 and newer
