@@ -56,6 +56,7 @@ SetToolPaths() {
     if [[ $platform != "win" ]]; then
         expect="$(which expect)"
     fi
+    cherrybin="../$cherry/cherry"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     idevicerestore="./resources/tools/idevicerestore_$platform"
@@ -74,17 +75,26 @@ SetToolPaths() {
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     tsschecker="./resources/tools/tsschecker_$platform"
+    xpwntool="./xpwntool"
 
     if [[ $platform == "linux" ]]; then
+        # openssl
+        opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
+        if [[ $opensslver != "1.1" ]]; then
+            cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
+            idevicerestore="sudo LD_LIBRARY_PATH=../resources/lib $idevicerestore"
+            xpwntool="env LD_LIBRARY_PATH=../resources/lib $xpwntool"
+        fi
         # these need to run as root for device detection
         expect="sudo $expect"
         futurerestore="sudo $futurerestore"
-        idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib $idevicerestore"
+        [[ -z $idevicerestore ]] && idevicerestore="sudo $idevicerestore"
         ipwndfu="sudo $ipwndfu"
         irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
         irecovery2="sudo LD_LIBRARY_PATH=./resources/lib $irecovery2"
         pwnedDFU="sudo $pwnedDFU"
         rmsigchks="sudo $rmsigchks"
+
     elif [[ $platform == "macos" ]]; then
         # for macOS 12.3 and newer
         if (( ${platformver:0:2} > 11 )) && [[ -z $python ]]; then
@@ -159,17 +169,13 @@ InstallDepends() {
         sudo apt update
         sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
 
-    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 33 )); then
+    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 35 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         sudo dnf install -y bsdiff expect libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
 
-    elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.3" || $PRETTY_NAME == *"Leap 15.4" ]]; then
-        libimobiledevice="libimobiledevice-1_0-6"
-        if [[ $PRETTY_NAME == *"Leap"* ]]; then
-            ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-            [[ $VERSION == "15.3" ]] && libimobiledevice="libimobiledevice6"
-        fi
-        sudo zypper -n in bsdiff curl expect $libimobiledevice python-base vim xmlstarlet zenity
+    elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
+        [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
+        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 python-base vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install

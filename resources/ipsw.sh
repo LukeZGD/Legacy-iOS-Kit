@@ -351,12 +351,12 @@ IPSW4() {
         cp -rf ../$cherry/bin/* ../$cherrymac/FirmwareBundles ../$cherrymac/src .
         unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
         mv iBoot.${HWModel}ap.RELEASE.img3 tmp
-        env LD_LIBRARY_PATH=../resources/lib ./xpwntool tmp ibot.dec -iv $IV -k $Key
+        $xpwntool tmp ibot.dec -iv $IV -k $Key
         ./iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
-        env LD_LIBRARY_PATH=../resources/lib ./xpwntool ibot.pwned iBoot -t tmp
+        $xpwntool ibot.pwned iBoot -t tmp
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
-        env LD_LIBRARY_PATH=../resources/lib ../$cherry/cherry ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -derebusantiquis ../$IPSW7.ipsw iBoot ${JBFiles[@]}
+        $cherrybin ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -derebusantiquis ../$IPSW7.ipsw iBoot ${JBFiles[@]}
     fi
     cd ..
 
