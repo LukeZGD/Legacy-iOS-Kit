@@ -348,11 +348,11 @@ IPSW4() {
             Log "Verbose boot option disabled by user."
         fi
         Log "Preparing custom IPSW with ch3rryflower..."
-        cp -rf ../$cherry/bin/* ../$cherrymac/FirmwareBundles ../$cherrymac/src .
+        cp -rf ../$cherrymac/FirmwareBundles ../$cherrymac/src .
         unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
         mv iBoot.${HWModel}ap.RELEASE.img3 tmp
         $xpwntool tmp ibot.dec -iv $IV -k $Key
-        ./iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
+        ../$cherry/bin/iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
         $xpwntool ibot.pwned iBoot -t tmp
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot

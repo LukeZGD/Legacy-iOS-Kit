@@ -75,25 +75,24 @@ SetToolPaths() {
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     tsschecker="./resources/tools/tsschecker_$platform"
-    xpwntool="./xpwntool"
+    xpwntool="../resources/tools/xpwntool_$platform"
 
     if [[ $platform == "linux" ]]; then
-        # openssl
-        opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
-        if [[ $opensslver != "1.1" ]]; then
-            cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
-            idevicerestore="sudo LD_LIBRARY_PATH=../resources/lib $idevicerestore"
-            xpwntool="env LD_LIBRARY_PATH=../resources/lib $xpwntool"
-        fi
         # these need to run as root for device detection
         expect="sudo $expect"
         futurerestore="sudo $futurerestore"
-        [[ -z $idevicerestore ]] && idevicerestore="sudo $idevicerestore"
+        idevicerestore="sudo $idevicerestore"
         ipwndfu="sudo $ipwndfu"
         irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
         irecovery2="sudo LD_LIBRARY_PATH=./resources/lib $irecovery2"
         pwnedDFU="sudo $pwnedDFU"
         rmsigchks="sudo $rmsigchks"
+        # openssl
+        opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
+        if [[ $opensslver == "3"* ]]; then
+            cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
+            idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_$platform"
+        fi
 
     elif [[ $platform == "macos" ]]; then
         # for macOS 12.3 and newer
@@ -171,11 +170,11 @@ InstallDepends() {
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 35 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff expect libimobiledevice perl-Digest-SHA python2 vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff expect libimobiledevice openssl perl-Digest-SHA python2 vim-common xmlstarlet zenity
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 python-base vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 openssl python-base vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
