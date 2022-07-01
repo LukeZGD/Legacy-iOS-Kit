@@ -81,7 +81,6 @@ SetToolPaths() {
         # these need to run as root for device detection
         expect="sudo $expect"
         futurerestore="sudo $futurerestore"
-        idevicerestore="sudo $idevicerestore"
         ipwndfu="sudo $ipwndfu"
         irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
         irecovery2="sudo LD_LIBRARY_PATH=./resources/lib $irecovery2"
@@ -91,7 +90,9 @@ SetToolPaths() {
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
-            idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib ./resources/tools/idevicerestore_$platform"
+            idevicerestore="sudo ${idevicerestore}2"
+        else
+            idevicerestore="sudo $idevicerestore"
         fi
 
     elif [[ $platform == "macos" ]]; then
