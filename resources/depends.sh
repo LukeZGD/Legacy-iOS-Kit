@@ -96,8 +96,8 @@ SetToolPaths() {
         fi
 
     elif [[ $platform == "macos" ]]; then
-        # for macOS 12.3 and newer
-        if (( ${platformver:0:2} > 11 )) && [[ -z $python ]]; then
+        # for macOS 12 and newer
+        if (( ${platformver:0:2} > 11 )); then
             python="/usr/bin/python3"
             ipwndfu="$(which python2) ipwndfu"
             rmsigchks="$(which python2) rmsigchks.py"
