@@ -92,10 +92,10 @@ DowngradeOther() {
     [[ ! -s "$SHSH" ]] && Error "No SHSH selected, or SHSH file not found."
     Log "Selected SHSH file: $SHSH"
 
+    unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
+    BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     if [[ ! -e resources/firmware/$ProductType/$BuildVer/index.html ]]; then
-        Log "Getting firmware keys for $ProductType"
-        unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
-        BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+        Log "Getting firmware keys for $ProductType-$BuildVer"
         mkdir -p resources/firmware/$ProductType/$BuildVer 2>/dev/null
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
         mv tmp/index.html resources/firmware/$ProductType/$BuildVer
@@ -130,6 +130,7 @@ DowngradeOTAWin() {
     fi
     IPSWFindVerify
     if [[ $DeviceProc == 7 ]]; then
+        IPSWA7=1
         IPSWSetExtract
         IPSW64
         EnterPwnREC
