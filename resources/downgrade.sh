@@ -36,7 +36,7 @@ FutureRestore() {
     local ExtraArgs=()
 
     Log "Proceeding to futurerestore..."
-    if [[ $platform != "win" ]]; then
+    if [[ $IPSWA7 != 1 ]]; then
         ExtraArgs+=("--use-pwndfu")
         cd resources
         $SimpleHTTPServer &
@@ -46,7 +46,7 @@ FutureRestore() {
 
     if [[ $DeviceProc == 7 ]]; then
         ExtraArgs+=("-s" "$IPSWRestore/Firmware/all_flash/$SEP" "-m" "$BuildManifest")
-        if [[ $platform != "win" ]]; then
+        if [[ $IPSWA7 != 1 ]]; then
             # Send dummy file for device detection
             $irecovery -f README.md
             sleep 2
@@ -146,10 +146,43 @@ DowngradeOTAWin() {
     iDeviceRestore
 }
 
+IPSWCustomA7() {
+    if [[ $platform == "macos" ]]; then
+        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-macOS.tar.xz" "d279423dd9a12d3a7eceaeb7e01beb332c306aaa")
+    elif [[ $platform == "linux" ]]; then
+        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-ubuntu_20.04.2.tar.xz" "9f2b4b6cc6710d1d68880711001d2dc5b4cb9407")
+    fi
+    Input "Custom IPSW Option"
+    Echo "* When this option is enabled, a custom IPSW will be created/used for restoring."
+    Echo "* Only enable this when you encounter problems with futurerestore."
+    Echo "* This option is disabled by default (N)."
+    read -p "$(Input 'Enable this option? (y/N):')" IPSWA7
+    if [[ $IPSWA7 != 'Y' && $IPSWA7 != 'y' ]]; then
+        return
+    fi
+    IPSWA7=1
+    Log "Custom IPSW option enabled by user."
+    futurerestore="./resources/tools/futurerestore194_$platform"
+    if [[ ! -e $futurerestore ]]; then
+        cd tmp
+        SaveFile ${fr194[0]} futurerestore.tar.xz ${fr194[1]}
+        7z x futurerestore.tar.xz
+        tar -xf futurerestore*.tar
+        chmod +x futurerestore-v194
+        mv futurerestore-v194 ../$futurerestore
+        cd ..
+    fi
+ }
+
 Downgrade() {
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
-    if [[ $platform == "win" ]]; then
+
+    if [[ $DeviceProc == 7 && $platform != "win" ]]; then
+        IPSWCustomA7
+    fi
+
+    if [[ $platform == "win" || $IPSWA7 == 1 ]]; then
         DowngradeOTAWin
         return
     elif [[ $OSVer == "Other" ]]; then

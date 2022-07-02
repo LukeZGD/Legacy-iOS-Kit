@@ -181,7 +181,7 @@ InstallDepends() {
 
     elif [[ $platform == "win" ]]; then
         pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip a34cbce38d89f96b97e62199aece78a58dd00e15
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 4433ad5d6661cb5a374edccf771d4f2b761e7e46
         Log "Extracting Windows tools..."
         unzip -oq tools_win.zip -d ../resources
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
