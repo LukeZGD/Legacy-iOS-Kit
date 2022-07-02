@@ -36,7 +36,6 @@ FutureRestore() {
     local ExtraArgs=()
 
     Log "Proceeding to futurerestore..."
-    [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
     if [[ $platform != "win" ]]; then
         ExtraArgs+=("--use-pwndfu")
         cd resources
@@ -94,7 +93,7 @@ DowngradeOther() {
     Log "Selected SHSH file: $SHSH"
 
     if [[ ! -e resources/firmware/$ProductType/$BuildVer/index.html ]]; then
-        Log "Getting firmware keys for $ProductType-$BuildVer"
+        Log "Getting firmware keys for $ProductType"
         unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
         BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         mkdir -p resources/firmware/$ProductType/$BuildVer 2>/dev/null
@@ -164,7 +163,6 @@ iDeviceRestore() {
     mkdir shsh
     cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
-    Echo "* Enter your user password when prompted"
     [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
     [[ $1 == "latest" ]] && ExtraArgs="-ey" || ExtraArgs="-ewy"
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"

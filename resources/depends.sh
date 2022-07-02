@@ -78,21 +78,13 @@ SetToolPaths() {
     xpwntool="../resources/tools/xpwntool_$platform"
 
     if [[ $platform == "linux" ]]; then
-        # these need to run as root for device detection
-        expect="sudo $expect"
-        futurerestore="sudo $futurerestore"
-        ipwndfu="sudo $ipwndfu"
-        irecovery="sudo LD_LIBRARY_PATH=./resources/lib $irecovery"
-        irecovery2="sudo LD_LIBRARY_PATH=./resources/lib $irecovery2"
-        pwnedDFU="sudo $pwnedDFU"
-        rmsigchks="sudo $rmsigchks"
+        irecovery="env LD_LIBRARY_PATH=./resources/lib $irecovery"
+        irecovery2="env LD_LIBRARY_PATH=./resources/lib $irecovery2"
         # openssl
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
-            idevicerestore="sudo ${idevicerestore}2"
-        else
-            idevicerestore="sudo $idevicerestore"
+            idevicerestore="${idevicerestore}2"
         fi
 
     elif [[ $platform == "macos" ]]; then
@@ -161,21 +153,23 @@ InstallDepends() {
     fi
 
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl expect libimobiledevice openssh python2 unzip usbutils vim xmlstarlet zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl expect libimobiledevice openssh python2 udev unzip usbmuxd usbutils vim xmlstarlet zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 udev unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 35 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff expect libimobiledevice openssl perl-Digest-SHA python2 vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl perl-Digest-SHA python2 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 openssl python-base vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 openssl python-base usbmuxd vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
@@ -198,6 +192,12 @@ InstallDepends() {
 
     if [[ $platform == "linux" ]]; then
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip" "fc5e714adf6fa72328d3e1ddea4e633f370559a4")
+        # from linux_fix script by Cryptiiiic
+        sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
+        echo "QUNUSU9OPT0iYWRkIiwgU1VCU1lTVEVNPT0idXNiIiwgQVRUUntpZFZlbmRvcn09PSIwNWFjIiwgQVRUUntpZFByb2R1Y3R9PT0iMTIyWzI3XXwxMjhbMC0zXSIsIE9XTkVSPSJyb290IiwgR1JPVVA9InVzYm11eGQiLCBNT0RFPSIwNjYwIiwgVEFHKz0idWFjY2VzcyIKCkFDVElPTj09ImFkZCIsIFNVQlNZU1RFTT09InVzYiIsIEFUVFJ7aWRWZW5kb3J9PT0iMDVhYyIsIEFUVFJ7aWRQcm9kdWN0fT09IjEzMzgiLCBPV05FUj0icm9vdCIsIEdST1VQPSJ1c2JtdXhkIiwgTU9ERT0iMDY2MCIsIFRBRys9InVhY2Nlc3MiCgoK" | base64 -d | sudo tee /usr/lib/udev/rules.d/39-libirecovery.rules >/dev/null 2>/dev/null
+        sudo chown root:root /usr/lib/udev/rules.d/39-libirecovery.rules
+        sudo chmod 0644 /usr/lib/udev/rules.d/39-libirecovery.rules
+        sudo udevadm control --reload-rules
     fi
 
     if [[ ! -d ../resources/libimobiledevice_$platform && $MPath == "./resources"* ]]; then
@@ -212,4 +212,5 @@ InstallDepends() {
 
     cd ..
     Log "Install script done! Please run the script again to proceed"
+    Log "If your iOS device is plugged in, unplug and replug your device"
 }

@@ -48,7 +48,6 @@ GetDeviceValues() {
     ideviceinfo2=$($ideviceinfo -s)
     if [[ $? != 0 && $1 != "NoDevice" ]]; then
         Log "Finding device in DFU/recovery mode..."
-        [[ $platform == "linux" ]] && Echo "* Enter your user password when prompted"
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     elif [[ $1 == "NoDevice" ]]; then
         Log "NoDevice argument detected. Skipping device detection"
@@ -227,7 +226,6 @@ EnterPwnDFU() {
     Log "Entering pwnDFU mode with: $pwnDFUTool..."
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
-        Echo "* Enter your user password when prompted"
         $ipwndfu -p
         pwnDFUDevice=$?
         if [[ $DeviceProc == 7 ]]; then
