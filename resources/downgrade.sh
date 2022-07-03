@@ -113,7 +113,7 @@ DowngradeOTA() {
     SaveOTABlobs
     IPSWFindVerify
     kDFU
-    if [[ $Jailbreak == 1 ]]; then
+    if [[ $Jailbreak == 1 || $ProductType == "iPad2,3" ]]; then
         IPSW32
     else
         IPSWCustom=0
@@ -225,7 +225,7 @@ Downgrade4() {
         IPSWSetExtract
         iDeviceRestore latest
         return
-    else
+    elif [[ $OSVer != "7.1.2" ]]; then
         IPSWFindVerify 712
     fi
     IPSW4

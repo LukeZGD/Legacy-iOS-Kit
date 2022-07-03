@@ -163,7 +163,7 @@ Main() {
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
                 ExitWin 0
-            else
+            elif [[ $ProductType != "iPad2,3" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
                 ExitWin 0
             fi
@@ -171,7 +171,7 @@ Main() {
 
         IPSWFindVerify
         if [[ $DeviceProc == 4 ]]; then
-            IPSWFindVerify 712
+            [[ $OSVer != "7.1.2" ]] && IPSWFindVerify 712
             IPSW4
         else
             IPSW32

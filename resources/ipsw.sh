@@ -204,6 +204,7 @@ IPSW32() {
         done
     fi
     if [[ $platform == "win" ]]; then
+        BBUpdate=
         WinBundles="windows/"
     elif [[ $ProductType == "iPad2,3" ]]; then
         BBUpdate=
