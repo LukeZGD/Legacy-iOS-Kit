@@ -97,7 +97,7 @@ Main() {
 
     if [[ $1 == "Install" || -z $bspatch || ! -e $ideviceinfo || ! -e $irecoverychk ||
           ! -e $ideviceenterrecovery || ! -e $iproxy || -z $python ||
-          ! -d ./resources/libimobiledevice_$platform ]]; then
+          ! -e ./resources/first_run ]]; then
         if [[ ! -e $ideviceinfo || ! -e $irecoverychk ||
               ! -e $ideviceenterrecovery || ! -e $iproxy ]]; then
             rm -rf ./resources/libimobiledevice_$platform

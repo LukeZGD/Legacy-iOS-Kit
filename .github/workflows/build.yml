@@ -12,13 +12,15 @@ jobs:
           mv ./resources/lib/* ./exclude/
           mv ./resources/tools/*linux* ./exclude/
 
-      - name: Zip files
-        run: zip -r ${{ github.event.repository.name }}-macos.zip resources/ restore.sh README.md
+      - name: Download and extract libimobiledevice_macos
+        run: |
+          curl -LO https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_macos.zip
+          mkdir ./resources/libimobiledevice_macos
+          unzip libimobiledevice_macos.zip -d ./resources/libimobiledevice_macos
+          chmod +x ./resources/libimobiledevice_macos/*
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-macos
-          path: ${{ github.event.repository.name }}-macos.zip
+      - name: Zip macos files
+        run: zip -r ${{ github.event.repository.name }}_macos.zip resources/ restore.sh README.md
 
       - name: Move macos binaries
         run: |
@@ -26,22 +28,42 @@ jobs:
           mv ./exclude/* ./resources/tools/
           mv ./resources/tools/*macos* ./exclude/
 
-      - name: Zip files
-        run: zip -r ${{ github.event.repository.name }}-linux.zip resources/ restore.sh README.md
+      - name: Download and extract libimobiledevice_linux
+        run: |
+          rm -rf ./resources/libimobiledevice*
+          curl -LO https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_linux.zip
+          mkdir ./resources/libimobiledevice_linux
+          unzip libimobiledevice_linux.zip -d ./resources/libimobiledevice_linux
+          chmod +x ./resources/libimobiledevice_linux/*
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-linux
-          path: ${{ github.event.repository.name }}-linux.zip
+      - name: Zip linux files
+        run: zip -r ${{ github.event.repository.name }}_linux.zip resources/ restore.sh README.md
 
       - name: Remove linux binaries
         run: rm ./resources/lib/* ./resources/tools/*linux
 
-      - uses: actions/upload-artifact@v3
+      - name: Download and extract libimobiledevice_win
+        run: |
+          rm -rf ./resources/libimobiledevice*
+          curl -LO https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip
+          mkdir ./resources/libimobiledevice_win
+          unzip libimobiledevice_win.zip -d ./resources/libimobiledevice_win
+
+      - name: Download and extract tools_win
+        run: |
+          curl -LO https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip
+          unzip tools_win.zip -d ./resources
+
+      - name: Zip win files
+        run: zip -r ${{ github.event.repository.name }}_win.zip resources/ restore.cmd restore.sh README.md
+
+      - name: Update latest release
+        uses: pyTooling/Actions/releaser@main
         with:
-          name: ${{ github.event.repository.name }}-win
-          path: |
-            resources/
-            restore.cmd
-            restore.sh
-            README.md
+          tag: latest
+          rm: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ${{ github.event.repository.name }}_macos.zip
+            ${{ github.event.repository.name }}_linux.zip
+            ${{ github.event.repository.name }}_win.zip
