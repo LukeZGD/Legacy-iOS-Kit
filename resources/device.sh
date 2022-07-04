@@ -223,7 +223,7 @@ EnterPwnDFU() {
         SaveExternal https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu 61333249eb58faebbb380c4709384034ce0e019a
     fi
     
-    Log "Entering pwnDFU mode with: $pwnDFUTool..."
+    Log "Entering pwnDFU mode with: $pwnDFUTool"
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
         $ipwndfu -p
@@ -240,12 +240,21 @@ EnterPwnDFU() {
         $pwnDFUTool -p
         pwnDFUDevice=$?
     fi
-    [[ $DeviceProc == 7 ]] && pwnD=$($irecovery -q | grep -c "PWND")
-    [[ $DeviceProc == 4 ]] && SendiBSS=1
+    if [[ $DeviceProc == 4 || $DeviceProc == 7 ]]; then
+        pwnD=$($irecovery -q | grep -c "PWND")
+        SendiBSS=1
+    fi
     
-    if [[ $pwnDFUDevice != 0 && $ProductType == "iPhone3,1" ]]; then
-        Error "Failed to enter pwnDFU mode. Please run the script again" \
-        "Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+    if [[ $ProductType == "iPhone3,1" ]]; then
+        if [[ $pwnDFUDevice != 0 ]]; then
+            Error "Failed to enter pwnDFU mode. Please run the script again" \
+            "Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+        elif [[ $pwnD != 1 ]]; then
+            Error "Your device is not in pwnDFU mode, cannot proceed. Note that kDFU mode will NOT work!" \
+            "Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds."
+        else
+            Log "Device in pwnDFU mode detected."
+        fi
     elif [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
         echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
         echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds. ${Color_N}"

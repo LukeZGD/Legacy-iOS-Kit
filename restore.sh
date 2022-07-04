@@ -209,7 +209,19 @@ Main() {
         fi
 
     elif [[ $Mode == *"4" || $DeviceProc == 7 ]]; then
-        if [[ $DeviceState == "Normal" ]]; then
+        if [[ $DeviceState == "Normal" && $OSVer == "7.1.2" ]]; then
+            kDFU
+        elif [[ $DeviceState == "DFU" && $OSVer == "7.1.2" ]]; then
+            Input "Select the mode that your device is currently in:"
+            Selection=("kDFU mode" "DFU/pwnDFU mode")
+            select opt in "${Selection[@]}"; do
+            case $opt in
+                "kDFU mode" ) break;;
+                "DFU/pwnDFU mode" ) EnterPwnDFU; break;;
+                * ) exit 0;;
+            esac
+            done
+        elif [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
             [[ $Selection == 'Y' || $Selection == 'y' ]] && Recovery || exit
