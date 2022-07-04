@@ -129,9 +129,9 @@ InstallDepends() {
 
     mkdir resources/lib tmp 2>/dev/null
     cd resources
-    cp lib/*.so.1.1 ../tmp
+    cp lib/*.so.1.1 ../tmp 2>/dev/null
     rm -rf ipwndfu lib/*
-    cp ../tmp/*.so.1.1 lib/
+    cp ../tmp/*.so.1.1 lib/ 2>/dev/null
     cd ../tmp
 
     Log "Installing dependencies..."
