@@ -1,0 +1,47 @@
+name: Create zip files
+on: [push]
+jobs:
+  create-zip-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Move linux binaries
+        run: |
+          mkdir ./exclude
+          mv ./resources/lib/* ./exclude/
+          mv ./resources/tools/*linux* ./exclude/
+
+      - name: Zip files
+        run: zip -r ${{ github.event.repository.name }}-macos.zip resources/ restore.sh README.md
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-macos
+          path: ${{ github.event.repository.name }}-macos.zip
+
+      - name: Move macos binaries
+        run: |
+          mv ./exclude/*.so.1.1 ./resources/lib/
+          mv ./exclude/* ./resources/tools/
+          mv ./resources/tools/*macos* ./exclude/
+
+      - name: Zip files
+        run: zip -r ${{ github.event.repository.name }}-linux.zip resources/ restore.sh README.md
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-linux
+          path: ${{ github.event.repository.name }}-linux.zip
+
+      - name: Remove linux binaries
+        run: rm ./resources/lib/* ./resources/tools/*linux
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-win
+          path: |
+            resources/
+            restore.cmd
+            restore.sh
+            README.md
