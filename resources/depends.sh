@@ -84,7 +84,6 @@ SetToolPaths() {
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
-            idevicerestore="${idevicerestore}2"
         fi
 
     elif [[ $platform == "macos" ]]; then
