@@ -156,12 +156,11 @@ InstallDepends() {
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
-        [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 udev unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
-    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 35 )); then
+    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl perl-Digest-SHA python2 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt

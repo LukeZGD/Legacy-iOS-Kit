@@ -68,7 +68,7 @@
 ## Supported OS versions/distros
 - [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora**](https://getfedora.org/) 35 and newer
+- [**Fedora**](https://getfedora.org/) 36 and newer
 - [**Debian**](https://www.debian.org/) 11 Bullseye and newer, Sid, and Debian-based distros
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed, Leap 15.4
 - **macOS** 10.13 and newer
