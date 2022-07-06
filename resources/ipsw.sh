@@ -176,7 +176,7 @@ IPSW32() {
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> tmp/reboot.sh
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
-        #JBFiles=("../resources/jailbreak/sshdeb.tar") # uncomment to add openssh to custom ipsw
+        #JBFiles=("../resources/jailbreak/sshdeb.tar")                             # uncomment to add openssh to custom ipsw
         #JailbreakFiles $JBURL/sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
         JBFiles2=("bin.tar" "cydia.tar" "untether.tar")
         JBSHA1=("98034227c68610f4c7dd48ca9e622314a1e649e7" "2e9e662afe890e50ccf06d05429ca12ce2c0a3a3" "f88ec9a1b3011c4065733249363e9850af5f57c8")
@@ -369,15 +369,15 @@ IPSW4() {
         mv -v applelogo-640x960.s5l8930x.img3 applelogo4-640x960.s5l8930x.img3
         echo "0000010: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
         echo "0000020: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
-        if [[ $platform == macos ]]; then
-            plutil -extract 'APTicket' xml1 ../../../../../../shsh/$UniqueChipID-iPhone3,1-$OSVer.shsh -o 'apticket.plist'
+        if [[ $platform == "macos" ]]; then
+            plutil -extract 'APTicket' xml1 ../../../../../../$SHSH -o 'apticket.plist'
             cat apticket.plist | sed -ne '/<data>/,/<\/data>/p' | sed -e "s/<data>//" | sed "s/<\/data>//" | awk '{printf "%s",$0}' | base64 --decode > apticket.der
         else
-            $xmlstarlet sel -t -m "/plist/dict/key[.='APTicket']" -v "following-sibling::data[1]" ../../../../../../shsh/$UniqueChipID-iPhone3,1-$OSVer.shsh > apticket.plist
+            $xmlstarlet sel -t -m "/plist/dict/key[.='APTicket']" -v "following-sibling::data[1]" ../../../../../../$SHSH > apticket.plist
             sed -i -e 's/[ \t]*//' apticket.plist
             cat apticket.plist | base64 --decode > apticket.der
         fi
-        env LD_LIBRARY_PATH=../../../../../../resources/lib ../../../../../../$cherry/bin/xpwntool apticket.der applelogoT-640x960.s5l8930x.img3 -t scab_template.img3
+        ../../../../../$xpwntool apticket.der applelogoT-640x960.s5l8930x.img3 -t scab_template.img3
         cd ../../..
         zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
         zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
