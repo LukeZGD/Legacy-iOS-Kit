@@ -79,8 +79,7 @@ SetToolPaths() {
 
     if [[ $platform == "linux" ]]; then
         irecovery="env LD_LIBRARY_PATH=./resources/lib $irecovery"
-        irecovery2="env LD_LIBRARY_PATH=./resources/lib $irecovery2"
-        # openssl
+        irecovery2="env LD_LIBRARY_PATH=../lib $irecovery2"
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
@@ -103,14 +102,26 @@ SetToolPaths() {
 }
 
 SaveExternal() {
-    if [[ -d ./resources/$2 ]]; then
+    local Link
+    local Name
+    local SHA1
+    if [[ $1 == "ipwndfu" ]]; then
+        Link=https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip
+        Name=ipwndfu
+        SHA1=61333249eb58faebbb380c4709384034ce0e019a
+    elif [[ $1 == "ch3rryflower" ]]; then
+        Link=https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f
+        Name=ch3rryflower
+        SHA1=790d56db354151b9740c929e52c097ba57f2929d
+    fi
+    if [[ -d ./resources/$Name ]]; then
         return
     fi
     cd tmp
-    SaveFile $1 $2.zip $3
+    SaveFile $Link $Name.zip $SHA1
     cd ../resources
-    unzip -q ../tmp/$2.zip -d .
-    mv $2* $2
+    unzip -q ../tmp/$Name.zip -d .
+    mv $Name* $Name
     cd ..
 }
 
@@ -130,7 +141,7 @@ InstallDepends() {
     mkdir resources/lib tmp 2>/dev/null
     cd resources
     cp lib/*.so.1.1 ../tmp 2>/dev/null
-    rm -rf ipwndfu lib/*
+    rm -rf lib/*
     cp ../tmp/*.so.1.1 lib/ 2>/dev/null
     cd ../tmp
 
@@ -173,9 +184,8 @@ InstallDepends() {
         xcode-select --install
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_macos.zip" "66a49e4f69757a3d9dc51109a8e4651020bfacb8")
         Echo "* iOS-OTA-Downgrader provides a copy of libimobiledevice and libirecovery by default"
-        Echo "* In case that problems occur, try installing them from Homebrew"
-        Echo "* The script will detect this automatically and will use the Homebrew versions of the tools"
-        Echo "* Install using this command: 'brew install libimobiledevice libirecovery'"
+        Echo "* In case that problems occur, try installing them from Homebrew or MacPorts"
+        Echo "* The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools"
 
     elif [[ $platform == "win" ]]; then
         pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip

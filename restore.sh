@@ -112,7 +112,7 @@ Main() {
     mkdir tmp
 
     if [[ $ProductType == "iPhone3,1" ]]; then
-        SaveExternal https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f ch3rryflower 790d56db354151b9740c929e52c097ba57f2929d
+        SaveExternal ch3rryflower
     fi
 
     if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
@@ -258,7 +258,7 @@ Main() {
         case $opt in
             "kDFU mode" ) break;;
             "DFU mode (A4/A6)" ) EnterPwnDFU; break;;
-            "pwnDFU mode (A5)" ) SendPwnediBSS; break;;
+            "pwnDFU mode (A5)" ) SendPwnediBSSA5; break;;
             * ) exit 0;;
         esac
         done

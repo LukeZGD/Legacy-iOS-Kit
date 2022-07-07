@@ -137,10 +137,6 @@ GetDeviceValues() {
         BasebandURL=$(cat $Firmware/11D257/url)
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="007365a5655ac2f9fbd1e5b6dba8f4be0513e364"
-        if [[ $ProductType == "iPhone3,1" ]]; then
-            Log "iPhone 4 GSM detected. iPhone4Down functions enabled."
-            Echo "* This script uses ch3rryflower by dora2iOS"
-        fi
 
     elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3"* || $ProductType == "iPad4,1" ||
             $ProductType == "iPad4,4" || $ProductType == "iPod5,1" ]]; then
@@ -151,7 +147,10 @@ GetDeviceValues() {
     
     if [[ $ProductType == "iPhone3"* ]]; then
         DeviceProc=4
-        if [[ $ProductType != "iPhone3,1" ]]; then
+        if [[ $ProductType == "iPhone3,1" ]]; then
+            Log "iPhone 4 GSM detected. iPhone4Down functions enabled."
+            Echo "* This script uses ch3rryflower by dora2iOS"
+        else
             Log "$ProductType detected. Your device is not supported by ch3rryflower."
             Echo "* Functions will be limited to entering kDFU and restoring with blobs."
         fi
@@ -220,7 +219,7 @@ EnterPwnDFU() {
         done
     else
         pwnDFUTool="ipwndfu"
-        SaveExternal https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu 61333249eb58faebbb380c4709384034ce0e019a
+        SaveExternal ipwndfu
     fi
     
     Log "Entering pwnDFU mode with: $pwnDFUTool"
@@ -232,10 +231,11 @@ EnterPwnDFU() {
             Log "Running rmsigchks.py..."
             $rmsigchks
             pwnDFUDevice=$?
+            cd ../..
         else
-            SendiBSS=1
+            cd ../..
+            SendPwnediBSS
         fi
-        cd ../..
     else
         $pwnDFUTool -p
         pwnDFUDevice=$?
@@ -268,6 +268,8 @@ EnterPwnDFU() {
         Log "Warning - Failed to detect device in pwnDFU mode."
         Echo "* If the device entered pwnDFU mode successfully, you may continue"
         Echo "* If entering pwnDFU failed, you may have to force restart your device and start over"
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
     fi
 }
 
@@ -285,7 +287,7 @@ Recovery() {
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then
         Log "Exiting recovery mode."
         $irecovery -n
-        exit 0
+        ExitWin 0
     fi
     
     Echo "* Hold TOP and HOME buttons for 10 seconds."
@@ -310,7 +312,7 @@ RecoveryExit() {
         Log "Exiting recovery mode."
         $irecovery -n
     fi
-    exit 0
+    ExitWin 0
 }
 
 PatchiBSS() {
@@ -335,7 +337,7 @@ PatchiBSS() {
     $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
 }
 
-SendPwnediBSS() {
+SendPwnediBSSA5() {
     Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!"
     Echo "* This option will not work if your device is not in pwnDFU mode."
     Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
@@ -348,12 +350,11 @@ SendPwnediBSS() {
         Log "No iBSS option enabled by user."
         return
     fi
-
     echo
     Input "Send iBSS Option"
     Echo "* To send pwned iBSS using ipwndfu, select Y. (does not work on ARM Macs)"
     Echo "* To let futurerestore send iBSS, select N. (likely does not work)"
-    Echo "* For macOS >=12.3, install python2 first before selecting ipwndfu."
+    Echo "* For macOS 12 and newer, install python2 first before selecting ipwndfu."
     Echo "* This option is enabled by default (Y)."
     read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
     if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then
@@ -361,8 +362,11 @@ SendPwnediBSS() {
         SendiBSS=1
         return
     fi
+    SendPwnediBSS
+}
 
-    SaveExternal https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu 61333249eb58faebbb380c4709384034ce0e019a
+SendPwnediBSS() {
+    SaveExternal ipwndfu
     PatchiBSS
     cd resources/ipwndfu
     Log "Sending iBSS..."

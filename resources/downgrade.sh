@@ -98,6 +98,10 @@ DowngradeOther() {
         Log "Getting firmware keys for $ProductType-$BuildVer"
         mkdir -p resources/firmware/$ProductType/$BuildVer 2>/dev/null
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
+        if [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]]; then
+            curl -L https://api.m1sta.xyz/wikiproxy/$ProductType/$BuildVer -o tmp/index.html
+            [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]] && Error "Failed to download firmware keys, cannot proceed."
+        fi
         mv tmp/index.html resources/firmware/$ProductType/$BuildVer
     fi
 
