@@ -11,6 +11,7 @@
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
+- The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, iOS 5 and newer only)
 - This script can also be used to just enter kDFU mode (32-bit devices only)
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
