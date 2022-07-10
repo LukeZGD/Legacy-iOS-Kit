@@ -82,6 +82,9 @@ FutureRestore() {
 }
 
 DowngradeOther() {
+    local FWKeys
+    local NoMove
+
     Input "Select your IPSW file in the file selection window."
     IPSW="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
     [[ ! -s "$IPSW" ]] && Error "No IPSW selected, or IPSW file not found."
@@ -92,17 +95,40 @@ DowngradeOther() {
     [[ ! -s "$SHSH" ]] && Error "No SHSH selected, or SHSH file not found."
     Log "Selected SHSH file: $SHSH"
 
+    Log "Getting build version from IPSW"
     unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
-    BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-    if [[ ! -e resources/firmware/$ProductType/$BuildVer/index.html ]]; then
+    if [[ $platform == "macos" ]]; then
+        plutil -extract 'ProductBuildVersion' xml1 tmp/Restore.plist -o tmp/BuildVer
+        BuildVer=$(cat tmp/BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+    else
+        BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+    fi
+
+    FWKeys="./resources/firmware/$ProductType/$BuildVer"
+    Log "Checking firmware keys in $FWKeys"
+    if [[ -e $FWKeys/index.html ]]; then
+        if [[ $(cat $FWKeys/index.html | grep -c "$BuildVer") != 1 ]]; then
+            Log "Existing firmware keys are not valid. Deleting"
+            rm $FWKeys/index.html
+        fi
+    fi
+
+    if [[ ! -e $FWKeys/index.html ]]; then
         Log "Getting firmware keys for $ProductType-$BuildVer"
-        mkdir -p resources/firmware/$ProductType/$BuildVer 2>/dev/null
+        mkdir -p $FWKeys 2>/dev/null
         curl -L https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/raw/master/$ProductType/$BuildVer/index.html -o tmp/index.html
         if [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]]; then
             curl -L https://api.m1sta.xyz/wikiproxy/$ProductType/$BuildVer -o tmp/index.html
-            [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]] && Log "Warning - Failed to download firmware keys."
+            if [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]]; then
+                Log "Warning - Failed to download firmware keys."
+                NoMove=1
+            fi
         fi
-        mv tmp/index.html resources/firmware/$ProductType/$BuildVer
+        if [[ $NoMove == 1 ]]; then
+            rm resources/firmware/$ProductType/$BuildVer
+        elif [[ -s tmp/index.html ]]; then
+            mv tmp/index.html resources/firmware/$ProductType/$BuildVer
+        fi
     fi
 
     kDFU
@@ -152,6 +178,7 @@ DowngradeOTAWin() {
 }
 
 IPSWCustomA7() {
+    local fr194=()
     if [[ $platform == "macos" ]]; then
         fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-macOS.tar.xz" "d279423dd9a12d3a7eceaeb7e01beb332c306aaa")
     elif [[ $platform == "linux" ]]; then
