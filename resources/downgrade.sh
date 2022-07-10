@@ -125,9 +125,9 @@ DowngradeOther() {
             fi
         fi
         if [[ $NoMove == 1 ]]; then
-            rm resources/firmware/$ProductType/$BuildVer
+            rm $FWKeys
         elif [[ -s tmp/index.html ]]; then
-            mv tmp/index.html resources/firmware/$ProductType/$BuildVer
+            mv tmp/index.html $FWKeys
         fi
     fi
 
