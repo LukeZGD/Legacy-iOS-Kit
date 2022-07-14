@@ -11,8 +11,8 @@
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
-- The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
 - This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, iOS 5 and newer only)
+- The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
 - This script can also be used to just enter kDFU mode (32-bit devices only)
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
 
@@ -86,7 +86,7 @@
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios ([LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW))
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar ([1Conan fork](https://github.com/1Conan/tsschecker))
-- [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (194 used for Windows only)
+- [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (and 194)
 - [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
@@ -94,7 +94,7 @@
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - [zenity](https://github.com/GNOME/zenity) ([macOS/Windows builds](https://github.com/ncruces/zenity))
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
-- A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches) (patches used for Windows only)
+- A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [evasi0n7](https://www.theiphonewiki.com/wiki/Evasi0n7)
