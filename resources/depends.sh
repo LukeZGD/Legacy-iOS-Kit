@@ -173,7 +173,7 @@ InstallDepends() {
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl perl-Digest-SHA python2 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates expect libimobiledevice openssl perl-Digest-SHA python2 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
