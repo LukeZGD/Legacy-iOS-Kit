@@ -68,7 +68,11 @@ JailbreakOption() {
     echo
 
     if [[ $Jailbreak != 1 || $platform == "win" ]]; then
-        [[ $ProductType == "iPhone3"* && $OSVer == "7.1.2" ]] && return
+        if [[ $ProductType == "iPhone3"* ]]; then
+            [[ $OSVer == "7.1.2" ]] && return
+        else
+            return
+        fi
     fi
     Input "Memory Option for creating custom IPSW"
     Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
