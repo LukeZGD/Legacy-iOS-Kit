@@ -21,3 +21,4 @@ resources/libimobiledevice*/
 resources/ramdisk/
 saved/
 tmp/
+version.xml

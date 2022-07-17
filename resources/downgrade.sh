@@ -229,7 +229,8 @@ iDeviceRestore() {
     cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
     [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
-    [[ $1 == "latest" ]] && ExtraArgs="-ey" || ExtraArgs="-ewy"
+    [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
+    [[ $platform == "win" ]] && ExtraArgs="-ewy"
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     if [[ $platform == "macos" && $? != 0 ]]; then
         Log "Restoring done! Read the message below if any error has occurred:"

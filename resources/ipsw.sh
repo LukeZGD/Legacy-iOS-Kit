@@ -68,7 +68,7 @@ JailbreakOption() {
     echo
 
     if [[ $Jailbreak != 1 || $platform == "win" ]]; then
-        return
+        [[ $ProductType == "iPhone3"* && $OSVer == "7.1.2" ]] && return
     fi
     Input "Memory Option for creating custom IPSW"
     Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
@@ -242,28 +242,7 @@ IPSW4() {
         return
     fi
 
-    if [[ $OSVer == 7.1.1 ]]; then
-        IV=b110991061d76f74c1fc05ddd7cff540
-        Key=c6fbf428e0105ab22b2abaefd20ca22c2084e200f74e8a3b08298a54f8bfe28f
-    elif [[ $OSVer == 7.1 ]]; then
-        IV=9fe5b6785126c8fc5787582df9efcf94
-        Key=b68612f21e377bd1f685e9031be159a724e931eff162db245c63b7b692cefa7e
-    elif [[ $OSVer == 7.0.6 ]]; then
-        IV=12af3a975f0346e89d3a34e73b4e0ae1
-        Key=d7b5bb9b90f19493449ab17fda63afdb16069ad5b65026bb11b4db223fdd4be1
-    elif [[ $OSVer == 7.0.4 ]]; then
-        IV=67087ac7f28c77cdf9110356f476540b
-        Key=2a6940252b5cb19b86efb9005cdd5fd713290e573dc760f5a3e05df9e868bb89
-    elif [[ $OSVer == 7.0.3 ]]; then
-        IV=7cb97df787dcc6367816b03492b225f9
-        Key=bd56f0886e21f233f519d4db20fd044b9208882a6fb791553a75eb4e0c45bbc5
-    elif [[ $OSVer == 7.0.2 ]]; then
-        IV=65db9a4e4f64bb79a55d76d98ce1457b
-        Key=5cd910c268813cb4008e5b33e01f761c0794ed1437737b4d386727d17fac79d1
-    elif [[ $OSVer == 7.0 ]]; then
-        IV=5bf099d9db5cf1009329e527a378c8be
-        Key=e1fef31c8aabcdca2a3887ba21c0e2113c41a5617380657ab6a487993b39f9a8
-    elif [[ $OSVer == 6.1.3 ]]; then
+    if [[ $OSVer == 6.1.3 ]]; then
         IV=b559a2c7dae9b95643c6610b4cf26dbd
         Key=3dbe8be17af793b043eed7af865f0b843936659550ad692db96865c00171959f
     elif [[ $OSVer == 6.1.2 ]]; then
@@ -308,11 +287,8 @@ IPSW4() {
     fi
 
     if [[ $Jailbreak == 1 ]]; then
-        if [[ $OSVer == 7.1* ]]; then
+        if [[ $OSVer == 7.1.2 ]]; then
             JBFiles=(Cydia7.tar panguaxe.tar fstab7.tar)
-            JBSHA1=bba5022d6749097f47da48b7bdeaa3dc67cbf2c4
-        elif [[ $OSVer == 7.* ]]; then
-            JBFiles=(Cydia7.tar evasi0n7-untether.tar fstab7.tar)
             JBSHA1=bba5022d6749097f47da48b7bdeaa3dc67cbf2c4
         elif [[ $OSVer == 6.1.3 ]]; then
             JBFiles=(Cydia6.tar p0sixspwn.tar)
@@ -324,7 +300,7 @@ IPSW4() {
             JBFiles=(Cydia5.tar unthredeh4il.tar)
             JBSHA1=f5b5565640f7e31289919c303efe44741e28543a
         fi
-        [[ $OSVer != 7.* ]] && JBFiles+=(fstab_rw.tar)
+        [[ $OSVer != 7.1.2 ]] && JBFiles+=(fstab_rw.tar)
         JailbreakFiles $JBURL/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}

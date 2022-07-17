@@ -304,9 +304,8 @@ SelectVersion() {
 
     if [[ $ProductType == "iPhone3,1" ]]; then
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
-        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)" "More versions (5.0-6.1.2)" "4.3.x (not supported)" "7.x (not supported)")
-        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-        Selection3=("7.1.1" "7.1" "7.0.6" "7.0.4" "7.0.3" "7.0.2" "7.0")
+        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)" "4.3.5" "More versions (4.3-6.1.2)")
+        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0" "4.3.3" "4.3")
         if [[ $Mode == "Restore712" ]]; then
             Echo "* Make sure to disable the exploit first! See the README for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
@@ -336,9 +335,8 @@ SelectVersion() {
         "6.1.3" ) OSVer="6.1.3"; BuildVer="10B329"; break;;
         "5.1.1 (9B208)" ) OSVer="5.1.1"; BuildVer="9B208"; break;;
         "5.1.1 (9B206)" ) OSVer="5.1.1"; BuildVer="9B206"; break;;
-        "More versions (5.0-6.1.2)" ) OSVer="More"; break;;
-        "4.3.x (not supported)" ) OSVer="4.3.x"; break;;
-        "7.x (not supported)" ) OSVer="7.x"; break;;
+        "4.3.5" ) OSVer="4.3.5"; BuildVer="8L1"; break;;
+        "More versions (4.3-6.1.2)" ) OSVer="More"; break;;
         * ) exit 0;;
     esac
     done
@@ -353,30 +351,8 @@ SelectVersion() {
             "5.1" ) OSVer="5.1"; BuildVer="9B176"; break;;
             "5.0.1" ) OSVer="5.0.1"; BuildVer="9A405"; break;;
             "5.0" ) OSVer="5.0"; BuildVer="9A334"; break;;
-            * ) exit 0;;
-        esac
-        done
-    elif [[ $OSVer == "4.3.x" ]]; then
-        Echo "* I can't verify if iOS 4.3.x works or not, let me know if it does work for you"
-        select opt in "4.3.5" "4.3.3" "4.3"; do
-        case $opt in
-            "4.3.5" ) OSVer="4.3.5"; BuildVer="8L1"; break;;
             "4.3.3" ) OSVer="4.3.3"; BuildVer="8J2"; break;;
             "4.3" ) OSVer="4.3"; BuildVer="8F190"; break;;
-            * ) exit 0;;
-        esac
-        done
-    elif [[ $OSVer == "7.x" ]]; then
-        Echo "* I don't think any iOS 7.x version works (gets stuck in recovery mode)"
-        select opt in "${Selection3[@]}"; do
-        case $opt in
-            "7.1.1" ) OSVer="7.1.1"; BuildVer="11D201"; break;;
-            "7.1" ) OSVer="7.1"; BuildVer="11D169"; break;;
-            "7.0.6" ) OSVer="7.0.6"; BuildVer="11B651"; break;;
-            "7.0.4" ) OSVer="7.0.4"; BuildVer="11B554a"; break;;
-            "7.0.3" ) OSVer="7.0.3"; BuildVer="11B511"; break;;
-            "7.0.2" ) OSVer="7.0.2"; BuildVer="11A501"; break;;
-            "7.0" ) OSVer="7.0"; BuildVer="11A465"; break;;
             * ) exit 0;;
         esac
         done
