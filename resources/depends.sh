@@ -224,4 +224,5 @@ InstallDepends() {
     cd ..
     Log "Install script done! Please run the script again to proceed"
     Log "If your iOS device is plugged in, unplug and replug your device"
+    ExitWin 0
 }

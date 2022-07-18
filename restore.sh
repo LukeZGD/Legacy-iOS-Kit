@@ -20,7 +20,7 @@ fi
 
 Clean() {
     rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
-    ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist
+    ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist version.xml
     kill $iproxyPID $ServerPID 2>/dev/null
 }
 
@@ -104,7 +104,6 @@ Main() {
         fi
         Clean
         InstallDepends
-        ExitWin 0
     fi
     
     GetDeviceValues $1
@@ -163,7 +162,7 @@ Main() {
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
                 ExitWin 0
-            elif [[ $ProductType != "iPad2,3" ]]; then
+            elif [[ $ProductType != "iPhone3"* && $ProductType != "iPad2,3" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
                 ExitWin 0
             fi

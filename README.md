@@ -87,7 +87,7 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar ([1Conan fork](https://github.com/1Conan/tsschecker))
 - [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (and 194)
-- [idevicerestore](https://github.com/LukeeGD/idevicerestore) - LukeZGD fork
+- [idevicerestore](https://github.com/LukeZGD/idevicerestore) - LukeZGD fork
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)

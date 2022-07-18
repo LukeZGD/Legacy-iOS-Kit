@@ -44,6 +44,7 @@ JailbreakSet() {
 }
 
 JailbreakOption() {
+    echo
     Input "Jailbreak Option"
     Echo "* When this option is enabled, your device will be jailbroken on restore."
     if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then

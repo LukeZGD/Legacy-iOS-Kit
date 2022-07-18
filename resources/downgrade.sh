@@ -136,6 +136,59 @@ DowngradeOther() {
     FutureRestore
 }
 
+
+iDeviceRestore() {
+    mkdir shsh
+    cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
+    Log "Proceeding to idevicerestore..."
+    [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
+    [[ $platform == "win" ]] && ExtraArgs="-ewy"
+    $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
+    if [[ $platform == "win" && $? != 0 ]]; then
+        Log "Restoring done! Read the message below if any error has occurred:"
+        Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
+        Echo "* To fix this, follow troubleshooting steps from here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
+    elif [[ $? != 0 ]]; then
+        Log "An error seems to have occurred in idevicerestore."
+        Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
+        Echo "* Your problem may have already been addressed within the wiki page."
+        Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    else
+        echo
+        Log "Restoring done!"
+    fi
+    Log "Downgrade script done!"
+}
+
+IPSWCustomA7() {
+    local fr194=()
+    if [[ $platform == "macos" ]]; then
+        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-macOS.tar.xz" "d279423dd9a12d3a7eceaeb7e01beb332c306aaa")
+    elif [[ $platform == "linux" ]]; then
+        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-ubuntu_20.04.2.tar.xz" "9f2b4b6cc6710d1d68880711001d2dc5b4cb9407")
+    fi
+    Input "Custom IPSW Option"
+    Echo "* When this option is enabled, a custom IPSW will be created/used for restoring."
+    Echo "* Only enable this when you encounter problems with futurerestore."
+    Echo "* This option is disabled by default (N)."
+    read -p "$(Input 'Enable this option? (y/N):')" IPSWA7
+    if [[ $IPSWA7 != 'Y' && $IPSWA7 != 'y' ]]; then
+        return
+    fi
+    IPSWA7=1
+    Log "Custom IPSW option enabled by user."
+    futurerestore="./resources/tools/futurerestore194_$platform"
+    if [[ ! -e $futurerestore ]]; then
+        cd tmp
+        SaveFile ${fr194[0]} futurerestore.tar.xz ${fr194[1]}
+        7z x futurerestore.tar.xz
+        tar -xf futurerestore*.tar
+        chmod +x futurerestore-v194
+        mv futurerestore-v194 ../$futurerestore
+        cd ..
+    fi
+ }
+
 DowngradeOTA() {
     if [[ $DeviceProc != 7 ]]; then
         JailbreakOption
@@ -177,35 +230,6 @@ DowngradeOTAWin() {
     iDeviceRestore
 }
 
-IPSWCustomA7() {
-    local fr194=()
-    if [[ $platform == "macos" ]]; then
-        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-macOS.tar.xz" "d279423dd9a12d3a7eceaeb7e01beb332c306aaa")
-    elif [[ $platform == "linux" ]]; then
-        fr194=("https://github.com/futurerestore/futurerestore/releases/download/194/futurerestore-v194-ubuntu_20.04.2.tar.xz" "9f2b4b6cc6710d1d68880711001d2dc5b4cb9407")
-    fi
-    Input "Custom IPSW Option"
-    Echo "* When this option is enabled, a custom IPSW will be created/used for restoring."
-    Echo "* Only enable this when you encounter problems with futurerestore."
-    Echo "* This option is disabled by default (N)."
-    read -p "$(Input 'Enable this option? (y/N):')" IPSWA7
-    if [[ $IPSWA7 != 'Y' && $IPSWA7 != 'y' ]]; then
-        return
-    fi
-    IPSWA7=1
-    Log "Custom IPSW option enabled by user."
-    futurerestore="./resources/tools/futurerestore194_$platform"
-    if [[ ! -e $futurerestore ]]; then
-        cd tmp
-        SaveFile ${fr194[0]} futurerestore.tar.xz ${fr194[1]}
-        7z x futurerestore.tar.xz
-        tar -xf futurerestore*.tar
-        chmod +x futurerestore-v194
-        mv futurerestore-v194 ../$futurerestore
-        cd ..
-    fi
- }
-
 Downgrade() {
     Log "Select your options when asked. If unsure, go for the defaults (press Enter/Return)."
     echo
@@ -222,31 +246,6 @@ Downgrade() {
         return
     fi
     DowngradeOTA
-}
-
-iDeviceRestore() {
-    mkdir shsh
-    cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
-    Log "Proceeding to idevicerestore..."
-    [[ $platform == "macos" ]] && sudo codesign --sign - --force --deep $idevicerestore
-    [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
-    [[ $platform == "win" ]] && ExtraArgs="-ewy"
-    $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
-    if [[ $platform == "macos" && $? != 0 ]]; then
-        Log "Restoring done! Read the message below if any error has occurred:"
-        Echo "* If the \"Killed: 9\" or other similar error pops up, try these steps:"
-        Echo "* Using Terminal, cd to where the script is located, then run"
-        Echo "* sudo codesign --sign - --force --deep resources/tools/idevicerestore_macos"
-        Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-    elif [[ $platform == "win" && $? != 0 ]]; then
-        Log "Restoring done! Read the message below if any error has occurred:"
-        Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-        Echo "* To fix this, follow troubleshooting steps from here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
-    else
-        echo
-        Log "Restoring done!"
-    fi
-    Log "Downgrade script done!"
 }
 
 Downgrade4() {
