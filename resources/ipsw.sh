@@ -29,10 +29,8 @@ JailbreakSet() {
     elif [[ $OSVer == "8.4.1" ]]; then
         JBName="EtasonJB"
         IPSWCustom="${IPSWCustom}E"
-    elif [[ $OSVer == "7.1"* ]]; then
+    elif [[ $OSVer == "7.1.2" ]]; then
         JBName="Pangu7"
-    elif [[ $OSVer == "7"* ]]; then
-        JBName="evasi0n7"
     elif [[ $OSVer == "6.1.3" ]]; then
         JBName="p0sixspwn"
     elif [[ $OSVer == "6"* ]]; then

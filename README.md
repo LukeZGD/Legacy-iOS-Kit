@@ -97,7 +97,6 @@
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
-- [evasi0n7](https://www.theiphonewiki.com/wiki/Evasi0n7)
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
