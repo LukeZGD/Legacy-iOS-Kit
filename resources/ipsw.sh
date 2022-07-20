@@ -236,7 +236,7 @@ IPSW32() {
 IPSW4() {
     local config="config"
     local JBFiles=()
-    local JBFiles2=()
+    local JBFiles2
     local JBSHA1
 
     if [[ -e $IPSWCustom.ipsw ]]; then
@@ -259,11 +259,11 @@ IPSW4() {
         else
             JBFiles=(Cydia5.tar unthredeh4il.tar fstab_rw.tar)
             JBSHA1=f5b5565640f7e31289919c303efe44741e28543a
-            JBFiles2=("${JBFiles[@]}")
         fi
-        JailbreakFiles $JBURL/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
+        JBFiles2="${JBFiles[0]}"
+        JailbreakFiles $JBURL/$JBFiles2 $JBFiles2 $JBSHA1
         for i in {0..2}; do
-            JBFiles2[$i]=../resources/jailbreak/${JBFiles2[$i]}
+            JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
     fi
 
@@ -289,13 +289,13 @@ IPSW4() {
         cp -rf ../resources/firmware/powdersn0wBundles ./FirmwareBundles
         cp -rf ../resources/firmware/src .
         if [[ $Jailbreak == 1 && $OSVer == "6."* ]]; then
-            JBFiles2=
+            JBFiles=
             rm FirmwareBundles/${config}.plist
             mv FirmwareBundles/${config}JB.plist FirmwareBundles/${config}.plist
             cp ../resources/jailbreak/Cydia6.tar src/cydia6.tar
         fi
         mv FirmwareBundles/${config}.plist FirmwareBundles/config.plist
-        $powdersn0w ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -base ../$IPSW7.ipsw ${JBFiles2[@]}
+        $powdersn0w ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -base ../$IPSW7.ipsw ${JBFiles[@]}
     fi
     cd ..
 
