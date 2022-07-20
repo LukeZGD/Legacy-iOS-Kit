@@ -68,7 +68,8 @@ SetToolPaths() {
     irecovery2="../tools/irecovery_$platform"
     partialzip="./resources/tools/partialzip_$platform"
     ping="ping -c1"
-    pwnedDFU="$cherry/pwnedDFU"
+    powdersn0w="../resources/tools/powdersn0w_$platform"
+    pwnedDFU="./resources/tools/pwnedDFU_$platform"
     rmsigchks="$python rmsigchks.py"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
@@ -191,7 +192,7 @@ InstallDepends() {
         pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
         if [[ ! $(ls ../resources/tools/*win*) ]]; then
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 4433ad5d6661cb5a374edccf771d4f2b761e7e46
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip d6fed106f38f8e60dfaf67cfbcb06898fb9a1b2e
             Log "Extracting Windows tools..."
             unzip -oq tools_win.zip -d ../resources
         fi

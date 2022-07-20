@@ -69,15 +69,12 @@ FutureRestore() {
 
     Log "Running futurerestore with command: $futurerestore -t \"$SHSH\" ${ExtraArgs[*]} \"$IPSWRestore.ipsw\""
     $futurerestore -t "$SHSH" "${ExtraArgs[@]}" "$IPSWRestore.ipsw"
-    if [[ $? != 0 ]]; then
-        Log "An error seems to have occurred in futurerestore."
-        Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
-        Echo "* Your problem may have already been addressed within the wiki page."
-        Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
-    else
-        echo
-        Log "Restoring done!"
-    fi
+    echo
+    Log "Restoring done! Read the message below if any error has occurred:"
+    Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
+    Echo "* Your problem may have already been addressed within the wiki page."
+    Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    echo
     Log "Downgrade script done!"
 }
 
@@ -144,19 +141,16 @@ iDeviceRestore() {
     [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
     [[ $platform == "win" ]] && ExtraArgs="-ewy"
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
-    if [[ $platform == "win" && $? != 0 ]]; then
-        Log "Restoring done! Read the message below if any error has occurred:"
+    echo
+    Log "Restoring done! Read the message below if any error has occurred:"
+    if [[ $platform == "win" ]]; then
         Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
         Echo "* To fix this, follow troubleshooting steps from here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
-    elif [[ $? != 0 ]]; then
-        Log "An error seems to have occurred in idevicerestore."
-        Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
-        Echo "* Your problem may have already been addressed within the wiki page."
-        Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
-    else
-        echo
-        Log "Restoring done!"
     fi
+    Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
+    Echo "* Your problem may have already been addressed within the wiki page."
+    Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    echo
     Log "Downgrade script done!"
 }
 

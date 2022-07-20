@@ -110,10 +110,6 @@ Main() {
     Clean
     mkdir tmp
 
-    if [[ $ProductType == "iPhone3,1" ]]; then
-        SaveExternal ch3rryflower
-    fi
-
     if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
         Mode="$1"
     else
@@ -188,9 +184,7 @@ Main() {
         ExitWin 0
     fi
 
-    if [[ $DeviceProc == 4 && $platform == "win" ]]; then
-        Error "Your device ($ProductType) is unsupported on Windows."
-    elif [[ $DeviceProc == 7 && $platform == "win" ]]; then
+    if [[ $DeviceProc == 7 && $platform == "win" ]]; then
         local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
         if [[ $DeviceState == "Normal" ]]; then
             Error "$Message"

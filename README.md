@@ -1,10 +1,10 @@
 # iOS-OTA-Downgrader
 
 - **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
-- **iPhone4Down: Downgrade your iPhone 4 on Linux (using ch3rryflower)**
+- **iPhone4Down: Downgrade your iPhone 4 on Linux (using powdersn0w)**
 - **Linux and macOS** are supported
     - **Partial support for Windows** - usage is not recommended
-    - iPhone4Down is focused on Linux only - macOS and Windows are unsupported
+    - iPhone4Down is focused on Linux only - macOS and Windows are untested
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
@@ -22,7 +22,6 @@
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs
 - **iPhone4Down supports the iPhone 4 GSM (iPhone3,1) only**
-    - You are on your own if you attempt to restore to versions not within the supported range (except for iOS 7.1.2)
 
 <table>
     <thead>
@@ -79,7 +78,8 @@
 - cURL
 - bspatch
 - python2 (ipwndfu, rmsigchks, SimpleHTTPServer), python3 (http.server)
-- [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios
+- [powdersn0w](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios ([LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub))
+- [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios (used for iOS 4.3.x only)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
@@ -96,7 +96,6 @@
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
-- [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)

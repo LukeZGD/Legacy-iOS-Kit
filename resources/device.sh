@@ -149,9 +149,9 @@ GetDeviceValues() {
         DeviceProc=4
         if [[ $ProductType == "iPhone3,1" ]]; then
             Log "iPhone 4 GSM detected. iPhone4Down functions enabled."
-            Echo "* This script uses ch3rryflower by dora2iOS"
+            Echo "* This script uses powdersn0w by dora2ios"
         else
-            Log "$ProductType detected. Your device is not supported by ch3rryflower."
+            Log "$ProductType detected. Your device is not supported by powdersn0w (yet)"
             Echo "* Functions will be limited to entering kDFU and restoring with blobs."
         fi
     elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPad3,2" ||
@@ -204,6 +204,14 @@ EnterPwnDFU() {
     
     if [[ $ProductType == "iPhone3,1" ]]; then
         pwnDFUTool="$pwnedDFU"
+        if [[ $platform == "win" ]]; then
+            Log "iPhone 4 device detected in DFU mode."
+            Echo "* Make sure that your device is already in pwnDFU mode."
+            Echo "* If your device is not in pwnDFU mode, the restore will not proceed!"
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+            read -s
+            return
+        fi
     elif [[ $platform == "macos" ]]; then
         Selection=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
