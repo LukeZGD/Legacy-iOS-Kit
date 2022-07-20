@@ -8,6 +8,7 @@ SaveOTABlobs() {
 
     if [[ $(ls saved/shsh/$SHSHChk 2>/dev/null) ]]; then
         Log "Found existing saved $OSVer blobs."
+        SHSH=$(ls saved/shsh/$SHSHChk)
         return
     fi
 
