@@ -139,7 +139,7 @@ iDeviceRestore() {
     cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
     [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
-    [[ $platform == "win" ]] && ExtraArgs="-ewy"
+    [[ $platform == "win" ]] && ExtraArgs+=" -y"
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     echo
     Log "Restoring done! Read the message below if any error has occurred:"
@@ -243,7 +243,9 @@ Downgrade() {
 }
 
 Downgrade4() {
-    JailbreakOption
+    if [[ $OSVer == "7.1.2" ]]; then
+        [[ $platform != "win" ]] && JailbreakOption
+    fi
     IPSWFindVerify
     Save712Blobs
     if [[ $OSVer == "7.1.2" && $Jailbreak != 1 ]]; then

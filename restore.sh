@@ -19,8 +19,7 @@ if [[ $1 != "NoColor" && $2 != "NoColor" ]]; then
 fi
 
 Clean() {
-    rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw ${UniqueChipID}_${ProductType}_*.shsh2 \
-    ${UniqueChipID}_${ProductType}_${HWModel}ap_*.shsh BuildManifest.plist version.xml
+    rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw BuildManifest.plist version.xml
     kill $iproxyPID $ServerPID 2>/dev/null
 }
 
