@@ -4,7 +4,7 @@
 - **iPhone4Down: Downgrade your iPhone 4 on Linux (using powdersn0w)**
 - **Linux and macOS** are supported
     - **Partial support for Windows** - usage is not recommended
-    - iPhone4Down is focused on Linux only - macOS and Windows are untested
+    - iPhone4Down is focused on Linux only - macOS and Windows are only partially supported
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 

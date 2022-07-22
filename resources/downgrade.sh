@@ -243,9 +243,7 @@ Downgrade() {
 }
 
 Downgrade4() {
-    if [[ $OSVer == "7.1.2" ]]; then
-        [[ $platform != "win" ]] && JailbreakOption
-    fi
+    JailbreakOption
     IPSWFindVerify
     Save712Blobs
     if [[ $OSVer == "7.1.2" && $Jailbreak != 1 ]]; then

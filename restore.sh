@@ -116,7 +116,8 @@ Main() {
         [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
 
         if [[ $ProductType == "iPhone3,1" && $1 != "NoDevice" ]]; then
-            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2" "SSH Ramdisk")
+            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2")
+            [[ $platform != "win" ]] && Selection+=("SSH Ramdisk")
         fi
 
         if [[ $DeviceProc != 7 ]]; then
@@ -296,9 +297,15 @@ SelectVersion() {
 
     if [[ $ProductType == "iPhone3,1" ]]; then
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
-        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)" "4.3.5" "More versions (4.3-6.1.2)")
-        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0" "4.3.3" "4.3")
-        if [[ $Mode == "Restore712" ]]; then
+        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)")
+        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+        if [[ $platform == "linux" ]]; then
+            Selection+=("4.3.5")
+            Selection2+=("4.3.3" "4.3")
+        elif [[ $platform == "win" && $Mode == "Downgrade" ]]; then
+            Error "Using iPhone4Down on Windows is currently disabled due to issues with idevicerestore" \
+            "Only creating custom IPSWs is enabled for now. This will be fixed sometime later"
+        elif [[ $Mode == "Restore712" ]]; then
             Echo "* Make sure to disable the exploit first! See the README for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
@@ -306,7 +313,12 @@ SelectVersion() {
             BuildVer="11D257"
             Mode="Downgrade4"
             return
-        elif [[ $Mode == "Downgrade" ]]; then
+        else
+            Echo "* iOS 4.3.x downgrades are available on Linux only"
+            Echo "* For macOS users, use cherryflowerJB instead"
+        fi
+        Selection+=("More versions")
+        if [[ $Mode == "Downgrade" ]]; then
             Mode="Downgrade4"
         fi
     fi
@@ -328,7 +340,7 @@ SelectVersion() {
         "5.1.1 (9B208)" ) OSVer="5.1.1"; BuildVer="9B208"; break;;
         "5.1.1 (9B206)" ) OSVer="5.1.1"; BuildVer="9B206"; break;;
         "4.3.5" ) OSVer="4.3.5"; BuildVer="8L1"; break;;
-        "More versions (4.3-6.1.2)" ) OSVer="More"; break;;
+        "More versions" ) OSVer="More"; break;;
         * ) exit 0;;
     esac
     done

@@ -66,7 +66,8 @@ JailbreakOption() {
     fi
     echo
 
-    if [[ $Jailbreak != 1 || $platform == "win" ]]; then
+    [[ $platform == "win" || -e "$IPSWCustom.ipsw" ]] && return
+    if [[ $Jailbreak != 1 ]]; then
         if [[ $ProductType == "iPhone3"* ]]; then
             [[ $OSVer == "7.1.2" ]] && return
         else
@@ -161,11 +162,12 @@ IPSWSetExtract() {
 }
 
 IPSW32() {
+    local BBUpdate="-bbupdate"
     local ExtraArgs
     local JBFiles
     local JBFiles2
     local JBSHA1
-    BBUpdate="-bbupdate"
+    local WinBundles
 
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -238,6 +240,7 @@ IPSW4() {
     local JBFiles=()
     local JBFiles2
     local JBSHA1
+    local WinBundles
 
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -269,8 +272,12 @@ IPSW4() {
 
     cd tmp
     if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
+        if [[ $platform == "win" ]]; then
+            ipsw="${ipsw}3"
+            WinBundles="windows/"
+        fi
         Log "Preparing custom IPSW..."
-        cp -rf ../resources/firmware/FirmwareBundles .
+        cp -rf ../resources/firmware/${WinBundles}FirmwareBundles .
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
     elif [[ ! -e $IPSWCustom.ipsw ]]; then
         echo

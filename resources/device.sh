@@ -211,6 +211,8 @@ EnterPwnDFU() {
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
             return
+        elif [[ $platform == "macos" ]]; then
+            pwnDFUTool="$ipwnder32"
         fi
     elif [[ $platform == "macos" ]]; then
         Selection=("ipwnder_lite" "iPwnder32")
@@ -461,7 +463,7 @@ Remove4() {
     Log "Patching iBSS..."
     $bspatch tmp/iBSS tmp/pwnediBSS resources/patches/iBSS.n90ap.8L1.patch
     Log "Booting iBSS..."
-    $pwnedDFU -f tmp/pwnediBSS
+    $irecovery -f tmp/pwnediBSS
     sleep 2
     Log "Running commands..."
     $irecovery -c "setenv boot-partition $Rec"
