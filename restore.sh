@@ -9,7 +9,19 @@ cd "$(dirname $0)"
 . ./resources/downgrade.sh
 . ./resources/ipsw.sh
 
-if [[ $1 != "NoColor" && $2 != "NoColor" ]]; then
+for i in "$@"; do
+    if [[ $i == "EntryDevice" ]]; then
+        EntryDevice=1
+    elif [[ $i == "NoColor" ]]; then
+        NoColor=1
+    elif [[ $i == "NoDevice" ]]; then
+        NoDevice=1
+    elif [[ $i == "PwnedDevice" ]]; then
+        PwnedDevice=1
+    fi
+done
+
+if [[ $NoColor != 1 ]]; then
     TERM=xterm-256color
     Color_R=$(tput setaf 9)
     Color_G=$(tput setaf 10)
@@ -105,17 +117,17 @@ Main() {
         InstallDepends
     fi
     
-    GetDeviceValues $1
+    GetDeviceValues
     Clean
     mkdir tmp
 
-    if [[ -n $1 && $1 != "NoColor" && $1 != "NoDevice" && $1 != "PwnedDevice" ]]; then
+    if [[ -n $1 && $1 != "NoColor" && $1 != *"Device" ]]; then
         Mode="$1"
     else
-        [[ $1 != "NoDevice" ]] && Selection+=("Downgrade Device")
+        [[ $NoDevice != 1 ]] && Selection+=("Downgrade Device")
         [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
 
-        if [[ $ProductType == "iPhone3,1" && $1 != "NoDevice" ]]; then
+        if [[ $ProductType == "iPhone3,1" && $NoDevice != 1 ]]; then
             Selection+=("Disable/Enable Exploit" "Restore to 7.1.2")
             [[ $platform != "win" ]] && Selection+=("SSH Ramdisk")
         fi
@@ -229,7 +241,7 @@ Main() {
         fi
 
     elif [[ $DeviceState == "DFU" ]]; then
-        if [[ $1 != "PwnedDevice" ]]; then
+        if [[ $PwnedDevice != 1 ]]; then
             echo -e "\n${Color_R}[Error] 32-bit A${DeviceProc} device detected in DFU mode. ${Color_N}"
             echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
             echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"

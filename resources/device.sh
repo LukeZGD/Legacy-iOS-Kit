@@ -46,10 +46,10 @@ GetDeviceValues() {
     Log "Finding device in Normal mode..."
     DeviceState=
     ideviceinfo2=$($ideviceinfo -s)
-    if [[ $? != 0 && $1 != "NoDevice" ]]; then
+    if [[ $? != 0 && $NoDevice != 1 ]]; then
         Log "Finding device in DFU/recovery mode..."
         DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
-    elif [[ $1 == "NoDevice" ]]; then
+    elif [[ $NoDevice == 1 ]]; then
         Log "NoDevice argument detected. Skipping device detection"
         DeviceState="NoDevice"
     elif [[ -n $ideviceinfo2 ]]; then
@@ -61,7 +61,7 @@ GetDeviceValues() {
         ProductType=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
         [[ $(echo $ProductType | cut -c 3) == 'h' ]] && ProdCut=9
         ProductType=$(echo $ProductType | cut -c -$ProdCut)
-        UniqueChipID=$((16#$(echo $($irecovery -q | grep "ECID" | cut -c 7-) | cut -c 3-)))
+        UniqueChipID=$((16#$($irecovery -q | grep "ECID" | cut -c 9-)))
         ProductVer="Unknown"
     elif [[ $DeviceState == "Normal" ]]; then
         ProductType=$(echo "$ideviceinfo2" | grep "ProductType" | cut -c 14-)
@@ -70,6 +70,11 @@ GetDeviceValues() {
         UniqueChipID=$(echo "$ideviceinfo2" | grep "UniqueChipID" | cut -c 15-)
         UniqueDeviceID=$(echo "$ideviceinfo2" | grep "UniqueDeviceID" | cut -c 17-)
         version="(iOS $ProductVer) "
+    fi
+
+    if [[ $EntryDevice == 1 ]]; then
+        ProductType=
+        UniqueChipID=
     fi
 
     if [[ ! $DeviceState ]]; then
