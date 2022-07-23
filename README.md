@@ -1,7 +1,7 @@
 # iOS-OTA-Downgrader
 
 - **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
-- **iPhone4Down: Downgrade your iPhone 4 on Linux (using powdersn0w)**
+- **iPhone4Down: Downgrade your iPhone 4 on Linux/Windows (using powdersn0w)**
 - **Linux and macOS** are supported
     - **Partial support for Windows** - usage is not recommended
     - iPhone4Down is focused on Linux only - macOS and Windows are only partially supported

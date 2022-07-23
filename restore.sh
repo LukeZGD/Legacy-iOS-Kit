@@ -237,7 +237,7 @@ Main() {
         fi
         if [[ $Mode == *"4" ]]; then
             $Mode
-            exit 0
+            ExitWin 0
         fi
 
     elif [[ $DeviceState == "DFU" ]]; then
@@ -314,9 +314,6 @@ SelectVersion() {
         if [[ $platform == "linux" ]]; then
             Selection+=("4.3.5")
             Selection2+=("4.3.3" "4.3")
-        elif [[ $platform == "win" && $Mode == "Downgrade" ]]; then
-            Error "Using iPhone4Down on Windows is currently disabled due to issues with idevicerestore" \
-            "Only creating custom IPSWs is enabled for now. This will be fixed sometime later"
         elif [[ $Mode == "Restore712" ]]; then
             Echo "* Make sure to disable the exploit first! See the README for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
