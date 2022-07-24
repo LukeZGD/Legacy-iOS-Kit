@@ -65,7 +65,7 @@ ExitWin() {
 
 Main() {
     local Selection=()
-    
+
     clear
     Echo "******* iOS-OTA-Downgrader *******"
     Echo " - Downgrader script by LukeZGD - "
@@ -80,6 +80,14 @@ Main() {
         "If resources folder is present try removing spaces from path/folder name"
     fi
     
+    if [[ -d .git ]]; then
+        Echo "Version: $(git rev-parse HEAD)"
+    elif [[ -e resources/git_hash ]]; then
+        Echo "Version: $(cat resources/git_hash)"
+    else
+        Echo "Version: Unknown"
+    fi
+
     SetToolPaths
     if [[ $? != 0 ]]; then
         Error "Setting tool paths failed. Your copy of iOS-OTA-Downgrader seems to be incomplete."

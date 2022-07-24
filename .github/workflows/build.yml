@@ -6,6 +6,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Create git_hash
+        run: echo ${{ github.sha }} | tee ./resources/git_hash
+
       - name: Move linux binaries
         run: |
           mkdir -p ./exclude/firmware ./exclude/lib ./exclude/tools
