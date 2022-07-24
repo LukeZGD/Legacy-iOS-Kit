@@ -156,7 +156,6 @@ Main() {
     fi
 
     SelectVersion
-    [[ $OSVer == "Other" ]] && Mode="Downgrade"
 
     if [[ $Mode == "IPSW32" ]]; then
         echo
@@ -290,8 +289,6 @@ SelectVersion() {
         OSVer="10.3.3"
         BuildVer="14G60"
         return
-    elif [[ $Mode == "Downgrade"* ]]; then
-        :
     elif [[ $Mode == "kDFU" || $Mode == *"4" ]]; then
         return
     fi
@@ -311,10 +308,7 @@ SelectVersion() {
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
         Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)")
         Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-        if [[ $platform == "linux" ]]; then
-            Selection+=("4.3.5")
-            Selection2+=("4.3.3" "4.3")
-        elif [[ $Mode == "Restore712" ]]; then
+        if [[ $Mode == "Restore712" ]]; then
             Echo "* Make sure to disable the exploit first! See the README for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
@@ -322,6 +316,9 @@ SelectVersion() {
             BuildVer="11D257"
             Mode="Downgrade4"
             return
+        elif [[ $platform == "linux" ]]; then
+            Selection+=("4.3.5")
+            Selection2+=("4.3.3" "4.3")
         else
             Echo "* iOS 4.3.x downgrades are available on Linux only"
             Echo "* For macOS users, use cherryflowerJB instead"
@@ -332,8 +329,8 @@ SelectVersion() {
         fi
     fi
 
-    if [[ $platform != "win" ]]; then
-        [[ $Mode == "Downgrade"* ]] && Selection+=("Other (use SHSH blobs)")
+    if [[ $platform != "win" && $Mode == "Downgrade"* ]]; then
+        Selection+=("Other (use SHSH blobs)")
     fi
     Selection+=("(Any other key to exit)")
     
@@ -354,7 +351,9 @@ SelectVersion() {
     esac
     done
 
-    if [[ $OSVer == "More" ]]; then
+    if [[ $OSVer == "Other" ]]; then
+        Mode="Downgrade"
+    elif [[ $OSVer == "More" ]]; then
         select opt in "${Selection2[@]}"; do
         case $opt in
             "6.1.2" ) OSVer="6.1.2"; BuildVer="10B146"; break;;
