@@ -1,11 +1,13 @@
 @echo off
 
 if not exist "C:\Program Files\iTunes\iTunes.exe" (
-    echo [Error] iTunes does not seem to be installed.
-    echo * Please install iTunes 12.6.5 first before proceeding.
-    echo * Read the "How to Use" wiki page in GitHub for more details.
-    pause >nul
-    exit
+    if not exist "C:\Program Files (x86)\iTunes\iTunes.exe" (
+        echo [Error] iTunes does not seem to be installed.
+        echo * Please install iTunes 12.6.5 or older before proceeding.
+        echo * Read the "How to Use" wiki page in GitHub for more details.
+        pause >nul
+        exit
+    )
 )
 
 if not exist "C:\msys64\msys2.exe" (
