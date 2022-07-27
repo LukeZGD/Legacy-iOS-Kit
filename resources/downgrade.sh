@@ -122,7 +122,7 @@ DowngradeOther() {
             fi
         fi
         if [[ $NoMove == 1 ]]; then
-            rm $FWKeys
+            rm $FWKeys/index.html
         elif [[ -s tmp/index.html ]]; then
             mv tmp/index.html $FWKeys
         fi
