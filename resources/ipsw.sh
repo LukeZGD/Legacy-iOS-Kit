@@ -93,7 +93,7 @@ JailbreakFiles() {
     local JBSHA1L
     if [[ -e resources/jailbreak/$2 ]]; then
         Log "Verifying $2..."
-        JBSHA1L=$(shasum resources/jailbreak/$2 | awk '{print $1}')
+        JBSHA1L=$($sha1sum resources/jailbreak/$2 | awk '{print $1}')
         if [[ $JBSHA1L == $3 ]]; then
             return
         fi
@@ -136,7 +136,7 @@ IPSWFindVerify() {
     Log "Verifying $IPSWDL.ipsw..."
     IPSWSHA1=$(cat $Firmware/$BuildVerDL/sha1sum)
     Log "Expected SHA1sum: $IPSWSHA1"
-    IPSWSHA1L=$(shasum $IPSWDL.ipsw | awk '{print $1}')
+    IPSWSHA1L=$($sha1sum $IPSWDL.ipsw | awk '{print $1}')
     Log "Actual SHA1sum:   $IPSWSHA1L"
     if [[ $IPSWSHA1L != $IPSWSHA1 ]]; then
         Error "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Delete/replace the IPSW and run the script again" \

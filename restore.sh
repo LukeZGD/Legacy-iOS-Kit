@@ -86,6 +86,7 @@ Main() {
         Echo "Version: $(cat resources/git_hash)"
     else
         Echo "Version: Unknown"
+        Echo "* I recommend downloading iOS-OTA-Downgrader from the GitHub releases page"
     fi
 
     SetToolPaths

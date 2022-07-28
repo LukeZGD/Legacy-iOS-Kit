@@ -20,7 +20,7 @@ FRBaseband() {
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     fi
 
-    BasebandSHA1L=$(shasum saved/baseband/$Baseband | awk '{print $1}')
+    BasebandSHA1L=$($sha1sum saved/baseband/$Baseband | awk '{print $1}')
     if [[ ! -e $(ls saved/baseband/$Baseband) || $BasebandSHA1L != $BasebandSHA1 ]]; then
         rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
         if [[ $DeviceProc == 7 ]]; then

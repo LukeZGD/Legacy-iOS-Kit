@@ -41,7 +41,6 @@ SetToolPaths() {
         ipwnder32="./resources/tools/ipwnder32_macos"
         ipwnder_lite="./resources/tools/ipwnder_macos"
         python="/usr/bin/python"
-        xmlstarlet=/
         zenity="./resources/tools/zenity_macos"
 
     elif [[ $OSTYPE == "msys" ]]; then
@@ -71,6 +70,7 @@ SetToolPaths() {
     powdersn0w="../resources/tools/powdersn0w_$platform"
     pwnedDFU="./resources/tools/pwnedDFU_$platform"
     rmsigchks="$python rmsigchks.py"
+    sha1sum="$(which sha1sum 2>/dev/null)"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
     SCP="$(which scp) $SSH"
@@ -87,8 +87,9 @@ SetToolPaths() {
         fi
 
     elif [[ $platform == "macos" ]]; then
-        # for macOS 12 and newer
+        sha1sum="$(which shasum)"
         if (( ${platformver:0:2} > 11 )); then
+            # for macOS 12 and newer
             python="/usr/bin/python3"
             ipwndfu="$(which python2) ipwndfu"
             rmsigchks="$(which python2) rmsigchks.py"
@@ -129,7 +130,7 @@ SaveExternal() {
 SaveFile() {
     Log "Downloading $2..."
     curl -L $1 -o $2
-    local SHA1=$(shasum $2 | awk '{print $1}')
+    local SHA1=$($sha1sum $2 | awk '{print $1}')
     if [[ $SHA1 != $3 ]]; then
         Error "Verifying $2 failed. The downloaded file may be corrupted or incomplete. Please run the script again" \
         "SHA1sum mismatch. Expected $3, got $SHA1"
@@ -175,7 +176,7 @@ InstallDepends() {
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates expect libimobiledevice openssl perl-Digest-SHA python2 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates expect libimobiledevice openssl python2 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
