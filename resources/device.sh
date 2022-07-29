@@ -42,16 +42,20 @@ FindDevice() {
 GetDeviceValues() {
     local ideviceinfo2
     local version
-    
-    Log "Finding device in Normal mode..."
     DeviceState=
-    ideviceinfo2=$($ideviceinfo -s)
-    if [[ $? != 0 && $NoDevice != 1 ]]; then
-        Log "Finding device in DFU/recovery mode..."
-        DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
-    elif [[ $NoDevice == 1 ]]; then
+
+    if [[ $NoDevice == 1 ]]; then
         Log "NoDevice argument detected. Skipping device detection"
         DeviceState="NoDevice"
+    else
+        Log "Finding device in Normal mode..."
+        ideviceinfo2=$($ideviceinfo -s)
+        opt=$?
+    fi
+
+    if [[ $opt != 0 && $NoDevice != 1 ]]; then
+        Log "Finding device in DFU/recovery mode..."
+        DeviceState="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
     elif [[ -n $ideviceinfo2 ]]; then
         DeviceState="Normal"
     fi

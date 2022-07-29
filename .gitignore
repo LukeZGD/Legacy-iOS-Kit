@@ -9,6 +9,7 @@
 *.shsh2
 *.txt
 Cydia*
+exploit
 first_run
 iP*Custom*/
 iP*Restore/
@@ -20,5 +21,6 @@ resources/jailbreak/untether.tar
 resources/libimobiledevice*/
 resources/ramdisk/
 saved/
+sshdeb.tar
 tmp/
 version.xml

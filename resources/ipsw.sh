@@ -181,8 +181,8 @@ IPSW32() {
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> tmp/reboot.sh
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
-        #JBFiles=("../resources/jailbreak/sshdeb.tar")                             # uncomment to add openssh to custom ipsw
-        #JailbreakFiles $JBURL/sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
+        #JBFiles=("../resources/jailbreak/sshdeb.tar")                                        # uncomment to add openssh to custom ipsw
+        #JailbreakFiles $JBURL/sshdeb.tar sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
         JBFiles2=("bin.tar" "cydia.tar" "untether.tar")
         JBSHA1=("98034227c68610f4c7dd48ca9e622314a1e649e7" "2e9e662afe890e50ccf06d05429ca12ce2c0a3a3" "f88ec9a1b3011c4065733249363e9850af5f57c8")
         mkdir -p tmp/jailbreak
@@ -250,6 +250,10 @@ IPSW4() {
     if [[ $OSVer == "4.3"* ]]; then
         IPSW4Cherry
         return
+    else
+        local JBURL2="https://github.com/LukeZGD/powdersn0w_pub/raw/main/xpwn/src/target/n90/11D257/exploit"
+        JailbreakFiles $JBURL2 exploit bedd10a96ba0f305a0af74a15e1eee88946070a1
+        cp resources/jailbreak/exploit resources/firmware/src/target/n90/11D257/
     fi
 
     if [[ $Jailbreak == 1 ]]; then
