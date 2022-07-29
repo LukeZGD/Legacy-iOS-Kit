@@ -511,36 +511,21 @@ Ramdisk4() {
         cp -rf ramdisk ../resources
         cd ..
     fi
-    cd resources/ramdisk
 
     Log "Sending iBSS..."
-    $irecovery2 -f iBSS.n90ap.RELEASE.dfu
+    $irecovery -f resources/ramdisk/iBSS.n90ap.RELEASE.dfu
     sleep 2
     Log "Sending iBEC..."
-    $irecovery2 -f iBEC.n90ap.RELEASE.dfu
-
+    $irecovery -f resources/ramdisk/iBEC.n90ap.RELEASE.dfu
     FindDevice "Recovery" error
 
     Log "Booting..."
-    $expect -c "
-    spawn $irecovery2 -s
-    expect \"iRecovery>\"
-    send \"/send DeviceTree.n90ap.img3\r\"
-    expect \"iRecovery>\"
-    send \"devicetree\r\"
-    expect \"iRecovery>\"
-    send \"/send 058-1056-002.dmg\r\"
-    expect \"iRecovery>\"
-    send \"ramdisk\r\"
-    expect \"iRecovery>\"
-    send \"/send kernelcache.release.n90\r\"
-    expect \"iRecovery>\"
-    send \"bootx\r\"
-    expect \"iRecovery>\"
-    send \"/exit\r\"
-    expect eof"
-    cd ../..
-
+    $irecovery -f resources/ramdisk/DeviceTree.n90ap.img3
+    $irecovery -c devicetree
+    $irecovery -f resources/ramdisk/058-1056-002.dmg
+    $irecovery -c ramdisk
+    $irecovery -f resources/ramdisk/kernelcache.release.n90
+    $irecovery -c bootx
     FindDevice "Restore" error
 
     Log "Device should now be in SSH ramdisk mode."
@@ -553,6 +538,8 @@ Ramdisk4() {
     Echo "* Mount filesystems with these commands:"
     Echo "    mount_hfs /dev/disk0s1s1 /mnt1"
     Echo "    mount_hfs /dev/disk0s1s2 /mnt1/private/var"
+    Echo "* To reboot, use this command:"
+    Echo "    reboot_bak"
 }
 
 EnterPwnREC() {

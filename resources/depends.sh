@@ -52,9 +52,6 @@ SetToolPaths() {
         python=/
     fi
 
-    if [[ $platform != "win" ]]; then
-        expect="$(which expect)"
-    fi
     cherrybin="../$cherry/cherry"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
@@ -64,7 +61,6 @@ SetToolPaths() {
     ipwndfu="$python ipwndfu"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
-    irecovery2="../tools/irecovery_$platform"
     partialzip="./resources/tools/partialzip_$platform"
     ping="ping -c1"
     powdersn0w="../resources/tools/powdersn0w_$platform"
@@ -80,7 +76,6 @@ SetToolPaths() {
 
     if [[ $platform == "linux" ]]; then
         irecovery="env LD_LIBRARY_PATH=./resources/lib $irecovery"
-        irecovery2="env LD_LIBRARY_PATH=../lib $irecovery2"
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
@@ -165,23 +160,23 @@ InstallDepends() {
     fi
 
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl expect libimobiledevice openssh python2 udev unzip usbmuxd usbutils vim xmlstarlet zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 udev unzip usbmuxd usbutils vim xmlstarlet zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl expect libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates expect libimobiledevice openssl python2 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl expect libimobiledevice-1_0-6 openssl python-base usbmuxd vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base usbmuxd vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install

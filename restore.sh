@@ -137,8 +137,7 @@ Main() {
         [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
 
         if [[ $ProductType == "iPhone3,1" && $NoDevice != 1 ]]; then
-            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2")
-            [[ $platform != "win" ]] && Selection+=("SSH Ramdisk")
+            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2" "SSH Ramdisk")
         fi
 
         if [[ $DeviceProc != 7 ]]; then
