@@ -123,7 +123,7 @@ IPSWFindVerify() {
         return
     fi
 
-    if [[ ! -e "$IPSW.ipsw" ]]; then
+    if [[ ! -e "$IPSWDL.ipsw" ]]; then
         Log "iOS $OSVerDL IPSW for $ProductType cannot be found."
         Echo "* If you already downloaded the IPSW, move/copy it to the directory where the script is located."
         Echo "* Do NOT rename the IPSW as the script will fail to detect it."
