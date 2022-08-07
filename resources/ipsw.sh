@@ -45,8 +45,10 @@ JailbreakOption() {
     echo
     Input "Jailbreak Option"
     Echo "* When this option is enabled, your device will be jailbroken on restore."
-    if [[ $ProductType == "iPad2,5" || $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
-        Echo "* Based on some reported issues, Jailbreak Option might be broken for iPad mini 1 devices."
+    if [[ $OSVer == "6.1.3" ]]; then
+        Echo "* I recommend to enable this for iOS 6.1.3, since it is hard to get p0sixspwn to work."
+    elif [[ $OSVer == "8.4.1" ]]; then
+        Echo "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
         Echo "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
     fi
     Echo "* This option is enabled by default (Y)."

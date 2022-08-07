@@ -90,9 +90,15 @@ SetToolPaths() {
             rmsigchks="$(which python2) rmsigchks.py"
             SimpleHTTPServer="$python -m http.server 8888"
         fi
-    else
+    elif [[ $platform == "win" ]]; then
         ping="ping -n 1"
-        zenity="./resources/tools/zenity_$platform"
+        Log "WARNING - Using iOS-OTA-Downgrader on Windows is highly discouraged."
+        Echo "* Please use it on Linux or macOS instead."
+        Echo "* You may still continue, but you may encounter problems with restoring and activation."
+        Echo "* You have been warned."
+        sleep 5
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+        read -s
     fi
 
     Log "Running on platform: $platform ($platformver)"
