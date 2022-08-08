@@ -104,7 +104,7 @@ Main() {
     fi
     
     Log "Checking Internet connection..."
-    $ping 8.8.8.8 >/dev/null
+    $ping 208.67.222.222 >/dev/null
     if [[ $? != 0 ]]; then
         Error "Please check your Internet connection before proceeding."
     fi
