@@ -81,7 +81,7 @@ Main() {
     fi
     
     if [[ -d .git ]]; then
-        Echo "Version: $(git rev-parse HEAD)"
+        Echo "Version: $(git log -1 --format="%at" | xargs -I{} date -d @{} +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
     elif [[ -e resources/git_hash ]]; then
         Echo "Version: $(cat resources/git_hash)"
     else

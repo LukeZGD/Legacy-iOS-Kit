@@ -6,8 +6,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Create git_hash
-        run: echo ${{ github.sha }} | tee ./resources/git_hash
+      - name: Create name version env
+        run: |
+          echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+          echo "SHA_SHORT=$(echo ${{ github.sha }} | cut -c -7)" >> $GITHUB_ENV
+
+      - name: Create git hash
+        run: echo "${{ env.DATE }}-${{ env.SHA_SHORT }}" | tee ./resources/git_hash
 
       - name: Move linux binaries
         run: |
@@ -23,7 +28,7 @@ jobs:
           chmod +x ./resources/libimobiledevice_macos/*
 
       - name: Zip macos files
-        run: zip -r ${{ github.event.repository.name }}_macos.zip resources/ restore.sh README.md
+        run: zip -r ${{ github.event.repository.name }}_macos_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.sh README.md
 
       - name: Move macos binaries
         run: |
@@ -40,7 +45,7 @@ jobs:
           chmod +x ./resources/libimobiledevice_linux/*
 
       - name: Zip linux files
-        run: zip -r ${{ github.event.repository.name }}_linux.zip resources/ restore.sh README.md
+        run: zip -r ${{ github.event.repository.name }}_linux_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.sh README.md
 
       - name: Move linux binaries and other files
         run: |
@@ -61,7 +66,7 @@ jobs:
           unzip tools_win.zip -d ./resources
 
       - name: Zip win files
-        run: zip -r ${{ github.event.repository.name }}_win.zip resources/ restore.cmd restore.sh README.md
+        run: zip -r ${{ github.event.repository.name }}_win_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.cmd restore.sh README.md
 
       - name: Copy exclude files back
         run: cp -r ./exclude/* ./resources
@@ -70,7 +75,7 @@ jobs:
         run: ./resources/complete.sh
 
       - name: Zip complete files
-        run: zip -r ${{ github.event.repository.name }}_complete.zip resources/ restore.cmd restore.sh README.md
+        run: zip -r ${{ github.event.repository.name }}_complete_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.cmd restore.sh README.md
 
       - name: Update latest release
         uses: pyTooling/Actions/releaser@main
@@ -79,7 +84,7 @@ jobs:
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${{ github.event.repository.name }}_complete.zip
-            ${{ github.event.repository.name }}_macos.zip
-            ${{ github.event.repository.name }}_linux.zip
-            ${{ github.event.repository.name }}_win.zip
+            ${{ github.event.repository.name }}_complete_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
+            ${{ github.event.repository.name }}_macos_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
+            ${{ github.event.repository.name }}_linux_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
+            ${{ github.event.repository.name }}_win_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
