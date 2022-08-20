@@ -265,12 +265,9 @@ EnterPwnDFU() {
     fi
     
     if [[ $ProductType == "iPhone3,1" ]]; then
-        if [[ $pwnDFUDevice != 0 ]]; then
-            Error "Failed to enter pwnDFU mode. Please run the script again" \
+        if [[ $pwnD != 1 ]]; then
+            Error "Failed to enter pwnDFU mode. Please run the script again. Note that kDFU mode will NOT work!" \
             "Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
-        elif [[ $pwnD != 1 ]]; then
-            Error "Your device is not in pwnDFU mode, cannot proceed. Note that kDFU mode will NOT work!" \
-            "Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds."
         else
             Log "Device in pwnDFU mode detected."
         fi

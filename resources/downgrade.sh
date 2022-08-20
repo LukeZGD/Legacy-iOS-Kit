@@ -139,6 +139,7 @@ iDeviceRestore() {
     cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
     [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
+    Log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     echo
     Log "Restoring done! Read the message below if any error has occurred:"

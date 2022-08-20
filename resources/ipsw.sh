@@ -50,6 +50,9 @@ JailbreakOption() {
     elif [[ $OSVer == "8.4.1" ]]; then
         Echo "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
         Echo "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
+    elif [[ $OSVer == "5.1" ]]; then
+        Echo "* Based on some reported issues, Jailbreak Option might not work properly for iOS 5.1."
+        Echo "* I recommend to use other versions instead, such as 5.1.1."
     fi
     Echo "* This option is enabled by default (Y)."
     read -p "$(Input 'Enable this option? (Y/n):')" Jailbreak

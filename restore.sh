@@ -81,7 +81,11 @@ Main() {
     fi
     
     if [[ -d .git ]]; then
-        Echo "Version: $(git log -1 --format="%at" | xargs -I{} date -d @{} +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
+        if [[ $platform == "macos" ]]; then
+            Echo "Version: $(date -r $(git log -1 --format="%at") +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
+        else
+            Echo "Version: $(date -d @$(git log -1 --format="%at") --rfc-3339=date)-$(git rev-parse HEAD | cut -c -7)"
+        fi
     elif [[ -e resources/git_hash ]]; then
         Echo "Version: $(cat resources/git_hash)"
     else
