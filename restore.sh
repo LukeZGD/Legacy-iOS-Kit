@@ -328,12 +328,13 @@ SelectVersion() {
             BuildVer="11D257"
             Mode="Downgrade4"
             return
-        elif [[ $platform == "linux" ]]; then
+        elif [[ $platform != "linux" ]]; then
+            Echo "* iOS 4.3.x downgrades are supported on Linux only"
+            Echo "* For macOS users, use cherryflowerJB instead"
+        fi
+        if [[ $platform != "win" ]]; then
             Selection+=("4.3.5")
             Selection2+=("4.3.3" "4.3")
-        else
-            Echo "* iOS 4.3.x downgrades are available on Linux only"
-            Echo "* For macOS users, use cherryflowerJB instead"
         fi
         Selection+=("More versions")
         if [[ $Mode == "Downgrade" ]]; then
