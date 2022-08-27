@@ -23,7 +23,7 @@ FRBaseband() {
     BasebandSHA1L=$($sha1sum saved/baseband/$Baseband | awk '{print $1}')
     if [[ ! -e $(ls saved/baseband/$Baseband) || $BasebandSHA1L != $BasebandSHA1 ]]; then
         rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
-        if [[ $DeviceProc == 7 ]]; then
+        if [[ $DeviceProc == 7 || $platform == "win" ]]; then
             Error "Downloading/verifying baseband failed. Please run the script again"
         else
             Log "Downloading/verifying baseband failed, will proceed with --latest-baseband flag"
@@ -138,7 +138,20 @@ iDeviceRestore() {
     mkdir shsh
     cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
     Log "Proceeding to idevicerestore..."
-    [[ $1 == "latest" ]] && ExtraArgs="-e" || ExtraArgs="-e -w"
+    ExtraArgs="-e -w"
+    if [[ $1 == "latest" ]]; then
+        ExtraArgs="-e"
+    elif [[ $platform == "win" && $ProductType != "iPhone3"* ]]; then
+        ExtraArgs="-r"
+        idevicerestore="$idevicererestore"
+        if [[ $Baseband == 0 ]]; then
+            Log "Device $ProductType has no baseband"
+        else
+            FRBaseband
+            cp saved/baseband/$Baseband tmp/bbfw.tmp
+            cp $BuildManifest tmp/BuildManifest.plist
+        fi
+    fi
     Log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     echo
@@ -200,7 +213,7 @@ DowngradeOTA() {
 }
 
 DowngradeOTAWin() {
-    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomWin"
+    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomW"
     if [[ $DeviceProc != 7 ]]; then
         JailbreakOption
         SaveOTABlobs

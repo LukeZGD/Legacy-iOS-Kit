@@ -220,10 +220,7 @@ IPSW32() {
         done
     fi
     [[ $ProductType == "$DisableBBUpdate" ]] && BBUpdate=
-    if [[ $platform == "win" ]]; then
-        BBUpdate=
-        WinBundles="windows/"
-    fi
+    [[ $platform == "win" ]] && WinBundles="windows/"
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."

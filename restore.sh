@@ -171,7 +171,7 @@ Main() {
 
     if [[ $Mode == "IPSW32" ]]; then
         echo
-        [[ $platform == "win" ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomWin"
+        [[ $platform == "win" ]] && IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomW"
         JailbreakOption
         if [[ -e "$IPSWCustom.ipsw" ]]; then
             Log "Found existing Custom IPSW, stopping here."

@@ -56,6 +56,7 @@ SetToolPaths() {
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     idevicerestore="./resources/tools/idevicerestore_$platform"
+    idevicererestore="./resources/tools/idevicererestore_$platform"
     iproxy="$MPath/iproxy"
     ipsw="../resources/tools/ipsw_$platform"
     ipwndfu="$python ipwndfu"
@@ -94,7 +95,7 @@ SetToolPaths() {
         ping="ping -n 1"
         Log "WARNING - Using iOS-OTA-Downgrader on Windows is highly discouraged."
         Echo "* Please use it on Linux or macOS instead."
-        Echo "* You may still continue, but you may encounter problems with restoring and activation."
+        Echo "* You may still continue, but you might encounter problems with restoring and activation."
         Echo "* You have been warned."
         sleep 5
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
@@ -195,7 +196,7 @@ InstallDepends() {
         pacman -Sy --noconfirm --needed ca-certificates curl openssh unzip zip
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
         if [[ ! $(ls ../resources/tools/*win*) ]]; then
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 30597bc091b1a2fa80350febdfd97a24b28fbdd5
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip b8b727b74d3bbba2093bef5a156e30cb29d6eac7
             Log "Extracting Windows tools..."
             unzip -oq tools_win.zip -d ../resources
         fi
