@@ -22,13 +22,13 @@ JailbreakSet() {
          [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
     fi
 
-    [[ $platform == "win" ]] && IPSWCustom="${IPSWCustom}JB"
+    [[ $platform == "win" ]] && IPSWCustom+="JB"
     if [[ $JBDaibutsu == 1 ]]; then
         JBName="daibutsu"
-        IPSWCustom="${IPSWCustom}D"
+        IPSWCustom+="D"
     elif [[ $OSVer == "8.4.1" ]]; then
         JBName="EtasonJB"
-        IPSWCustom="${IPSWCustom}E"
+        IPSWCustom+="E"
     elif [[ $OSVer == "7.1.2" ]]; then
         JBName="Pangu7"
     elif [[ $OSVer == "6"* && $ProductType == "iPhone3"* ]]; then
@@ -67,7 +67,13 @@ JailbreakOption() {
     if [[ $ProductType == "iPhone3"* ]]; then
         [[ $Jailbreak == 1 ]] && Custom="Custom" || Custom="CustomN"
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_${Custom}"
-        [[ $OSVer == 4.3* ]] && IPSWCustom="$IPSWCustom-$UniqueChipID"
+        [[ $OSVer == 4.3* ]] && IPSWCustom+="-$UniqueChipID"
+    elif [[ $ProductType == "$DisableBBUpdate" ]]; then
+        Log "Baseband update will be disabled for the custom IPSW."
+        IPSWCustom+="B"
+        if [[ $platform != "win" && $Jailbreak != 1 ]]; then
+            IPSWCustom+="N"
+        fi
     fi
     echo
 
@@ -75,7 +81,7 @@ JailbreakOption() {
     if [[ $Jailbreak != 1 ]]; then
         if [[ $ProductType == "iPhone3"* ]]; then
             [[ $OSVer == "7.1.2" ]] && return
-        else
+        elif [[ $ProductType != "$DisableBBUpdate" ]]; then
             return
         fi
     fi
@@ -213,13 +219,10 @@ IPSW32() {
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
     fi
+    [[ $ProductType == "$DisableBBUpdate" ]] && BBUpdate=
     if [[ $platform == "win" ]]; then
         BBUpdate=
         WinBundles="windows/"
-    elif [[ $ProductType == "iPad2,3" ]]; then
-        BBUpdate=
-        [[ $Jailbreak != 1 ]] && IPSWCustom+="N"
-        IPSWCustom+="B"
     fi
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then

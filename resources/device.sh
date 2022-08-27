@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DisableBBUpdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed
+
 FindDevice() {
     local DeviceIn
     local i=0

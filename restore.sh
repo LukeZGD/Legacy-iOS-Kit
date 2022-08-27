@@ -31,7 +31,7 @@ if [[ $NoColor != 1 ]]; then
 fi
 
 Clean() {
-    rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw BuildManifest.plist version.xml
+    rm -rf iP*/ shsh/ tmp/ *.im4p *.bbfw *.plist *.tmp version.xml
     kill $iproxyPID $ServerPID 2>/dev/null
 }
 
@@ -181,7 +181,7 @@ Main() {
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
                 ExitWin 0
-            elif [[ $ProductType != "iPhone3"* && $ProductType != "iPad2,3" ]]; then
+            elif [[ $ProductType != "iPhone3"* && $ProductType != "$DisableBBUpdate" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken restores on your device."
                 ExitWin 0
             fi

@@ -190,7 +190,7 @@ DowngradeOTA() {
     SaveOTABlobs
     IPSWFindVerify
     kDFU
-    if [[ $Jailbreak == 1 || $ProductType == "iPad2,3" ]]; then
+    if [[ $Jailbreak == 1 || $ProductType == "$DisableBBUpdate" ]]; then
         IPSW32
     else
         IPSWCustom=0
