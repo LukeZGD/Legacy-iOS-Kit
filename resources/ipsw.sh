@@ -352,6 +352,14 @@ IPSW4Cherry() {
 
     Log "ch3rryflower will be used instead of powdersn0w for iOS 4.3.x"
     SaveExternal ch3rryflower
+    if [[ $platform == "linux" ]]; then
+        cd tmp
+        echo "QlNESUZGNDA4AAAAAAAAAEUAAAAAAAAAQKoEAAAAAABCWmg5MUFZJlNZCmbVYQAABtRYTCAAIEAAQAAAEAIAIAAiNNA9QgyYiW0geDDxdyRThQkApm1WEEJaaDkxQVkmU1kFCpb0AACoSA7AAABAAAikAAACAAigAFCDJiApUmmnpMCTNJOaootbhBXWMbqkjO/i7kinChIAoVLegEJaaDkXckU4UJAAAAAA" | base64 -d | tee cherry.patch >/dev/null
+        $bspatch $cherrybin ${cherrybin}2 cherry.patch
+        chmod +x ${cherrybin}2
+        cd ..
+        cherrybin+="2"
+    fi
 
     echo
     Input "Verbose Boot Option"
@@ -378,6 +386,11 @@ IPSW4Cherry() {
     $cherrybin ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -derebusantiquis ../$IPSW7.ipsw iBoot ${JBFiles[@]}
     cd ..
 
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again" \
+        "You may try selecting N for memory option"
+    fi
+
     Log "iOS 4 Fix" # From ios4fix
     zip -d $IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
     cd tmp/src/n90ap/Firmware/all_flash/all_flash.n90ap.production
@@ -399,11 +412,6 @@ IPSW4Cherry() {
     zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
     zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
     cd ../../..
-
-    if [[ ! -e $IPSWCustom.ipsw ]]; then
-        Error "Failed to find custom IPSW. Please run the script again" \
-        "You may try selecting N for memory option"
-    fi
 }
 
 IPSW64() {
