@@ -305,7 +305,7 @@ IPSW4() {
         cp -rf ../resources/firmware/powdersn0wBundles ./FirmwareBundles
         cp -rf ../resources/firmware/src .
         if [[ $Jailbreak == 1 && $OSVer == "6."* ]]; then
-            JBFiles=
+            JBFiles=()
             rm FirmwareBundles/${config}.plist
             mv FirmwareBundles/${config}JB.plist FirmwareBundles/${config}.plist
             cp ../resources/jailbreak/Cydia6.tar src/cydia6.tar
