@@ -83,6 +83,7 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
+- [gaster](https://github.com/0x7ff/gaster) - 0x7ff
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios ([LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW))
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar ([1Conan fork](https://github.com/1Conan/tsschecker))

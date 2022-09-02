@@ -212,6 +212,7 @@ EnterPwnDFU() {
     local pwnDFUTool
     local pwnDFUDevice
     local pwnD=1
+    local Selection=()
     
     if [[ $ProductType == "iPhone3,1" ]]; then
         pwnDFUTool="$pwnedDFU"
@@ -225,17 +226,21 @@ EnterPwnDFU() {
         elif [[ $platform == "macos" ]]; then
             pwnDFUTool="$ipwnder32"
         fi
-    elif [[ $platform == "macos" ]]; then
-        Selection=("ipwnder_lite" "iPwnder32")
+    elif [[ $platform == "macos" || $DeviceProc == 7 ]]; then
+        [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
+        [[ $DeviceProc == 7 ]] && Selection+=("gaster")
+        [[ $platform == "linux" ]] && Selection+=("ipwndfu")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
-        Echo "* If unsure, select 1. Select 2 if 1 does not work."
+        Echo "* If unsure, select 1. If 1 does not work, try selecting the other options."
         Echo "* This option is set to ${Selection[0]} by default (1)."
         Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
+            "gaster" ) pwnDFUTool="$gaster"; break;;
+            "ipwndfu" ) pwnDFUTool="ipwndfu"; SaveExternal ipwndfu; break;;
         esac
         done
     else
@@ -257,6 +262,9 @@ EnterPwnDFU() {
             cd ../..
             SendPwnediBSS
         fi
+    elif [[ $pwnDFUTool == "$gaster" ]]; then
+        $pwnDFUTool pwn
+        pwnDFUDevice=$?
     else
         $pwnDFUTool -p
         pwnDFUDevice=$?
