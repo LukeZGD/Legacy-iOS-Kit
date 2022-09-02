@@ -83,12 +83,13 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
-- [gaster](https://github.com/0x7ff/gaster) - 0x7ff
-- [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios ([LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW))
+- [gaster](https://github.com/0x7ff/gaster) - 0x7ff; [verygenericname (Nathan) fork](https://github.com/verygenericname/gaster)
+- [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
-- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar ([1Conan fork](https://github.com/1Conan/tsschecker))
+- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker)
 - [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (and 194)
-- [idevicerestore](https://github.com/LukeZGD/idevicerestore) - LukeZGD fork
+- [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
+- [idevicererestore](https://github.com/LukeZGD/daibutsuCFW) from daibutsuCFW (used for Windows OTA restores only)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)

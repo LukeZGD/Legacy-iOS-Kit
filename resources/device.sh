@@ -265,6 +265,7 @@ EnterPwnDFU() {
     elif [[ $pwnDFUTool == "$gaster" ]]; then
         $pwnDFUTool pwn
         pwnDFUDevice=$?
+        $pwnDFUTool reset
     else
         $pwnDFUTool -p
         pwnDFUDevice=$?
