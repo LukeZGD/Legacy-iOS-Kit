@@ -293,6 +293,7 @@ Main() {
     fi
     
     Downgrade
+    Log "Downgrade script done!"
     ExitWin 0
 }
 

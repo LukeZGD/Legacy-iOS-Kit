@@ -78,7 +78,7 @@
 - cURL
 - bspatch
 - python2 (ipwndfu, rmsigchks, SimpleHTTPServer), python3 (http.server)
-- [powdersn0w](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios ([LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub))
+- [powdersn0w](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
 - [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios (used for iOS 4.3.x only)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios

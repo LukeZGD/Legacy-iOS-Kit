@@ -75,7 +75,6 @@ FutureRestore() {
     Echo "* Your problem may have already been addressed within the wiki page."
     Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
     echo
-    Log "Downgrade script done!"
 }
 
 DowngradeOther() {
@@ -164,7 +163,6 @@ iDeviceRestore() {
     Echo "* Your problem may have already been addressed within the wiki page."
     Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
     echo
-    Log "Downgrade script done!"
 }
 
 IPSWCustomA7() {
@@ -196,6 +194,19 @@ IPSWCustomA7() {
     fi
  }
 
+RetryOption() {
+    Input "Retry Command Option"
+    Echo "* This gives users the option to retry the restore command."
+    Echo "* It can be useful in case that the restore failed early."
+    Echo "* If the restore failed with the device no longer in DFU, this will not work."
+    Echo "* This option is disabled by default (N)."
+    read -p "$(Input 'Enable this option? (y/N):')" Retry
+    if [[ $Retry != 'Y' && $Retry != 'y' ]]; then
+        return
+    fi
+    $1
+}
+
 DowngradeOTA() {
     if [[ $DeviceProc != 7 ]]; then
         JailbreakOption
@@ -210,6 +221,7 @@ DowngradeOTA() {
     fi
     IPSWSetExtract
     FutureRestore
+    RetryOption FutureRestore
 }
 
 DowngradeOTAWin() {
@@ -235,6 +247,7 @@ DowngradeOTAWin() {
     IPSW32
     IPSWSetExtract
     iDeviceRestore
+    RetryOption iDeviceRestore
 }
 
 Downgrade() {
@@ -269,4 +282,5 @@ Downgrade4() {
     IPSW4
     IPSWSetExtract
     iDeviceRestore
+    RetryOption iDeviceRestore
 }
