@@ -283,4 +283,5 @@ Downgrade4() {
     IPSWSetExtract
     iDeviceRestore
     RetryOption iDeviceRestore
+    Log "Downgrade script done!"
 }

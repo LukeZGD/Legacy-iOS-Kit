@@ -208,12 +208,11 @@ IPSW32() {
         if [[ $OSVer == "8.4.1" ]]; then
             JBFiles=("fstab.tar" "etasonJB-untether.tar" "Cydia8.tar")
             JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
-            ExtraArgs+="-s 2305"
         elif [[ $OSVer == "6.1.3" ]]; then
             JBFiles=("fstab_rw.tar" "p0sixspwn.tar" "Cydia6.tar")
             JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
-            ExtraArgs+="-s 1260"
         fi
+        ExtraArgs+="-S 50"
         JailbreakFiles $JBURL/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
