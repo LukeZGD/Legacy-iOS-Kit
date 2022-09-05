@@ -14,7 +14,7 @@ FindDevice() {
     elif [[ $1 == "Restore" ]]; then
         USB=1297
     fi
-    [[ -n $2 ]] && Timeout=5
+    [[ -n $2 ]] && Timeout=10
     
     Log "Finding device in $1 mode..."
     while (( i < Timeout )); do
