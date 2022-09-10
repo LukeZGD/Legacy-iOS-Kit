@@ -354,8 +354,8 @@ IPSW4Cherry() {
     if [[ $platform == "linux" ]]; then
         cd tmp
         echo "QlNESUZGNDA4AAAAAAAAAEUAAAAAAAAAQKoEAAAAAABCWmg5MUFZJlNZCmbVYQAABtRYTCAAIEAAQAAAEAIAIAAiNNA9QgyYiW0geDDxdyRThQkApm1WEEJaaDkxQVkmU1kFCpb0AACoSA7AAABAAAikAAACAAigAFCDJiApUmmnpMCTNJOaootbhBXWMbqkjO/i7kinChIAoVLegEJaaDkXckU4UJAAAAAA" | base64 -d | tee cherry.patch >/dev/null
-        $bspatch $cherrybin ${cherrybin}2 cherry.patch
-        chmod +x ${cherrybin}2
+        $bspatch ../$cherry/cherry ../$cherry/cherry2 cherry.patch
+        chmod +x ../$cherry/cherry2
         cd ..
         cherrybin+="2"
     fi
