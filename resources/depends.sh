@@ -77,6 +77,7 @@ SetToolPaths() {
     xpwntool="../resources/tools/xpwntool_$platform"
 
     if [[ $platform == "linux" ]]; then
+        idevicerestore="env LD_LIBRARY_PATH=./resources/lib $idevicerestore"
         irecovery="env LD_LIBRARY_PATH=./resources/lib $irecovery"
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
