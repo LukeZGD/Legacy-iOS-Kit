@@ -192,6 +192,7 @@ IPSW32() {
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> tmp/reboot.sh
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> tmp/reboot.sh
         echo "/usr/bin/haxx_overwrite -$HWModel" >> tmp/reboot.sh
+        # uncomment the 2 lines below to add openssh to daibutsu cfw
         #JBFiles=("../resources/jailbreak/sshdeb.tar")                                        # uncomment to add openssh to custom ipsw
         #JailbreakFiles $JBURL/sshdeb.tar sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
         JBFiles2=("bin.tar" "cydia.tar" "untether.tar")
@@ -199,7 +200,8 @@ IPSW32() {
         mkdir -p tmp/jailbreak
         for i in {0..2}; do
             JBURL="https://github.com/LukeZGD/daibutsuCFW/raw/main/build/src/"
-            (( i > 0 )) && JBURL+="daibutsu/${JBFiles2[$i]}" || JBURL+="${JBFiles2[$i]}"
+            (( i > 0 )) && JBURL+="daibutsu/"
+            JBURL+="${JBFiles2[$i]}"
             JailbreakFiles $JBURL ${JBFiles2[$i]} ${JBSHA1[$i]}
             cp resources/jailbreak/${JBFiles2[$i]} tmp/jailbreak/
         done
@@ -217,6 +219,9 @@ IPSW32() {
         for i in {0..2}; do
             JBFiles[$i]=../resources/jailbreak/${JBFiles[$i]}
         done
+        # adding sshdeb works for 6.1.3 only from what i've tested, doesn't seem to work on etasonjb ipsws
+        #JBFiles+=("../resources/jailbreak/sshdeb.tar")                                       # uncomment to add openssh to custom ipsw
+        #JailbreakFiles $JBURL/sshdeb.tar sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
     fi
     [[ $ProductType == "$DisableBBUpdate" ]] && BBUpdate=
     [[ $platform == "win" ]] && WinBundles="windows/"

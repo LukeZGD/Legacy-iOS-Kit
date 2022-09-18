@@ -83,7 +83,14 @@ GetDeviceValues() {
         UniqueChipID=
     fi
 
-    if [[ ! $DeviceState ]]; then
+    if [[ -n $DeviceState ]]; then
+        if [[ ! $ProductType ]]; then
+            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
+        fi
+        if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
+            read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
+        fi
+    else
         echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
         echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
         echo "${Color_Y}* For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
@@ -91,13 +98,6 @@ GetDeviceValues() {
         echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
         echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         ExitWin 1
-    elif [[ -n $DeviceState ]]; then
-        if [[ ! $ProductType ]]; then
-            read -p "$(Input 'Enter ProductType (eg. iPad2,1):')" ProductType
-        fi
-        if [[ ! $UniqueChipID || $UniqueChipID == 0 ]]; then
-            read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
-        fi
     fi
     
     Firmware=resources/firmware/$ProductType
@@ -542,9 +542,13 @@ Ramdisk4() {
     Echo "* Then SSH to 127.0.0.1:2022"
     Echo "    ssh -p 2022 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
     Echo "* Enter root password: alpine"
-    Echo "* Mount filesystems with these commands:"
+    Echo "* Mount filesystems with these commands (iOS 5+):"
     Echo "    mount_hfs /dev/disk0s1s1 /mnt1"
     Echo "    mount_hfs /dev/disk0s1s2 /mnt1/private/var"
+    Echo "* If your device is on iOS 4, use these commands instead:"
+    Echo "    fsck_hfs /dev/disk0s1"
+    Echo "    mount_hfs /dev/disk0s1 /mnt1"
+    Echo "    mount_hfs /dev/disk0s2s1 /mnt/private/var"
     Echo "* To reboot, use this command:"
     Echo "    reboot_bak"
 }
