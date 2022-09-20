@@ -118,6 +118,10 @@ SaveExternal() {
         Link=https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f
         Name=ch3rryflower
         SHA1=790d56db354151b9740c929e52c097ba57f2929d
+    elif [[ $1 == "powdersn0w" ]]; then
+        Link=https://dora2ios.github.io/download/konayuki/powdersn0w_v2.0b3.zip
+        Name=powdersn0w
+        SHA1=c733aac4a0833558ef9f5517f2a11ca547110b6e
     fi
     if [[ -d ./resources/$Name ]]; then
         return

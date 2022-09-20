@@ -42,6 +42,11 @@ JailbreakSet() {
 }
 
 JailbreakOption() {
+    if [[ $ProductType == "iPhone3,3" && $OSVer != "7.1.2" ]]; then
+        IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_Custom"
+        return
+    fi
+
     Input "Jailbreak Option"
     Echo "* When this option is enabled, your device will be jailbroken on restore."
     if [[ $OSVer == "6.1.3" ]]; then
@@ -257,6 +262,9 @@ IPSW4() {
     if [[ $OSVer == "4.3"* ]]; then
         IPSW4Cherry
         return
+    elif [[ $ProductType == "iPhone3,3" && $OSVer != "7.1.2" ]]; then
+        IPSW4Powder
+        return
     else
         local JBURL2="https://github.com/LukeZGD/powdersn0w_pub/raw/main/xpwn/src/target/n90/11D257/exploit"
         JailbreakFiles $JBURL2 exploit bedd10a96ba0f305a0af74a15e1eee88946070a1
@@ -414,6 +422,46 @@ IPSW4Cherry() {
     zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
     zip -r0 ../../../$IPSWCustom.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
     cd ../../..
+}
+
+IPSW4Powder() {
+    Log "powdersn0w v2.0b3 will be used instead of powdersn0w_pub for iPhone3,3" # powdersn0w_pub doesn't have n92 exploit
+    SaveExternal powdersn0w # downloads powdersn0w from https://dora2ios.github.io/download/konayuki/powdersn0w_v2.0b3.zip
+
+    powderdir="../resources/powdersn0w/macosx_x86_64"
+    cd tmp
+    cp -rf $powderdir/FirmwareBundles $powderdir/src .
+    powdersn0w="$powderdir/ipsw"
+
+    if [[ $platform != "macos" ]]; then
+        echo "QlNESUZGNDA2AAAAAAAAAEkAAAAAAAAA4HscAAAAAABCWmg5MUFZJlNZcLcTFwAAB+DBQKAABAAIQCBCACAAIjEaNCDJiDaAhcW9PF3JFOFCQcLcTFxCWmg5MUFZJlNZidWPbQAOTMKswAAAAJAAEAAACKAAAAigAFCDJiBNUpoPU+qqe5IkMxAqd8VISW223BKUbv4u5IpwoSETqx7aQlpoORdyRThQkAAAAAA=" | base64 -d | tee ipsw.patch >/dev/null
+        $bspatch $powderdir/ipsw $powderdir/ipsw_patched ipsw.patch
+        powdersn0w="darling $(pwd)/$powderdir/ipsw_patched"
+        if [[ ! $(which darling) ]]; then
+            Error "Cannot find darling. darling is required to create custom IPSW."
+        fi
+    fi
+# above patch changes temp path from /tmp to ././ (current dir)
+# only modifies xpwn part, hopefully doesn't violate nbsk license. here is the equivalent diff (based on gpl code released):
+: '
+main.c:
+187c188
+<             strcpy(tmpFileBuffer, "/tmp/rootXXXXXX");
+---
+>             strcpy(tmpFileBuffer, "././/rootXXXXXX");
+outputstate.c:
+292c292
+<       strcpy(tmpFileBuffer, "/tmp/pwnXXXXXX");
+---
+>       strcpy(tmpFileBuffer, "././/pwnXXXXXX");
+'
+    Log "Preparing custom IPSW with powdersn0w..."
+    $powdersn0w ../$IPSW.ipsw ../$IPSWCustom.ipsw -useDRA ../$IPSW7.ipsw
+    cd ..
+
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again"
+    fi
 }
 
 IPSW64() {

@@ -321,9 +321,10 @@ SelectVersion() {
 
     if [[ $ProductType == "iPhone3"* ]]; then
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
+        [[ $ProductType != "iPhone3,2" ]] && Selection+=("6.1.3")
 
         if [[ $ProductType == "iPhone3,1" ]]; then
-            Selection+=("6.1.3 ""5.1.1 (9B208)" "5.1.1 (9B206)")
+            Selection+=("5.1.1 (9B208)" "5.1.1 (9B206)")
             Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
             if [[ $platform != "linux" ]]; then
                 Echo "* iOS 4.3.x downgrades are supported on Linux only"
@@ -334,6 +335,12 @@ SelectVersion() {
                 Selection2+=("4.3.3" "4.3")
             fi
             Selection+=("More versions")
+
+        elif [[ $ProductType == "iPhone3,3" && $platform != "macos" && $Mode != "Restore712" ]]; then
+            Echo "* For creating 6.1.3 custom IPSW, make sure to have darling installed: https://github.com/darlinghq/darling"
+            Echo "* For Ubuntu/Debian, you may install the .deb from releases."
+            Echo "* For Arch, you may install darling-bin from AUR."
+            Echo "* For other distros, you might need to build darling yourself."
         fi
 
         if [[ $Mode == "Restore712" ]]; then

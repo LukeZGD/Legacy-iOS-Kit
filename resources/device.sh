@@ -158,7 +158,7 @@ GetDeviceValues() {
     
     if [[ $ProductType == "iPhone3"* ]]; then
         DeviceProc=4
-        if [[ $ProductType == "iPhone3,1" ]]; then
+        if [[ $ProductType != "iPhone3,2" ]]; then
             Log "$ProductType detected. iPhone4Down functions enabled."
             Echo "* This script uses powdersn0w by dora2ios"
         else

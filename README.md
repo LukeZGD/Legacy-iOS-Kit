@@ -21,7 +21,7 @@
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs
-- **iPhone4Down supports the iPhone 4 GSM (iPhone3,1) only**
+- **iPhone4Down supports iPhone 4 GSM and CDMA (iPhone3,1 and iPhone3,3)**
 
 <table>
     <thead>
@@ -48,10 +48,11 @@
         <tr><td>iPad mini 1</td></tr>
         <tr><td>iPod touch 5</td></tr>
         <tr>
-            <td rowspan=2>iOS 6.1.3</td>
+            <td rowspan=3>iOS 6.1.3</td>
             <td>iPhone 4S</td>
         </tr>
         <tr><td>iPad 2 (except iPad2,4)</td></tr>
+        <tr><td>iPhone 4 GSM, CDMA</td></tr>
         <tr>
             <td>iOS 7.1.2</td>
             <td>iPhone 4 (all models)</td></tr>
