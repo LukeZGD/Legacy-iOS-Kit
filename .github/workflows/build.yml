@@ -52,6 +52,8 @@ jobs:
           mv ./resources/lib/* ./exclude/lib
           mv ./resources/tools/*linux* ./exclude/tools
           mv ./resources/firmware/FirmwareBundles ./resources/firmware/JailbreakBundles ./exclude/firmware
+          mkdir ./resources/firmware/FirmwareBundles
+          mv ./exclude/firmware/FirmwareBundles/Down_iPhone3* ./resources/firmware/FirmwareBundles
 
       - name: Download and extract libimobiledevice_win
         run: |

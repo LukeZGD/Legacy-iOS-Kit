@@ -159,7 +159,7 @@ GetDeviceValues() {
     if [[ $ProductType == "iPhone3"* ]]; then
         DeviceProc=4
         if [[ $ProductType == "iPhone3,1" ]]; then
-            Log "iPhone 4 GSM detected. iPhone4Down functions enabled."
+            Log "$ProductType detected. iPhone4Down functions enabled."
             Echo "* This script uses powdersn0w by dora2ios"
         else
             Log "$ProductType detected. Your device is not supported by powdersn0w (yet)"
@@ -212,9 +212,10 @@ EnterPwnDFU() {
     local pwnDFUTool
     local pwnDFUDevice
     local pwnD=1
+    local pwn="-p"
     local Selection=()
     
-    if [[ $ProductType == "iPhone3,1" ]]; then
+    if [[ $DeviceProc == 4 ]]; then
         pwnDFUTool="$pwnedDFU"
         if [[ $platform == "win" ]]; then
             Log "iPhone 4 device detected in DFU mode."
@@ -248,6 +249,12 @@ EnterPwnDFU() {
         SaveExternal ipwndfu
     fi
     
+    if [[ $pwnDFUTool == "$gaster" ]]; then
+        pwn="pwn"
+    elif [[ $ProductType == "iPhone3,3" && $platform == "linux" ]]; then
+        pwn="-s"
+    fi
+
     Log "Entering pwnDFU mode with: $pwnDFUTool"
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
@@ -262,11 +269,8 @@ EnterPwnDFU() {
             cd ../..
             SendPwnediBSS
         fi
-    elif [[ $pwnDFUTool == "$gaster" ]]; then
-        $pwnDFUTool pwn
-        pwnDFUDevice=$?
     else
-        $pwnDFUTool -p
+        $pwnDFUTool $pwn
         pwnDFUDevice=$?
     fi
     if [[ $DeviceProc == 4 || $DeviceProc == 7 ]]; then
@@ -274,7 +278,7 @@ EnterPwnDFU() {
         SendiBSS=1
     fi
     
-    if [[ $ProductType == "iPhone3,1" ]]; then
+    if [[ $DeviceProc == 4 ]]; then
         if [[ $pwnD != 1 ]]; then
             Error "Failed to enter pwnDFU mode. Please run the script again. Note that kDFU mode will NOT work!" \
             "Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
@@ -458,6 +462,29 @@ kDFU() {
     FindDevice "DFU"
 }
 
+Remove4DL() {
+    local Link
+    if [[ ! -e saved/$ProductType/$1_p ]]; then
+        Link=$(cat $Firmware/11D257/url)
+        [[ -n $2 ]] && Link=$(cat $Firmware/$2/url)
+        Log "Downloading $1..."
+        $partialzip $Link Firmware/dfu/$1.${HWModel}ap.RELEASE.dfu $1
+        mkdir -p saved/$ProductType 2>/dev/null
+        cp $1 saved/$ProductType/$1_p
+        mv $1 tmp
+    else
+        cp saved/$ProductType/$1_p tmp/$1
+    fi
+    Log "Patching $1..."
+    if [[ -n $2 ]]; then
+        $bspatch tmp/iBSS tmp/pwnediBSS resources/patches/$1.${HWModel}ap.$2.patch
+    else
+        $bspatch tmp/$1 tmp/pwned$1 resources/patches/$1.${HWModel}ap.RELEASE.patch
+    fi
+    Log "Booting $1..."
+    $irecovery -f tmp/pwned$1
+}
+
 Remove4() {
     Input "Select option:"
     select opt in "Disable exploit" "Enable exploit" "(Any other key to exit)"; do
@@ -467,19 +494,13 @@ Remove4() {
         * ) exit 0;;
     esac
     done
-    if [[ ! -e saved/iPhone3,1/iBSS_8L1 ]]; then
-        Log "Downloading iBSS..."
-        $partialzip http://appldnld.apple.com/iPhone4/041-1966.20110721.V3Ufe/iPhone3,1_4.3.5_8L1_Restore.ipsw Firmware/dfu/iBSS.n90ap.RELEASE.dfu iBSS
-        mkdir -p saved/iPhone3,1 2>/dev/null
-        cp iBSS saved/iPhone3,1/iBSS_8L1
-        mv iBSS tmp
+
+    if [[ $ProductType == "iPhone3,1" ]]; then
+        Remove4DL iBSS 8L1
     else
-        cp saved/iPhone3,1/iBSS_8L1 tmp/iBSS
+        Remove4DL iBSS
+        Remove4DL iBEC
     fi
-    Log "Patching iBSS..."
-    $bspatch tmp/iBSS tmp/pwnediBSS resources/patches/iBSS.n90ap.8L1.patch
-    Log "Booting iBSS..."
-    $irecovery -f tmp/pwnediBSS
     sleep 2
     Log "Running commands..."
     $irecovery -c "setenv boot-partition $Rec"

@@ -140,8 +140,10 @@ Main() {
         [[ $NoDevice != 1 ]] && Selection+=("Downgrade Device")
         [[ $DeviceProc != 4 ]] && Selection+=("Save OTA Blobs")
 
-        if [[ $ProductType == "iPhone3,1" && $NoDevice != 1 ]]; then
-            Selection+=("Disable/Enable Exploit" "Restore to 7.1.2" "SSH Ramdisk")
+        if [[ $ProductType == "iPhone3"* && $NoDevice != 1 ]]; then
+            Selection+=("Restore to 7.1.2")
+            [[ $ProductType != "iPhone3,2" ]] && Selection+=("Disable/Enable Exploit")
+            [[ $ProductType == "iPhone3,1" ]] && Selection+=("SSH Ramdisk")
         fi
 
         if [[ $DeviceProc != 7 ]]; then
@@ -317,10 +319,23 @@ SelectVersion() {
         Selection+=("iOS 6.1.3")
     fi
 
-    if [[ $ProductType == "iPhone3,1" ]]; then
+    if [[ $ProductType == "iPhone3"* ]]; then
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
-        Selection+=("6.1.3" "5.1.1 (9B208)" "5.1.1 (9B206)")
-        Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+
+        if [[ $ProductType == "iPhone3,1" ]]; then
+            Selection+=("6.1.3 ""5.1.1 (9B208)" "5.1.1 (9B206)")
+            Selection2=("6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+            if [[ $platform != "linux" ]]; then
+                Echo "* iOS 4.3.x downgrades are supported on Linux only"
+                Echo "* For macOS users, use cherryflowerJB instead"
+            fi
+            if [[ $platform != "win" ]]; then
+                Selection+=("4.3.5")
+                Selection2+=("4.3.3" "4.3")
+            fi
+            Selection+=("More versions")
+        fi
+
         if [[ $Mode == "Restore712" ]]; then
             Echo "* Make sure to disable the exploit first! See the README for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
@@ -329,15 +344,8 @@ SelectVersion() {
             BuildVer="11D257"
             Mode="Downgrade4"
             return
-        elif [[ $platform != "linux" ]]; then
-            Echo "* iOS 4.3.x downgrades are supported on Linux only"
-            Echo "* For macOS users, use cherryflowerJB instead"
         fi
-        if [[ $platform != "win" ]]; then
-            Selection+=("4.3.5")
-            Selection2+=("4.3.3" "4.3")
-        fi
-        Selection+=("More versions")
+
         if [[ $Mode == "Downgrade" ]]; then
             Mode="Downgrade4"
         fi

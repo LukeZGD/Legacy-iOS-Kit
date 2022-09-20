@@ -42,7 +42,6 @@ JailbreakSet() {
 }
 
 JailbreakOption() {
-    echo
     Input "Jailbreak Option"
     Echo "* When this option is enabled, your device will be jailbroken on restore."
     if [[ $OSVer == "6.1.3" ]]; then
@@ -249,7 +248,6 @@ IPSW4() {
     local JBFiles=()
     local JBFiles2
     local JBSHA1
-    local WinBundles
 
     if [[ -e $IPSWCustom.ipsw ]]; then
         Log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -287,10 +285,9 @@ IPSW4() {
     if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
         if [[ $platform == "win" ]]; then
             ipsw="${ipsw}3"
-            WinBundles="windows/"
         fi
         Log "Preparing custom IPSW..."
-        cp -rf ../resources/firmware/${WinBundles}FirmwareBundles .
+        cp -rf ../resources/firmware/FirmwareBundles .
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
     elif [[ ! -e $IPSWCustom.ipsw ]]; then
         echo
@@ -357,6 +354,7 @@ IPSW4Cherry() {
     Log "ch3rryflower will be used instead of powdersn0w for iOS 4.3.x"
     SaveExternal ch3rryflower
     if [[ $platform == "linux" ]]; then
+        # patch cherry temp path from /tmp to ././ (current dir)
         cd tmp
         echo "QlNESUZGNDA4AAAAAAAAAEUAAAAAAAAAQKoEAAAAAABCWmg5MUFZJlNZCmbVYQAABtRYTCAAIEAAQAAAEAIAIAAiNNA9QgyYiW0geDDxdyRThQkApm1WEEJaaDkxQVkmU1kFCpb0AACoSA7AAABAAAikAAACAAigAFCDJiApUmmnpMCTNJOaootbhBXWMbqkjO/i7kinChIAoVLegEJaaDkXckU4UJAAAAAA" | base64 -d | tee cherry.patch >/dev/null
         $bspatch ../$cherry/cherry ../$cherry/cherry2 cherry.patch

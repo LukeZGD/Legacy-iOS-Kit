@@ -54,9 +54,12 @@
         <tr><td>iPad 2 (except iPad2,4)</td></tr>
         <tr>
             <td>iOS 7.1.2</td>
-            <td rowspan=2>iPhone 4 GSM (iPhone3,1)</td>
+            <td>iPhone 4 (all models)</td></tr>
         </tr>
-        <tr><td>iOS 4.3 to 6.1.3</td></tr></tr>
+        <tr>
+            <td>iOS 4.3 to 6.1.3</td>
+            <td>iPhone 4 GSM</td>
+        </tr>
     </tbody>
 </table>
 
