@@ -111,9 +111,14 @@ GetDeviceValues() {
         BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
         LatestVer="9.3.5"
     
-    elif [[ $ProductType == "iPad2,3" || $ProductType == "iPhone3,3" ]]; then
+    elif [[ $ProductType == "iPad2,3" ]]; then
         Baseband="Phoenix-3.6.03.Release.bbfw"
         BasebandSHA1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
+
+    elif [[ $ProductType == "iPhone3,3" ]]; then
+        BasebandURL=$(cat $Firmware/11D257/url)
+        Baseband="Phoenix-3.0.04.Release.bbfw"
+        BasebandSHA1="a507ee2fe061dfbf8bee7e512df52ade8777e113"
     
     elif [[ $ProductType == "iPad2,6" || $ProductType == "iPad2,7" ]]; then
         Baseband="Mav5-11.80.00.Release.bbfw"
