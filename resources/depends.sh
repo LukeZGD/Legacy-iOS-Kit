@@ -176,6 +176,8 @@ InstallDepends() {
     fi
 
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+        Echo "* Arch Linux repos do not ship python2, which is needed for ipwndfu"
+        Echo "* If you need to use ipwndfu, python2 can be installed from the AUR"
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
@@ -192,7 +194,7 @@ InstallDepends() {
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base usbmuxd vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base python3 usbmuxd vim xmlstarlet zenity
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
