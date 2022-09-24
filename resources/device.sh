@@ -230,9 +230,12 @@ EnterPwnDFU() {
     elif [[ $platform == "macos" || $DeviceProc == 7 ]]; then
         [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
         [[ $DeviceProc == 7 ]] && Selection+=("gaster")
-        [[ $platform == "linux" ]] && Selection+=("ipwndfu")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
+        if [[ $platform == "linux" ]]; then
+            Selection+=("ipwndfu")
+            Echo "* For Arch, install python2 first from AUR before selecting ipwndfu."
+        fi
         Echo "* If unsure, select 1. If 1 does not work, try selecting the other options."
         Echo "* This option is set to ${Selection[0]} by default (1)."
         Input "Select your option:"
@@ -249,12 +252,7 @@ EnterPwnDFU() {
         SaveExternal ipwndfu
     fi
     
-    if [[ $pwnDFUTool == "$gaster" ]]; then
-        pwn="pwn"
-    elif [[ $ProductType == "iPhone3,3" && $platform == "linux" ]]; then
-        pwn="-s"
-    fi
-
+    [[ $pwnDFUTool == "$gaster" ]] && pwn="pwn"
     Log "Entering pwnDFU mode with: $pwnDFUTool"
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
@@ -384,7 +382,7 @@ SendPwnediBSSA5() {
     Input "Send iBSS Option"
     Echo "* To send pwned iBSS using ipwndfu, select Y. (does not work on ARM Macs)"
     Echo "* To let futurerestore send iBSS, select N. (likely does not work)"
-    Echo "* For macOS 12 and newer, install python2 first before selecting ipwndfu."
+    Echo "* For Arch, macOS 12 and newer, install python2 first before selecting ipwndfu."
     Echo "* This option is enabled by default (Y)."
     read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
     if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then

@@ -13,7 +13,7 @@ SetToolPaths() {
         bspatch="$(which bspatch)"
         cherry="./resources/ch3rryflower/Tools/ubuntu/UNTETHERED"
         futurerestore="./resources/tools/futurerestore_linux"
-        python="$(which python2)"
+        python="$(which python3)"
         xmlstarlet="$(which xmlstarlet)"
         zenity="$(which zenity)"
 
@@ -67,6 +67,7 @@ SetToolPaths() {
     ping="ping -c1"
     powdersn0w="../resources/tools/powdersn0w_$platform"
     pwnedDFU="./resources/tools/pwnedDFU_$platform"
+    python2="$(which python2 2>/dev/null)"
     rmsigchks="$python rmsigchks.py"
     sha1sum="$(which sha1sum 2>/dev/null)"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
@@ -82,14 +83,17 @@ SetToolPaths() {
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
         fi
+        ipwndfu="$python2 ipwndfu"
+        rmsigchks="$python2 rmsigchks.py"
+        SimpleHTTPServer="$python -m http.server 8888"
 
     elif [[ $platform == "macos" ]]; then
         sha1sum="$(which shasum)"
         if (( ${platformver:0:2} > 11 )); then
             # for macOS 12 and newer
             python="/usr/bin/python3"
-            ipwndfu="$(which python2) ipwndfu"
-            rmsigchks="$(which python2) rmsigchks.py"
+            ipwndfu="$python2 ipwndfu"
+            rmsigchks="$python2 rmsigchks.py"
             SimpleHTTPServer="$python -m http.server 8888"
         fi
     elif [[ $platform == "win" ]]; then
@@ -172,18 +176,18 @@ InstallDepends() {
     fi
 
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python2 udev unzip usbmuxd usbutils vim xmlstarlet zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
