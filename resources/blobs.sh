@@ -58,7 +58,7 @@ Save712Blobs() {
     Log "Saving 7.1.2 blobs with tsschecker..."
     $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m $BuildManifest -s -b
     SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
-    [[ -z $SHSHChk ]] && Error "Saving $OSVer blobs failed. Please run the script again"
+    [[ -z $SHSHChk ]] && Error "Saving 7.1.2 blobs failed. Please run the script again"
     mkdir -p saved/shsh 2>/dev/null
     mv $SHSHChk $SHSH
     Log "Successfully saved 7.1.2 blobs: $SHSH"
