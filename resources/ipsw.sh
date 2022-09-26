@@ -73,7 +73,12 @@ JailbreakOption() {
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_${Custom}"
         [[ $OSVer == 4.3* ]] && IPSWCustom+="-$UniqueChipID"
     elif [[ $ProductType == "$DisableBBUpdate" ]]; then
-        Log "Baseband update will be disabled for the custom IPSW."
+        Log "WARNING - Baseband update will be disabled for the custom IPSW."
+        Echo "* With baseband update disabled, activation errors may occur."
+        Echo "* Do NOT continue if you do not have other means for activation."
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+        read -s
+        Baseband=0
         IPSWCustom+="B"
         if [[ $platform != "win" && $Jailbreak != 1 ]]; then
             IPSWCustom+="N"

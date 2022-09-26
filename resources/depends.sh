@@ -100,9 +100,8 @@ SetToolPaths() {
         ping="ping -n 1"
         Log "WARNING - Using iOS-OTA-Downgrader on Windows is highly discouraged."
         Echo "* Please use it on Linux or macOS instead."
-        Echo "* You may still continue, but you might encounter problems with restoring and activation."
-        Echo "* You have been warned."
-        sleep 5
+        Echo "* You may still continue, but you might encounter problems with restoring the device."
+        sleep 3
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
         read -s
     fi

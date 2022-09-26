@@ -56,7 +56,7 @@ FutureRestore() {
     fi
 
     if [[ $Baseband == 0 ]]; then
-        Log "Device $ProductType has no baseband"
+        Log "Device $ProductType has no baseband/disabled baseband update"
         ExtraArgs+=("--no-baseband")
     else
         FRBaseband
@@ -144,7 +144,7 @@ iDeviceRestore() {
         ExtraArgs="-r"
         idevicerestore="$idevicererestore"
         if [[ $Baseband == 0 ]]; then
-            Log "Device $ProductType has no baseband"
+            Log "Device $ProductType has no baseband/disabled baseband update"
         else
             FRBaseband
             cp saved/baseband/$Baseband tmp/bbfw.tmp
