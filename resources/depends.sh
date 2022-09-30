@@ -53,7 +53,6 @@ SetToolPaths() {
     fi
 
     cherrybin="../$cherry/cherry"
-    gaster="./resources/tools/gaster_$platform"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     idevicerestore="./resources/tools/idevicerestore_$platform"

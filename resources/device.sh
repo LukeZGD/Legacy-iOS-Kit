@@ -217,10 +217,9 @@ EnterPwnDFU() {
     local pwnDFUTool
     local pwnDFUDevice
     local pwnD=1
-    local pwn="-p"
     local Selection=()
     
-    if [[ $DeviceProc == 4 ]]; then
+    if [[ $DeviceProc == 4 && $platform != "macos" ]]; then
         pwnDFUTool="$pwnedDFU"
         if [[ $platform == "win" ]]; then
             Log "iPhone 4 device detected in DFU mode."
@@ -229,35 +228,26 @@ EnterPwnDFU() {
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
             return
-        elif [[ $platform == "macos" ]]; then
-            pwnDFUTool="$ipwnder32"
         fi
-    elif [[ $platform == "macos" || $DeviceProc == 7 ]]; then
-        [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
-        [[ $DeviceProc == 7 ]] && Selection+=("gaster")
+    elif [[ $platform == "macos" ]]; then
+        Selection+=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
-        if [[ $platform == "linux" ]]; then
-            Selection+=("ipwndfu")
-            Echo "* For Arch, install python2 first from AUR before selecting ipwndfu."
-        fi
-        Echo "* If unsure, select 1. If 1 does not work, try selecting the other options."
+        Echo "* If unsure, select 1. If 1 does not work, try selecting the other option."
         Echo "* This option is set to ${Selection[0]} by default (1)."
         Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
-            "gaster" ) pwnDFUTool="$gaster"; break;;
-            "ipwndfu" ) pwnDFUTool="ipwndfu"; SaveExternal ipwndfu; break;;
         esac
         done
     else
+        Echo "* For Arch, install python2 first from AUR before using ipwndfu."
         pwnDFUTool="ipwndfu"
         SaveExternal ipwndfu
     fi
     
-    [[ $pwnDFUTool == "$gaster" ]] && pwn="pwn"
     Log "Entering pwnDFU mode with: $pwnDFUTool"
     if [[ $pwnDFUTool == "ipwndfu" ]]; then
         cd resources/ipwndfu
@@ -273,7 +263,7 @@ EnterPwnDFU() {
             SendPwnediBSS
         fi
     else
-        $pwnDFUTool $pwn
+        $pwnDFUTool -p
         pwnDFUDevice=$?
     fi
     if [[ $DeviceProc == 4 || $DeviceProc == 7 ]]; then
