@@ -178,7 +178,7 @@ InstallDepends() {
         Echo "* If you need to use ipwndfu, python2 can be installed from the AUR"
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity
    
-   elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
+    elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
         echo "* Gentoo repos do not ship python2, which is needed for ipwndfu"
         echo "* If you need to use ipwndfu, python2 can be installed from the official site"
         sudo emerge -av bsdiff net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity python zenity
