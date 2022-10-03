@@ -73,11 +73,13 @@ JailbreakOption() {
         IPSWCustom="${ProductType}_${OSVer}_${BuildVer}_${Custom}"
         [[ $OSVer == 4.3* ]] && IPSWCustom+="-$UniqueChipID"
     elif [[ $ProductType == "$DisableBBUpdate" ]]; then
-        Log "WARNING - Baseband update will be disabled for the custom IPSW."
-        Echo "* With baseband update disabled, activation errors may occur."
-        Echo "* Do NOT continue if you do not have other means for activation."
-        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
-        read -s
+        Log "Baseband update will be disabled for the custom IPSW."
+        if [[ $ProductType != "iPad2,3" ]]; then
+            Log "WARNING - With baseband update disabled, activation errors might occur."
+            Echo "* If you do not have other means for activation, this is not recommended."
+            Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+            read -s
+        fi
         Baseband=0
         IPSWCustom+="B"
         if [[ $platform != "win" && $Jailbreak != 1 ]]; then
@@ -296,9 +298,6 @@ IPSW4() {
 
     cd tmp
     if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
-        if [[ $platform == "win" ]]; then
-            ipsw="${ipsw}3"
-        fi
         Log "Preparing custom IPSW..."
         cp -rf ../resources/firmware/FirmwareBundles .
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}

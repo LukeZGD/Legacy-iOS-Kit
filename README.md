@@ -75,6 +75,7 @@
 - [**Fedora**](https://getfedora.org/) 36 and newer
 - [**Debian**](https://www.debian.org/) 11 Bullseye and newer, Sid, and Debian-based distros
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed, Leap 15.4
+- [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
 - **macOS** 10.13 and newer
 - **Windows** 7 and newer
 
