@@ -90,7 +90,8 @@ Main() {
         Echo "Version: $(cat resources/git_hash)"
     else
         Echo "Version: Unknown"
-        Echo "* I recommend downloading iOS-OTA-Downgrader from the GitHub releases page"
+        Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
+        "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
     fi
 
     SetToolPaths
@@ -322,6 +323,11 @@ SelectVersion() {
     if [[ $ProductType == "iPhone3"* ]]; then
         [[ $Mode == "IPSW32" ]] && Selection+=("7.1.2")
         [[ $ProductType != "iPhone3,2" ]] && Selection+=("6.1.3")
+
+        if [[ $platform == "macos" ]]; then
+            Echo "* Using iPhone4Down on macOS is not recommended for downgrading."
+            Echo "* Please use powdersn0w or cherryflowerJB from dora2ios instead."
+        fi
 
         if [[ $ProductType == "iPhone3,1" ]]; then
             Selection+=("5.1.1 (9B208)" "5.1.1 (9B206)")

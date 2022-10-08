@@ -73,7 +73,7 @@ FutureRestore() {
     Log "Restoring done! Read the message below if any error has occurred:"
     Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     Echo "* Your problem may have already been addressed within the wiki page."
-    Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    Echo "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     echo
 }
 
@@ -161,7 +161,7 @@ iDeviceRestore() {
     fi
     Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     Echo "* Your problem may have already been addressed within the wiki page."
-    Echo "* If opening an issue in GitHub, please provide a FULL log. Otherwise, your issue may be dismissed."
+    Echo "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     echo
 }
 
