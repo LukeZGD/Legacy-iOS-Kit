@@ -8,6 +8,7 @@ jobs:
 
       - name: Create name version env
         run: |
+          sudo timedatectl set-timezone Asia/Singapore
           echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
           echo "SHA_SHORT=$(echo ${{ github.sha }} | cut -c -7)" >> $GITHUB_ENV
 

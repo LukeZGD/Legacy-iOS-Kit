@@ -90,7 +90,8 @@ Main() {
         fi
         Echo "Version: $CurrentVersion"
     elif [[ -e resources/git_hash ]]; then
-        Echo "Version: $(cat resources/git_hash)"
+        CurrentVersion="$(cat resources/git_hash)"
+        Echo "Version: $CurrentVersion"
     else
         Echo "Version: Unknown"
         if [[ $NoVersionCheck != 1 ]]; then
