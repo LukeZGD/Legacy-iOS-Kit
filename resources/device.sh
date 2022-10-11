@@ -349,7 +349,7 @@ PatchiBSS() {
         Log "Downloading iBSS..."
         $partialzip "$(cat $Firmware/$iBSSBuildVer/url)" Firmware/dfu/$iBSS.dfu $iBSS.dfu
         mkdir -p saved/$ProductType 2>/dev/null
-        mv $iBSS.dfu saved/$ProductType
+        mv $iBSS.dfu saved/$ProductType/
     fi
 
     if [[ ! -e saved/$ProductType/$iBSS.dfu ]]; then
@@ -464,7 +464,7 @@ Remove4DL() {
         $partialzip $Link Firmware/dfu/$1.${HWModel}ap.RELEASE.dfu $1
         mkdir -p saved/$ProductType 2>/dev/null
         cp $1 saved/$ProductType/$1_p
-        mv $1 tmp
+        mv $1 tmp/
     else
         cp saved/$ProductType/$1_p tmp/$1
     fi
@@ -529,7 +529,7 @@ Ramdisk4() {
             curl -L $JailbreakLink/support_files/7.1.2/Ramdisk/$file -o $file
         done
         cd ..
-        cp -rf ramdisk ../resources
+        cp -rf ramdisk/ ../resources/
         cd ..
     fi
 

@@ -124,7 +124,7 @@ JailbreakFiles() {
     fi
     cd tmp
     SaveFile $1 $2 $3
-    mv $2 ../resources/jailbreak
+    mv $2 ../resources/jailbreak/
     cd ..
 }
 
@@ -152,7 +152,7 @@ IPSWFindVerify() {
         Echo "* The script will now proceed to download it for you. If you want to download it yourself, here is the link: $(cat $Firmware/$BuildVerDL/url)"
         Log "Downloading IPSW... (Press Ctrl+C to cancel)"
         curl -L $(cat $Firmware/$BuildVerDL/url) -o tmp/$IPSWDL.ipsw
-        mv tmp/$IPSWDL.ipsw .
+        mv tmp/$IPSWDL.ipsw ./
     fi
 
     Log "Verifying $IPSWDL.ipsw..."
@@ -241,9 +241,9 @@ IPSW32() {
         Log "Preparing custom IPSW..."
         cd tmp
         if [[ $JBDaibutsu == 1 ]]; then
-            cp -R ../resources/firmware/${WinBundles}JailbreakBundles FirmwareBundles
+            cp -R ../resources/firmware/${WinBundles}JailbreakBundles/ FirmwareBundles/
         else
-            cp -R ../resources/firmware/${WinBundles}FirmwareBundles FirmwareBundles
+            cp -R ../resources/firmware/${WinBundles}FirmwareBundles/ ./
         fi
         $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $BBUpdate $JBMemory ${JBFiles[@]}
         cd ..
@@ -299,7 +299,7 @@ IPSW4() {
     cd tmp
     if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."
-        cp -rf ../resources/firmware/FirmwareBundles .
+        cp -rf ../resources/firmware/FirmwareBundles/ ./
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
     elif [[ ! -e $IPSWCustom.ipsw ]]; then
         echo
@@ -315,8 +315,8 @@ IPSW4() {
         fi
 
         Log "Preparing custom IPSW with powdersn0w..."
-        cp -rf ../resources/firmware/powdersn0wBundles ./FirmwareBundles
-        cp -rf ../resources/firmware/src .
+        cp -rf ../resources/firmware/powdersn0wBundles/ ./FirmwareBundles/
+        cp -rf ../resources/firmware/src/ ./
         if [[ $Jailbreak == 1 && $OSVer == "6."* ]]; then
             JBFiles=()
             rm FirmwareBundles/${config}.plist
@@ -389,9 +389,9 @@ IPSW4Cherry() {
 
     cd tmp
     Log "Preparing custom IPSW with ch3rryflower..."
-    cp -rf ../$cherrymac/FirmwareBundles ../$cherrymac/src .
+    cp -rf ../$cherrymac/FirmwareBundles/ ../$cherrymac/src/ ./
     unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
-    mv iBoot.${HWModel}ap.RELEASE.img3 tmp
+    mv iBoot.${HWModel}ap.RELEASE.img3 tmp/
     $xpwntool tmp ibot.dec -iv $IV -k $Key
     ../$cherry/bin/iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
     $xpwntool ibot.pwned iBoot -t tmp
@@ -434,7 +434,7 @@ IPSW4Powder() {
 
     powderdir="../resources/powdersn0w/macosx_x86_64"
     cd tmp
-    cp -rf $powderdir/FirmwareBundles $powderdir/src .
+    cp -rf $powderdir/FirmwareBundles/ $powderdir/src/ ./
     powdersn0w="$powderdir/ipsw"
 
     if [[ $platform != "macos" ]]; then
@@ -477,12 +477,12 @@ IPSW64() {
     Log "Preparing custom IPSW..."
     $bspatch $IPSW/Firmware/dfu/$iBSS.im4p $iBSS.im4p resources/patches/$iBSS.patch
     $bspatch $IPSW/Firmware/dfu/$iBEC.im4p $iBEC.im4p resources/patches/$iBEC.patch
+    mv -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu/
     if [[ $ProductType == "iPad4"* ]]; then
         $bspatch $IPSW/Firmware/dfu/$iBSSb.im4p $iBSSb.im4p resources/patches/$iBSSb.patch
         $bspatch $IPSW/Firmware/dfu/$iBECb.im4p $iBECb.im4p resources/patches/$iBECb.patch
-        mv -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu
+        mv -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu/
     fi
-    mv -f $iBSS.im4p $iBEC.im4p $IPSW/Firmware/dfu
     cd $IPSW
     zip -rq0 ../$IPSWCustom.ipsw *
     cd ..

@@ -5,7 +5,7 @@ FRBaseband() {
     
     if [[ $DeviceProc == 7 ]]; then
         mkdir -p saved/baseband 2>/dev/null
-        cp -f $IPSWRestore/Firmware/$Baseband saved/baseband
+        cp -f $IPSWRestore/Firmware/$Baseband saved/baseband/
     fi
 
     if [[ ! -e saved/baseband/$Baseband ]]; then
@@ -13,8 +13,8 @@ FRBaseband() {
         $partialzip $BasebandURL Firmware/$Baseband $Baseband
         $partialzip $BasebandURL BuildManifest.plist BuildManifest.plist
         mkdir -p saved/$ProductType saved/baseband 2>/dev/null
-        mv $Baseband saved/baseband
-        mv BuildManifest.plist saved/$ProductType
+        mv $Baseband saved/baseband/
+        mv BuildManifest.plist saved/$ProductType/
         BuildManifest="saved/$ProductType/BuildManifest.plist"
     elif [[ $DeviceProc != 7 ]]; then
         BuildManifest="saved/$ProductType/BuildManifest.plist"
@@ -123,7 +123,7 @@ DowngradeOther() {
         if [[ $NoMove == 1 ]]; then
             rm $FWKeys/index.html
         elif [[ -s tmp/index.html ]]; then
-            mv tmp/index.html $FWKeys
+            mv tmp/index.html $FWKeys/
         fi
     fi
 
@@ -140,18 +140,22 @@ iDeviceRestore() {
     ExtraArgs="-e -w"
     if [[ $1 == "latest" ]]; then
         ExtraArgs="-e"
+    elif [[ $Baseband == 0 ]]; then
+        Log "Device $ProductType has no baseband/disabled baseband update"
     elif [[ $platform == "win" && $ProductType != "iPhone3"* ]]; then
         ExtraArgs="-r"
         idevicerestore="$idevicererestore"
-        if [[ $Baseband == 0 ]]; then
-            Log "Device $ProductType has no baseband/disabled baseband update"
-        else
-            FRBaseband
-            cp saved/baseband/$Baseband tmp/bbfw.tmp
-            cp $BuildManifest tmp/BuildManifest.plist
+        re="re"
+        FRBaseband
+        cp saved/baseband/$Baseband tmp/bbfw.tmp
+        cp $BuildManifest tmp/
+        BasebandSHA1L=$($sha1sum tmp/bbfw.tmp | awk '{print $1}')
+        if [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
+            rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
+            Error "Downloading/verifying baseband failed. Please run the script again"
         fi
     fi
-    Log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
+    Log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
     echo
     Log "Restoring done! Read the message below if any error has occurred:"

@@ -132,7 +132,7 @@ SaveExternal() {
     SaveFile $Link $Name.zip $SHA1
     cd ../resources
     unzip -q ../tmp/$Name.zip -d .
-    mv $Name* $Name
+    mv $Name*/ $Name/
     cd ..
 }
 
@@ -151,7 +151,7 @@ InstallDepends() {
 
     mkdir resources/lib tmp 2>/dev/null
     cd resources
-    cp lib/*.so.1.1 ../tmp 2>/dev/null
+    cp lib/*.so.1.1 ../tmp/ 2>/dev/null
     rm -rf lib/*
     cp ../tmp/*.so.1.1 lib/ 2>/dev/null
     cd ../tmp
