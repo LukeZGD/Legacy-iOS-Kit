@@ -16,6 +16,8 @@ for i in "$@"; do
         NoColor=1
     elif [[ $i == "NoDevice" ]]; then
         NoDevice=1
+    elif [[ $i == "NoVersionCheck" ]]; then
+        NoVersionCheck=1
     elif [[ $i == "PwnedDevice" ]]; then
         PwnedDevice=1
     fi
@@ -82,16 +84,19 @@ Main() {
     
     if [[ -d .git ]]; then
         if [[ $platform == "macos" ]]; then
-            Echo "Version: $(date -r $(git log -1 --format="%at") +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
+            CurrentVersion="$(date -r $(git log -1 --format="%at") +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
         else
-            Echo "Version: $(date -d @$(git log -1 --format="%at") --rfc-3339=date)-$(git rev-parse HEAD | cut -c -7)"
+            CurrentVersion="$(date -d @$(git log -1 --format="%at") --rfc-3339=date)-$(git rev-parse HEAD | cut -c -7)"
         fi
+        Echo "Version: $CurrentVersion"
     elif [[ -e resources/git_hash ]]; then
         Echo "Version: $(cat resources/git_hash)"
     else
         Echo "Version: Unknown"
-        Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
-        "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
+        if [[ $NoVersionCheck != 1 ]]; then
+            Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
+            "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
+        fi
     fi
 
     SetToolPaths
@@ -112,6 +117,26 @@ Main() {
     $ping 208.67.222.222 >/dev/null
     if [[ $? != 0 ]]; then
         Error "Please check your Internet connection before proceeding."
+    fi
+
+    if [[ $NoVersionCheck == 1 ]]; then
+        Log "WARNING - NoVersionCheck detected, update check will be disabled and no support may be provided."
+    else
+        Log "Checking for updates..."
+        LatestVersion=$(curl https://api.github.com/repos/LukeZGD/iOS-OTA-Downgrader/releases/latest 2>/dev/null | grep "latest/iOS-OTA-Downgrader_complete" | cut -c 131- | cut -c -18)
+        if [[ -z $LatestVersion ]]; then
+            Log "WARNING - Failed to check for updates. GitHub may be down or blocked by your network."
+        elif [[ $LatestVersion != $CurrentVersion ]]; then
+            if (( $(echo $CurrentVersion | cut -c -10 | sed -e 's/-//g') > $(echo $LatestVersion | cut -c -10 | sed -e 's/-//g') )); then
+                Log "WARNING - Current version is newer than remote ($LatestVersion)"
+            else
+                Echo "* A newer version of iOS-OTA-Downgrader is available."
+                Echo "* Current version: $CurrentVersion"
+                Echo "* Latest version:  $LatestVersion"
+                Echo "* Please download the latest version before continuing."
+                ExitWin 0
+            fi
+        fi
     fi
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
@@ -135,7 +160,7 @@ Main() {
     Clean
     mkdir tmp
 
-    if [[ -n $1 && $1 != "NoColor" && $1 != *"Device" ]]; then
+    if [[ -n $1 && $1 != "No"* && $1 != *"Device" ]]; then
         Mode="$1"
     else
         [[ $NoDevice != 1 ]] && Selection+=("Downgrade Device")
