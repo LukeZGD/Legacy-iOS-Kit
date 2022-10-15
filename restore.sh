@@ -81,24 +81,6 @@ Main() {
         Error "resources folder cannot be found. Replace resources folder and try again." \
         "If resources folder is present try removing spaces from path/folder name"
     fi
-    
-    if [[ -d .git ]]; then
-        if [[ $platform == "macos" ]]; then
-            CurrentVersion="$(date -r $(git log -1 --format="%at") +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
-        else
-            CurrentVersion="$(date -d @$(git log -1 --format="%at") --rfc-3339=date)-$(git rev-parse HEAD | cut -c -7)"
-        fi
-        Echo "Version: $CurrentVersion"
-    elif [[ -e resources/git_hash ]]; then
-        CurrentVersion="$(cat resources/git_hash)"
-        Echo "Version: $CurrentVersion"
-    else
-        Echo "Version: Unknown"
-        if [[ $NoVersionCheck != 1 ]]; then
-            Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
-            "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
-        fi
-    fi
 
     SetToolPaths
     if [[ $? != 0 ]]; then
@@ -108,6 +90,23 @@ Main() {
     if [[ ! $platform ]]; then
         Error "Platform unknown/not supported."
     fi
+
+    if [[ -d .git ]]; then
+        if [[ $platform == "macos" ]]; then
+            CurrentVersion="$(date -r $(git log -1 --format="%at") +%Y-%m-%d)-$(git rev-parse HEAD | cut -c -7)"
+        else
+            CurrentVersion="$(date -d @$(git log -1 --format="%at") --rfc-3339=date)-$(git rev-parse HEAD | cut -c -7)"
+        fi
+    elif [[ -e resources/git_hash ]]; then
+        CurrentVersion="$(cat resources/git_hash)"
+    else
+        Echo "* Version: Unknown"
+        if [[ $NoVersionCheck != 1 ]]; then
+            Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
+            "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
+        fi
+    fi
+    [[ -n $CurrentVersion ]] && Echo "* Version: $CurrentVersion"
 
     chmod +x ./resources/*.sh ./resources/tools/*
     if [[ $? != 0 ]]; then
@@ -134,7 +133,7 @@ Main() {
                 Echo "* A newer version of iOS-OTA-Downgrader is available."
                 Echo "* Current version: $CurrentVersion"
                 Echo "* Latest version:  $LatestVersion"
-                Echo "* Please download the latest version before continuing."
+                Echo "* Please download/pull the latest version before continuing."
                 ExitWin 0
             fi
         fi

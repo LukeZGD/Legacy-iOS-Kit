@@ -116,7 +116,7 @@ DowngradeOther() {
         if [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]]; then
             curl -L https://api.m1sta.xyz/wikiproxy/$ProductType/$BuildVer -o tmp/index.html
             if [[ $(cat tmp/index.html | grep -c "$BuildVer") != 1 ]]; then
-                Log "Warning - Failed to download firmware keys."
+                Log "WARNING - Failed to download firmware keys."
                 NoMove=1
             fi
         fi

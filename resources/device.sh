@@ -288,7 +288,7 @@ EnterPwnDFU() {
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."
     else
-        Log "Warning - Failed to detect device in pwnDFU mode."
+        Log "WARNING - Failed to detect device in pwnDFU mode."
         Echo "* If the device entered pwnDFU mode successfully, you may continue"
         Echo "* If entering pwnDFU failed, you may have to force restart your device and start over"
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
