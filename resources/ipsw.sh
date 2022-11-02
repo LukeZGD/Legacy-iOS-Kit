@@ -241,9 +241,9 @@ IPSW32() {
         Log "Preparing custom IPSW..."
         cd tmp
         if [[ $JBDaibutsu == 1 ]]; then
-            cp -R ../resources/firmware/${WinBundles}JailbreakBundles/ FirmwareBundles/
+            cp -R ../resources/firmware/${WinBundles}JailbreakBundles FirmwareBundles
         else
-            cp -R ../resources/firmware/${WinBundles}FirmwareBundles/ ./
+            cp -R ../resources/firmware/${WinBundles}FirmwareBundles FirmwareBundles
         fi
         $ipsw ./../$IPSW.ipsw ./../$IPSWCustom.ipsw $ExtraArgs $BBUpdate $JBMemory ${JBFiles[@]}
         cd ..
@@ -299,7 +299,7 @@ IPSW4() {
     cd tmp
     if [[ $OSVer == "7.1.2" && ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."
-        cp -rf ../resources/firmware/FirmwareBundles/ ./
+        cp -R ../resources/firmware/FirmwareBundles .
         $ipsw ../$IPSW.ipsw ../$IPSWCustom.ipsw $JBMemory -S 50 ${JBFiles[@]}
     elif [[ ! -e $IPSWCustom.ipsw ]]; then
         echo
@@ -315,8 +315,8 @@ IPSW4() {
         fi
 
         Log "Preparing custom IPSW with powdersn0w..."
-        cp -rf ../resources/firmware/powdersn0wBundles/ ./FirmwareBundles/
-        cp -rf ../resources/firmware/src/ ./
+        cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
+        cp -R ../resources/firmware/src .
         if [[ $Jailbreak == 1 && $OSVer == "6."* ]]; then
             JBFiles=()
             rm FirmwareBundles/${config}.plist
@@ -389,7 +389,7 @@ IPSW4Cherry() {
 
     cd tmp
     Log "Preparing custom IPSW with ch3rryflower..."
-    cp -rf ../$cherrymac/FirmwareBundles/ ../$cherrymac/src/ ./
+    cp -R ../$cherrymac/FirmwareBundles ../$cherrymac/src .
     unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
     mv iBoot.${HWModel}ap.RELEASE.img3 tmp/
     $xpwntool tmp ibot.dec -iv $IV -k $Key
@@ -434,7 +434,7 @@ IPSW4Powder() {
 
     powderdir="../resources/powdersn0w/macosx_x86_64"
     cd tmp
-    cp -rf $powderdir/FirmwareBundles/ $powderdir/src/ ./
+    cp -R $powderdir/FirmwareBundles $powderdir/src .
     powdersn0w="$powderdir/ipsw"
 
     if [[ $platform != "macos" ]]; then

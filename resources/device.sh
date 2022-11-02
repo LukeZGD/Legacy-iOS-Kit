@@ -243,7 +243,7 @@ EnterPwnDFU() {
         esac
         done
     else
-        Echo "* For Arch, install python2 first from AUR before using ipwndfu."
+        Echo "* Make sure to have python2 installed first before using ipwndfu."
         pwnDFUTool="ipwndfu"
         SaveExternal ipwndfu
     fi
@@ -377,7 +377,7 @@ SendPwnediBSSA5() {
     Input "Send iBSS Option"
     Echo "* To send pwned iBSS using ipwndfu, select Y. (does not work on ARM Macs)"
     Echo "* To let futurerestore send iBSS, select N. (likely does not work)"
-    Echo "* For Arch, macOS 12 and newer, install python2 first before selecting ipwndfu."
+    Echo "* Make sure to have python2 installed first before using ipwndfu."
     Echo "* This option is enabled by default (Y)."
     read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
     if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then
@@ -529,7 +529,7 @@ Ramdisk4() {
             curl -L $JailbreakLink/support_files/7.1.2/Ramdisk/$file -o $file
         done
         cd ..
-        cp -rf ramdisk/ ../resources/
+        cp -R ramdisk ../resources
         cd ..
     fi
 
