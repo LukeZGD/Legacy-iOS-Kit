@@ -97,10 +97,11 @@ SetToolPaths() {
         fi
     elif [[ $platform == "win" ]]; then
         ping="ping -n 1"
-        Log "WARNING - Using iOS-OTA-Downgrader on Windows is highly discouraged."
+        Log "WARNING - Using iOS-OTA-Downgrader on Windows is HIGHLY DISCOURAGED."
         Echo "* Please use it on Linux or macOS instead."
         Echo "* You may still continue, but you might encounter problems with restoring the device."
-        sleep 3
+        Echo "* You have been warned."
+        sleep 10
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
         read -s
     fi
@@ -190,7 +191,7 @@ InstallDepends() {
         sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
-    elif [[ $ID == "fedora" ]] && (( VERSION_ID >= 36 )); then
+    elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
         sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt

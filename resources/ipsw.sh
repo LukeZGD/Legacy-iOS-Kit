@@ -272,10 +272,6 @@ IPSW4() {
     elif [[ $ProductType == "iPhone3,3" && $OSVer != "7.1.2" ]]; then
         IPSW4Powder
         return
-    else
-        local JBURL2="https://github.com/LukeZGD/powdersn0w_pub/raw/main/xpwn/src/target/n90/11D257/exploit"
-        JailbreakFiles $JBURL2 exploit bedd10a96ba0f305a0af74a15e1eee88946070a1
-        cp resources/jailbreak/exploit resources/firmware/src/target/n90/11D257/
     fi
 
     if [[ $Jailbreak == 1 ]]; then

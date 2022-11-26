@@ -104,7 +104,7 @@ GetDeviceValues() {
     Baseband=0
     BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
     LatestVer="9.3.6"
-    
+
     if [[ $ProductType == "iPad2,2" ]]; then
         BasebandURL=$(cat $Firmware/13G36/url)
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
@@ -413,45 +413,42 @@ kDFU() {
     [[ ! $kloader ]] && kloader="kloader"
     
     Log "Running iproxy for SSH..."
-    $iproxy 2222 22 &
+    $iproxy 2222 22 >/dev/null &
     iproxyPID=$!
     sleep 2
 
-    echo
-    Log "Copying stuff to device via SSH..."
-    Echo "* Make sure OpenSSH/Dropbear is installed on the device and running!"
-    Echo "* Dropbear is only needed for devices on iOS 10"
-    Echo "* To make sure that SSH is successful, try these steps:"
-    Echo "* Reinstall OpenSSH/Dropbear, reboot and rejailbreak, then reinstall them again"
-    echo
-    Input "Enter the root password of your iOS device when prompted."
-    Echo "* Note that you will be prompted twice. Do not worry that your input is not visible, it is still being entered."
-    Echo "* The default password is \"alpine\""
+    Log "Please read the message below:"
+    Echo "1. Make sure to have installed the requirements from Cydia."
+    Echo "  - Only proceed if you have followed Section 2 (and 2.1 for iOS 10) in the GitHub wiki."
+    Echo "  - You will be prompted to enter the root password of your iOS device twice."
+    Echo "  - If you have not changed it, the default password is \"alpine\""
+    Echo "  - Do not worry that your input is not visible, it is still being entered."
+    Echo "2. Afterwards, the device will disconnect and its screen will stay black."
+    Echo "  - Proceed to either press the TOP/HOME button, or unplug and replug the device."
+    sleep 3
+    Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+    read -s
+    Log "Entering kDFU mode..."
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
         $SSH -p 2222 root@127.0.0.1 "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &
     else
-        Log "Cannot connect to device via USB SSH."
-        Echo "* Please try the steps above to make sure that SSH is successful"
-        Echo "* Alternatively, you may use kDFUApp by tihmstar (from my repo, see \"Troubleshooting\" wiki page)"
-        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel and try again)"
+        Log "Failed to connect to device via USB SSH."
+        Echo "* For Linux users, try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
+        Input "Press Enter/Return to try again with Wi-Fi SSH (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
-        Echo "* Make sure that the device and your PC/Mac are on the same network!"
-        Echo "* You can check for your device's IP Address in: Settings > WiFi/WLAN > tap the 'i' next to your network name"
+        Echo "* Make sure that your iOS device and PC/Mac are on the same network."
+        Echo "* To get your device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' next to your network name"
         read -p "$(Input 'Enter the IP Address of your device:')" IPAddress
-        Log "Copying stuff to device via SSH..."
         $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
-        if [[ $? == 1 ]]; then
-            Error "Cannot connect to device via SSH." \
-            "Please try the steps above to make sure that SSH is successful"
+        if [[ $? != 0 ]]; then
+            Log "Failed to connect to device via Wi-Fi SSH."
+            Echo "* Alternatively, you may use kDFUApp by tihmstar from my repo (see \"Troubleshooting\" wiki page for details)"
+            Error "Failed to connect to device via SSH, cannot continue."
         fi
         $SSH root@$IPAddress "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &
     fi
-    
-    Log "Entering kDFU mode..."
-    Echo "* Press TOP or HOME button when the device disconnects and its screen goes black"
-    Echo "* You may also try to unplug and replug your device"
     FindDevice "DFU"
 }
 

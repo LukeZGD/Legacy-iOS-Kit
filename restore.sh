@@ -100,10 +100,10 @@ Main() {
     elif [[ -e resources/git_hash ]]; then
         CurrentVersion="$(cat resources/git_hash)"
     else
-        Echo "* Version: Unknown"
+        Log ".git directory and git_hash file not found, cannot determine version."
         if [[ $NoVersionCheck != 1 ]]; then
-            Error "git_hash or .git not found. Your copy of iOS-OTA-Downgrader is downloaded incorrectly." \
-            "Please download iOS-OTA-Downgrader from the GitHub releases page or using git clone."
+            Error "Your copy of iOS-OTA-Downgrader is downloaded incorrectly. Do not use the \"Code\" button in GitHub." \
+            "Please download iOS-OTA-Downgrader using git clone or from GitHub releases: https://github.com/LukeZGD/iOS-OTA-Downgrader/releases"
         fi
     fi
     [[ -n $CurrentVersion ]] && Echo "* Version: $CurrentVersion"
@@ -290,8 +290,7 @@ Main() {
         fi
         echo
         Echo "* DFU Advanced Menu"
-        Echo "* This menu is for ADVANCED USERS ONLY."
-        Echo "* If you do not know what you are doing, EXIT NOW by pressing Ctrl+C and restart your device in normal mode."
+        Echo "* If you do not know what you are doing, exit now and restart your device in normal mode before retrying."
         Input "Select the mode that your device is currently in:"
         Selection=("kDFU mode")
         if [[ $platform != "win" ]]; then
@@ -350,7 +349,7 @@ SelectVersion() {
         [[ $ProductType != "iPhone3,2" ]] && Selection+=("6.1.3")
 
         if [[ $platform == "macos" ]]; then
-            Echo "* Using iPhone4Down on macOS is not recommended for downgrading."
+            Echo "* WARNING - Using iPhone4Down on macOS is not recommended for downgrading."
             Echo "* Please use powdersn0w or cherryflowerJB from dora2ios instead."
         fi
 
@@ -368,6 +367,7 @@ SelectVersion() {
             Selection+=("More versions")
 
         elif [[ $ProductType == "iPhone3,3" && $platform != "macos" && $Mode != "Restore712" ]]; then
+            Echo "* WARNING - iPhone3,3 support is not well tested. Please use powdersn0w from dora2ios instead."
             Echo "* For creating 6.1.3 custom IPSW, make sure to have darling installed: https://github.com/darlinghq/darling"
             Echo "* For Ubuntu/Debian, you may install the .deb from releases."
             Echo "* For Arch, you may install darling-bin from AUR."
@@ -375,7 +375,7 @@ SelectVersion() {
         fi
 
         if [[ $Mode == "Restore712" ]]; then
-            Echo "* Make sure to disable the exploit first! See the README for more details."
+            Echo "* Make sure to disable the exploit first! See the README and wiki for more details."
             Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
             read -s
             OSVer="7.1.2"
