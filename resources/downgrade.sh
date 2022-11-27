@@ -22,12 +22,11 @@ FRBaseband() {
 
     BasebandSHA1L=$($sha1sum saved/baseband/$Baseband | awk '{print $1}')
     if [[ ! -e $(ls saved/baseband/$Baseband) || $BasebandSHA1L != $BasebandSHA1 ]]; then
-        rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
+        rm -f saved/baseband/$Baseband $BuildManifest
         if [[ $DeviceProc == 7 || $platform == "win" ]]; then
             Error "Downloading/verifying baseband failed. Please run the script again"
         else
-            Log "Downloading/verifying baseband failed, will proceed with --latest-baseband flag"
-            return 1
+            Log "Downloading/verifying baseband failed. Proceeding with --latest-baseband flag"
         fi
     fi
 }
@@ -60,10 +59,11 @@ FutureRestore() {
         ExtraArgs+=("--no-baseband")
     else
         FRBaseband
-        if [[ $? == 1 ]]; then
-            ExtraArgs+=("--latest-baseband")
-        else
+        if [[ -e saved/baseband/$Baseband && -e $BuildManifest ]]; then
             ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
+        else
+            rm -f saved/baseband/$Baseband $BuildManifest
+            ExtraArgs+=("--latest-baseband")
         fi
     fi
 
@@ -153,6 +153,17 @@ iDeviceRestore() {
         if [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
             rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
             Error "Downloading/verifying baseband failed. Please run the script again"
+        fi
+        if [[ ! -e tmp/bbfw.tmp || ! -e tmp/BuildManifest.plist ]]; then
+            Log "Downloading/verifying baseband failed."
+            Echo "* You may still attempt to continue, but $OSVer baseband will be flashed instead of latest."
+            Echo "* This may cause ACTIVATION ERRORS after the restore, it is recommended to not continue."
+            Echo "* I highly suggest to do the restore in Linux/macOS instead to avoid issues."
+            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+            read -s
+            ExtraArgs="-e -w"
+            idevicerestore="./resources/tools/idevicerestore_$platform"
+            re=
         fi
     fi
     Log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
