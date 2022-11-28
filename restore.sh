@@ -129,7 +129,7 @@ Main() {
         elif [[ $LatestVersion != $CurrentVersion ]]; then
             if (( $(echo $CurrentVersion | cut -c -10 | sed -e 's/-//g') > $(echo $LatestVersion | cut -c -10 | sed -e 's/-//g') )); then
                 Log "WARNING - Current version is newer than remote ($LatestVersion)"
-            elif [[ $(echo $CurrentVersion | cut -c -12) != $(echo $LatestVersion | cut -c -12) ]]; then
+            elif [[ $(echo $CurrentVersion | cut -c 12-) != $(echo $LatestVersion | cut -c 12-) ]]; then
                 Echo "* A newer version of iOS-OTA-Downgrader is available."
                 Echo "* Current version: $CurrentVersion"
                 Echo "* Latest version:  $LatestVersion"
