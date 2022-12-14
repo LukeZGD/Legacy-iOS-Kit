@@ -361,10 +361,16 @@ PatchiBSS() {
 }
 
 SendPwnediBSSA5() {
-    Echo "* Make sure that your device is in pwnDFU mode using an Arduino+USB Host Shield!"
-    Echo "* This option will not work if your device is not in pwnDFU mode."
-    Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-    read -s
+    Echo "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
+    Echo "* If you do not know what you are doing, select N and restart your device in normal mode before retrying."
+    read -p "$(Input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N):')" opt
+    if [[ $opt != "Y" && $opt != "y" && $DeviceProc == 5 ]]; then
+        echo -e "\n${Color_R}[Error] 32-bit A5 device is not in PWNED DFU mode. ${Color_N}"
+        echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
+        echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
+        echo "${Color_Y}* For usage of kDFU/pwnDFU, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+        ExitWin 1
+    fi
     Input "No iBSS Option"
     Echo "* If you already have sent pwned iBSS manually, select Y. If not, select N."
     Echo "* This option is disabled by default (N)."
@@ -421,7 +427,7 @@ kDFU() {
     Echo "1. Make sure to have installed the requirements from Cydia."
     Echo "  - Only proceed if you have followed Section 2 (and 2.1 for iOS 10) in the GitHub wiki."
     Echo "  - You will be prompted to enter the root password of your iOS device twice."
-    Echo "  - If you have not changed it, the default password is \"alpine\""
+    Echo "  - The default root password is \"alpine\""
     Echo "  - Do not worry that your input is not visible, it is still being entered."
     Echo "2. Afterwards, the device will disconnect and its screen will stay black."
     Echo "  - Proceed to either press the TOP/HOME button, or unplug and replug the device."
@@ -435,6 +441,15 @@ kDFU() {
     else
         Log "Failed to connect to device via USB SSH."
         Echo "* For Linux users, try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
+        if [[ $VerDetect == 1 ]]; then
+            Echo "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak with h3lix, and try again."
+        elif [[ $VerDetect == 5 ]]; then
+            Echo "* Try to re-install OpenSSH, reboot, and try again."
+        else
+            Echo "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."
+            Echo "* Alternatively, you may use kDFUApp from my Cydia repo (see \"Troubleshooting\" wiki page for details)"
+            Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#dfu-advanced-menu-kdfu-mode"
+        fi
         Input "Press Enter/Return to try again with Wi-Fi SSH (or press Ctrl+C to cancel and try again)"
         read -s
         Log "Will try again with Wi-Fi SSH..."
@@ -443,8 +458,6 @@ kDFU() {
         read -p "$(Input 'Enter the IP Address of your device:')" IPAddress
         $SCP resources/tools/$kloader tmp/pwnediBSS root@$IPAddress:/tmp
         if [[ $? != 0 ]]; then
-            Log "Failed to connect to device via Wi-Fi SSH."
-            Echo "* Alternatively, you may use kDFUApp by tihmstar from my repo (see \"Troubleshooting\" wiki page for details)"
             Error "Failed to connect to device via SSH, cannot continue."
         fi
         $SSH root@$IPAddress "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &
@@ -499,8 +512,9 @@ Remove4() {
     $irecovery -c "saveenv"
     $irecovery -c "reset"
     Log "Done!"
-    Echo "* If disabling the exploit did not work and the device is getting stuck after restore:"
+    Echo "* If disabling the exploit did not work and the device is still in recovery mode screen after restore:"
     Echo "* You may try another method for clearing NVRAM. See the \"Troubleshooting\" wiki page for more details"
+    Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#clearing-nvram"
 }
 
 Ramdisk4() {

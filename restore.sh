@@ -18,8 +18,6 @@ for i in "$@"; do
         NoDevice=1
     elif [[ $i == "NoVersionCheck" ]]; then
         NoVersionCheck=1
-    elif [[ $i == "PwnedDevice" ]]; then
-        PwnedDevice=1
     fi
 done
 
@@ -280,31 +278,22 @@ Main() {
         fi
 
     elif [[ $DeviceState == "DFU" ]]; then
-        if [[ $PwnedDevice != 1 ]]; then
-            echo -e "\n${Color_R}[Error] 32-bit A${DeviceProc} device detected in DFU mode. ${Color_N}"
+        Log "32-bit A${DeviceProc} device detected in DFU mode."
+        Echo "* DFU Advanced Menu"
+        Echo "* Please specify if the device is already in kDFU mode or not."
+        read -p "$(Input 'Is your device in kDFU mode? (y/N):')" opt
+        if [[ $opt == "Y" || $opt == "y" ]]; then
+            Log "kDFU mode specified by user."
+        elif [[ $platform == "win" ]]; then
+            echo -e "\n${Color_R}[Error] Your device must be either in normal mode or kDFU mode for Windows. ${Color_N}"
             echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
             echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
-            echo "${Color_Y}* For usage of the DFU Advanced Menu, add PwnedDevice as an argument. ${Color_N}"
-            echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
             ExitWin 1
+        elif [[ $DeviceProc == 5 ]]; then
+            SendPwnediBSSA5
+        else
+            EnterPwnDFU
         fi
-        echo
-        Echo "* DFU Advanced Menu"
-        Echo "* If you do not know what you are doing, exit now and restart your device in normal mode before retrying."
-        Input "Select the mode that your device is currently in:"
-        Selection=("kDFU mode")
-        if [[ $platform != "win" ]]; then
-            [[ $DeviceProc == 5 ]] && Selection+=("pwnDFU mode (A5)") || Selection+=("DFU mode (A4/A6)")
-        fi
-        Selection+=("Any other key to exit")
-        select opt in "${Selection[@]}"; do
-        case $opt in
-            "kDFU mode" ) break;;
-            "DFU mode (A4/A6)" ) EnterPwnDFU; break;;
-            "pwnDFU mode (A5)" ) SendPwnediBSSA5; break;;
-            * ) exit 0;;
-        esac
-        done
         Log "Downgrading $ProductType in kDFU/pwnDFU mode..."
     
     elif [[ $DeviceState == "Recovery" ]]; then

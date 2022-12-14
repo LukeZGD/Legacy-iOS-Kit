@@ -172,7 +172,8 @@ iDeviceRestore() {
     Log "Restoring done! Read the message below if any error has occurred:"
     if [[ $platform == "win" ]]; then
         Echo "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-        Echo "* To fix this, follow troubleshooting steps from here: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
+        Echo "* Follow the troubleshoting link for steps to attempt fixing this issue."
+        Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#windows"
     fi
     Echo "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     Echo "* Your problem may have already been addressed within the wiki page."
