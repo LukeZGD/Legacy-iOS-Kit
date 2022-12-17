@@ -102,21 +102,21 @@ GetDeviceValues() {
     
     Firmware=resources/firmware/$ProductType
     Baseband=0
-    BasebandURL=$(cat $Firmware/13G37/url 2>/dev/null)
     LatestVer="9.3.6"
+    LatestBuildVer="13G37"
 
     if [[ $ProductType == "iPad2,2" ]]; then
-        BasebandURL=$(cat $Firmware/13G36/url)
+        LatestVer="9.3.5"
+        LatestBuildVer="13G36"
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
-        LatestVer="9.3.5"
     
     elif [[ $ProductType == "iPad2,3" ]]; then
         Baseband="Phoenix-3.6.03.Release.bbfw"
         BasebandSHA1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
 
     elif [[ $ProductType == "iPhone3,3" ]]; then
-        BasebandURL=$(cat $Firmware/11D257/url)
+        LatestBuildVer="11D257"
         Baseband="Phoenix-3.0.04.Release.bbfw"
         BasebandSHA1="a507ee2fe061dfbf8bee7e512df52ade8777e113"
     
@@ -134,14 +134,14 @@ GetDeviceValues() {
     
     elif [[ $ProductType == "iPad3,5" || $ProductType == "iPad3,6" ||
             $ProductType == "iPhone5,1" || $ProductType == "iPhone5,2" ]]; then
-        BasebandURL=$(cat $Firmware/14G61/url)
+        LatestVer="10.3.4"
+        LatestBuildVer="14G61"
         Baseband="Mav5-11.80.00.Release.bbfw"
         BasebandSHA1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
-        LatestVer="10.3.4"
 
     elif [[ $ProductType == "iPad4,2" || $ProductType == "iPad4,3" || $ProductType == "iPad4,5" ||
             $ProductType == "iPhone5"* || $ProductType == "iPhone6"* ]]; then
-        BasebandURL=$(cat $Firmware/14G60/url)
+        LatestBuildVer="14G60"
         Baseband="Mav7Mav8-7.60.00.Release.bbfw"
         BasebandSHA1="f397724367f6bed459cf8f3d523553c13e8ae12c"
         if [[ $ProductType == "iPhone5"* ]]; then
@@ -150,17 +150,25 @@ GetDeviceValues() {
         fi
 
     elif [[ $ProductType == "iPhone3"* ]]; then
-        BasebandURL=$(cat $Firmware/11D257/url)
+        LatestBuildVer="11D257"
         Baseband="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
         BasebandSHA1="007365a5655ac2f9fbd1e5b6dba8f4be0513e364"
 
-    elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3"* || $ProductType == "iPad4,1" ||
-            $ProductType == "iPad4,4" || $ProductType == "iPod5,1" ]]; then
+    elif [[ $ProductType == "iPad2"* || $ProductType == "iPad3,1" || $ProductType == "iPod5,1" ]]; then
+        LatestVer="9.3.5"
+        LatestBuildVer="13G36"
+
+    elif [[ $ProductType == "iPad3,4" ]]; then
+        LatestVer="10.3.3"
+        LatestBuildVer="14G60"
+
+    elif [[ $ProductType == "iPad4,1" || $ProductType == "iPad4,4" ]]; then
         BasebandURL=0
     else
         Error "Your device $ProductType ${version}is not supported."
     fi
-    
+    [[ $BasebandURL != 0 ]] && BasebandURL=$(cat $Firmware/$LatestBuildVer/url 2>/dev/null)
+
     if [[ $ProductType == "iPhone3"* ]]; then
         DeviceProc=4
         if [[ $ProductType != "iPhone3,2" ]]; then
@@ -304,7 +312,8 @@ Recovery() {
         $ideviceenterrecovery $UniqueDeviceID >/dev/null
         FindDevice "Recovery"
     fi
-    
+    [[ $1 == "only" ]] && return
+
     Echo "* Get ready to enter DFU mode."
     read -p "$(Input 'Select Y to continue, N to exit recovery (Y/n)')" RecoveryDFU
     if [[ $RecoveryDFU == 'N' || $RecoveryDFU == 'n' ]]; then

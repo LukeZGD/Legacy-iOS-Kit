@@ -125,8 +125,8 @@ Main() {
         if [[ -z $LatestVersion ]]; then
             Log "WARNING - Failed to check for updates. GitHub may be down or blocked by your network."
         elif [[ $LatestVersion != $CurrentVersion ]]; then
-            if (( $(echo $CurrentVersion | cut -c -10 | sed -e 's/-//g') > $(echo $LatestVersion | cut -c -10 | sed -e 's/-//g') )); then
-                Log "WARNING - Current version is newer than remote ($LatestVersion)"
+            if (( $(echo $CurrentVersion | cut -c -10 | sed -e 's/-//g') >= $(echo $LatestVersion | cut -c -10 | sed -e 's/-//g') )); then
+                Log "WARNING - Current version is newer/different than remote ($LatestVersion)"
             elif [[ $(echo $CurrentVersion | cut -c 12-) != $(echo $LatestVersion | cut -c 12-) ]]; then
                 Echo "* A newer version of iOS-OTA-Downgrader is available."
                 Echo "* Current version: $CurrentVersion"
@@ -173,6 +173,7 @@ Main() {
         if [[ $DeviceProc != 7 ]]; then
             Selection+=("Create Custom IPSW")
             [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
+            [[ $DeviceProc != 4 && $platform != "win" ]] && Selection+=("Restore to latest iOS")
         fi
 
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
@@ -186,6 +187,7 @@ Main() {
             "Put Device in kDFU Mode" ) Mode="kDFU"; break;;
             "Disable/Enable Exploit" ) Mode="Remove4"; break;;
             "Restore to 7.1.2" ) Mode="Restore712"; break;;
+            "Restore to latest iOS" ) Mode="RestoreLatest"; break;;
             "SSH Ramdisk" ) Mode="Ramdisk4"; break;;
             "(Re-)Install Dependencies" ) InstallDepends;;
             * ) exit 0;;
@@ -254,15 +256,13 @@ Main() {
         if [[ $DeviceState == "Normal" && $OSVer == "7.1.2" ]]; then
             kDFU
         elif [[ $DeviceState == "DFU" && $OSVer == "7.1.2" ]]; then
-            Input "Select the mode that your device is currently in:"
-            Selection=("kDFU mode" "DFU/pwnDFU mode")
-            select opt in "${Selection[@]}"; do
-            case $opt in
-                "kDFU mode" ) break;;
-                "DFU/pwnDFU mode" ) EnterPwnDFU; break;;
-                * ) exit 0;;
-            esac
-            done
+            Echo "* Please specify if the device is already in kDFU mode or not."
+            read -p "$(Input 'Is your device in kDFU mode? (y/N):')" opt
+            if [[ $opt == "Y" || $opt == "y" ]]; then
+                Log "kDFU mode specified by user."
+            else
+                EnterPwnDFU
+            fi
         elif [[ $DeviceState == "Normal" ]]; then
             Echo "* The device needs to be in recovery/DFU mode before proceeding."
             read -p "$(Input 'Send device to recovery mode? (y/N):')" Selection
@@ -281,6 +281,7 @@ Main() {
         Log "32-bit A${DeviceProc} device detected in DFU mode."
         Echo "* DFU Advanced Menu"
         Echo "* Please specify if the device is already in kDFU mode or not."
+        Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
         read -p "$(Input 'Is your device in kDFU mode? (y/N):')" opt
         if [[ $opt == "Y" || $opt == "y" ]]; then
             Log "kDFU mode specified by user."
@@ -317,6 +318,10 @@ SelectVersion() {
     if [[ $DeviceProc == 7 ]]; then
         OSVer="10.3.3"
         BuildVer="14G60"
+        return
+    elif [[ $Mode == "RestoreLatest" ]]; then
+        OSVer=$LatestVer
+        BuildVer=$LatestBuildVer
         return
     elif [[ $Mode == "kDFU" || $Mode == *"4" ]]; then
         return

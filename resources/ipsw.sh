@@ -387,7 +387,7 @@ IPSW4Cherry() {
     Log "Preparing custom IPSW with ch3rryflower..."
     cp -R ../$cherrymac/FirmwareBundles ../$cherrymac/src .
     unzip -j ../$IPSW.ipsw Firmware/all_flash/all_flash.${HWModel}ap.production/iBoot*
-    mv iBoot.${HWModel}ap.RELEASE.img3 tmp/
+    mv iBoot.${HWModel}ap.RELEASE.img3 tmp
     $xpwntool tmp ibot.dec -iv $IV -k $Key
     ../$cherry/bin/iBoot32Patcher ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
     $xpwntool ibot.pwned iBoot -t tmp

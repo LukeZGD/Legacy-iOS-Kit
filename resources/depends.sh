@@ -20,6 +20,14 @@ SetToolPaths() {
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platformver="${1:-$(sw_vers -productVersion)}"
+        if [[ $(echo $platformver | cut -c -2) == 10 ]]; then
+            local macver=$(echo $platformver | cut -c 4-)
+            macver=${macver%.*}
+            if (( macver < 13 )); then
+                Error "Your macOS version ($platformver) is not supported." \
+                "You need to be on macOS 10.13 or newer to continue."
+            fi
+        fi
         MPath+="$platform"
         if [[ -e /usr/local/bin/idevicedate && -e /usr/local/bin/irecovery ]]; then
             Detect+="Homebrew (Intel Mac)"

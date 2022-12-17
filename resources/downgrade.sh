@@ -3,7 +3,7 @@
 FRBaseband() {
     local BasebandSHA1L
     
-    if [[ $DeviceProc == 7 ]]; then
+    if [[ $DeviceProc == 7 || $1 == "latest" ]]; then
         mkdir -p saved/baseband 2>/dev/null
         cp -f $IPSWRestore/Firmware/$Baseband saved/baseband/
     fi
@@ -58,7 +58,7 @@ FutureRestore() {
         Log "Device $ProductType has no baseband/disabled baseband update"
         ExtraArgs+=("--no-baseband")
     else
-        FRBaseband
+        FRBaseband $1
         if [[ -e saved/baseband/$Baseband && -e $BuildManifest ]]; then
             ExtraArgs+=("-b" "saved/baseband/$Baseband" "-p" "$BuildManifest")
         else
@@ -300,4 +300,19 @@ Downgrade4() {
     iDeviceRestore
     RetryOption iDeviceRestore
     Log "Downgrade script done!"
+}
+
+RestoreLatest() {
+    if [[ $ProductType == "iPhone5"* ]]; then
+        IPSWType="iPhone_4.0_32bit"
+    elif [[ $DeviceProc == 6 && $ProductType == "iPad3"* ]]; then
+        IPSWType="iPad_32bit"
+    fi
+    IPSWA7=1
+    SendiBSS=1
+    IPSWFindVerify
+    IPSWSetExtract
+    Recovery only
+    SaveLatestBlobs
+    FutureRestore latest
 }

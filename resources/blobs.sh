@@ -34,7 +34,7 @@ SaveOTABlobs() {
 }
 
 Save712Blobs() {
-    local SHSHChk
+    local SHSHChk=${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2
     BuildManifest="saved/$ProductType/BuildManifest.plist"
     SHSH="saved/shsh/${UniqueChipID}-${ProductType}-7.1.2.shsh"
 
@@ -57,9 +57,23 @@ Save712Blobs() {
 
     Log "Saving 7.1.2 blobs with tsschecker..."
     $tsschecker -d $ProductType -i 7.1.2 -e $UniqueChipID -m $BuildManifest -s -b
-    SHSHChk=$(ls ${UniqueChipID}_${ProductType}_7.1.2-11D257_*.shsh2)
+    SHSHChk=$(ls $SHSHChk)
     [[ -z $SHSHChk ]] && Error "Saving 7.1.2 blobs failed. Please run the script again"
     mkdir -p saved/shsh 2>/dev/null
     mv $SHSHChk $SHSH
     Log "Successfully saved 7.1.2 blobs: $SHSH"
+}
+
+SaveLatestBlobs() {
+    local APNonce=$($irecovery -q | grep "NONC" | cut -c 7-)
+    local SHSHChk=${UniqueChipID}_${ProductType}_${LatestVer}-${LatestBuildVer}_*.shsh2
+    SHSH="shsh/${UniqueChipID}-${ProductType}-${LatestVer}.shsh"
+    Log "Saving $LatestVer blobs with tsschecker..."
+    mkdir -p saved/$ProductType shsh 2>/dev/null
+    cp -f $IPSWRestore/BuildManifest.plist saved/$ProductType/
+    $tsschecker -d $ProductType -i $LatestVer -e $UniqueChipID -m saved/$ProductType/BuildManifest.plist -s -b --apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
+    SHSHChk=$(ls $SHSHChk)
+    [[ -z $SHSHChk ]] && Error "Saving $LatestVer blobs failed. Please run the script again"
+    mv $SHSHChk $SHSH
+    Log "Successfully saved $LatestVer blobs: $SHSH"
 }
