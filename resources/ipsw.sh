@@ -480,7 +480,7 @@ IPSW64() {
         mv -f $iBSSb.im4p $iBECb.im4p $IPSW/Firmware/dfu/
     fi
     cd $IPSW
-    zip -rq0 ../$IPSWCustom.ipsw *
+    zip -r0 ../$IPSWCustom.ipsw *
     cd ..
     mv $IPSW/ $IPSWCustom/
 

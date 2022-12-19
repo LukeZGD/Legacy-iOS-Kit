@@ -91,12 +91,14 @@ GetDeviceValues() {
             read -p "$(Input 'Enter UniqueChipID (ECID, must be decimal):')" UniqueChipID
         fi
     else
-        echo -e "\n${Color_R}[Error] No device detected. Please put the device in normal mode before proceeding. ${Color_N}"
-        echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up. ${Color_N}"
-        echo "${Color_Y}* For Windows/macOS users, double-check if the device is being detected by iTunes/Finder. ${Color_N}"
-        echo "${Color_Y}* Recovery or DFU mode is also applicable. ${Color_N}"
-        echo "${Color_Y}* To perform operations without an iOS device connected, add NoDevice as an argument. ${Color_N}"
-        echo "${Color_Y}* For more details, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+        echo -e "\n${Color_R}[Error] No device detected. Please connect the iOS device to proceed."
+        echo "${Color_Y}* Make sure to also trust this computer by selecting \"Trust\" at the pop-up."
+        [[ $platform != "linux" ]] && echo "* Double-check if the device is being detected by iTunes/Finder."
+        [[ $platform == "macos" ]] && echo "* Also try installing libimobiledevice and libirecovery from Homebrew/MacPorts before retrying."
+        [[ $platform == "linux" ]] && echo "* Also try running \"sudo systemctl restart usbmuxd\" before retrying."
+        echo "* Recovery and DFU mode are also applicable."
+        echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub."
+        Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting"
         ExitWin 1
     fi
     
@@ -287,11 +289,12 @@ EnterPwnDFU() {
             Log "Device in pwnDFU mode detected."
         fi
     elif [[ $pwnDFUDevice != 0 && $pwnD != 1 ]]; then
-        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again ${Color_N}"
-        echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds. ${Color_N}"
-        echo "${Color_Y}* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates. ${Color_N}"
-        echo "${Color_Y}* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times ${Color_N}"
-        Echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+        echo -e "\n${Color_R}[Error] Failed to enter pwnDFU mode. Please run the script again"
+        echo "${Color_Y}* If the screen is black, exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+        echo "* This step may fail a lot, especially on Linux, and unfortunately there is nothing I can do about the low success rates."
+        echo "* The only option is to make sure you are using an Intel or Apple Silicon device, and to try multiple times."
+        echo "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+        Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting"
         ExitWin 1
     elif [[ $pwnDFUDevice == 0 ]]; then
         Log "Device in pwnDFU mode detected."

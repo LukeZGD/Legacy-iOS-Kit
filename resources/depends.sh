@@ -185,28 +185,28 @@ InstallDepends() {
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
         Echo "* Arch Linux repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the AUR"
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
    
     elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
         Echo "* Gentoo repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the official site"
-        sudo emerge -av bsdiff net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity
+        sudo emerge -av bsdiff net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
     
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity
+        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity
+        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base python3 usbmuxd vim xmlstarlet zenity
+        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base python3 usbmuxd unzip vim xmlstarlet zenity zip
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
