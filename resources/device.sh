@@ -383,6 +383,7 @@ SendPwnediBSSA5() {
         echo "${Color_Y}* For usage of kDFU/pwnDFU, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
         ExitWin 1
     fi
+    echo
     Input "No iBSS Option"
     Echo "* If you already have sent pwned iBSS manually, select Y. If not, select N."
     Echo "* This option is disabled by default (N)."
@@ -412,6 +413,12 @@ SendPwnediBSS() {
     cd resources/ipwndfu
     Log "Sending iBSS..."
     $ipwndfu -l ../../tmp/pwnediBSS
+    if [[ $? != 0 ]]; then
+        echo -e "\n${Color_R}[Error] Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode. ${Color_N}"
+        echo "${Color_Y}* Please exit DFU and (re-)enter PWNED DFU mode before retrying. ${Color_N}"
+        Echo "* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds."
+        ExitWin 1
+    fi
     cd ../..
 }
 

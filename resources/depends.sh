@@ -53,7 +53,7 @@ SetToolPaths() {
 
     elif [[ $OSTYPE == "msys" ]]; then
         platform="win"
-        platformver="$(cmd /c ver)"
+        platformver="$(uname)"
         MPath+="$platform"
         bspatch="./resources/tools/bspatch_win"
         futurerestore="./resources/tools/futurerestore_win"
@@ -109,7 +109,7 @@ SetToolPaths() {
         Echo "* Please use it on Linux or macOS instead."
         Echo "* You may still continue, but you might encounter problems with restoring the device."
         Echo "* You have been warned."
-        sleep 10
+        sleep 5
         Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
         read -s
     fi

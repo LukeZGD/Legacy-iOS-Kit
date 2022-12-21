@@ -149,22 +149,11 @@ iDeviceRestore() {
         FRBaseband
         cp saved/baseband/$Baseband tmp/bbfw.tmp
         cp $BuildManifest tmp/
-        BasebandSHA1L=$($sha1sum tmp/bbfw.tmp | awk '{print $1}')
-        if [[ $BasebandSHA1L != $BasebandSHA1 ]]; then
-            rm -f saved/baseband/$Baseband saved/$ProductType/BuildManifest.plist
-            Error "Downloading/verifying baseband failed. Please run the script again"
-        fi
-        if [[ ! -e tmp/bbfw.tmp || ! -e tmp/BuildManifest.plist ]]; then
-            Log "Downloading/verifying baseband failed."
-            Echo "* You may still attempt to continue, but $OSVer baseband will be flashed instead of latest."
-            Echo "* This may cause ACTIVATION ERRORS after the restore, it is recommended to not continue."
-            Echo "* I highly suggest to do the restore in Linux/macOS instead to avoid issues."
-            Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-            read -s
-            ExtraArgs="-e -w"
-            idevicerestore="./resources/tools/idevicerestore_$platform"
-            re=
-        fi
+        Log "WARNING - The restore is most likely to fail on updating baseband!!"
+        Echo "* This may or may not be fixed anytime soon."
+        Echo "* I highly suggest to do the restore in Linux/macOS instead to avoid issues."
+        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+        read -s
     fi
     Log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
