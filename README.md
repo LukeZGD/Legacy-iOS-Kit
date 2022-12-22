@@ -77,7 +77,7 @@
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed, Leap 15.4
 - [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
 - **macOS** 10.13 and newer
-- **Windows** 7 and newer
+- **Windows** 8.1 and newer
 
 ## Tools and other stuff used
 - cURL

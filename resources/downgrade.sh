@@ -149,11 +149,6 @@ iDeviceRestore() {
         FRBaseband
         cp saved/baseband/$Baseband tmp/bbfw.tmp
         cp $BuildManifest tmp/
-        Log "WARNING - The restore is most likely to fail on updating baseband!!"
-        Echo "* This may or may not be fixed anytime soon."
-        Echo "* I highly suggest to do the restore in Linux/macOS instead to avoid issues."
-        Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
-        read -s
     fi
     Log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$IPSWRestore.ipsw\""
     $idevicerestore $ExtraArgs "$IPSWRestore.ipsw"
