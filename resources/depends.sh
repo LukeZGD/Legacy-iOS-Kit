@@ -93,6 +93,22 @@ SetToolPaths() {
         ipwndfu="$python2 ipwndfu"
         rmsigchks="$python2 rmsigchks.py"
         SimpleHTTPServer="$python -m http.server 8888"
+        if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) != 64 ]]; then
+            # these still need sudo even with the udev rule for some reason
+            idevicerestore="sudo ${idevicerestore}_arm"
+            idevicererestore="sudo ${idevicererestore}_arm"
+            irecovery="sudo ${irecovery}_arm"
+            pwnedDFU="sudo ${pwnedDFU}_arm"
+
+            ideviceenterrecovery="${ideviceenterrecovery}_arm"
+            ideviceinfo="${ideviceinfo}_arm"
+            iproxy="${iproxy}_arm"
+            ipsw="${ipsw}_arm"
+            partialzip="${partialzip}_arm"
+            powdersn0w="${powdersn0w}_arm"
+            tsschecker="${tsschecker}_arm"
+            xpwntool="${xpwntool}_arm"
+        fi
 
     elif [[ $platform == "macos" ]]; then
         sha1sum="$(which shasum)"
@@ -189,12 +205,12 @@ InstallDepends() {
         Echo "* Arch Linux repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the AUR"
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
-   
+
     elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
         Echo "* Gentoo repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the official site"
         sudo emerge -av bsdiff net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
-    
+
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
@@ -250,9 +266,14 @@ InstallDepends() {
     elif [[ $MPath != "./resources"* ]]; then
         mkdir ../resources/libimobiledevice_$platform
     fi
-    touch ../resources/first_run
 
-    cd ..
+    if [[ $platform == "linux" && $(uname -m) == "a"* && ! $(ls ../resources/tools/*linux_arm*) ]]; then
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_arm.zip tools_linux_arm.zip b95b2bc1589ff1fe1e16ab7ac43e9d88d9880296
+        Log "Extracting Linux ARM tools..."
+        unzip -oq tools_linux_arm.zip -d ../resources
+    fi
+
+    touch ../resources/first_run
     Log "Install script done! Please run the script again to proceed"
     Log "If your iOS device is plugged in, unplug and replug your device"
     ExitWin 0

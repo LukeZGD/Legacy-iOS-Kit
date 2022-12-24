@@ -142,7 +142,7 @@ iDeviceRestore() {
         ExtraArgs="-e"
     elif [[ $Baseband == 0 ]]; then
         Log "Device $ProductType has no baseband/disabled baseband update"
-    elif [[ $platform == "win" && $ProductType != "iPhone3"* ]]; then
+    elif [[ $platform == "win" || $LinuxARM == 1 ]] && [[ $ProductType != "iPhone3"* ]]; then
         ExtraArgs="-r"
         idevicerestore="$idevicererestore"
         re="re"
@@ -258,7 +258,7 @@ Downgrade() {
         IPSWCustomA7
     fi
 
-    if [[ $platform == "win" || $IPSWA7 == 1 ]]; then
+    if [[ $platform == "win" || $LinuxARM == 1 || $IPSWA7 == 1 ]]; then
         DowngradeOTAWin
         return
     elif [[ $OSVer == "Other" ]]; then

@@ -139,6 +139,14 @@ Main() {
     
     if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
         Log "Apple Silicon Mac detected. Support may be limited, proceed at your own risk."
+    elif [[ $platform == "linux" && $(uname -m) == "a"* ]]; then
+        Log "Linux ARM detected. Support may be limited, proceed at your own risk."
+        Echo "* Note that only 32-bit (armhf) is compiled natively for now. For 64-bit, box64 might work."
+        if [[ $(getconf LONG_BIT) != 64 ]]; then
+            LinuxARM=1
+            Echo "* 32-bit Linux ARM support is also very limited."
+        fi
+
     elif [[ $(uname -m) != "x86_64" ]]; then
         Error "Only 64-bit (x86_64) distributions are supported."
     fi
@@ -146,10 +154,6 @@ Main() {
     if [[ $1 == "Install" || -z $bspatch || ! -e $ideviceinfo || ! -e $irecoverychk ||
           ! -e $ideviceenterrecovery || ! -e $iproxy || -z $python ||
           ! -e ./resources/first_run ]]; then
-        if [[ ! -e $ideviceinfo || ! -e $irecoverychk ||
-              ! -e $ideviceenterrecovery || ! -e $iproxy ]]; then
-            rm -rf ./resources/libimobiledevice_$platform
-        fi
         Clean
         InstallDepends
     fi
@@ -173,7 +177,7 @@ Main() {
         if [[ $DeviceProc != 7 ]]; then
             Selection+=("Create Custom IPSW")
             [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
-            [[ $DeviceProc != 4 && $platform != "win" ]] && Selection+=("Restore to latest iOS")
+            [[ $DeviceProc != 4 && $platform != "win" && $LinuxARM != 1 ]] && Selection+=("Restore to latest iOS")
         fi
 
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
@@ -205,7 +209,7 @@ Main() {
             Log "Found existing Custom IPSW, stopping here."
             Echo "* If you want to re-create the custom IPSW, move/delete the existing one first."
             ExitWin 0
-        elif [[ $Jailbreak != 1 && $platform != "win" ]]; then
+        elif [[ $Jailbreak != 1 && $platform != "win" && $LinuxARM != 1 ]]; then
             if [[ $DeviceProc == 4 && $OSVer == "7.1.2" ]]; then
                 Log "Creating custom IPSW is not needed for non-jailbroken 7.1.2 restores."
                 ExitWin 0
@@ -225,7 +229,7 @@ Main() {
         Log "Custom IPSW has been created: $IPSWCustom.ipsw"
         [[ $Jailbreak == 1 ]] && Echo "* This custom IPSW has a jailbreak built in ($JBName)"
         Echo "* Run the script again and select Downgrade Device to use the custom IPSW."
-        if [[ $DeviceProc != 4 && $platform != "win" ]]; then
+        if [[ $DeviceProc != 4 && $platform != "win" && $LinuxARM != 1 ]]; then
             Echo "* You may also use futurerestore manually (make sure to use the latest beta)"
         fi
         ExitWin 0
@@ -235,7 +239,9 @@ Main() {
         ExitWin 0
     fi
 
-    if [[ $DeviceProc == 7 && $platform == "win" ]]; then
+    if [[ $DeviceProc == 7 && $LinuxARM == 1 ]]; then
+        Error "Restoring A7 devices is not supported on Linux ARM 32-bit."
+    elif [[ $DeviceProc == 7 && $platform == "win" ]]; then
         local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
         if [[ $DeviceState == "Normal" ]]; then
             Error "$Message"
@@ -354,7 +360,7 @@ SelectVersion() {
                 Echo "* iOS 4.3.x downgrades are supported on Linux only"
                 Echo "* For macOS users, use cherryflowerJB instead"
             fi
-            if [[ $platform != "win" ]]; then
+            if [[ $platform != "win" && $LinuxARM != 1 ]]; then
                 Selection+=("4.3.5")
                 Selection2+=("4.3.3" "4.3")
             fi
@@ -383,7 +389,7 @@ SelectVersion() {
         fi
     fi
 
-    if [[ $platform != "win" && $Mode == "Downgrade"* ]]; then
+    if [[ $platform != "win" && $LinuxARM != 1 && $Mode == "Downgrade"* ]]; then
         Selection+=("Other (use SHSH blobs)")
     fi
     Selection+=("(Any other key to exit)")

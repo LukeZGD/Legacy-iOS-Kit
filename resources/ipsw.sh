@@ -22,7 +22,7 @@ JailbreakSet() {
          [[ $OSVer == "8.4.1" ]] && JBDaibutsu=1
     fi
 
-    [[ $platform == "win" ]] && IPSWCustom+="JB"
+    [[ $platform == "win" || $LinuxARM == 1 ]] && IPSWCustom+="JB"
     if [[ $JBDaibutsu == 1 ]]; then
         JBName="daibutsu"
         IPSWCustom+="D"
@@ -82,7 +82,7 @@ JailbreakOption() {
         fi
         Baseband=0
         IPSWCustom+="B"
-        if [[ $platform != "win" && $Jailbreak != 1 ]]; then
+        if [[ $platform != "win" && $LinuxARM != 1 && $Jailbreak != 1 ]]; then
             IPSWCustom+="N"
         fi
     fi
@@ -235,7 +235,7 @@ IPSW32() {
         #JailbreakFiles $JBURL/sshdeb.tar sshdeb.tar 0bffece0f8fd939c479159b57e923dd8c06191d3 # uncomment to add openssh to custom ipsw
     fi
     [[ $ProductType == "$DisableBBUpdate" ]] && BBUpdate=
-    [[ $platform == "win" ]] && WinBundles="windows/"
+    [[ $platform == "win" || $LinuxARM == 1 ]] && WinBundles="windows/"
 
     if [[ ! -e $IPSWCustom.ipsw ]]; then
         Log "Preparing custom IPSW..."
