@@ -454,6 +454,7 @@ kDFU() {
     Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
     read -s
     Log "Entering kDFU mode..."
+    Echo "* This may take a while."
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
     if [[ $? == 0 ]]; then
         $SSH -p 2222 root@127.0.0.1 "chmod +x /tmp/$kloader; /tmp/$kloader /tmp/pwnediBSS" &

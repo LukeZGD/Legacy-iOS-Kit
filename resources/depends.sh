@@ -169,6 +169,11 @@ InstallDepends() {
         Echo "* Enter your user password when prompted"
         Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
         read -s
+    elif [[ $platform == "win" ]]; then
+        Echo "* iOS-OTA-Downgrader will be installing dependencies from MSYS2"
+        Echo "* Note that you may have to run the script more than once"
+        Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+        read -s
     fi
 
     if [[ -e /etc/debian_version ]]; then
@@ -214,7 +219,7 @@ InstallDepends() {
         Echo "* The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools"
 
     elif [[ $platform == "win" ]]; then
-        pacman -Sy --noconfirm --needed ca-certificates curl libcurl openssh unzip zip
+        pacman -Syu --noconfirm --needed ca-certificates curl libcurl openssh unzip zip
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
         if [[ ! $(ls ../resources/tools/*win*) ]]; then
             SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 4436d23034e9bec1b855aabb69ae0013fec5e2cb
