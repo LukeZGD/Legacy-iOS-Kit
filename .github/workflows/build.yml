@@ -48,15 +48,10 @@ jobs:
       - name: Zip linux files
         run: zip -r ${{ github.event.repository.name }}_linux_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.sh README.md
 
-      - name: Move linux binaries and other files
-        run: |
-          mv ./resources/tools/*linux* ./exclude/tools
-          mv ./resources/libimobiledevice_linux ./exclude
-
       - name: Download and extract tools_linux_arm
         run: |
           curl -LO https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_arm.zip
-          unzip tools_linux_arm.zip -d ./resources
+          unzip -o tools_linux_arm.zip -d ./resources
 
       - name: Zip linux arm files
         run: zip -r ${{ github.event.repository.name }}_linux_arm_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip resources/ restore.sh README.md
@@ -65,8 +60,7 @@ jobs:
         run: |
           mv ./resources/lib/* ./exclude/lib
           mv ./resources/tools/*linux* ./exclude/tools
-          mv ./resources/libimobiledevice_linux/* ./exclude/libimobiledevice_linux
-          rm -r ./resources/libimobiledevice_linux
+          mv ./resources/libimobiledevice_linux ./exclude
           mv ./resources/firmware/FirmwareBundles ./resources/firmware/JailbreakBundles ./exclude/firmware
           mkdir ./resources/firmware/FirmwareBundles
           mv ./exclude/firmware/FirmwareBundles/Down_iPhone3* ./resources/firmware/FirmwareBundles

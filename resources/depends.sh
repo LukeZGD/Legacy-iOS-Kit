@@ -104,6 +104,7 @@ SetToolPaths() {
             ideviceinfo="${ideviceinfo}_arm"
             iproxy="${iproxy}_arm"
             ipsw="${ipsw}_arm"
+            irecoverychk="${irecoverychk}_arm"
             partialzip="${partialzip}_arm"
             powdersn0w="${powdersn0w}_arm"
             tsschecker="${tsschecker}_arm"
