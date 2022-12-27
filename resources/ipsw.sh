@@ -488,3 +488,173 @@ IPSW64() {
         Error "Failed to find custom IPSW. Please run the script again"
     fi
 }
+
+IPSW32Other() {
+    local BBUpdate="-bbupdate"
+    IPSWCustom="${IPSWType}_${OSVer}_${BuildVer}_CustomW"
+    if [[ -e $IPSWCustom.ipsw ]]; then
+        Log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    fi
+
+    if [[ $platform != "win" ]]; then
+        Input "Memory Option for creating custom IPSW"
+        Echo "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
+        Echo "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
+        Echo "* This option is enabled by default (Y)."
+        read -p "$(Input 'Enable this option? (Y/n):')" JBMemory
+        if [[ $JBMemory == 'N' || $JBMemory == 'n' ]]; then
+            Log "Memory option disabled by user."
+            JBMemory=
+        else
+            Log "Memory option enabled."
+            JBMemory="-memory"
+        fi
+        echo
+    fi
+
+    if [[ $ProductType == "$DisableBBUpdate" ]]; then
+        BBUpdate=
+        Log "Baseband update will be disabled for the custom IPSW."
+        if [[ $ProductType != "iPad2,3" ]]; then
+            Log "WARNING - With baseband update disabled, activation errors might occur."
+            Echo "* If you do not have other means for activation, this is not recommended."
+            Input "Press Enter/Return to continue anyway (or press Ctrl+C to cancel)"
+            read -s
+        fi
+        Baseband=0
+        IPSWCustom+="B"
+    fi
+
+    Log "Generating firmware bundle..."
+    local IPSWSHA256=$($sha256sum "$IPSW.ipsw")
+    [[ $platform == "win" ]] && IPSWSHA256=$(echo $IPSWSHA256 | cut -c 2-)
+    local FirmwareBundle=FirmwareBundles/${IPSWType}_${OSVer}_${BuildVer}.bundle
+    local NewPlist=tmp/$FirmwareBundle/Info.plist
+
+    mkdir -p tmp/$FirmwareBundle
+    cp resources/firmware/powdersn0wBundles/config2.plist tmp/FirmwareBundles/config.plist
+    unzip -j "$IPSW.ipsw" Firmware/all_flash/all_flash.${HWModel}ap.production/manifest
+    mv manifest tmp/$FirmwareBundle/
+
+    local FWKey=$(cat $FWKeys/index.html)
+    local RamdiskName=$(echo $FWKey | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
+    local RamdiskIV=$(echo $FWKey | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .iv')
+    local RamdiskKey=$(echo $FWKey | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .key')
+    cd tmp
+    unzip -j "$IPSW.ipsw" $RamdiskName
+    $xpwntool $RamdiskName Ramdisk.dec -iv $RamdiskIV -k $RamdiskKey -decrypt
+    $xpwntool Ramdisk.dec Ramdisk.raw
+    $hfsplus Ramdisk.raw extract usr/local/share/restore/options.$HWModel.plist
+    cd ..
+    local RootSize=$($xmlstarlet sel -t -m "plist/dict/key[.='SystemPartitionSize']" -v "following-sibling::integer[1]" tmp/options.$HWModel.plist)
+
+    printf '<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Filename</key>
+	<string>'>$NewPlist;printf "$IPSW.ipsw">>$NewPlist;printf '</string>
+	<key>RootFilesystem</key>
+	<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("RootFS")) | .filename'>>$NewPlist;printf '</string>
+	<key>RootFilesystemKey</key>
+	<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("RootFS")) | .key'>>$NewPlist;printf '</string>
+	<key>RootFilesystemSize</key>
+	<integer>'>>$NewPlist;printf $RootSize>>$NewPlist;printf '</integer>
+	<key>RamdiskOptionsPath</key>
+	<string>/usr/local/share/restore/options.'>>$NewPlist;printf $HWModel>>$NewPlist;printf '.plist</string>
+	<key>SHA256</key>
+	<string>'>>$NewPlist;printf $IPSWSHA256>>$NewPlist;printf '</string>
+	<key>FilesystemPackage</key>
+	<dict/>
+	<key>RamdiskPackage</key>
+	<dict/>
+	<key>Firmware</key>
+	<dict>
+		<key>iBSS</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/dfu/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .filename'>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv'>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key'>>$NewPlist;printf '</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>Patch</key>
+			<true/>
+		</dict>
+		<key>iBEC</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/dfu/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename'>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv'>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key'>>$NewPlist;printf '</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>Patch</key>
+			<true/>
+		</dict>
+		<key>Restore Ramdisk</key>
+		<dict>
+			<key>File</key>
+			<string>'>>$NewPlist;printf $RamdiskName>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;printf $RamdiskIV>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;printf $RamdiskKey>>$NewPlist;printf '</string>
+			<key>Decrypt</key>
+			<true/>
+		</dict>
+		<key>RestoreDeviceTree</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.'>>$NewPlist;printf $HWModel>>$NewPlist;printf 'ap.production/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .filename'>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .iv'>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .key'>>$NewPlist;printf '</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .filename'>>$NewPlist;printf '</string>
+		</dict>
+		<key>RestoreLogo</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.'>>$NewPlist;printf $HWModel>>$NewPlist;printf 'ap.production/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename'>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .iv'>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .key'>>$NewPlist;printf '</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename'>>$NewPlist;printf '</string>
+		</dict>
+		<key>RestoreKernelCache</key>
+		<dict>
+            <key>File</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("Kernelcache")) | .filename'>>$NewPlist;printf '</string>
+			<key>IV</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("Kernelcache")) | .iv'>>$NewPlist;printf '</string>
+			<key>Key</key>
+			<string>'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("Kernelcache")) | .key'>>$NewPlist;printf '</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/'>>$NewPlist;echo $FWKey | $jq -j '.keys[] | select(.image | startswith("Kernelcache")) | .filename'>>$NewPlist;printf '</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>Patch</key>
+			<false/>
+        </dict>
+	</dict>
+</dict>
+</plist>\n'>>$NewPlist
+    cat $NewPlist
+
+    Log "Preparing custom IPSW..."
+    cd tmp
+    $powdersn0w "$IPSW.ipsw" ../$IPSWCustom.ipsw $BBUpdate $JBMemory
+    cd ..
+    if [[ ! -e $IPSWCustom.ipsw ]]; then
+        Error "Failed to find custom IPSW. Please run the script again"
+    fi
+}

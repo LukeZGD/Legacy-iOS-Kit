@@ -14,8 +14,6 @@ SetToolPaths() {
         cherry="./resources/ch3rryflower/Tools/ubuntu/UNTETHERED"
         futurerestore="./resources/tools/futurerestore_linux"
         python="$(which python3)"
-        xmlstarlet="$(which xmlstarlet)"
-        zenity="$(which zenity)"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -49,7 +47,6 @@ SetToolPaths() {
         ipwnder32="./resources/tools/ipwnder32_macos"
         ipwnder_lite="./resources/tools/ipwnder_macos"
         python="/usr/bin/python"
-        zenity="./resources/tools/zenity_macos"
 
     elif [[ $OSTYPE == "msys" ]]; then
         platform="win"
@@ -61,6 +58,7 @@ SetToolPaths() {
     fi
 
     cherrybin="../$cherry/cherry"
+    hfsplus="../resources/tools/hfsplus_$platform"
     ideviceenterrecovery="$MPath/ideviceenterrecovery"
     ideviceinfo="$MPath/ideviceinfo"
     idevicerestore="./resources/tools/idevicerestore_$platform"
@@ -70,6 +68,7 @@ SetToolPaths() {
     ipwndfu="$python ipwndfu"
     irecoverychk="$MPath/irecovery"
     irecovery="$irecoverychk"
+    jq="./resources/tools/jq_$platform"
     partialzip="./resources/tools/partialzip_$platform"
     ping="ping -c1"
     powdersn0w="../resources/tools/powdersn0w_$platform"
@@ -77,29 +76,40 @@ SetToolPaths() {
     python2="$(which python2 2>/dev/null)"
     rmsigchks="$python rmsigchks.py"
     sha1sum="$(which sha1sum 2>/dev/null)"
+    sha256sum="$(which sha256sum 2>/dev/null)"
     SimpleHTTPServer="$python -m SimpleHTTPServer 8888"
     SSH="-F ./resources/ssh_config"
     SCP="$(which scp) $SSH"
     SSH="$(which ssh) $SSH"
     tsschecker="./resources/tools/tsschecker_$platform"
+    xmlstarlet="./resources/tools/xmlstarlet_$platform"
     xpwntool="../resources/tools/xpwntool_$platform"
+    zenity="./resources/tools/zenity_$platform"
 
     if [[ $platform == "linux" ]]; then
         irecovery="env LD_LIBRARY_PATH=./resources/lib $irecovery"
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
+            idevicerestore="env LD_LIBRARY_PATH=../resources/lib $idevicerestore"
         fi
         ipwndfu="$python2 ipwndfu"
+        jq="$(which jq)"
         rmsigchks="$python2 rmsigchks.py"
         SimpleHTTPServer="$python -m http.server 8888"
+        xmlstarlet="$(which xmlstarlet)"
+        zenity="$(which zenity)"
+        #if [[ $(uname -m) == "a"* ]]; then
         if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) != 64 ]]; then
+            LinuxARMType="arm"
             # these still need sudo even with the udev rule for some reason
-            idevicerestore="sudo ${idevicerestore}_arm"
-            idevicererestore="sudo ${idevicererestore}_arm"
+            futurerestore="${futurerestore}_arm"
+            idevicerestore="${idevicerestore}_arm"
+            idevicererestore="${idevicererestore}_arm"
             irecovery="sudo ${irecovery}_arm"
             pwnedDFU="sudo ${pwnedDFU}_arm"
 
+            hfsplus="${hfsplus}_arm"
             ideviceenterrecovery="${ideviceenterrecovery}_arm"
             ideviceinfo="${ideviceinfo}_arm"
             iproxy="${iproxy}_arm"
@@ -109,10 +119,36 @@ SetToolPaths() {
             powdersn0w="${powdersn0w}_arm"
             tsschecker="${tsschecker}_arm"
             xpwntool="${xpwntool}_arm"
+
+            : '
+            if [[ $(getconf LONG_BIT) == 64 ]]; then
+                LinuxARMType="arm64"
+                futurerestore="${futurerestore}64"
+                hfsplus="${hfsplus}64"
+                idevicerestore="${idevicerestore}64"
+                idevicererestore="${idevicererestore}64"
+                irecovery="${irecovery}64"
+                pwnedDFU="${pwnedDFU}64"
+                ideviceenterrecovery="${ideviceenterrecovery}_arm"
+                ideviceinfo="${ideviceinfo}64"
+                iproxy="${iproxy}64"
+                ipsw="${ipsw}64"
+                irecoverychk="${irecoverychk}64"
+                partialzip="${partialzip}64"
+                powdersn0w="${powdersn0w}64"
+                tsschecker="${tsschecker}64"
+                xpwntool="${xpwntool}64"
+            fi
+            '
+
+            futurerestore="sudo LD_LIBRARY_PATH=./resources/lib/$LinuxARMType $futurerestore"
+            idevicerestore="sudo LD_LIBRARY_PATH=./resources/lib/$LinuxARMType $idevicerestore"
+            idevicererestore="sudo LD_LIBRARY_PATH=./resources/lib/$LinuxARMType $idevicererestore"
         fi
 
     elif [[ $platform == "macos" ]]; then
         sha1sum="$(which shasum)"
+        sha256sum="$sha1sum -a 256"
         if (( ${platformver:0:2} > 11 )); then
             # for macOS 12 and newer
             python="/usr/bin/python3"
@@ -205,28 +241,28 @@ InstallDepends() {
     if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
         Echo "* Arch Linux repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the AUR"
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
 
     elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
         Echo "* Gentoo repos do not ship python2, which is needed for ipwndfu"
         Echo "* If you need to use ipwndfu, python2 can be installed from the official site"
-        sudo emerge -av bsdiff net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
+        sudo emerge -av bsdiff net-misc/curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
 
     elif [[ -n $UBUNTU_CODENAME && $VERSION_ID == "2"* ]] ||
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        sudo apt install -y bsdiff curl jq libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
         ln -sf /usr/lib64/libbz2.so.1.* ../resources/lib/libbz2.so.1.0
-        sudo dnf install -y bsdiff ca-certificates libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity zip
+        sudo dnf install -y bsdiff ca-certificates jq libimobiledevice openssl python2 python3 systemd udev usbmuxd vim-common xmlstarlet zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" || $PRETTY_NAME == *"Leap 15.4" ]]; then
         [[ $ID == "opensuse-leap" ]] && ln -sf /lib64/libreadline.so.7 ../resources/lib/libreadline.so.8
-        sudo zypper -n in bsdiff curl libimobiledevice-1_0-6 openssl python-base python3 usbmuxd unzip vim xmlstarlet zenity zip
+        sudo zypper -n in bsdiff curl jq libimobiledevice-1_0-6 openssl python-base python3 usbmuxd unzip vim xmlstarlet zenity zip
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
@@ -236,10 +272,14 @@ InstallDepends() {
         Echo "* The script will detect this automatically and will use the Homebrew/MacPorts versions of the tools"
 
     elif [[ $platform == "win" ]]; then
+        cd ..
+        rm -r tmp
         pacman -Syu --noconfirm --needed ca-certificates curl libcurl openssh unzip zip
+        mkdir tmp
+        cd tmp
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
         if [[ ! $(ls ../resources/tools/*win*) ]]; then
-            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip 4436d23034e9bec1b855aabb69ae0013fec5e2cb
+            SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_win.zip tools_win.zip fcaa14e420885c7a0e854aad3119e8a29362813b
             Log "Extracting Windows tools..."
             unzip -oq tools_win.zip -d ../resources
         fi
@@ -269,9 +309,12 @@ InstallDepends() {
     fi
 
     if [[ $platform == "linux" && $(uname -m) == "a"* && ! $(ls ../resources/tools/*linux_arm*) ]]; then
-        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_arm.zip tools_linux_arm.zip b95b2bc1589ff1fe1e16ab7ac43e9d88d9880296
+        SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_arm.zip tools_linux_arm.zip 59c16f684310bde75e12d4719bb918d448d47630
         Log "Extracting Linux ARM tools..."
         unzip -oq tools_linux_arm.zip -d ../resources
+        #SaveFile https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/tools_linux_arm64.zip tools_linux_arm64.zip b95b2bc1589ff1fe1e16ab7ac43e9d88d9880296
+        #Log "Extracting Linux ARM64 tools..."
+        #unzip -oq tools_linux_arm64.zip -d ../resources
     fi
 
     touch ../resources/first_run

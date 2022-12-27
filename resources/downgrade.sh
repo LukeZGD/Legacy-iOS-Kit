@@ -83,20 +83,25 @@ DowngradeOther() {
 
     Input "Select your IPSW file in the file selection window."
     IPSW="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
+    [[ ! -s "$IPSW" ]] && read -p "$(Input 'Enter path to IPSW file:')" IPSW
     [[ ! -s "$IPSW" ]] && Error "No IPSW selected, or IPSW file not found."
     IPSW="${IPSW%?????}"
     Log "Selected IPSW file: $IPSW.ipsw"
     Input "Select your SHSH file in the file selection window."
     SHSH="$($zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select SHSH file")"
+    [[ ! -s "$SHSH" ]] && read -p "$(Input 'Enter path to SHSH file:')" SHSH
     [[ ! -s "$SHSH" ]] && Error "No SHSH selected, or SHSH file not found."
     Log "Selected SHSH file: $SHSH"
 
-    Log "Getting build version from IPSW"
+    Log "Getting version from IPSW"
     unzip -o -j "$IPSW.ipsw" Restore.plist -d tmp
     if [[ $platform == "macos" ]]; then
+        plutil -extract 'ProductVersion' xml1 tmp/Restore.plist -o tmp/OSVer
+        OSVer=$(cat tmp/OSVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
         plutil -extract 'ProductBuildVersion' xml1 tmp/Restore.plist -o tmp/BuildVer
         BuildVer=$(cat tmp/BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
     else
+        OSVer=$(cat tmp/Restore.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         BuildVer=$(cat tmp/Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     fi
 
@@ -128,6 +133,15 @@ DowngradeOther() {
     fi
 
     kDFU
+    if [[ $(echo $BuildVer | cut -c 1) == 8 ]]; then
+        IPSWSetExtract
+        iDeviceRestore latest
+    elif [[ $platform == "win" || $LinuxARM == 1 ]]; then
+        IPSW32Other
+        IPSWSetExtract
+        iDeviceRestore
+        return
+    fi
     IPSWSetExtract
     FutureRestore
 }
@@ -135,7 +149,7 @@ DowngradeOther() {
 
 iDeviceRestore() {
     mkdir shsh
-    cp $SHSH shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh
+    cp "$SHSH" shsh/${UniqueChipID}-${ProductType}-${OSVer}.shsh 2>/dev/null
     Log "Proceeding to idevicerestore..."
     ExtraArgs="-e -w"
     if [[ $1 == "latest" ]]; then
@@ -258,11 +272,11 @@ Downgrade() {
         IPSWCustomA7
     fi
 
-    if [[ $platform == "win" || $LinuxARM == 1 || $IPSWA7 == 1 ]]; then
-        DowngradeOTAWin
-        return
-    elif [[ $OSVer == "Other" ]]; then
+    if [[ $OSVer == "Other" ]]; then
         DowngradeOther
+        return
+    elif [[ $platform == "win" || $LinuxARM == 1 || $IPSWA7 == 1 ]]; then
+        DowngradeOTAWin
         return
     fi
     DowngradeOTA
@@ -292,11 +306,7 @@ RestoreLatest() {
     elif [[ $DeviceProc == 6 && $ProductType == "iPad3"* ]]; then
         IPSWType="iPad_32bit"
     fi
-    IPSWA7=1
-    SendiBSS=1
     IPSWFindVerify
     IPSWSetExtract
-    Recovery only
-    SaveLatestBlobs
-    FutureRestore latest
+    iDeviceRestore latest
 }

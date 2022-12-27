@@ -1,20 +1,21 @@
 # iOS-OTA-Downgrader
 
-- **Downgrade/restore and jailbreak supported iOS devices to signed OTA firmwares**
+- **Downgrade/restore and jailbreak supported legacy iOS devices to signed OTA firmwares**
 - **iPhone4Down: Downgrade your iPhone 4 on Linux/Windows (using powdersn0w)**
-- **Linux and macOS** are supported
-    - **Partial support for Windows** - usage is not recommended
-    - iPhone4Down is focused on Linux only - macOS and Windows are only partially supported
+- **Linux, macOS, and Windows** are supported
+    - Windows usage is not recommended
+    - iPhone4Down focuses on Linux support - use [cherryflowerJB](https://web.archive.org/web/20210701000000*/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://dora2ios.web.app/konayuki/index.html) on macOS instead
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
-    - For iOS 10.3.3, use [TotallyNotSpyware](https://totally-not.spyware.lol) or [sockH3lix](https://github.com/SongXiaoXi/sockH3lix) to jailbreak
-- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only, iOS 5 and newer only)
+    - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
+- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only)
 - The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
 - This script can also be used to just enter kDFU mode (32-bit devices only)
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
+- This script can also be used to restore 32-bit devices to their latest versions
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -22,6 +23,7 @@
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs
 - **iPhone4Down supports iPhone 4 GSM and CDMA (iPhone3,1 and iPhone3,3)**
+    - iPhone3,3 support is not tested. Use [powdersn0w](https://dora2ios.web.app/konayuki/index.html) on macOS instead
 
 <table>
     <thead>
@@ -66,7 +68,7 @@
 
 <details>
     <summary>For Pangu 32-bit users:</summary>
-    <ul><li>For 32-bit users using Pangu and normal method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
+    <ul><li>For 32-bit users using Pangu and jailbroken method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
 </details>
 
 ## Supported OS versions/distros
@@ -83,7 +85,7 @@
 - cURL
 - bspatch
 - python2 (ipwndfu, rmsigchks, SimpleHTTPServer), python3 (http.server)
-- [powdersn0w](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
+- [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
 - [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios (used for iOS 4.3.x only)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
@@ -93,7 +95,7 @@
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker)
 - [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (and 194)
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
-- [idevicererestore](https://github.com/LukeZGD/daibutsuCFW) from daibutsuCFW (used for Windows OTA restores only)
+- [idevicererestore](https://github.com/LukeZGD/daibutsuCFW) from daibutsuCFW (used on Linux ARM/Windows restores for 32-bit devices)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440)

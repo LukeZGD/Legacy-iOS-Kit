@@ -144,7 +144,6 @@ Main() {
         Echo "* Note that only 32-bit (armhf) is compiled natively for now. For 64-bit, box64 might work."
         if [[ $(getconf LONG_BIT) != 64 ]]; then
             LinuxARM=1
-            Echo "* 32-bit Linux ARM support is also very limited."
         fi
 
     elif [[ $(uname -m) != "x86_64" ]]; then
@@ -177,7 +176,7 @@ Main() {
         if [[ $DeviceProc != 7 ]]; then
             Selection+=("Create Custom IPSW")
             [[ $DeviceState == "Normal" ]] && Selection+=("Put Device in kDFU Mode")
-            [[ $DeviceProc != 4 && $platform != "win" && $LinuxARM != 1 ]] && Selection+=("Restore to latest iOS")
+            [[ $DeviceProc != 4 ]] && Selection+=("Restore to latest iOS")
         fi
 
         Selection+=("(Re-)Install Dependencies" "(Any other key to exit)")
@@ -239,9 +238,7 @@ Main() {
         ExitWin 0
     fi
 
-    if [[ $DeviceProc == 7 && $LinuxARM == 1 ]]; then
-        Error "Restoring A7 devices is not supported on Linux ARM 32-bit."
-    elif [[ $DeviceProc == 7 && $platform == "win" ]]; then
+    if [[ $DeviceProc == 7 && $platform == "win" ]]; then
         local Message="If you want to restore your A7 device on Windows, put the device in pwnDFU mode."
         if [[ $DeviceState == "Normal" ]]; then
             Error "$Message"
@@ -389,7 +386,7 @@ SelectVersion() {
         fi
     fi
 
-    if [[ $platform != "win" && $LinuxARM != 1 && $Mode == "Downgrade"* ]]; then
+    if [[ $Mode == "Downgrade"* ]]; then
         Selection+=("Other (use SHSH blobs)")
     fi
     Selection+=("(Any other key to exit)")
