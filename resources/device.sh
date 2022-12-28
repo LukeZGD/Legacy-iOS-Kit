@@ -423,7 +423,7 @@ SendPwnediBSS() {
 }
 
 kDFU() {
-    local kloader
+    local kloader="kloader"
     local VerDetect=$(echo $ProductVer | cut -c 1)
     
     if [[ $DeviceState != "Normal" ]]; then
@@ -432,11 +432,6 @@ kDFU() {
     fi
 
     PatchiBSS
-
-    [[ $VerDetect == 1 ]] && kloader="kloader_hgsp"
-    [[ $VerDetect == 5 ]] && kloader="kloader5"
-    [[ ! $kloader ]] && kloader="kloader"
-    
     Log "Running iproxy for SSH..."
     $iproxy 2222 22 >/dev/null &
     iproxyPID=$!
@@ -453,6 +448,21 @@ kDFU() {
     sleep 3
     Input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
     read -s
+
+    if [[ $VerDetect == 1 ]]; then
+        Selection=("h3lix" "kok3shiX")
+        Input "Select the jailbreak used on the device:"
+        Echo "* For kok3shiX, make sure to have turned on \"use legacy patches\" before jailbreaking."
+        select opt in "${Selection[@]}"; do
+        case $opt in
+            "h3lix" ) kloader+="_hgsp"; break;;
+            * ) break;;
+        esac
+        done
+    elif [[ $VerDetect == 5 ]]; then
+        kloader+="5"
+    fi
+
     Log "Entering kDFU mode..."
     Echo "* This may take a while."
     $SCP -P 2222 resources/tools/$kloader tmp/pwnediBSS root@127.0.0.1:/tmp
@@ -462,7 +472,9 @@ kDFU() {
         Log "Failed to connect to device via USB SSH."
         Echo "* For Linux users, try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
         if [[ $VerDetect == 1 ]]; then
-            Echo "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak with h3lix, and try again."
+            Echo "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
+            Echo "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
+            Echo "* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
         elif [[ $VerDetect == 5 ]]; then
             Echo "* Try to re-install OpenSSH, reboot, and try again."
         else
