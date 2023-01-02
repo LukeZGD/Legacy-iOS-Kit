@@ -239,23 +239,25 @@ EnterPwnDFU() {
             read -s
             return
         fi
-    elif [[ $platform == "macos" ]]; then
-        Selection+=("ipwnder_lite" "iPwnder32")
+    else
+        [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
         Echo "* If unsure, select 1. If 1 does not work, try selecting the other option."
+        if [[ $platform == "linux" ]]; then
+            Selection+=("pwnedDFU" "ipwndfu")
+            Echo "* Make sure to have python2 installed first before proceeding."
+        fi
         Echo "* This option is set to ${Selection[0]} by default (1)."
         Input "Select your option:"
         select opt in "${Selection[@]}"; do
         case $opt in
             "ipwnder_lite" ) pwnDFUTool="$ipwnder_lite"; break;;
             "iPwnder32" ) pwnDFUTool="$ipwnder32"; break;;
+            "ipwndfu" ) pwnDFUTool="ipwndfu"; SaveExternal ipwndfu; break;;
+            "pwnedDFU" ) pwnDFUTool="$pwnedDFU"; break;;
         esac
         done
-    else
-        Echo "* Make sure to have python2 installed first before using ipwndfu."
-        pwnDFUTool="ipwndfu"
-        SaveExternal ipwndfu
     fi
     
     Log "Entering pwnDFU mode with: $pwnDFUTool"
@@ -275,6 +277,14 @@ EnterPwnDFU() {
     else
         $pwnDFUTool -p
         pwnDFUDevice=$?
+        if [[ $DeviceProc == 7 && $pwnDFUTool == "$pwnedDFU" ]]; then
+            SaveExternal ipwndfu
+            cd resources/ipwndfu
+            Log "Running rmsigchks.py..."
+            $rmsigchks
+            pwnDFUDevice=$?
+            cd ../..
+        fi
     fi
     if [[ $DeviceProc == 4 || $DeviceProc == 7 ]]; then
         pwnD=$($irecovery -q | grep -c "PWND")
