@@ -294,7 +294,7 @@ Main() {
             echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
             ExitWin 1
         elif [[ $DeviceProc == 5 ]]; then
-            SendPwnediBSSA5
+            SendPwnediBSS
         else
             EnterPwnDFU
         fi

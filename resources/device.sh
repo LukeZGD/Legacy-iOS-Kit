@@ -239,7 +239,7 @@ EnterPwnDFU() {
             read -s
             return
         fi
-    else
+    elif [[ $DeviceProc == 7 ]]; then
         [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."
@@ -258,6 +258,9 @@ EnterPwnDFU() {
             "pwnedDFU" ) pwnDFUTool="$pwnedDFU"; break;;
         esac
         done
+    else
+        Echo "* Make sure to have python2 installed first before proceeding."
+        pwnDFUTool="ipwndfu"
     fi
     
     Log "Entering pwnDFU mode with: $pwnDFUTool"
@@ -382,17 +385,20 @@ PatchiBSS() {
     $bspatch saved/$ProductType/$iBSS.dfu tmp/pwnediBSS resources/patches/$iBSS.patch
 }
 
-SendPwnediBSSA5() {
-    Echo "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
-    Echo "* If you do not know what you are doing, select N and restart your device in normal mode before retrying."
-    read -p "$(Input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N):')" opt
-    if [[ $opt != "Y" && $opt != "y" && $DeviceProc == 5 ]]; then
-        echo -e "\n${Color_R}[Error] 32-bit A5 device is not in PWNED DFU mode. ${Color_N}"
-        echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
-        echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
-        echo "${Color_Y}* For usage of kDFU/pwnDFU, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
-        ExitWin 1
+SendPwnediBSS() {
+    if [[ $DeviceProc == 5 ]]; then
+        Echo "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
+        Echo "* If you do not know what you are doing, select N and restart your device in normal mode before retrying."
+        read -p "$(Input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N):')" opt
+        if [[ $opt != "Y" && $opt != "y" && $DeviceProc == 5 ]]; then
+            echo -e "\n${Color_R}[Error] 32-bit A5 device is not in PWNED DFU mode. ${Color_N}"
+            echo "${Color_Y}* Please put the device in normal mode and jailbroken before proceeding. ${Color_N}"
+            echo "${Color_Y}* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds. ${Color_N}"
+            echo "${Color_Y}* For usage of kDFU/pwnDFU, read the \"Troubleshooting\" wiki page in GitHub ${Color_N}"
+            ExitWin 1
+        fi
     fi
+
     echo
     Input "No iBSS Option"
     Echo "* If you already have sent pwned iBSS manually, select Y. If not, select N."
@@ -402,30 +408,18 @@ SendPwnediBSSA5() {
         Log "No iBSS option enabled by user."
         return
     fi
-    echo
-    Input "Send iBSS Option"
-    Echo "* To send pwned iBSS using ipwndfu, select Y. (does not work on ARM Macs)"
-    Echo "* To let futurerestore send iBSS, select N. (likely does not work)"
-    Echo "* Make sure to have python2 installed first before using ipwndfu."
-    Echo "* This option is enabled by default (Y)."
-    read -p "$(Input 'Enable this option? (Y/n):')" SendiBSS
-    if [[ $SendiBSS == 'N' || $SendiBSS == 'n' ]]; then
-        Log "Send iBSS option disabled by user."
-        SendiBSS=1
-        return
-    fi
-    SendPwnediBSS
-}
 
-SendPwnediBSS() {
+    echo
     SaveExternal ipwndfu
     PatchiBSS
-    cd resources/ipwndfu
     Log "Sending iBSS..."
+    cd resources/ipwndfu
     $ipwndfu -l ../../tmp/pwnediBSS
     if [[ $? != 0 ]]; then
+        cd ../..
         echo -e "\n${Color_R}[Error] Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode. ${Color_N}"
         echo "${Color_Y}* Please exit DFU and (re-)enter PWNED DFU mode before retrying. ${Color_N}"
+        Echo "* If you already have sent pwned iBSS manually, no need to exit DFU, just retry and select Y for kDFU mode."
         Echo "* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds."
         ExitWin 1
     fi

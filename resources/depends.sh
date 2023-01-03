@@ -274,7 +274,7 @@ InstallDepends() {
     elif [[ $platform == "win" ]]; then
         cd ..
         rm -r tmp
-        pacman -Syu --noconfirm --needed ca-certificates curl libcurl openssh unzip zip
+        pacman -Syu --noconfirm --needed ca-certificates curl libcurl libopenssl openssh openssl unzip zip
         mkdir tmp
         cd tmp
         libimobiledevice=("https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/tools/libimobiledevice_win.zip" "75ae3af3347b89107f0f6b7e41fde42e6ccdd404")
