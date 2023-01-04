@@ -86,7 +86,7 @@ Main() {
     fi
     
     if [[ ! $platform ]]; then
-        Error "Platform unknown/not supported."
+        Error "Platform is unknown/not supported." "Supported platforms: macOS, Linux, Windows"
     fi
 
     if [[ -d .git ]]; then
@@ -137,17 +137,19 @@ Main() {
         fi
     fi
     
-    if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-        Log "Apple Silicon Mac detected. Support may be limited, proceed at your own risk."
-    elif [[ $platform == "linux" && $(uname -m) == "a"* ]]; then
-        Log "Linux ARM detected. Support may be limited, proceed at your own risk."
-        Echo "* Note that only 32-bit (armhf) is compiled natively for now. For 64-bit, box64 might work."
-        if [[ $(getconf LONG_BIT) != 64 ]]; then
-            LinuxARM=1
+    if [[ $(uname -m) != "x86_64" && $(uname -m) == "a"* ]]; then
+        if [[ $platform == "macos" ]]; then
+            Log "Apple Silicon Mac detected. Support may be limited, proceed at your own risk."
+        elif [[ $platform == "linux" ]]; then
+            Log "Linux ARM ($(uname -m)) detected. Support may be limited, proceed at your own risk."
+            Echo "* Note that only 32-bit (armhf) is compiled natively for now. For 64-bit, get the x86_64 version and box64 might work."
+            [[ $(getconf LONG_BIT) != 64 ]] && LinuxARM=1
+        elif [[ $platform == "win" ]]; then
+            Log "WARNING - Windows ARM is not tested or supported."
+            Echo "* You must be using Windows 11 on ARM or newer."
         fi
-
     elif [[ $(uname -m) != "x86_64" ]]; then
-        Error "Only 64-bit (x86_64) distributions are supported."
+        Error "Platform architecture ($(uname -m)) is not supported." "Supported architectures: x86_64, armhf (Linux), arm64 (macOS only for now)"
     fi
 
     if [[ $1 == "Install" || -z $bspatch || ! -e $ideviceinfo || ! -e $irecoverychk ||

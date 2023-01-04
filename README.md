@@ -4,7 +4,7 @@
 - **iPhone4Down: Downgrade your iPhone 4 on Linux/Windows (using powdersn0w)**
 - **Linux, macOS, and Windows** are supported
     - Windows usage is not recommended
-    - iPhone4Down focuses on Linux support - use [cherryflowerJB](https://web.archive.org/web/20210701000000*/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://dora2ios.web.app/konayuki/index.html) on macOS instead
+    - iPhone4Down focuses on Linux support - use [cherryflowerJB](https://web.archive.org/web/20210322151509/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
@@ -23,7 +23,7 @@
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs
 - **iPhone4Down supports iPhone 4 GSM and CDMA (iPhone3,1 and iPhone3,3)**
-    - iPhone3,3 support is not tested. Use [powdersn0w](https://dora2ios.web.app/konayuki/index.html) on macOS instead
+    - iPhone3,3 support is not tested. Use [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
 
 <table>
     <thead>
@@ -72,6 +72,7 @@
 </details>
 
 ## Supported OS versions/distros
+#### Supported architectures: x86_64, armhf (Linux), arm64 (macOS only for now)
 - [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 36 and newer

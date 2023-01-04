@@ -229,7 +229,7 @@ EnterPwnDFU() {
     local pwnD=1
     local Selection=()
     
-    if [[ $DeviceProc == 4 && $platform != "macos" ]]; then
+    if [[ $ProductType == "iPhone3,1" && $platform != "macos" ]]; then
         pwnDFUTool="$pwnedDFU"
         if [[ $platform == "win" ]]; then
             Log "iPhone 4 device detected in DFU mode."
@@ -239,7 +239,7 @@ EnterPwnDFU() {
             read -s
             return
         fi
-    elif [[ $DeviceProc == 7 ]]; then
+    elif [[ $DeviceProc == 4 || $DeviceProc == 7 ]]; then
         [[ $platform == "macos" ]] && Selection+=("ipwnder_lite" "iPwnder32")
         Input "PwnDFU Tool Option"
         Echo "* This option selects what tool to use to put your device in pwnDFU mode."

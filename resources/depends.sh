@@ -181,7 +181,7 @@ SaveExternal() {
         Name=ch3rryflower
         SHA1=790d56db354151b9740c929e52c097ba57f2929d
     elif [[ $1 == "powdersn0w" ]]; then
-        Link=https://dora2ios.github.io/download/konayuki/powdersn0w_v2.0b3.zip
+        Link=https://web.archive.org/web/20220802230119if_/https://dora2ios.github.io/download/konayuki/powdersn0w_v2.0b3.zip
         Name=powdersn0w
         SHA1=c733aac4a0833558ef9f5517f2a11ca547110b6e
     fi
@@ -252,7 +252,8 @@ InstallDepends() {
          (( DebianVer >= 11 )) || [[ $DebianVer == "sid" ]]; then
         [[ -n $UBUNTU_CODENAME ]] && sudo add-apt-repository -y universe
         sudo apt update
-        sudo apt install -y bsdiff curl jq libimobiledevice6 openssh-client python2 python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        sudo apt install -y bsdiff curl jq libimobiledevice6 openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        [[ $DebianVer != "sid" ]] && sudo apt install -y python2
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
