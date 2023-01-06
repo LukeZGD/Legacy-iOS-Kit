@@ -91,7 +91,7 @@ SetToolPaths() {
         opensslver=$(openssl version | awk '{print $2}' | cut -c -3)
         if [[ $opensslver == "3"* ]]; then
             cherrybin="env LD_LIBRARY_PATH=../resources/lib $cherrybin"
-            idevicerestore="env LD_LIBRARY_PATH=../resources/lib $idevicerestore"
+            idevicerestore="env LD_LIBRARY_PATH=./resources/lib $idevicerestore"
         fi
         ipwndfu="$python2 ipwndfu"
         jq="$(which jq)"
