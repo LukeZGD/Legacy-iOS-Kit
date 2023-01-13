@@ -730,16 +730,13 @@ device_enter_mode() {
                 if [[ $device_mode == "DFU" ]]; then
                     pause
                     return
-                else
-                    if [[ $device_mode == "Recovery" ]]; then
-                        read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
-                        if [[ $opt != 'N' && $opt != 'n' ]]; then
-                            log "Exiting recovery mode."
-                            $irecovery -n
-                        fi
-                    fi
-                    clean_and_exit
                 fi
+                read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
+                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                    log "Exiting recovery mode."
+                    $irecovery -n
+                fi
+                clean_and_exit
             fi
 
             if [[ $device_mode == "DFU" && $mode != "pwned-ibss" ]] && (( device_proc < 7 )); then
@@ -763,13 +760,14 @@ device_enter_mode() {
                 fi
                 device_ipwndfu send_ibss
                 return
-            else
-                device_enter_mode DFU
             fi
+
+            device_enter_mode DFU
 
             if [[ $device_proc == 6 && $platform != "macos" ]]; then
                 device_ipwndfu pwn
             else
+                log "Placing device to pwnDFU mode using ipwnder"
                 $ipwnder -p
                 tool_pwned=$?
             fi
@@ -803,31 +801,39 @@ device_ipwndfu() {
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
     fi
-    if [[ $1 == "send_ibss" ]]; then
-        cp pwnediBSS ../resources/ipwndfu/
-        pushd ../resources/ipwndfu/
-        $(which python2) ipwndfu -f pwnediBSS
-        tool_pwned=$?
-        rm pwnediBSS
-        popd
-        if [[ $tool_pwned != 0 ]]; then
-            error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
-            "* Please exit DFU and (re-)enter PWNED DFU mode before retrying."
-        fi
-    elif [[ $1 == "pwn" ]]; then
-        pushd ../resources/ipwndfu/
-        $(which python2) ipwndfu -p
-        tool_pwned=$?
-        popd
-        if [[ $tool_pwned != 0 ]]; then
-            error "Failed to enter pwnDFU mode. Please run the script again." \
-            "* Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
-        fi
-    elif [[ $1 == "rmsigchks" ]]; then
-        pushd ../resources/ipwndfu/
-        $(which python2) rmsigchks.py
-        popd
+    if [[ $1 == "send-ibss" ]]; then
+        patch_ibss
+        cp pwnediBSS ../resources/ipwndfu/ 2>/dev/null
     fi
+    pushd ../resources/ipwndfu/
+    case $1 in
+        "send_ibss" )
+            log "Sending iBSS..."
+            $(which python2) ipwndfu -f pwnediBSS
+            tool_pwned=$?
+            rm pwnediBSS
+            if [[ $tool_pwned != 0 ]]; then
+                error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
+                "* Please exit DFU and (re-)enter PWNED DFU mode before retrying."
+            fi
+            ;;
+
+        "pwn" )
+            log "Placing device to pwnDFU Mode using ipwndfu"
+            $(which python2) ipwndfu -p
+            tool_pwned=$?
+            if [[ $tool_pwned != 0 ]]; then
+                error "Failed to enter pwnDFU mode. Please run the script again." \
+                "* Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+            fi
+            ;;
+
+        "rmsigchks" )
+            log "Running rmsigchks..."
+            $(which python2) rmsigchks.py
+            ;;
+    esac
+    popd
 }
 
 main_menu() {
@@ -913,8 +919,7 @@ device_target_menu() {
             menu_items+=("5.1.1 (9B208)" "5.1.1 (9B206)" "4.3.5" "More versions")
             ;;
     esac
-    menu_items+=("Other (use SHSH blobs)")
-    menu_items+=("(Any other key to exit)")
+    menu_items+=("Other (use SHSH blobs)" "(Any other key to exit)")
 
     if [[ -z $device_target_vers ]]; then
         echo
@@ -1034,9 +1039,8 @@ patch_ibss() {
 
 ipsw_path_set() {
     : '
-    set variable ipsw_path, ipsw_custom
-    also set ipsw_path_712 for iphone 4
-    also set shsh_path for "Other" downgrades
+    set variable ipsw_path, ipsw_custom, also ipsw_path_712 for iphone 4
+    also set shsh_path, device_target_vers, device_target_build for "Other" downgrades
     '
 
     if [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -1209,7 +1213,9 @@ ipsw_preference_set() {
 
     if [[ $platform == "windows" ]]; then
         ipsw_memory=
-    elif [[ $ipsw_jailbreak == 1 ]] || [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" && -z $ipsw_memory ]]; then
+    elif [[ -n $ipsw_memory ]]; then
+        :
+    elif [[ $ipsw_jailbreak == 1 ]] || [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
         input "Memory Option for creating custom IPSW"
         print "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
         print "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
@@ -1317,7 +1323,7 @@ ipsw_download() {
         version="7.1.2"
         build_id="11D257"
         ipsw_dl="$ipsw_path_712"
-    elif [[ $device_type == "iPhone3,1" && ! -e "$ipsw_path_712" ]]; then
+    elif [[ $device_type == "iPhone3,1" && ! -e "$ipsw_path_712.ipsw" ]]; then
         ipsw_download 7.1.2
     fi
 
@@ -1488,7 +1494,7 @@ ipsw_prepare_32bit_keys() {
 ipsw_prepare_32bit() {
     device_fw_key_check
     if [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" && $debug_mode != 1 ]]; then
-        log "No need to create custom IPSW for non-jailbroken restores"
+        log "No need to create custom IPSW for non-jailbroken restores on $platform"
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -1540,7 +1546,6 @@ ipsw_prepare_32bit() {
     "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
-        pause
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
@@ -1575,7 +1580,7 @@ ipsw_prepare_powder() {
         done
     fi
     if [[ $ipsw_verbose == 1 ]]; then
-        config="configv"
+        config+="v"
     fi
 
     log "Preparing custom IPSW with powdersn0w..."
