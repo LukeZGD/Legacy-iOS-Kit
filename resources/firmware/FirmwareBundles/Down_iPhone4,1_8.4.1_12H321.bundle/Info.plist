@@ -2,6 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BuildIdentitiesPatches</key>
+	<dict>
+		<key>UniqueBuildID</key>
+		<data>eMMUaFp+ot+OMIZHCzrwrU85W60=</data>
+		<key>Manifest</key>
+		<dict>
+			<key>RestoreRamDisk</key>
+			<dict>
+				<key>Digest</key>
+				<data>6YT8kmZto76bYGIappOkcqg4gqg=</data>
+			</dict>
+		</dict>
+	</dict>
 	<key>RootFilesystem</key>
 	<string>058-24033-023.dmg</string>
 	<key>RootFilesystemSize</key>
@@ -50,6 +63,71 @@
 			<integer>8</integer>
 			<key>IV</key>
 			<string>b41ffb8429157ff7677db6c7a654d1b4</string>
+		</dict>
+		<key>iBSS</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/dfu/iBSS.n94.RELEASE.dfu</string>
+			<key>Key</key>
+			<string>6ea1eb62a9f403ee212c1f6b3039df093963b46739c6093407190fe3d750c69c</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>Patch</key>
+			<string>iBSS.n94.RELEASE.patch</string>
+			<key>IV</key>
+			<string>147cdef921ed14a5c10631c5e6e02d1e</string>
+			<key>TypeFlag</key>
+			<integer>8</integer>
+		</dict>
+		<key>iBEC</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/dfu/iBEC.n94.RELEASE.dfu</string>
+			<key>Key</key>
+			<string>03d3ecffe7df8729a85df6eafc96ee78bead7822f63ebab21016ac4157dee793</string>
+			<key>Decrypt</key>
+			<true/>
+			<key>Patch</key>
+			<string>iBEC.n94.RELEASE.patch</string>
+			<key>IV</key>
+			<string>b9f99de35e106350d89af30482249df3</string>
+			<key>TypeFlag</key>
+			<integer>8</integer>
+		</dict>
+		<key>RestoreDeviceTree</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.n94ap.production/DeviceTree.n94ap.img3</string>
+			<key>Key</key>
+			<string>ca597a5833a96eafcf4316790a25f37fb2593b2da170b0c5e855c4fab93c2469</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreDeviceTree</string>
+			<key>IV</key>
+			<string>70860c7ffbd16f51b4ac998eda7db70d</string>
+		</dict>
+		<key>RestoreLogo</key>
+		<dict>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.n94ap.production/applelogo@2x~iphone.s5l8940x.img3</string>
+			<key>Key</key>
+			<string>f5cc9c8f3c0242183869327e00fd2838f8624032e9cc3a6f595407ba3d5c2c08</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreLogo</string>
+			<key>IV</key>
+			<string>96b38c2b31a20def160b6a1fdcbd6c3b</string>
+		</dict>
+		<key>RestoreKernelCache</key>
+		<dict>
+			<key>File</key>
+			<string>kernelcache.release.n94</string>
+			<key>Key</key>
+			<string>7bdb23aa85a6de247a1aacde70b7ace76b0f4a4c5dd9de4e1e55183cbe4040fd</string>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreKernelCache</string>
+			<key>TypeFlag</key>
+			<integer>4</integer>
+			<key>IV</key>
+			<string>d98ab32f9db9f1bc72ff25a4c226f3b9</string>
 		</dict>
 	</dict>
 	<key>RootFilesystemKey</key>

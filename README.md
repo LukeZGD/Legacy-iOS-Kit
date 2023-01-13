@@ -11,19 +11,18 @@
 ## Other features
 - iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
     - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
-- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit devices only)
+- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit/A7/A8 devices, iOS 5 to 12)
 - The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
-- This script can also be used to just enter kDFU mode (32-bit devices only)
+- This script can also be used to enter kDFU mode for 32-bit devices
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
-- This script can also be used to restore 32-bit devices to their latest versions
+- This script can also be used to restore supported devices to their latest versions
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
 - **iPhone 5C and iPad mini 3 devices are NOT supported!**
     - iPhone 5C can still be restored to versions that you have SHSH blobs for
     - iPhone 4 devices also support restoring with SHSH blobs
-- **iPhone4Down supports iPhone 4 GSM and CDMA (iPhone3,1 and iPhone3,3)**
-    - iPhone3,3 support is not tested. Use [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
+- **iPhone4Down supports iPhone 4 GSM only (iPhone3,1)**
 
 <table>
     <thead>
@@ -50,11 +49,10 @@
         <tr><td>iPad mini 1</td></tr>
         <tr><td>iPod touch 5</td></tr>
         <tr>
-            <td rowspan=3>iOS 6.1.3</td>
+            <td rowspan=2>iOS 6.1.3</td>
             <td>iPhone 4S</td>
         </tr>
         <tr><td>iPad 2 (except iPad2,4)</td></tr>
-        <tr><td>iPhone 4 GSM, CDMA</td></tr>
         <tr>
             <td>iOS 7.1.2</td>
             <td>iPhone 4 (all models)</td></tr>
@@ -72,12 +70,11 @@
 </details>
 
 ## Supported OS versions/distros
-#### Supported architectures: x86_64, armhf (Linux), arm64 (macOS only for now)
-- [**Ubuntu**](https://ubuntu.com/) 20.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
+- [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 36 and newer
-- [**Debian**](https://www.debian.org/) 11 Bullseye and newer, Sid, and Debian-based distros
-- [**openSUSE**](https://www.opensuse.org/) Tumbleweed, Leap 15.4
+- [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
+- [**openSUSE**](https://www.opensuse.org/) Tumbleweed
 - [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
 - **macOS** 10.13 and newer
 - **Windows** 8.1 and newer
@@ -91,6 +88,7 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
+- [gaster](https://github.com/0x7ff/gaster) - 0x7ff; [verygenericname (Nathan) fork](https://github.com/verygenericname/gaster)
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker)

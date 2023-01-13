@@ -2,6 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BuildIdentitiesPatches</key>
+	<dict>
+		<key>UniqueBuildID</key>
+		<data>4BRM2aN9L5ZBKJRmSur/LHSebwQ=</data>
+		<key>Manifest</key>
+		<dict>
+			<key>RestoreRamDisk</key>
+			<dict>
+				<key>Digest</key>
+				<data>iIAxhUXqVmz+44ZiP0wQANYfNI8=</data>
+			</dict>
+		</dict>
+	</dict>
 	<key>DownloadUrl</key>
 	<string></string>
 	<key>Filename</key>
@@ -37,11 +50,74 @@
 			<key>TypeFlag</key>
 			<integer>8</integer>
 		</dict>
+			<key>RestoreDeviceTree</key>
+		<dict>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreDeviceTree</string>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.j2aap.production/DeviceTree.j2aap.img3</string>
+			<key>IV</key>
+			<string>82636e066f841cd08786a9cfb239e350</string>
+			<key>Key</key>
+			<string>41cd6dc7de49c5f2b72bd7cc20f61c27c7c61738eecd12affbf805c0492708b5</string>
+		</dict>
+		<key>RestoreKernelCache</key>
+		<dict>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreKernelCache</string>
+			<key>File</key>
+			<string>kernelcache.release.j2a</string>
+			<key>IV</key>
+			<string>9664ad3b2f5df350d22fe8fd2340aa32</string>
+			<key>Key</key>
+			<string>b953731b34e0342ddfd5f75a83244df4b4c39c43d83c668b249c8dd9197239e9</string>
+			<key>TypeFlag</key>
+			<integer>4</integer>
+		</dict>
+		<key>RestoreLogo</key>
+		<dict>
+			<key>DecryptPath</key>
+			<string>Downgrade/RestoreLogo</string>
+			<key>File</key>
+			<string>Firmware/all_flash/all_flash.j2aap.production/applelogo@2x~ipad.s5l8945x.img3</string>
+			<key>IV</key>
+			<string>3df4d1dea7c24fe4c46d5cff958b69e9</string>
+			<key>Key</key>
+			<string>1ae2c4ba9b387976f3360c2203d4de6e1996f741678eaa9d9078fd76a57c3b79</string>
+		</dict>
+		<key>iBEC</key>
+		<dict>
+			<key>Decrypt</key>
+			<true/>
+			<key>File</key>
+			<string>Firmware/dfu/iBEC.j2a.RELEASE.dfu</string>
+			<key>IV</key>
+			<string>79517c3e4ffc35d3cfe563d0fae93775</string>
+			<key>Key</key>
+			<string>ff6c7004d45ecfc1ee69f2b0fb2e15c4dc3c7f192563b8254e82edb7e8f426fe</string>
+			<key>Patch</key>
+			<string>iBEC.j2a.RELEASE.patch</string>
+			<key>TypeFlag</key>
+			<integer>8</integer>
+		</dict>
+		<key>iBSS</key>
+		<dict>
+			<key>Decrypt</key>
+			<true/>
+			<key>File</key>
+			<string>Firmware/dfu/iBSS.j2a.RELEASE.dfu</string>
+			<key>IV</key>
+			<string>e6b041970cd611c8a1561a4c210bc476</string>
+			<key>Key</key>
+			<string>aec6a888d45bd26106ac620d7d4ec0c160ab80276deedc1b50ce8f5d99dcc9af</string>
+			<key>Patch</key>
+			<string>iBSS.j2a.RELEASE.patch</string>
+			<key>TypeFlag</key>
+			<integer>8</integer>
+		</dict>
 	</dict>
 	<key>Name</key>
 	<string>iPad3,3_8.4.1_12H321</string>
-	<key>hwmodel</key>
-	<string>J2a</string>
 	<key>Platform</key>
 	<integer>1</integer>
 	<key>RamdiskMountVolume</key>
@@ -72,13 +148,15 @@
 	<integer>6</integer>
 	<key>needPref</key>
 	<true/>
+	<key>hwmodel</key>
+	<string>J2a</string>
 	<key>PackagePath</key>
-	<string>jailbreak/cydia.tar</string>
+	<string>./Cydia8.tar</string>
 	<key>UntetherPath</key>
-	<string>jailbreak/untether.tar</string>
+	<string>./untether.tar</string>
 	<key>RamdiskPackage</key>
-	<string>jailbreak/bin.tar</string>
+	<string>./bin.tar</string>
 	<key>RamdiskReboot</key>
-	<string>../tmp/reboot.sh</string>
+	<string>./reboot.sh</string>
 </dict>
 </plist>
