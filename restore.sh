@@ -392,6 +392,7 @@ device_get_info() {
 
         "Normal" )
             device_type=$($ideviceinfo -s -k ProductType)
+            [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
             device_ecid=$($ideviceinfo -s -k UniqueChipID)
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
@@ -794,22 +795,31 @@ device_enter_mode() {
 
 device_ipwndfu() {
     local tool_pwned=0
+    local python2=$(which python2 2>/dev/null)
     print "* Make sure to have python2 installed to use ipwndfu"
+    print "* You may install python2 from pyenv: pyenv install 2.7.18"
+    if [[ -e ~/.pyenv/shims/python2 ]]; then
+        print "* python2 from pyenv detected"
+        python2=~/.pyenv/shims/python2
+    fi
+
     device_enter_mode DFU
     if [[ ! -d ../resources/ipwndfu ]]; then
         download_file https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu.zip 61333249eb58faebbb380c4709384034ce0e019a
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
     fi
+
     if [[ $1 == "send-ibss" ]]; then
         patch_ibss
         cp pwnediBSS ../resources/ipwndfu/ 2>/dev/null
     fi
+
     pushd ../resources/ipwndfu/
     case $1 in
         "send_ibss" )
             log "Sending iBSS..."
-            $(which python2) ipwndfu -f pwnediBSS
+            $python2 ipwndfu -l pwnediBSS
             tool_pwned=$?
             rm pwnediBSS
             if [[ $tool_pwned != 0 ]]; then
@@ -820,7 +830,7 @@ device_ipwndfu() {
 
         "pwn" )
             log "Placing device to pwnDFU Mode using ipwndfu"
-            $(which python2) ipwndfu -p
+            $python2 ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 ]]; then
                 error "Failed to enter pwnDFU mode. Please run the script again." \
@@ -830,7 +840,7 @@ device_ipwndfu() {
 
         "rmsigchks" )
             log "Running rmsigchks..."
-            $(which python2) rmsigchks.py
+            $python2 rmsigchks.py
             ;;
     esac
     popd
@@ -1035,6 +1045,8 @@ patch_ibss() {
     fi
     log "Patching iBSS..."
     $bspatch iBSS pwnediBSS "../resources/patch/$targetfile.patch"
+    cp pwnediBSS ../saved/$device_type
+    log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
 }
 
 ipsw_path_set() {
@@ -1288,13 +1300,13 @@ shsh_save() {
         return
     fi
 
-    log "Saving iOS $version blobs with tsschecker..."
     ExtraArgs="-d $device_type -i $version -e $device_ecid -m $buildmanifest -o -s -B ${device_model}ap -b "
     if [[ -n $apnonce ]]; then
         ExtraArgs+="--apnonce $apnonce"
     else
         ExtraArgs+="-g 0x1111111111111111"
     fi
+    log "Running tsschecker with command: $dir/tsschecker $ExtraArgs"
     "$dir/tsschecker" $ExtraArgs
     shsh_path="$(ls $shsh_check)"
     if [[ -n "$shsh_path" ]]; then
@@ -1374,7 +1386,11 @@ ipsw_prepare_1033() {
         mv $iBECb.im4p $iBECb.orig
         $bspatch $iBSSb.orig $iBSSb.im4p ../resources/patch/$iBSSb.patch
         $bspatch $iBECb.orig $iBECb.im4p ../resources/patch/$iBECb.patch
+        cp $iBSSb.im4p $iBECb.im4p ../saved/$device_type
+    else
+        cp $iBSS.im4p $iBEC.im4p ../saved/$device_type
     fi
+    log "Pwned iBSS and iBEC saved at: saved/$device_type"
 }
 
 ipsw_prepare_jailbreak() {
@@ -1740,7 +1756,7 @@ restore_download_bbsep() {
     mkdir tmp
     # BuildManifest
     if [[ ! -e ../saved/$device_type/$build_id.plist ]]; then
-        if [[ $device_proc == 7 && $build_id == "14G60" ]]; then
+        if [[ $device_proc == 7 && $device_target_vers == "10"* ]]; then
             cp ../resources/manifest/BuildManifest_${device_type}_10.3.3.plist $build_id.plist
         else
             log "Downloading $build_id BuildManifest"
