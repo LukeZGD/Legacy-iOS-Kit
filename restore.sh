@@ -271,7 +271,11 @@ install_depends() {
         xcode-select --install
 
     elif [[ $platform == "windows" ]]; then
+        popd
+        rm -rf "$(dirname "$0")/tmp"
         pacman -Syu --noconfirm --needed ca-certificates curl libcurl libopenssl openssh openssl unzip zip
+        mkdir "$(dirname "$0")/tmp"
+        pushd "$(dirname "$0")/tmp"
 
     else
         error "Distro not detected/supported by the install script. See the repo README for supported OS versions/distros"
@@ -718,8 +722,8 @@ device_enter_mode() {
             local tool_pwned
 
             if [[ $platform == "windows" ]]; then
-                print "* Make sure that your device is in PWNED DFU mode."
-                print "* For 32-bit devices, pwned iBSS must be already booted."
+                print "* Make sure that your device is in PWNED DFU or kDFU mode."
+                print "* For 32-bit devices, pwned iBSS/kDFU must be already booted."
                 print "* For A7 devices, signature checks must be already disabled."
                 print "* If you do not know what you are doing, exit now and restart your device in normal mode."
                 if [[ $device_mode == "DFU" ]]; then
@@ -1129,7 +1133,7 @@ ipsw_path_set() {
         device_target_vers=$(cat Restore.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         device_target_build=$(cat Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     fi
-    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Custom.ipsw"
+    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Custom"
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         ipsw_custom+="B"
     fi
@@ -1487,14 +1491,14 @@ ipsw_prepare_32bit() {
 
     local ExtraArgs
     log "Generating firmware bundle..."
-    local IPSWSHA256=$($sha256sum "$ipsw_path.ipsw" | awk '{print $1}')
-    #[[ $platform == "windows" ]] && IPSWSHA256=$(echo $IPSWSHA256 | cut -c 2-)
+    local IPSWSHA256=$($sha256sum "${ipsw_path//\\//}.ipsw" | awk '{print $1}')
+    log "IPSWSHA256: $IPSWSHA256"
     local FirmwareBundle=FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle
     local NewPlist=$FirmwareBundle/Info.plist
     mkdir -p $FirmwareBundle
     cp ../resources/firmware/powdersn0wBundles/config2.plist FirmwareBundles/config.plist
     unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/manifest
-    mv manifest tmp/$FirmwareBundle/
+    mv manifest $FirmwareBundle/
 
     local RamdiskName=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
     local RamdiskIV=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .iv')
@@ -1502,7 +1506,7 @@ ipsw_prepare_32bit() {
     unzip -o -j "$ipsw_path.ipsw" $RamdiskName
     "$dir/xpwntool" $RamdiskName Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
-    local RootSize=$($xmlstarlet sel -t -m "plist/dict/key[.='SystemPartitionSize']" -v "following-sibling::integer[1]" tmp/options.$device_model.plist)
+    local RootSize=$($xmlstarlet sel -t -m "plist/dict/key[.='SystemPartitionSize']" -v "following-sibling::integer[1]" options.$device_model.plist)
     echo -e $'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>' > $NewPlist
     echo -e "<key>Filename</key><string>$ipsw_type.ipsw</string>" >> $NewPlist
     echo -e "<key>RootFilesystem</key><string>$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RootFS")) | .filename')</string>" >> $NewPlist
@@ -1577,7 +1581,7 @@ ipsw_prepare_powder() {
     mv FirmwareBundles/${config}.plist FirmwareBundles/config.plist
     "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ipsw_memory -base "$ipsw_path_712.ipsw" ${JBFiles[@]}
 
-    if [[ ! -e "$ipsw_custom" ]]; then
+    if [[ ! -e "$ipsw_custom.ipsw" ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "You may try selecting N for memory option"
     fi
@@ -1895,7 +1899,7 @@ restore_prepare() {
         4 )
             if [[ $device_target_other == 1 ]]; then
                 device_enter_mode kDFU
-                if [[ -e "$ipsw_custom" ]]; then
+                if [[ -e "$ipsw_custom.ipsw" ]]; then
                     restore_idevicerestore
                 else
                     restore_futurerestore --use-pwndfu
@@ -1922,7 +1926,7 @@ restore_prepare() {
             fi
             if [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
-            elif [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom" ]]; then
+            elif [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom.ipsw" ]]; then
                 device_enter_mode kDFU
                 restore_idevicerestore
             else
