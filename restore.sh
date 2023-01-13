@@ -48,15 +48,15 @@ if (( bash_version < 5 )); then
 fi
 
 display_help() {
-    echo "******* iOS-OTA-Downgrader *******
+    echo '******* iOS-OTA-Downgrader *******
  - Downgrader script by LukeZGD -
 
-Usage: $0 [Options]
+Usage: ./restore.sh [Options]
 
 NOTE: CLI implementation is NOT COMPLETE (yet)
 
 List of options:
-    --debug                   For script debugging (set -x)
+    --debug                   For script debugging (set -x and debug mode)
     --device-ecid [ECID]      Provide device ECID (must be decimal)
     --device-type [Type]      Provide device type (eg. iPad2,1)
     --entry-device            Enable manual device and ECID entry
@@ -71,17 +71,18 @@ For 32-bit devices:
 For devices compatible with downgrades (see README):
     --custom-ipsw [version]   Create custom IPSW for provided iOS version
     --downgrade [version]     Downgrade/Restore to provided iOS version
-    --ipsw [Path to IPSW]     Set path to IPSW
+    --ipsw [IPSW path]        Set path to IPSW
+    --ipsw-verbose            Enable verbose boot option (iPhone 4 only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
     --save-blobs [version]    Save OTA blobs for provided iOS version
-    --shsh [Path to SHSH]     Set path to SHSH
+    --shsh [SHSH path]        Set path to SHSH
 
     * For jailbreak option on 8.4.1, also provide [jailbreak] (etasonjb | daibutsu)
-    * For \"Other\" downgrades with SHSH, provide \"Other\" without quotes as Build ID
+    * For "Other" downgrades with SHSH, provide "Other" without quotes as version
     * Default IPSW path: <script location>/name_of_ipswfile.ipsw
     * Default SHSH path: <script location>/saved/shsh/name_of_blobfile.shsh(2)
-    "
+    '
 }
 
 set_tool_paths() {
@@ -118,7 +119,7 @@ set_tool_paths() {
         elif [[ $(uname -m) == "x86_64" ]]; then
             dir+="x86_64"
         else
-            error "Your architecture is not supported."
+            error "Your architecture ($(uname -m)) is not supported."
         fi
 
         bspatch="$(which bspatch)"
@@ -201,7 +202,7 @@ set_tool_paths() {
         print "* You may still continue, but you might encounter issues with restoring the device."
         pause
     else
-        error "Your platform is not supported." "* Supported platforms: Linux, macOS, Windows"
+        error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS, Windows"
     fi
     log "Running on platform: $platform ($platform_ver)"
 
@@ -314,7 +315,7 @@ version_check() {
         log ".git directory and git_hash file not found, cannot determine version."
         if [[ $no_version_check != 1 ]]; then
             error "Your copy of iOS-OTA-Downgrader is downloaded incorrectly. Do not use the \"Code\" button in GitHub." \
-            "Please download iOS-OTA-Downgrader using git clone or from GitHub releases: https://github.com/LukeZGD/iOS-OTA-Downgrader/releases"
+            "* Please download iOS-OTA-Downgrader using git clone or from GitHub releases: https://github.com/LukeZGD/iOS-OTA-Downgrader/releases"
         fi
     fi
 
@@ -844,8 +845,8 @@ main_menu() {
         if [[ $device_proc == 4 ]]; then
             tmp_items+=("Disable/Enable Exploit")
         fi
+        # kDFU/pwned iBSS for 32-bit only
         if (( device_proc < 7 )); then
-            # kDFU/pwned iBSS for 32-bit only
             if [[ $device_mode == "Normal" ]]; then
                 tmp_items+=("Put Device in kDFU Mode")
             else
@@ -1155,7 +1156,7 @@ ipsw_preference_set() {
         return
     fi
 
-    if (( device_proc < 7 )) && [[ $device_target_other != 1 ]]; then
+    if (( device_proc < 7 )) && [[ $device_target_other != 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         if [[ $device_target_vers == "6.1.3" ]]; then
@@ -1169,16 +1170,17 @@ ipsw_preference_set() {
         fi
         print "* This option is enabled by default (Y)."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
-        if [[ $ipsw_jailbreak != 'N' && $ipsw_jailbreak != 'n' ]]; then
+        if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
+            ipsw_jailbreak=
+            log "Jailbreak option disabled by user."
+        else
             ipsw_jailbreak=1
             log "Jailbreak option enabled."
-        else
-            log "Jailbreak option disabled by user."
         fi
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && $device_target_vers == "8.4.1" ]]; then
+    if [[ $ipsw_jailbreak == 1 && $device_target_vers == "8.4.1" && -z $ipsw_jailbreak_tool ]]; then
         case $device_type in
             iPhone4,1 | iPhone5,2 )
                 input "Jailbreak Tool Option"
@@ -1207,7 +1209,7 @@ ipsw_preference_set() {
 
     if [[ $platform == "windows" ]]; then
         ipsw_memory=
-    elif [[ $ipsw_jailbreak == 1 ]] || [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
+    elif [[ $ipsw_jailbreak == 1 ]] || [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" && -z $ipsw_memory ]]; then
         input "Memory Option for creating custom IPSW"
         print "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
         print "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
@@ -1218,21 +1220,22 @@ ipsw_preference_set() {
             ipsw_memory=
         else
             log "Memory option enabled."
-            ipsw_memory="-memory"
+            ipsw_memory=1
         fi
         echo
     fi
 
-    if [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
+    if [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" && -z $ipsw_verbose ]]; then
         input "Verbose Boot Option"
         print "* When enabled, the device will have verbose boot on restore."
         print "* This option is enabled by default (Y)."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_verbose
-        if [[ $opt != 'N' && $opt != 'n' ]]; then
+        if [[ $ipsw_verbose == 'N' || $ipsw_verbose == 'n' ]]; then
+            ipsw_verbose=
+            log "Verbose boot option disabled by user."
+        else
             ipsw_verbose=1
             log "Verbose boot option enabled."
-        else
-            log "Verbose boot option disabled by user."
         fi
         echo
     fi
@@ -1430,8 +1433,11 @@ ipsw_prepare_jailbreak() {
     if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     fi
+    if [[ $ipsw_memory == 1 ]]; then
+        ExtraArgs+=" -memory"
+    fi
     log "Preparing custom IPSW..."
-    "$ipsw" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs $ipsw_memory ${JBFiles[@]}
+    "$ipsw" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
@@ -1527,8 +1533,11 @@ ipsw_prepare_32bit() {
     if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     fi
+    if [[ $ipsw_memory == 1 ]]; then
+        ExtraArgs+=" -memory"
+    fi
     log "Preparing custom IPSW..."
-    "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs $ipsw_memory
+    "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
         pause
@@ -1579,6 +1588,11 @@ ipsw_prepare_powder() {
         cp ../resources/jailbreak/Cydia6.tar src/cydia6.tar
     fi
     mv FirmwareBundles/${config}.plist FirmwareBundles/config.plist
+    if [[ $ipsw_memory == 1 ]]; then
+        ipsw_memory="-memory"
+    else
+        ipsw_memory=
+    fi
     "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ipsw_memory -base "$ipsw_path_712.ipsw" ${JBFiles[@]}
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
@@ -1651,6 +1665,11 @@ ipsw_prepare_cherry() {
     "$dir/xpwntool" ibot.pwned iBoot -t tmp
     echo "0000010: 6365" | xxd -r - iBoot
     echo "0000020: 6365" | xxd -r - iBoot
+    if [[ $ipsw_memory == 1 ]]; then
+        ipsw_memory="-memory"
+    else
+        ipsw_memory=
+    fi
     $ch3rry "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ipsw_memory -derebusantiquis "$ipsw_path_712.ipsw" iBoot ${JBFiles[@]}
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
@@ -2196,6 +2215,9 @@ for i in "$@"; do
         "--no-version-check" ) no_version_check=1;;
         "--debug" ) set -x; debug_mode=1;;
         "--help" ) display_help; clean_and_exit;;
+        "--ipsw-verbose" ) ipsw_verbose=1;;
+        "--jailbreak" ) ipsw_jailbreak=1;;
+        "--memory" ) ipsw_memory=1;;
     esac
 done
 
