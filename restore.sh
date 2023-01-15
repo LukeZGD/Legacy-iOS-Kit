@@ -796,10 +796,17 @@ device_enter_mode() {
 
 device_ipwndfu() {
     local tool_pwned=0
+    local mac_ver=0
     local python2=$(which python2 2>/dev/null)
     print "* Make sure to have python2 installed to use ipwndfu"
     print "* You may install python2 from pyenv: pyenv install 2.7.18"
-    if [[ -e ~/.pyenv/shims/python2 ]]; then
+
+    if [[ $platform == "macos" ]]; then
+        mac_ver=$(echo "$platform_ver" | cut -c -2)
+    fi
+    if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
+        python2=/usr/bin/python
+    elif [[ -e ~/.pyenv/shims/python2 ]]; then
         print "* python2 from pyenv detected"
         python2=~/.pyenv/shims/python2
     fi
@@ -1841,7 +1848,7 @@ restore_futurerestore() {
     pushd ../resources >/dev/null
     if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
         # python2 SimpleHTTPServer for macos 11 and older
-        $(which python2) -m SimpleHTTPServer $port &
+        /usr/bin/python -m SimpleHTTPServer $port &
         httpserver_pid=$!
     else
         # python3 http.server for the rest
