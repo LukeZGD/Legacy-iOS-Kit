@@ -727,15 +727,16 @@ device_enter_mode() {
                 print "* Make sure that your device is in PWNED DFU or kDFU mode."
                 print "* For 32-bit devices, pwned iBSS/kDFU must be already booted."
                 print "* For A7 devices, signature checks must be already disabled."
-                print "* If you do not know what you are doing, exit now and restart your device in normal mode."
                 if [[ $device_mode == "DFU" ]]; then
                     pause
                     return
-                fi
-                read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
-                if [[ $opt != 'N' && $opt != 'n' ]]; then
-                    log "Exiting recovery mode."
-                    $irecovery -n
+                elif [[ $device_mode == "Recovery" ]]; then
+                    print "* If you do not know what you are doing, exit now and restart your device in normal mode."
+                    read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
+                    if [[ $opt != 'N' && $opt != 'n' ]]; then
+                        log "Exiting recovery mode."
+                        $irecovery -n
+                    fi
                 fi
                 clean_and_exit
             fi
@@ -810,7 +811,7 @@ device_ipwndfu() {
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
     fi
 
-    if [[ $1 == "send-ibss" ]]; then
+    if [[ $1 == "send_ibss" ]]; then
         patch_ibss
         cp pwnediBSS ../resources/ipwndfu/ 2>/dev/null
     fi
