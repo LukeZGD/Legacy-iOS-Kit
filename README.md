@@ -1,6 +1,6 @@
 # iOS-OTA-Downgrader
 
-- **Downgrade/restore and jailbreak supported legacy iOS devices to signed OTA firmwares**
+- **A multi-purpose script to downgrade/restore and jailbreak supported legacy iOS devices**
 - **iPhone4Down: Downgrade your iPhone 4 on Linux/Windows (using powdersn0w)**
 - **Linux, macOS, and Windows** are supported
     - Windows usage is not recommended
@@ -16,6 +16,7 @@
 - This script can also be used to enter kDFU mode for 32-bit devices
 - This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
 - This script can also be used to restore supported devices to their latest versions
+- This script can also be used to save on-board SHSH blobs for 32-bit devices
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)

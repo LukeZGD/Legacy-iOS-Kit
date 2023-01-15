@@ -257,7 +257,7 @@ install_depends() {
 
     elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
         sudo apt update
-        sudo apt install -y bsdiff curl jq libimobiledevice6 openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        sudo apt install -y bsdiff curl jq libimobiledevice6 libirecovery-common openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
@@ -289,6 +289,7 @@ install_depends() {
         sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
         sudo udevadm control --reload-rules
+        sudo udevadm trigger
     fi
 
     uname > "../resources/firstrun"
@@ -876,6 +877,7 @@ main_menu() {
             else
                 tmp_items+=("Send Pwned iBSS")
             fi
+            tmp_items+=("Save Onboard Blobs")
         fi
         # SSH Ramdisk for iPhone 4 GSM only
         if [[ $device_type == "iPhone3,1" ]]; then
@@ -904,6 +906,7 @@ main_menu() {
             "Restore to Latest iOS" ) mode="restore-latest"; break;;
             "SSH Ramdisk" ) mode="ramdisk4"; break;;
             "Send Pwned iBSS" ) mode="pwned-ibss"; break;;
+            "Save Onboard Blobs" ) mode="save-onboard-blobs"; break;;
             "(Re-)Install Dependencies" ) install_depends;;
             * ) break;;
         esac
@@ -1020,11 +1023,28 @@ device_fw_key_check() {
     device_fw_key="$(cat $keys_path/index.html)"
 }
 
+download_comp() {
+    # usage: download_comp [build_id] [comp]
+    local build_id="$1"
+    local comp="$2"
+    download_targetfile="$comp.$device_model"
+    if [[ $build_id != "12"* ]]; then
+        download_targetfile+="ap"
+    fi
+    download_targetfile+=".RELEASE"
+
+    if [[ -e "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
+        cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
+    else
+        log "Downloading ${comp}..."
+        "$dir/partialzip" $(cat "$device_fw_dir/$build_id/url") "Firmware/dfu/$download_targetfile.dfu" ${comp}
+        cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
+    fi
+}
+
 patch_ibss() {
     # creates file pwnediBSS to be sent to device
-    local targetfile="iBSS."
     local build_id
-
     case $device_type in
         iPad3,1 | iPhone3,[123] )
             build_id="11D257"
@@ -1036,25 +1056,57 @@ patch_ibss() {
 
         * )
             build_id="12H321"
-            targetfile+="${device_model}.RELEASE"
             ;;
     esac
-
-    if [[ $build_id != "12"* ]]; then
-        targetfile+="${device_model}ap.RELEASE"
-    fi
-
-    if [[ -e "../saved/$device_type/iBSS_$build_id.dfu" ]]; then
-        cp "../saved/$device_type/iBSS_$build_id.dfu" iBSS
-    else
-        log "Downloading iBSS..."
-        "$dir/partialzip" $(cat "$device_fw_dir/$build_id/url") "Firmware/dfu/$targetfile.dfu" iBSS
-        cp iBSS "../saved/$device_type/iBSS_$build_id.dfu"
-    fi
+    download_comp $build_id iBSS
     log "Patching iBSS..."
-    $bspatch iBSS pwnediBSS "../resources/patch/$targetfile.patch"
+    $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
     cp pwnediBSS ../saved/$device_type
     log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
+}
+
+patch_ibec() {
+    # creates file pwnediBEC to be sent to device for blob dumping
+    local build_id
+    case $device_type in
+        iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
+            build_id="10B329"
+            ;;
+
+        iPad2,2 | iPhone3,[123] )
+            build_id="11D257"
+            ;;
+
+        iPad2,[367] | iPad3,[25] )
+            build_id="12H321"
+            ;;
+
+        iPad3,1 )
+            build_id="10B146"
+            ;;
+
+        iPhone5,3 )
+            build_id="11B511"
+            ;;
+
+        iPhone5,4 )
+            build_id="11B651"
+            ;;
+    esac
+    download_comp $build_id iBEC
+    device_target_build=$build_id
+    device_fw_key_check
+    local name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename')
+    local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
+    local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
+    log "Decrypting iBEC"
+    mv iBEC $name.orig
+    "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
+    "$dir/xpwntool" $name.dec $name.raw
+    log "Patching iBEC"
+    $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
+    "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
+    rm $name.dec $name.orig $name.raw $name.patched
 }
 
 ipsw_path_set() {
@@ -2145,6 +2197,31 @@ device_ramdisk4() {
     print "    reboot_bak"
 }
 
+shsh_save_onboard() {
+    if [[ $platform == "windows" ]]; then
+        log "Saving onboard SHSH is not (yet) supported on Windows"
+        return
+    fi
+    device_target_other=1
+    ipsw_path_set
+    device_enter_mode kDFU
+    patch_ibec
+    $irecovery -f pwnediBEC
+    sleep 5
+    device_find_mode Recovery
+    (echo -e "/send ../resources/payload\ngo blobs\n/exit") | ${irecovery}2 -s
+    ${irecovery}2 -g myblob.dump
+    $irecovery -n
+    "$dir/ticket" myblob.dump myblob.plist "$ipsw_path.ipsw" -z
+    "$dir/validate" myblob.plist "$ipsw_path.ipsw" -z
+    if [[ ! -s myblob.plist ]]; then
+        warn "Saving onboard blobs failed."
+        return
+    fi
+    mv myblob.plist ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
+    log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
+}
+
 main() {
     clear
     print "******* iOS-OTA-Downgrader *******"
@@ -2225,6 +2302,10 @@ main() {
 
         "pwned-ibss" )
             device_enter_mode pwnDFU
+            ;;
+
+        "save-onboard-blobs" )
+            shsh_save_onboard
             ;;
 
         * )
