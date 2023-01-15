@@ -1270,9 +1270,6 @@ ipsw_preference_set() {
 shsh_save() {
     # usage: shsh_save {apnonce (optional)}
     # sets variable shsh_path
-
-    log "Saving $device_target_vers blobs for $device_type with ECID $device_ecid"
-
     local version=$device_target_vers
     local build_id=$device_target_build
     local apnonce
@@ -1597,7 +1594,7 @@ ipsw_prepare_powder() {
         fi
         if [[ ! -e ../resources/jailbreak/${JBFiles[0]} ]]; then
             download_file https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[0]} ${JBFiles[0]} $JBSHA1
-            cp ${JBFiles[2]} ../resources/jailbreak/${JBFiles[0]}
+            cp ${JBFiles[0]} ../resources/jailbreak/${JBFiles[0]}
         fi
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
