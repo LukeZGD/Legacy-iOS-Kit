@@ -30,7 +30,7 @@ clean_and_exit() {
         read -s
     fi
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" /tmp/futurerestore
-    kill $iproxy_pid $httpserver_pid $sudoloop 2>/dev/null
+    kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
     sudo -k
     exit $1
 }
