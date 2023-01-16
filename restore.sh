@@ -374,7 +374,8 @@ device_get_info() {
         device_vers="Unknown"
     fi
 
-    if [[ -z $device_mode && $($ideviceinfo -s 2>/dev/null) != "ERROR"* ]]; then
+    $ideviceinfo -s >/dev/null
+    if [[ $? == 0 ]]; then
         device_mode="Normal"
     fi
 
