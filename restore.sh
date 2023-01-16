@@ -29,8 +29,9 @@ clean_and_exit() {
         input "Press Enter/Return to exit."
         read -s
     fi
-    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
-    kill $iproxy_pid $httpserver_pid 2>/dev/null
+    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" /tmp/futurerestore
+    kill $iproxy_pid $httpserver_pid $sudoloop 2>/dev/null
+    sudo -k
     exit $1
 }
 
@@ -64,6 +65,7 @@ List of options:
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
+    --sudoloop                Run some tools as root for device detection
 
 For 32-bit devices:
     --kdfu                    Place device in kDFU mode
@@ -94,7 +96,7 @@ set_tool_paths() {
     bspatch, ch3rry, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
 
     these ones "need" sudo for linux arm, not for others:
-    futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
+    futurerestore, idevicerestore, idevicererestore, ipwnder, irecovery
 
     tools set here will be executed using:
     $name_of_tool
@@ -132,22 +134,33 @@ set_tool_paths() {
         xmlstarlet="$(which xmlstarlet)"
         zenity="$(which zenity)"
 
-        : '
-        # needs sudo for linux arm
-        if [[ $(uname -m) == "a"* ]]; then
+        if [[ -e ../resources/sudoloop && $device_argmode != "sudoloop" ]]; then
+            local opt
+            log "Previous run failed to detect iOS device."
+            print "* You may enable sudoloop mode, which will run some tools as root."
+            read -p "$(input 'Enable sudoloop mode? (y/N) ')" opt
+            if [[ $opt == 'Y' || $opt == 'y' ]]; then
+                device_argmode="sudoloop"
+            fi
+            rm ../resources/sudoloop
+        fi
+
+        if [[ $(uname -m) == "a"* || $device_argmode == "sudoloop" || $(id -u $USER) == 999 ]]; then
+            print "* Enter your user password when prompted"
+            sudo -v
+            (while true; do sudo -v; sleep 60; done) &
+            sudoloop_pid=$!
             futurerestore="sudo "
-            gaster="sudo "
             idevicerestore="sudo "
             idevicererestore="sudo "
             ipwnder="sudo "
             irecovery="sudo "
         fi
-        '
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platform_ver="${1:-$(sw_vers -productVersion)}"
-        dir="../bin/macos/"
+        dir="../bin/macos"
 
         # macos version check
         if [[ $(echo "$platform_ver" | cut -c -2) == 10 ]]; then
@@ -186,7 +199,7 @@ set_tool_paths() {
     elif [[ $OSTYPE == "msys" ]]; then
         platform="windows"
         platform_ver="$(uname)"
-        dir="../bin/windows/"
+        dir="../bin/windows"
 
         bspatch="$dir/bspatch"
         jq="$dir/jq"
@@ -208,13 +221,12 @@ set_tool_paths() {
 
     # common
     if [[ $platform != "macos" ]]; then
-        futurerestore="$dir/futurerestore"
+        futurerestore+="$dir/futurerestore"
         ideviceenterrecovery="$dir/ideviceenterrecovery"
         ideviceinfo="$dir/ideviceinfo"
         iproxy="$dir/iproxy"
-        irecovery="$dir/irecovery"
+        irecovery+="$dir/irecovery"
     fi
-    gaster+="$dir/gaster"
     idevicerestore+="$dir/idevicerestore"
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
@@ -374,7 +386,11 @@ device_get_info() {
         local error_msg=$'* Make sure to also trust this computer by selecting "Trust" at the pop-up.'
         [[ $platform != "linux" ]] && error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
         [[ $platform == "macos" ]] && error_msg+=$'\n* Also try installing libimobiledevice and libirecovery from Homebrew/MacPorts before retrying.'
-        [[ $platform == "linux" ]] && error_msg+=$'\n* Also try running "sudo systemctl restart usbmuxd" before retrying.'
+        if [[ $platform == "linux" ]]; then
+            error_msg+=$'\n* Also try running "sudo systemctl restart usbmuxd" before retrying.'
+            error_msg+=$'\n* You may also try running the script again and enable sudoloop mode.'
+            touch ../resources/sudoloop
+        fi
         error_msg+=$'\n* Recovery and DFU mode are also applicable.\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
@@ -2327,6 +2343,7 @@ for i in "$@"; do
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
+        "--sudoloop" ) device_argmode="sudoloop";;
     esac
 done
 

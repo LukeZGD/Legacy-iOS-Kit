@@ -17,5 +17,6 @@ resources/ipwndfu/
 resources/powdersn0w/
 resources/ramdisk/
 saved/
+sudoloop
 tmp/
 version.xml
