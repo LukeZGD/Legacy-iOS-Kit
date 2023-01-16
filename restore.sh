@@ -2122,7 +2122,7 @@ device_remove4() {
     device_enter_mode pwnDFU
     log "Patching iBSS..."
     $bspatch iBSS_8L1.dfu pwnediBSS resources/patches/iBSS.n90ap.8L1.patch
-    log "Booting iBSS..."
+    log "Sending iBSS..."
     $irecovery -f pwnediBSS
     sleep 2
     log "Running commands..."
@@ -2206,9 +2206,11 @@ shsh_save_onboard() {
     ipsw_path_set
     device_enter_mode kDFU
     patch_ibec
+    log "Sending iBEC..."
     $irecovery -f pwnediBEC
     sleep 5
     device_find_mode Recovery
+    log "Dumping blobs now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | ${irecovery}2 -s
     ${irecovery}2 -g myblob.dump
     $irecovery -n
