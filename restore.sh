@@ -2216,8 +2216,10 @@ device_ramdisk4() {
 
 shsh_save_onboard() {
     if [[ $platform == "windows" ]]; then
-        log "Saving onboard SHSH is not (yet) supported on Windows"
-        return
+        print "* Saving onboard SHSH is not tested on Windows"
+        print "* It is recommended to do this on Linux/macOS instead"
+        print "* You may also need iTunes 12.4.3 or older for shshdump to work"
+        pause
     fi
     device_target_other=1
     ipsw_path_set
@@ -2228,16 +2230,23 @@ shsh_save_onboard() {
     sleep 5
     device_find_mode Recovery
     log "Dumping blobs now"
-    (echo -e "/send ../resources/payload\ngo blobs\n/exit") | ${irecovery}2 -s
-    ${irecovery}2 -g myblob.dump
-    $irecovery -n
-    "$dir/ticket" myblob.dump myblob.plist "$ipsw_path.ipsw" -z
-    "$dir/validate" myblob.plist "$ipsw_path.ipsw" -z
-    if [[ ! -s myblob.plist ]]; then
-        warn "Saving onboard blobs failed."
+    if [[ $platform == "windows" ]]; then
+        "$dir/shshdump"
+    else
+        (echo -e "/send ../resources/payload\ngo blobs\n/exit") | ${irecovery}2 -s
+        ${irecovery}2 -g dump.shsh
+        $irecovery -n
+    fi
+    "$dir/ticket" dump.shsh dump.plist "$ipsw_path.ipsw" -z
+    "$dir/validate" dump.plist "$ipsw_path.ipsw" -z
+    if [[ $? != 0 ]]; then
+        warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
+    fi
+    if [[ ! -s dump.plist ]]; then
+        warn "Saving onboard SHSH blobs failed."
         return
     fi
-    mv myblob.plist ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
+    mv dump.plist ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
     log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
 }
 
