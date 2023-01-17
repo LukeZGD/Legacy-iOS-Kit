@@ -1,29 +1,30 @@
 # iOS-OTA-Downgrader
 
 - **A multi-purpose script to downgrade/restore and jailbreak supported legacy iOS devices**
-- **iPhone4Down: Downgrade your iPhone 4 on Linux/Windows (using powdersn0w)**
+- **iPhone4Down: Downgrade iPhone 4 GSM on Linux/Windows (using powdersn0w)**
 - **Linux, macOS, and Windows** are supported
     - Windows usage is not recommended
-    - iPhone4Down focuses on Linux support - use [cherryflowerJB](https://web.archive.org/web/20210322151509/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
+    - iPhone4Down focuses on Linux support only - use [cherryflowerJB](https://web.archive.org/web/20210322151509/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Other features
-- iOS 6.1.3 and 8.4.1 downgrades have the option to **jailbreak** the install
+- Option to **jailbreak** iOS 6.1.3 and 8.4.1 downgrades
     - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
-- This script can also restore your device to other iOS versions that you have SHSH blobs for (32-bit/A7/A8 devices, iOS 5 to 12)
-- The latest baseband will always be used for 32-bit devices that have baseband. For iPhone 5C and A7 devices, iOS 10.3.3 baseband will be used
-- This script can also be used to enter kDFU mode for 32-bit devices
-- This script can also be used to restore your iPhone 4 back to iOS 7.1.2 with the option to jailbreak the install
-- This script can also be used to restore supported devices to their latest versions
-- This script can also be used to save on-board SHSH blobs for 32-bit devices
+- Restore to other iOS versions with SHSH blobs (32-bit/A7/A8 devices, iOS 5 to 12)
+- The latest baseband will be used for 32-bit devices if applicable
+- Place device to pwned iBSS/kDFU mode for 32-bit devices
+- Clear NVRAM for iPhone 4 GSM (Disable/Enable Exploit)
+- Restore iPhone 4 to iOS 7.1.2 with the option to jailbreak
+- Restore supported devices to their latest iOS version
+- Save on-board SHSH blobs for 32-bit devices
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
-- **iPhone 5C and iPad mini 3 devices are NOT supported!**
-    - iPhone 5C can still be restored to versions that you have SHSH blobs for
-    - iPhone 4 devices also support restoring with SHSH blobs
-- **iPhone4Down supports iPhone 4 GSM only (iPhone3,1)**
+- **iPhone 5C and iPad mini 3 devices are NOT supported by OTA downgrades**
+    - These devices still support restoring to other iOS versions with SHSH blobs
+- **iPhone4Down (downgrading without blobs) supports iPhone 4 GSM only (iPhone3,1)**
+    - All iPhone 4 models still support restoring with SHSH blobs and to iOS 7.1.2
 
 <table>
     <thead>
@@ -71,6 +72,9 @@
 </details>
 
 ## Supported OS versions/distros
+
+#### Supported architectures: x86_64, armhf (Linux), arm64
+
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 36 and newer

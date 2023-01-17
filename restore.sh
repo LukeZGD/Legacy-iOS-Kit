@@ -134,18 +134,17 @@ set_tool_paths() {
         xmlstarlet="$(which xmlstarlet)"
         zenity="$(which zenity)"
 
-        if [[ -e ../resources/sudoloop && $device_argmode != "sudoloop" ]]; then
+        if [[ -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
             local opt
             log "Previous run failed to detect iOS device."
             print "* You may enable sudoloop mode, which will run some tools as root."
             read -p "$(input 'Enable sudoloop mode? (y/N) ')" opt
             if [[ $opt == 'Y' || $opt == 'y' ]]; then
-                device_argmode="sudoloop"
+                device_sudoloop=1
             fi
-            rm ../resources/sudoloop
         fi
 
-        if [[ $(uname -m) == "a"* || $device_argmode == "sudoloop" || $(id -u $USER) == 999 ]]; then
+        if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $(id -u $USER) == 999 ]]; then
             print "* Enter your user password when prompted"
             sudo -v
             (while true; do sudo -v; sleep 60; done) &
@@ -218,6 +217,7 @@ set_tool_paths() {
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS, Windows"
     fi
     log "Running on platform: $platform ($platform_ver)"
+    rm ../resources/sudoloop 2>/dev/null
 
     # common
     if [[ $platform != "macos" ]]; then
@@ -604,7 +604,8 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         if [[ $timeout != 1 ]]; then
-            error "Failed to find device in $1 mode (Timed out)."
+            touch ../resources/sudoloop
+            error "Failed to find device in $1 mode (Timed out). Please run the script again."
         fi
         return 1
     fi
@@ -1010,7 +1011,7 @@ download_file() {
     local sha1=$($sha1sum $2 | awk '{print $1}')
     if [[ $sha1 != "$3" ]]; then
         error "Verifying $filename failed. The downloaded file may be corrupted or incomplete. Please run the script again" \
-        "SHA1sum mismatch. Expected $3, got $sha1"
+        "* SHA1sum mismatch. Expected $3, got $sha1"
     fi
 }
 
@@ -1390,7 +1391,7 @@ shsh_save() {
         log "Successfully saved $version blobs: $shsh_path"
     else
         error "Saving $version blobs failed. Please run the script again" \
-        "It is also possible that $version for $device_type is no longer signed"
+        "* It is also possible that $version for $device_type is no longer signed"
     fi
 }
 
@@ -1460,6 +1461,8 @@ ipsw_prepare_1033() {
         mv $iBECb.im4p $iBECb.orig
         $bspatch $iBSSb.orig $iBSSb.im4p ../resources/patch/$iBSSb.patch
         $bspatch $iBECb.orig $iBECb.im4p ../resources/patch/$iBECb.patch
+    fi
+    if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
         cp $iBSSb.im4p $iBECb.im4p ../saved/$device_type
     else
         cp $iBSS.im4p $iBEC.im4p ../saved/$device_type
@@ -1692,7 +1695,7 @@ ipsw_prepare_powder() {
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
-        "You may try selecting N for memory option"
+        "* You may try selecting N for memory option"
     fi
 }
 
@@ -1769,7 +1772,7 @@ ipsw_prepare_cherry() {
 
     if [[ ! -e "$ipsw_custom.ipsw" ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
-        "You may try selecting N for memory option"
+        "* You may try selecting N for memory option"
     fi
 
     log "iOS 4 Fix" # From ios4fix
@@ -2353,7 +2356,7 @@ for i in "$@"; do
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
-        "--sudoloop" ) device_argmode="sudoloop";;
+        "--sudoloop" ) device_sudoloop=1;;
     esac
 done
 
