@@ -760,7 +760,9 @@ device_enter_mode() {
                 clean_and_exit
             fi
 
-            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" ]] && (( device_proc < 7 )); then
+            if [[ $device_proc == 4 ]]; then
+                print "* Note that kDFU mode will NOT work for iPhone4Down downgrades!"
+            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" ]] && (( device_proc < 7 )); then
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
                     log "Pwned iBSS/kDFU mode specified by user."
@@ -788,8 +790,12 @@ device_enter_mode() {
             if [[ $device_proc == 6 && $platform != "macos" ]]; then
                 device_ipwndfu pwn
             else
+                opt=-p
+                if [[ $platform == "macos" ]]; then
+                    opt=
+                fi
                 log "Placing device to pwnDFU mode using ipwnder"
-                $ipwnder -p
+                $ipwnder $opt
                 tool_pwned=$?
             fi
             irec_pwned=$($irecovery -q | grep -c "PWND")
