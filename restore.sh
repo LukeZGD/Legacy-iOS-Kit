@@ -29,7 +29,10 @@ clean_and_exit() {
         input "Press Enter/Return to exit."
         read -s
     fi
-    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" /tmp/futurerestore
+    if [[ $device_sudoloop == 1 ]]; then
+        rm -rf /tmp/futurerestore /tmp/*.json
+    fi
+    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
     kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
     sudo -k
     exit $1
@@ -269,7 +272,7 @@ install_depends() {
 
     elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
         sudo apt update
-        sudo apt install -y bsdiff curl jq libimobiledevice6 libirecovery-common openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        sudo apt install -y bsdiff curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
@@ -689,7 +692,7 @@ device_enter_mode() {
 
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 1 ]]; then
-                echo "[[ -e /.installed_kok3shiX ]] && /tmp/kloader /tmp/pwnediBSS || \
+                echo "[[ -e /.installed_kok3shiX || -e /.installed_p0insettia ]] && /tmp/kloader /tmp/pwnediBSS || \
                 /tmp/kloader_hgsp /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader_hgsp")
                 sendfiles+=("../resources/kloader")
@@ -1592,7 +1595,7 @@ ipsw_prepare_32bit_keys() {
 
 ipsw_prepare_32bit() {
     device_fw_key_check
-    if [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" && $debug_mode != 1 ]]; then
+    if [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $platform"
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -1965,7 +1968,7 @@ restore_futurerestore() {
     fi
 
     log "Running futurerestore with command: $futurerestore ${ExtraArgs[*]}"
-    "$futurerestore" "${ExtraArgs[@]}"
+    $futurerestore "${ExtraArgs[@]}"
     log "Restoring done! Read the message below if any error has occurred:"
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
