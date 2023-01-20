@@ -30,11 +30,10 @@ clean_and_exit() {
         read -s
     fi
     if [[ $device_sudoloop == 1 ]]; then
-        rm -rf /tmp/futurerestore /tmp/*.json
+        sudo rm -rf /tmp/futurerestore /tmp/*.json
     fi
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
     kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
-    sudo -k
     exit $1
 }
 
