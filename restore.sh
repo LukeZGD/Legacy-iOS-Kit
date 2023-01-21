@@ -1382,6 +1382,7 @@ shsh_save() {
         log "Found existing saved $version blobs: $shsh_path"
         return
     fi
+    rm *.shsh*
 
     ExtraArgs="-d $device_type -i $version -e $device_ecid -m $buildmanifest -o -s -B ${device_model}ap -b "
     if [[ -n $apnonce ]]; then
