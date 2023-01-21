@@ -440,6 +440,7 @@ device_get_info() {
     fi
 
     device_use_bb=0
+    device_latest_bb=0
     # set device_proc (what processor the device has)
     case $device_type in
         iPhone3,[123] )
@@ -541,7 +542,7 @@ device_get_info() {
         iPad4,[235] | iPhone5,[34] | iPhone6,[12] ) # MDM9615 10.3.3 (5C, 5S, air, mini2)
             device_use_bb="Mav7Mav8-7.60.00.Release.bbfw"
             device_use_bb_sha1="f397724367f6bed459cf8f3d523553c13e8ae12c"
-            ;;
+            ;;&
 
         iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.6
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
@@ -1393,15 +1394,14 @@ shsh_save() {
     log "Running tsschecker with command: $dir/tsschecker $ExtraArgs"
     "$dir/tsschecker" $ExtraArgs
     shsh_path="$(ls $shsh_check)"
-    if [[ -n "$shsh_path" ]]; then
-        if [[ -z $apnonce ]]; then
-            cp "$shsh_path" ../saved/shsh/
-        fi
-        log "Successfully saved $version blobs: $shsh_path"
-    else
+    if [[ -z "$shsh_path" ]]; then
         error "Saving $version blobs failed. Please run the script again" \
         "* It is also possible that $version for $device_type is no longer signed"
     fi
+    if [[ -z $apnonce ]]; then
+        cp "$shsh_path" ../saved/shsh/
+    fi
+    log "Successfully saved $version blobs: $shsh_path"
 }
 
 ipsw_download() {
@@ -1938,7 +1938,7 @@ restore_futurerestore() {
     ipsw_extract
     restore_download_bbsep
     # baseband args
-    if [[ $device_use_bb == 0 ]]; then
+    if [[ $restore_baseband == 0 ]]; then
         ExtraArgs+=("--no-baseband")
     else
         ExtraArgs+=("-b" "$restore_baseband" "-p" "$restore_manifest")
