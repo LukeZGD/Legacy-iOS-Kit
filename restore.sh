@@ -830,17 +830,18 @@ device_ipwndfu() {
     local tool_pwned=0
     local mac_ver=0
     local python2=$(which python2 2>/dev/null)
-    print "* Make sure to have python2 installed to use ipwndfu"
-    print "* You may install python2 from pyenv: pyenv install 2.7.18"
 
     if [[ $platform == "macos" ]]; then
         mac_ver=$(echo "$platform_ver" | cut -c -2)
     fi
     if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
         python2=/usr/bin/python
-    elif [[ -e ~/.pyenv/shims/python2 ]]; then
-        print "* python2 from pyenv detected"
-        python2=~/.pyenv/shims/python2
+    elif [[ -e ~/.pyenv/versions/2.7.18/bin/python2 ]]; then
+        log "python2 from pyenv detected"
+        python2=~/.pyenv/versions/2.7.18/bin/python2
+    elif [[ -z $python2 ]]; then
+        error "Python 2 is not installed, cannot continue. Make sure to have python2 installed to use ipwndfu." \
+        "You may install python2 from pyenv: pyenv install 2.7.18"
     fi
 
     device_enter_mode DFU
@@ -1384,12 +1385,12 @@ shsh_save() {
     fi
     shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-${build_id}_*.shsh*
 
-    if [[ $(ls ../saved/shsh/$shsh_check) && -z $apnonce ]]; then
+    if [[ $(ls ../saved/shsh/$shsh_check 2>/dev/null) && -z $apnonce ]]; then
         shsh_path="$(ls ../saved/shsh/$shsh_check)"
         log "Found existing saved $version blobs: $shsh_path"
         return
     fi
-    rm *.shsh*
+    rm *.shsh* 2>/dev/null
 
     ExtraArgs="-d $device_type -i $version -e $device_ecid -m $buildmanifest -o -s -B ${device_model}ap -b "
     if [[ -n $apnonce ]]; then
