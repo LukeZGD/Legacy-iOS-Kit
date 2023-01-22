@@ -831,6 +831,11 @@ device_ipwndfu() {
     local mac_ver=0
     local python2=$(which python2 2>/dev/null)
 
+    if [[ $1 == "send_ibss" ]]; then
+        patch_ibss
+        cp pwnediBSS ../resources/ipwndfu/
+    fi
+
     if [[ $platform == "macos" ]]; then
         mac_ver=$(echo "$platform_ver" | cut -c -2)
     fi
@@ -838,10 +843,14 @@ device_ipwndfu() {
         python2=/usr/bin/python
     elif [[ -e ~/.pyenv/versions/2.7.18/bin/python2 ]]; then
         log "python2 from pyenv detected"
-        python2=~/.pyenv/versions/2.7.18/bin/python2
+        python2=
+        if [[ $device_sudoloop == 1 ]]; then
+            python2="sudo "
+        fi
+        python2+="~/.pyenv/versions/2.7.18/bin/python2"
     elif [[ -z $python2 ]]; then
         error "Python 2 is not installed, cannot continue. Make sure to have python2 installed to use ipwndfu." \
-        "You may install python2 from pyenv: pyenv install 2.7.18"
+        "* You may install python2 from pyenv: pyenv install 2.7.18"
     fi
 
     device_enter_mode DFU
@@ -849,11 +858,6 @@ device_ipwndfu() {
         download_file https://github.com/LukeZGD/ipwndfu/archive/6e67c9e28a5f7f63f179dea670f7f858712350a0.zip ipwndfu.zip 61333249eb58faebbb380c4709384034ce0e019a
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
-    fi
-
-    if [[ $1 == "send_ibss" ]]; then
-        patch_ibss
-        cp pwnediBSS ../resources/ipwndfu/ 2>/dev/null
     fi
 
     pushd ../resources/ipwndfu/
