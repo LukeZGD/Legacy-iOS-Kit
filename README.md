@@ -85,19 +85,16 @@
 - **Windows** 8.1 and newer
 
 ## Tools and other stuff used
-- cURL
+- curl
 - bspatch
-- python2 (ipwndfu, rmsigchks, SimpleHTTPServer), python3 (http.server)
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
 - [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios (used for iOS 4.3.x only)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - LukeZGD fork
-- [iPwnder32](https://github.com/dora2-iOS/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite) - dora2ios
-- [gaster](https://github.com/0x7ff/gaster) - 0x7ff; [verygenericname (Nathan) fork](https://github.com/verygenericname/gaster)
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice ([macOS/Windows builds](https://github.com/libimobiledevice-win32/imobiledevice-net))
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker)
-- [futurerestore](https://github.com/futurerestore/futurerestore) - futurerestore beta (and 194)
+- [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar; [LukeZGD fork](https://github.com/LukeZGD/futurerestore)
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW) from daibutsuCFW (used on Linux ARM/Windows restores for 32-bit devices)
 - [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)

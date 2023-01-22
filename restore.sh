@@ -4,7 +4,7 @@ device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You
 ipsw_openssh=1 # If this value is 1, OpenSSH will be added to custom IPSW. (8.4.1 daibutsu and 6.1.3 p0sixspwn only)
 
 print() {
-    echo "${color_B}$1${color_N}"
+    echo "${color_B}${1}${color_N}"
 }
 
 input() {
@@ -24,6 +24,15 @@ error() {
     clean_and_exit 1
 }
 
+pause() {
+    input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
+    read -s
+}
+
+clean() {
+    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+}
+
 clean_and_exit() {
     if [[ $platform == "windows" ]]; then
         input "Press Enter/Return to exit."
@@ -32,14 +41,9 @@ clean_and_exit() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf /tmp/futurerestore /tmp/*.json
     fi
-    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+    clean
     kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
     exit $1
-}
-
-pause() {
-    input "Press Enter/Return to continue (or press Ctrl+C to cancel)"
-    read -s
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
@@ -280,7 +284,7 @@ install_depends() {
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $ID == "opensuse-tumbleweed" ]]; then
-        sudo zypper -n in bsdiff curl jq libimobiledevice-1_0-6 openssl python3 usbmuxd unzip vim xmlstarlet zenity zip
+        sudo zypper -n in bsdiff curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim xmlstarlet zenity zip
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
@@ -1134,6 +1138,8 @@ patch_ibec() {
     $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
     "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
     rm $name.dec $name.orig $name.raw $name.patched
+    cp pwnediBEC ../resources/saved
+    log "Pwned iBEC saved at: saved/$device_type/pwnediBEC"
 }
 
 ipsw_path_set() {
@@ -1443,10 +1449,7 @@ ipsw_download() {
 }
 
 ipsw_prepare_1033() {
-    # set iBSS, iBEC, iBSSb, iBECb variables, not needed on mac fr
-    if [[ $platform == "macos" ]]; then
-        return
-    fi
+    # patch iBSS, iBEC, iBSSb, iBECb and set variables
     iBSS="ipad4"
     if [[ $device_type == "iPhone6"* ]]; then
         iBSS="iphone6"
@@ -1477,6 +1480,20 @@ ipsw_prepare_1033() {
         cp $iBSS.im4p $iBEC.im4p ../saved/$device_type
     fi
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
+
+    if [[ $platform == "macos" && ! -e "$ipsw_custom.ipsw" ]]; then
+        log "Preparing custom IPSW..."
+        mkdir -p Firmware/dfu
+        cp "$ipsw_path.ipsw" "$ipsw_custom.ipsw"
+        zip -d "$ipsw_custom.ipsw" Firmware/dfu/$iBEC.im4p
+        cp $iBEC.im4p Firmware/dfu
+        zip -r0 "$ipsw_custom.ipsw" Firmware/dfu/$iBEC.im4p
+        if [[ $device_type == "iPad4"* ]]; then
+            zip -d "$ipsw_custom.ipsw" Firmware/dfu/$iBECb.im4p
+            cp $iBECb.im4p Firmware/dfu
+            zip -r0 "$ipsw_custom.ipsw" Firmware/dfu/$iBECb.im4p
+        fi
+    fi
 }
 
 ipsw_prepare_jailbreak() {
@@ -1935,7 +1952,6 @@ restore_futurerestore() {
     fi
     popd >/dev/null
 
-    ipsw_extract
     restore_download_bbsep
     # baseband args
     if [[ $restore_baseband == 0 ]]; then
@@ -1958,14 +1974,18 @@ restore_futurerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=("-d")
     fi
-    ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     if [[ $platform != "macos" ]]; then
         if (( device_proc < 7 )); then
             futurerestore+="_old"
         else
             futurerestore+="_new"
         fi
+    elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+        futurerestore="$dir/futurerestore_194"
+        ipsw_path="$ipsw_custom"
     fi
+    ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
+    ipsw_extract
 
     log "Running futurerestore with command: $futurerestore ${ExtraArgs[*]}"
     $futurerestore "${ExtraArgs[@]}"
@@ -1989,9 +2009,6 @@ restore_prepare_1033() {
     local attempt=1
 
     shsh_save
-    if [[ $platform == "macos" ]]; then
-        return
-    fi
     if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
         iBSS=$iBSSb
         iBEC=$iBECb
@@ -2067,9 +2084,7 @@ restore_prepare() {
                 local opt="--skip-blob"
                 restore_prepare_1033
                 if [[ $platform == "macos" ]]; then
-                    opt="--use-pwndfu"
-                    log "USB reset"
-                    "$dir/gaster" reset
+                    opt=
                 fi
                 restore_futurerestore $opt
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -2372,7 +2387,7 @@ done
 trap "clean_and_exit" EXIT
 trap "clean_and_exit 1" INT TERM
 
-rm -rf "$(dirname "$0")/tmp"
+clean
 mkdir "$(dirname "$0")/tmp"
 pushd "$(dirname "$0")/tmp" >/dev/null
 
