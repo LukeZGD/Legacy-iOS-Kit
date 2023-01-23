@@ -97,6 +97,7 @@ set_tool_paths() {
     : '
     sets variables: platform, platform_ver, dir, lib (linux only)
     also checks architecture (linux) and macos version
+    also set distro, debian_ver, ubuntu_ver, fedora_ver variables for linux
 
     list of tools set here:
     bspatch, ch3rry, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
@@ -128,6 +129,33 @@ set_tool_paths() {
             dir+="x86_64"
         else
             error "Your architecture ($(uname -m)) is not supported."
+        fi
+
+        if [[ -e /etc/debian_version ]]; then
+            debian_ver=$(cat /etc/debian_version)
+            if [[ $debian_ver == *"sid" ]]; then
+                debian_ver="sid"
+            else
+                debian_ver="$(echo "$debian_ver" | cut -c -2)"
+            fi
+        fi
+        if [[ -n $UBUNTU_CODENAME ]]; then
+            ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
+        fi
+        if [[ $ID == "fedora" || $ID == "nobara" ]]; then
+            fedora_ver=$VERSION_ID
+        fi
+
+        if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+            distro="arch"
+        elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
+            distro="debian"
+        elif (( fedora_ver >= 36 )); then
+            distro="fedora"
+        elif [[ $ID == "opensuse-tumbleweed" ]]; then
+            distro="opensuse"
+        else
+            error "Distro not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
         bspatch="$(which bspatch)"
@@ -241,8 +269,6 @@ set_tool_paths() {
 }
 
 install_depends() {
-    local debian_ver
-    local ubuntu_ver
     log "Installing dependencies..."
     rm "../resources/firstrun" 2>/dev/null
 
@@ -256,34 +282,23 @@ install_depends() {
         pause
     fi
 
-    if [[ -e /etc/debian_version ]]; then
-        debian_ver=$(cat /etc/debian_version)
-        if [[ $debian_ver == *"sid" ]]; then
-            debian_ver="sid"
-        else
-            debian_ver="$(echo "$debian_ver" | cut -c -2)"
-        fi
-    fi
-
-    if [[ -n $UBUNTU_CODENAME ]]; then
-        ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
-        sudo add-apt-repository -y universe
-    fi
-
-    if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+    if [[ $distro == "arch" ]]; then
         sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
 
-    elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
+    elif [[ $distro == "debian" ]]; then
+        if [[ -n $ubuntu_ver ]]; then
+            sudo add-apt-repository -y universe
+        fi
         sudo apt update
         sudo apt install -y bsdiff curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
-    elif [[ $ID == "fedora" || $ID == "nobara" ]] && (( VERSION_ID >= 36 )); then
+    elif [[ $distro == "fedora" ]]; then
         ln -sf /usr/lib64/libbz2.so.1.* "$lib/libbz2.so.1.0"
         sudo dnf install -y bsdiff ca-certificates jq libimobiledevice openssl python3 systemd udev usbmuxd vim-common xmlstarlet zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
-    elif [[ $ID == "opensuse-tumbleweed" ]]; then
+    elif [[ $distro == "opensuse" ]]; then
         sudo zypper -n in bsdiff curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim xmlstarlet zenity zip
 
     elif [[ $platform == "macos" ]]; then
@@ -295,11 +310,9 @@ install_depends() {
         pacman -Syu --noconfirm --needed ca-certificates curl libcurl libopenssl openssh openssl unzip zip
         mkdir "$(dirname "$0")/tmp"
         pushd "$(dirname "$0")/tmp"
-
-    else
-        error "Distro not detected/supported by the install script. See the repo README for supported OS versions/distros"
     fi
 
+    uname > "../resources/firstrun"
     if [[ $platform == "linux" ]]; then
         # from linux_fix script by Cryptiiiic
         sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
@@ -308,9 +321,9 @@ install_depends() {
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger
+        echo "$distro" > "../resources/firstrun"
     fi
 
-    uname > "../resources/firstrun"
     log "Install script done! Please run the script again to proceed"
     log "If your iOS device is plugged in, unplug and replug your device"
     clean_and_exit
@@ -2310,12 +2323,17 @@ main() {
     log "Checking Internet connection..."
     $ping 208.67.222.222 >/dev/null
     if [[ $? != 0 ]]; then
-        error "Please check your Internet connection before proceeding."
+        $ping 8.8.8.8 >/dev/null
+        if [[ $? != 0 ]]; then
+            error "Please check your Internet connection before proceeding."
+        fi
     fi
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$(uname)" ]]; then
+    if [[ ! -e "../resources/firstrun" ]] ||
+       [[ $(cat "../resources/firstrun") != "$(uname)" &&
+          $(cat "../resources/firstrun") != "$distro" ]]; then
         install_depends
     fi
 
