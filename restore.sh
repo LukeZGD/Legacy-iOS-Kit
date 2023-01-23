@@ -1440,7 +1440,8 @@ ipsw_download() {
         print "* Do NOT rename the IPSW as the script will fail to detect it."
         print "* The script will now proceed to download it for you. If you want to download it yourself, here is the link: $(cat $device_fw_dir/$build_id/url)"
         log "Downloading IPSW... (Press Ctrl+C to cancel)"
-        curl -L "$(cat $device_fw_dir/$build_id/url)" -o "$ipsw_dl.ipsw"
+        curl -L "$(cat $device_fw_dir/$build_id/url)" -o temp.ipsw
+        mv temp.ipsw "$ipsw_dl.ipsw"
     fi
 
     log "Verifying $ipsw_dl.ipsw..."
@@ -1489,15 +1490,16 @@ ipsw_prepare_1033() {
     if [[ $platform == "macos" && ! -e "$ipsw_custom.ipsw" ]]; then
         log "Preparing custom IPSW..."
         mkdir -p Firmware/dfu
-        cp "$ipsw_path.ipsw" "$ipsw_custom.ipsw"
-        zip -d "$ipsw_custom.ipsw" Firmware/dfu/$iBEC.im4p
+        cp "$ipsw_path.ipsw" temp.ipsw
+        zip -d temp.ipsw Firmware/dfu/$iBEC.im4p
         cp $iBEC.im4p Firmware/dfu
-        zip -r0 "$ipsw_custom.ipsw" Firmware/dfu/$iBEC.im4p
+        zip -r0 temp.ipsw Firmware/dfu/$iBEC.im4p
         if [[ $device_type == "iPad4"* ]]; then
-            zip -d "$ipsw_custom.ipsw" Firmware/dfu/$iBECb.im4p
+            zip -d temp.ipsw Firmware/dfu/$iBECb.im4p
             cp $iBECb.im4p Firmware/dfu
-            zip -r0 "$ipsw_custom.ipsw" Firmware/dfu/$iBECb.im4p
+            zip -r0 temp.ipsw Firmware/dfu/$iBECb.im4p
         fi
+        mv temp.ipsw "$ipsw_custom.ipsw"
     fi
 }
 
@@ -1567,12 +1569,13 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+=" -memory"
     fi
     log "Preparing custom IPSW..."
-    "$ipsw" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs ${JBFiles[@]}
+    "$ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
-    if [[ ! -e "$ipsw_custom.ipsw" ]]; then
+    if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_32bit_keys() {
@@ -1667,12 +1670,13 @@ ipsw_prepare_32bit() {
         ExtraArgs+=" -memory"
     fi
     log "Preparing custom IPSW..."
-    "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ExtraArgs
+    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs
 
-    if [[ ! -e "$ipsw_custom.ipsw" ]]; then
+    if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_powder() {
@@ -1722,18 +1726,20 @@ ipsw_prepare_powder() {
     else
         ipsw_memory=
     fi
-    "$dir/powdersn0w" "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ipsw_memory -base "$ipsw_path_712.ipsw" ${JBFiles[@]}
+    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ipsw_memory -base "$ipsw_path_712.ipsw" ${JBFiles[@]}
 
-    if [[ ! -e "$ipsw_custom.ipsw" ]]; then
+    if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_cherry() {
     local ExtraArgs="--logo4 "
     local IV
     local JBFiles
+    local JBSHA1
     local Key
     ipsw_custom+="_$device_ecid"
 
@@ -1757,6 +1763,7 @@ ipsw_prepare_cherry() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         JBFiles=("fstab_rw.tar" "unthredeh4il.tar" "Cydia5.tar")
+        JBSHA1="f5b5565640f7e31289919c303efe44741e28543a"
         if [[ ! -e ../resources/jailbreak/${JBFiles[2]} ]]; then
             download_file https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
             cp ${JBFiles[2]} ../resources/jailbreak/${JBFiles[2]}
@@ -1799,15 +1806,15 @@ ipsw_prepare_cherry() {
     else
         ipsw_memory=
     fi
-    $ch3rry "$ipsw_path.ipsw" "$ipsw_custom.ipsw" $ipsw_memory -derebusantiquis "$ipsw_path_712.ipsw" iBoot ${JBFiles[@]}
+    $ch3rry "$ipsw_path.ipsw" temp.ipsw $ipsw_memory -derebusantiquis "$ipsw_path_712.ipsw" iBoot ${JBFiles[@]}
 
-    if [[ ! -e "$ipsw_custom.ipsw" ]]; then
+    if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
 
     log "iOS 4 Fix" # From ios4fix
-    zip -d "$ipsw_custom.ipsw" Firmware/all_flash/all_flash.n90ap.production/manifest
+    zip -d temp.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
     pushd src/n90ap/Firmware/all_flash/all_flash.n90ap.production
     unzip -o -j "../../../../../$ipsw_path.ipsw" Firmware/all_flash/all_flash*/applelogo*
     mv -v applelogo-640x960.s5l8930x.img3 applelogo4-640x960.s5l8930x.img3
@@ -1823,11 +1830,12 @@ ipsw_prepare_cherry() {
     fi
     "../../../../../$dir/xpwntool" apticket.der applelogoT-640x960.s5l8930x.img3 -t scab_template.img3
     pushd ../../..
-    zip -r0 "../../../$ipsw_custom.ipsw" Firmware/all_flash/all_flash.n90ap.production/manifest
-    zip -r0 "../../../$ipsw_custom.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
-    zip -r0 "../../../$ipsw_custom.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
+    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/manifest
+    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
+    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
     popd
     popd
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_extract() {
