@@ -509,8 +509,8 @@ device_get_info() {
             ;;&
 
         iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
-            device_latest_vers="12.5.6"
-            device_latest_build="16H71"
+            device_latest_vers="12.5.7"
+            device_latest_build="16H81"
             ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -561,7 +561,7 @@ device_get_info() {
             device_use_bb_sha1="f397724367f6bed459cf8f3d523553c13e8ae12c"
             ;;&
 
-        iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.6
+        iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.7
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
             ;;
@@ -854,13 +854,13 @@ device_ipwndfu() {
     fi
     if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
         python2=/usr/bin/python
-    elif [[ -e ~/.pyenv/versions/2.7.18/bin/python2 ]]; then
+    elif [[ -e $HOME/.pyenv/versions/2.7.18/bin/python2 ]]; then
         log "python2 from pyenv detected"
         python2=
         if [[ $device_sudoloop == 1 ]]; then
             python2="sudo "
         fi
-        python2+="~/.pyenv/versions/2.7.18/bin/python2"
+        python2+="$HOME/.pyenv/versions/2.7.18/bin/python2"
     elif [[ -z $python2 ]]; then
         error "Python 2 is not installed, cannot continue. Make sure to have python2 installed to use ipwndfu." \
         "* You may install python2 from pyenv: pyenv install 2.7.18"
@@ -2120,6 +2120,7 @@ restore_prepare() {
                 print "* Make sure to set the nonce generator of your device!"
                 print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
                 print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#method"
+                print "* Also check the SEP/BB Compatibility Chart (Legacy iOS 12 sheet): https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
                 pause
                 restore_futurerestore
             fi
