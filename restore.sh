@@ -103,7 +103,7 @@ set_tool_paths() {
     bspatch, ch3rry, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
 
     these ones "need" sudo for linux arm, not for others:
-    futurerestore, idevicerestore, idevicererestore, ipwnder, irecovery
+    futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
 
     tools set here will be executed using:
     $name_of_tool
@@ -184,6 +184,7 @@ set_tool_paths() {
             (while true; do sudo -v; sleep 60; done) &
             sudoloop_pid=$!
             futurerestore="sudo "
+            gaster="sudo "
             idevicerestore="sudo "
             idevicererestore="sudo "
             ipwnder="sudo "
@@ -261,6 +262,7 @@ set_tool_paths() {
         iproxy="$dir/iproxy"
         irecovery+="$dir/irecovery"
     fi
+    gaster+="$dir/gaster"
     idevicerestore+="$dir/idevicerestore"
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
@@ -808,9 +810,33 @@ device_enter_mode() {
             device_enter_mode DFU
 
             if [[ $device_proc == 6 && $platform != "macos" ]]; then
+                # A6 linux uses ipwndfu
                 device_ipwndfu pwn
+            elif [[ $device_proc == 7 ]]; then
+                # A7 uses gaster or ipwnder
+                opt="$gaster pwn"
+                input "PwnDFU Tool Option"
+                print "* Select tool to be used for entering pwned DFU mode."
+                print "* This option is set to ipwnder by default (1)."
+                input "Select your option:"
+                select opt2 in "ipwnder" "gaster"; do
+                    case $opt2 in
+                        "gaster" ) :; break;;
+                        * )
+                            opt="$ipwnder"
+                            if [[ $platform != "macos" ]]; then
+                                opt+=" -p"
+                            fi
+                            break
+                            ;;
+                    esac
+                done
+                log "Placing device to pwnDFU mode using: $opt"
+                $opt
+                tool_pwned=$?
             else
-                opt=-p
+                # A4/A6 uses ipwnder
+                opt="-p"
                 if [[ $platform == "macos" ]]; then
                     opt=
                 fi
@@ -826,7 +852,7 @@ device_enter_mode() {
                 "* Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
             fi
 
-            if [[ $platform == "macos" ]]; then
+            if [[ $platform == "macos" && $opt != "$gaster pwn" ]]; then
                 return
             fi
 
