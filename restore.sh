@@ -2207,7 +2207,7 @@ device_remove4() {
     if [[ ! -e ../saved/$device_type/iBSS_8L1.dfu ]]; then
         log "Downloading 8L1 iBSS..."
         "$dir/partialzip" $(cat $device_fw_dir/8L1/url) Firmware/dfu/iBSS.n90ap.RELEASE.dfu iBSS_8L1.dfu
-        cp iBSS_8L1 ../saved/$device_type
+        cp iBSS_8L1.dfu ../saved/$device_type
     else
         cp ../saved/$device_type/iBSS_8L1.dfu .
     fi
