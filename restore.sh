@@ -941,10 +941,6 @@ main_menu() {
         if [[ $platform != "macos" ]]; then
             tmp_items+=("Restore to Latest iOS")
         fi
-        # Disable/enable exploit for iPhone 4 only
-        if [[ $device_proc == 4 ]]; then
-            tmp_items+=("Disable/Enable Exploit")
-        fi
         # kDFU/pwned iBSS for 32-bit only
         if (( device_proc < 7 )); then
             if [[ $device_mode == "Normal" ]]; then
@@ -954,9 +950,9 @@ main_menu() {
             fi
             tmp_items+=("Save Onboard Blobs")
         fi
-        # SSH Ramdisk for iPhone 4 GSM only
+        # Options for iPhone 4 GSM only
         if [[ $device_type == "iPhone3,1" ]]; then
-            tmp_items+=("SSH Ramdisk")
+            tmp_items+=("Disable/Enable Exploit" "SSH Ramdisk")
         fi
     fi
     # Save OTA blobs for A5, A6, A7 only
