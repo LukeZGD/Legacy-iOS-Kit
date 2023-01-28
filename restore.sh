@@ -158,7 +158,10 @@ set_tool_paths() {
             error "Distro not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
-        bspatch="$(which bspatch)"
+        bspatch="$(which bspatch 2>/dev/null)"
+        if [[ ! -e $bspatch ]]; then
+            bspatch="env LD_LIBRARY_PATH=$lib $dir/bspatch"
+        fi
         ch3rry_dir="../resources/ch3rryflower/Tools/ubuntu/UNTETHERED"
         ch3rry="env LD_LIBRARY_PATH=$lib $ch3rry_dir/cherry"
         jq="$(which jq)"
@@ -285,7 +288,7 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel bsdiff curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
@@ -821,7 +824,7 @@ device_enter_mode() {
                 input "Select your option:"
                 select opt2 in "ipwnder" "gaster"; do
                     case $opt2 in
-                        "gaster" ) :; break;;
+                        "gaster" ) break;;
                         * )
                             opt="$ipwnder"
                             if [[ $platform != "macos" ]]; then
@@ -1951,7 +1954,6 @@ restore_idevicerestore() {
 
     mkdir shsh
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
-    ipsw_extract custom
     restore_download_bbsep
     if [[ $device_use_bb == 0 ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
@@ -1964,6 +1966,7 @@ restore_idevicerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=" -d"
     fi
+    ipsw_extract custom
 
     log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore $ExtraArgs "$ipsw_custom.ipsw"
@@ -2105,6 +2108,7 @@ restore_prepare() {
                 fi
             else
                 # ch3rryflower 4.3.x, powdersn0w 5.0-6.1.3
+                shsh_save version 7.1.2
                 device_enter_mode pwnDFU
                 restore_idevicerestore
             fi
@@ -2170,7 +2174,6 @@ ipsw_prepare() {
                 ipsw_prepare_cherry
             else
                 # powdersn0w 5.0-6.1.3
-                shsh_save version 7.1.2
                 ipsw_prepare_powder
             fi
             ;;
