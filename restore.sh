@@ -817,23 +817,22 @@ device_enter_mode() {
                 device_ipwndfu pwn
             elif [[ $device_proc == 7 ]]; then
                 # A7 uses gaster or ipwnder
-                opt="$gaster pwn"
-                input "PwnDFU Tool Option"
-                print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ipwnder by default (1)."
-                input "Select your option:"
-                select opt2 in "ipwnder" "gaster"; do
-                    case $opt2 in
-                        "gaster" ) break;;
-                        * )
-                            opt="$ipwnder"
-                            if [[ $platform != "macos" ]]; then
-                                opt+=" -p"
-                            fi
-                            break
-                            ;;
-                    esac
-                done
+                opt="$ipwnder"
+                if [[ $platform != "macos" ]]; then
+                    opt+=" -p"
+                fi
+                if [[ $platform != "macos" ]] || [[ $platform == "macos" && $(uname -m) == "x86_64" ]]; then
+                    input "PwnDFU Tool Option"
+                    print "* Select tool to be used for entering pwned DFU mode."
+                    print "* This option is set to ipwnder by default (1)."
+                    input "Select your option:"
+                    select opt2 in "ipwnder" "gaster"; do
+                        case $opt2 in
+                            "gaster" ) opt="$gaster pwn"; break;;
+                            * ) break;;
+                        esac
+                    done
+                fi
                 log "Placing device to pwnDFU mode using: $opt"
                 $opt
                 tool_pwned=$?
