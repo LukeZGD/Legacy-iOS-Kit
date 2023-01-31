@@ -88,7 +88,6 @@
 - curl
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
-- [ch3rryflower](https://web.archive.org/web/20200708040313/https://github.com/dora2-iOS/ch3rryflower) - dora2ios (old version used for iOS 4.3.x only)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)

@@ -100,7 +100,7 @@ set_tool_paths() {
     also set distro, debian_ver, ubuntu_ver, fedora_ver variables for linux
 
     list of tools set here:
-    bspatch, ch3rry, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
+    bspatch, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
 
     these ones "need" sudo for linux arm, not for others:
     futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
@@ -112,7 +112,6 @@ set_tool_paths() {
     "$dir/$name_of_tool"
     '
 
-    ch3rry_dirmac="../resources/ch3rryflower/Tools/macos/UNTETHERED"
     if [[ $OSTYPE == "linux"* ]]; then
         . /etc/os-release
         platform="linux"
@@ -162,8 +161,6 @@ set_tool_paths() {
         if [[ ! -e $bspatch ]]; then
             bspatch="env LD_LIBRARY_PATH=$lib $dir/bspatch"
         fi
-        ch3rry_dir="../resources/ch3rryflower/Tools/ubuntu/UNTETHERED"
-        ch3rry="env LD_LIBRARY_PATH=$lib $ch3rry_dir/cherry"
         jq="$(which jq)"
         ping="ping -c1"
         sha1sum="$(which sha1sum)"
@@ -210,8 +207,6 @@ set_tool_paths() {
         fi
 
         bspatch="$(which bspatch)"
-        ch3rry_dir="$ch3rry_dirmac"
-        ch3rry="$ch3rry_dir/cherry"
         futurerestore="$dir/futurerestore_$(uname -m)"
         if [[ ! -e $futurerestore ]]; then
             futurerestore="$dir/futurerestore_arm64"
@@ -1263,6 +1258,9 @@ ipsw_path_set() {
     elif [[ $ipsw_jailbreak_tool == "etasonjb" ]]; then
         ipsw_custom+="E"
     fi
+    if [[ $ipsw_verbose == 1 ]]; then
+        ipsw_custom+="V"
+    fi
 
     if [[ $device_target_other != 1 ]]; then
         return
@@ -1453,6 +1451,9 @@ shsh_save() {
 }
 
 ipsw_download() {
+    if [[ $device_target_vers == "4.3"* ]]; then
+        ipsw_custom+="_$device_ecid"
+    fi
     if [[ $device_target_other == 1 ]]; then
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -1718,8 +1719,12 @@ ipsw_prepare_32bit() {
 
 ipsw_prepare_powder() {
     local config="config"
+    local ExtraArgs
+    local ExtraArgs2="--logo4 "
+    local IV
     local JBFiles=()
     local JBSHA1
+    local Key
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -1732,7 +1737,7 @@ ipsw_prepare_powder() {
             JBFiles=("Cydia6.tar")
             JBSHA1="1d5a351016d2546aa9558bc86ce39186054dc281"
         else
-            # use unthredeh4il for ios 5
+            # use unthredeh4il for ios 4/5
             JBFiles=("Cydia5.tar" "unthredeh4il.tar" "fstab_rw.tar")
             JBSHA1="f5b5565640f7e31289919c303efe44741e28543a"
         fi
@@ -1744,12 +1749,15 @@ ipsw_prepare_powder() {
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
         done
     fi
-    if [[ $ipsw_verbose == 1 ]]; then
-        config+="v"
-    fi
 
     log "Preparing custom IPSW with powdersn0w..."
     cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
+    if [[ $device_target_vers == "4.3"* ]]; then
+        ExtraArgs+="-apticket $shsh_path"
+    fi
+    if [[ $ipsw_verbose == 1 ]]; then
+        config+="v"
+    fi
     cp -R ../resources/firmware/src .
     if [[ $ipsw_jailbreak == 1 && $device_target_vers == "6"* ]]; then
         JBFiles=()
@@ -1759,119 +1767,62 @@ ipsw_prepare_powder() {
     fi
     mv FirmwareBundles/${config}.plist FirmwareBundles/config.plist
     if [[ $ipsw_memory == 1 ]]; then
-        ipsw_memory="-memory"
-    else
-        ipsw_memory=
+        ExtraArgs+=" -memory"
     fi
-    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ipsw_memory -base "$ipsw_path_712.ipsw" ${JBFiles[@]}
+    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_path_712.ipsw" $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
-    mv temp.ipsw "$ipsw_custom.ipsw"
-}
 
-ipsw_prepare_cherry() {
-    local ExtraArgs="--logo4 "
-    local IV
-    local JBFiles
-    local JBSHA1
-    local Key
-    ipsw_custom+="_$device_ecid"
-
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
-        log "Found existing Custom IPSW. Skipping IPSW creation."
-        return
-    fi
-
-    if [[ $device_target_vers == "4.3.5" ]]; then
-        IV="986032eecd861c37ca2a86b6496a3c0d"
-        Key="b4e300c54a9dd2e648ead50794e9bf2205a489c310a1c70a9fae687368229468"
-    elif [[ $device_target_vers == "4.3.3" ]]; then
-        IV="bb3fc29dd226fac56086790060d5c744"
-        Key="c2ead1d3b228a05b665c91b4b1ab54b570a81dffaf06eaf1736767bcb86e50de"
-        ExtraArgs+="--433 "
-    elif [[ $device_target_vers == "4.3" ]]; then
-        IV="9f11c07bde79bdac4abb3f9707c4b13c"
-        Key="0958d70e1a292483d4e32ed1e911d2b16b6260856be67d00a33b6a1801711d32"
-        ExtraArgs+="--433 "
-    fi
-
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("fstab_rw.tar" "unthredeh4il.tar" "Cydia5.tar")
-        JBSHA1="f5b5565640f7e31289919c303efe44741e28543a"
-        if [[ ! -e ../resources/jailbreak/${JBFiles[2]} ]]; then
-            download_file https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/download/jailbreak/${JBFiles[2]} ${JBFiles[2]} $JBSHA1
-            cp ${JBFiles[2]} ../resources/jailbreak/${JBFiles[2]}
+    if [[ $device_target_vers == "4.3"* ]]; then
+        device_fw_key_check
+        log "Applying iOS 4 patches"
+        log "Patch iBoot"
+        IV=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
+        Key=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+        if [[ $device_target_vers != "4.3.5" ]]; then
+            ExtraArgs2+="--433 "
         fi
-        for i in {0..2}; do
-            JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
-        done
+        if [[ $ipsw_verbose == 1 ]]; then
+            ExtraArgs2+="-b -v"
+        fi
+        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.n90ap.production/iBoot*
+        mv iBoot.n90ap.RELEASE.img3 tmp
+        "$dir/xpwntool" tmp ibot.dec -iv $IV -k $Key
+        "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs2
+        "$dir/xpwntool" ibot.pwned iBoot -t tmp
+        rm tmp
+        echo "0000010: 6365" | xxd -r - iBoot
+        echo "0000020: 6365" | xxd -r - iBoot
+        mkdir -p Firmware/all_flash/all_flash.n90ap.production Firmware/dfu
+        cp iBoot Firmware/all_flash/all_flash.n90ap.production/iBoot4.n90ap.RELEASE.img3
+        log "Patch iBSS"
+        unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.n90ap.RELEASE.dfu
+        $bspatch iBSS.n90ap.RELEASE.dfu Firmware/dfu/iBSS.n90ap.RELEASE.dfu FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/iBSS.n90ap.RELEASE.patch
+        log "Patch Ramdisk"
+        local RamdiskName=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
+        unzip -o -j "$ipsw_path.ipsw" $RamdiskName
+        if [[ $device_target_vers == "4.3" ]]; then
+            "$dir/xpwntool" $RamdiskName ramdisk.orig -iv d11772b6a3bdd4f0b4cd8795b9f10ad9 -k 9873392c91743857cf5b35c9017c6683d5659c9358f35c742be27bfb03dee77c -decrypt
+        else
+            mv $RamdiskName ramdisk.orig
+        fi
+        $bspatch ramdisk.orig ramdisk.patched FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/${RamdiskName%????}.patch
+        "$dir/xpwntool" ramdisk.patched ramdisk.raw
+        "$dir/hfsplus" ramdisk.raw rm iBoot
+        "$dir/hfsplus" ramdisk.raw add iBoot iBoot
+        "$dir/xpwntool" ramdisk.raw $RamdiskName -t ramdisk.patched
+        log "Patch AppleLogo"
+        unzip -o -j temp.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
+        echo "0000010: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
+        echo "0000020: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
+        mv applelogo-640x960.s5l8930x.img3 Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
+        log "Add all to custom IPSW"
+        zip -r0 temp.ipsw Firmware/all_flash/all_flash.n90ap.production/* Firmware/dfu/iBSS.n90ap.RELEASE.dfu $RamdiskName
     fi
 
-    log "ch3rryflower will be used instead of powdersn0w for iOS 4.3.x"
-    if [[ ! -d ../resources/ch3rryflower ]]; then
-        download_file https://web.archive.org/web/20210529174714if_/https://codeload.github.com/dora2-iOS/ch3rryflower/zip/316d2cdc5351c918e9db9650247b91632af3f11f ch3rryflower.zip 790d56db354151b9740c929e52c097ba57f2929d
-        unzip -q ch3rryflower.zip -d ../resources
-        mv ../resources/ch3rryflower*/ ../resources/ch3rryflower/
-    fi
-
-    if [[ $platform == "linux" ]]; then
-        # patch cherry temp path from /tmp to ././ (current dir)
-        echo "QlNESUZGNDA4AAAAAAAAAEUAAAAAAAAAQKoEAAAAAABCWmg5MUFZJlNZCmbVYQAABtRYTCAAIEAAQAAAEAIAIAAiNNA9QgyYiW0geDDxdyRThQkApm1WEEJaaDkxQVkmU1kFCpb0AACoSA7AAABAAAikAAACAAigAFCDJiApUmmnpMCTNJOaootbhBXWMbqkjO/i7kinChIAoVLegEJaaDkXckU4UJAAAAAA" | base64 -d | tee cherry.patch >/dev/null
-        $bspatch $ch3rry_dir/cherry $ch3rry_dir/cherry2 cherry.patch
-        chmod +x $ch3rry_dir/cherry2
-        ch3rry+="2"
-    fi
-
-    if [[ $ipsw_verbose == 1 ]]; then
-        ExtraArgs+="-b -v"
-    fi
-
-    log "Preparing custom IPSW with ch3rryflower..."
-    cp -R "$ch3rry_dirmac/FirmwareBundles" "$ch3rry_dirmac/src" .
-    unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.n90ap.production/iBoot*
-    mv iBoot.n90ap.RELEASE.img3 tmp
-    "$dir/xpwntool" tmp ibot.dec -iv $IV -k $Key
-    "$ch3rry_dir/bin/iBoot32Patcher" ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs
-    "$dir/xpwntool" ibot.pwned iBoot -t tmp
-    echo "0000010: 6365" | xxd -r - iBoot
-    echo "0000020: 6365" | xxd -r - iBoot
-    if [[ $ipsw_memory == 1 ]]; then
-        ipsw_memory="-memory"
-    else
-        ipsw_memory=
-    fi
-    $ch3rry "$ipsw_path.ipsw" temp.ipsw $ipsw_memory -derebusantiquis "$ipsw_path_712.ipsw" iBoot ${JBFiles[@]}
-
-    if [[ ! -e temp.ipsw ]]; then
-        error "Failed to find custom IPSW. Please run the script again" \
-        "* You may try selecting N for memory option"
-    fi
-
-    log "iOS 4 Fix" # From ios4fix
-    zip -d temp.ipsw Firmware/all_flash/all_flash.n90ap.production/manifest
-    pushd src/n90ap/Firmware/all_flash/all_flash.n90ap.production
-    unzip -o -j "../../../../../$ipsw_path.ipsw" Firmware/all_flash/all_flash*/applelogo*
-    mv -v applelogo-640x960.s5l8930x.img3 applelogo4-640x960.s5l8930x.img3
-    echo "0000010: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
-    echo "0000020: 34" | xxd -r - applelogo4-640x960.s5l8930x.img3
-    if [[ $platform == "macos" ]]; then
-        plutil -extract 'APTicket' xml1 "../../../../../$shsh_path" -o 'apticket.plist'
-        cat apticket.plist | sed -ne '/<data>/,/<\/data>/p' | sed -e "s/<data>//" | sed "s/<\/data>//" | awk '{printf "%s",$0}' | base64 --decode > apticket.der
-    else
-        "$xmlstarlet" sel -t -m "plist/dict/key[.='APTicket']" -v "following-sibling::data[1]" "../../../../../$shsh_path" > apticket.plist
-        sed -i -e 's/[ \t]*//' apticket.plist
-        cat apticket.plist | base64 --decode > apticket.der
-    fi
-    "../../../../../$dir/xpwntool" apticket.der applelogoT-640x960.s5l8930x.img3 -t scab_template.img3
-    pushd ../../..
-    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/manifest
-    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogo4-640x960.s5l8930x.img3
-    zip -r0 "../../temp.ipsw" Firmware/all_flash/all_flash.n90ap.production/applelogoT-640x960.s5l8930x.img3
-    popd
-    popd
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -2106,7 +2057,7 @@ restore_prepare() {
                     restore_latest
                 fi
             else
-                # ch3rryflower 4.3.x, powdersn0w 5.0-6.1.3
+                # powdersn0w 4.3.x-6.1.3
                 shsh_save version 7.1.2
                 device_enter_mode pwnDFU
                 restore_idevicerestore
@@ -2167,12 +2118,11 @@ ipsw_prepare() {
                 else
                     log "No need to create custom IPSW for non-jailbroken 7.1.2 restores"
                 fi
-            elif [[ $device_target_vers == "4.3"* ]]; then
-                # ch3rryflower 4.3.x
-                shsh_save version 7.1.2
-                ipsw_prepare_cherry
             else
-                # powdersn0w 5.0-6.1.3
+                # powdersn0w 4.3.x-6.1.3
+                if [[ $device_target_vers == "4.3"* ]]; then
+                    shsh_save version 7.1.2
+                fi
                 ipsw_prepare_powder
             fi
             ;;
@@ -2216,10 +2166,10 @@ device_remove4() {
 
     device_enter_mode pwnDFU
     log "Patching iBSS..."
-    $bspatch iBSS_8L1.dfu pwnediBSS resources/patches/iBSS.n90ap.8L1.patch
+    $bspatch iBSS_8L1.dfu pwnediBSS ../resources/patch/iBSS.n90ap.8L1.patch
     log "Sending iBSS..."
     $irecovery -f pwnediBSS
-    sleep 2
+    sleep 5
     log "Running commands..."
     $irecovery -c "setenv boot-partition $rec"
     $irecovery -c "saveenv"
