@@ -95,12 +95,12 @@ For devices compatible with downgrades (see README):
 
 set_tool_paths() {
     : '
-    sets variables: platform, platform_ver, dir, lib (linux only)
+    sets variables: platform, platform_ver, dir
     also checks architecture (linux) and macos version
     also set distro, debian_ver, ubuntu_ver, fedora_ver variables for linux
 
     list of tools set here:
-    bspatch, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), xmlstarlet, zenity
+    bspatch, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), zenity
 
     these ones "need" sudo for linux arm, not for others:
     futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
@@ -117,7 +117,6 @@ set_tool_paths() {
         platform="linux"
         platform_ver="$PRETTY_NAME"
         dir="../bin/linux/"
-        lib="../resources/lib/"
 
         # architecture check
         if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
@@ -130,6 +129,7 @@ set_tool_paths() {
             error "Your architecture ($(uname -m)) is not supported."
         fi
 
+        # version check
         if [[ -e /etc/debian_version ]]; then
             debian_ver=$(cat /etc/debian_version)
             if [[ $debian_ver == *"sid" ]]; then
@@ -145,6 +145,7 @@ set_tool_paths() {
             fedora_ver=$VERSION_ID
         fi
 
+        # distro check
         if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
             distro="arch"
         elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
@@ -157,18 +158,11 @@ set_tool_paths() {
             error "Distro not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
-        bspatch="$(which bspatch 2>/dev/null)"
-        if [[ ! -e $bspatch ]]; then
-            bspatch="env LD_LIBRARY_PATH=$lib $dir/bspatch"
-        fi
         jq="$(which jq)"
         ping="ping -c1"
-        sha1sum="$(which sha1sum)"
-        sha256sum="$(which sha256sum)"
-        xmlstarlet="$(which xmlstarlet)"
         zenity="$(which zenity)"
 
-        if [[ -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
+        if [[ $(uname -m) == "x86_64" && -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
             local opt
             log "Previous run failed to detect iOS device."
             print "* You may enable sudoloop mode, which will run some tools as root."
@@ -177,7 +171,6 @@ set_tool_paths() {
                 device_sudoloop=1
             fi
         fi
-
         if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $(id -u $USER) == 999 ]]; then
             print "* Enter your user password when prompted"
             sudo -v
@@ -215,14 +208,11 @@ set_tool_paths() {
         ideviceinfo="$(which ideviceinfo)"
         iproxy="$(which iproxy)"
         irecovery="$(which irecovery)"
-        jq="$dir/jq"
         ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
         sha256sum="$(which shasum) -a 256"
-        xmlstarlet="$dir/xmlstarlet"
-        zenity="$dir/zenity"
 
-        if [[ ! -e $ideviceinfo || ! -e $irecovery ]]; then
+        if [[ -z $ideviceinfo || -z $irecovery ]]; then
             error "Install bash, libimobiledevice and libirecovery from Homebrew or MacPorts to continue." \
             "* For Homebrew: brew install bash libimobiledevice libirecovery" \
             $'\n* For MacPorts: sudo port install bash libimobiledevice libirecovery'
@@ -233,13 +223,7 @@ set_tool_paths() {
         platform_ver="$(uname)"
         dir="../bin/windows"
 
-        bspatch="$dir/bspatch"
-        jq="$dir/jq"
         ping="ping -n 1"
-        sha1sum="$(which sha1sum)"
-        sha256sum="$(which sha256sum)"
-        xmlstarlet="$dir/xmlstarlet"
-        zenity="$dir/zenity"
 
         # windows warning message
         warn "Using iOS-OTA-Downgrader on Windows is not recommended."
@@ -254,11 +238,18 @@ set_tool_paths() {
 
     # common
     if [[ $platform != "macos" ]]; then
+        bspatch="$dir/bspatch"
         futurerestore+="$dir/futurerestore"
         ideviceenterrecovery="$dir/ideviceenterrecovery"
         ideviceinfo="$dir/ideviceinfo"
         iproxy="$dir/iproxy"
         irecovery+="$dir/irecovery"
+        sha1sum="$(which sha1sum)"
+        sha256sum="$(which sha256sum)"
+    fi
+    if [[ $platform != "linux" ]]; then
+        jq="$dir/jq"
+        zenity="$dir/zenity"
     fi
     gaster+="$dir/gaster"
     idevicerestore+="$dir/idevicerestore"
@@ -283,23 +274,22 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim xmlstarlet zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y bsdiff curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xmlstarlet xxd zenity zip
+        sudo apt install -y curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        ln -sf /usr/lib64/libbz2.so.1.* "$lib/libbz2.so.1.0"
-        sudo dnf install -y bsdiff ca-certificates jq libimobiledevice openssl python3 systemd udev usbmuxd vim-common xmlstarlet zenity zip
+        sudo dnf install -y ca-certificates jq libimobiledevice openssl python3 systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in bsdiff curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim xmlstarlet zenity zip
+        sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
         xcode-select --install
@@ -585,11 +575,10 @@ device_get_info() {
 }
 
 device_find_mode() {
-    # usage: device_find_mode {DFU,Recovery,Restore} {Timeout (default: 10)}
+    # usage: device_find_mode {DFU,Recovery,Restore} {Timeout (default: 24 for linux, 4 for other)}
     # finds device in given mode, and sets the device_mode variable
-
     local usb
-    local timeout=10
+    local timeout=4
     local i=0
     local device_in
 
@@ -601,6 +590,8 @@ device_find_mode() {
 
     if [[ -n $2 ]]; then
         timeout=$2
+    elif [[ $platform == "linux" ]]; then
+        timeout=24
     fi
 
     log "Finding device in $1 mode..."
@@ -635,7 +626,6 @@ device_enter_mode() {
     # usage: device_enter_mode {Recovery, DFU, kDFU, pwnDFU}
     # attempt to enter given mode, and device_find_mode function will then set device_mode variable
     local opt
-
     case $1 in
         "Recovery" )
             if [[ $device_mode == "Normal" ]]; then
@@ -678,7 +668,7 @@ device_enter_mode() {
                 sleep 1
             done
             echo
-            device_find_mode DFU 20
+            device_find_mode DFU
             ;;
 
         "kDFU" )
@@ -929,7 +919,6 @@ device_ipwndfu() {
 
 main_menu() {
     # provides a menu to set the variable mode {downgrade, restore-latest, save-ota-blobs, custom-ipsw, kdfu, remove4, ramdisk4}
-
     local menu_items=()
     local tmp_items=()
     if [[ $device_mode != "none" ]]; then
@@ -1300,7 +1289,6 @@ ipsw_path_set() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
-
     if [[ $device_target_vers == "$device_latest_vers" && $device_proc != 4 ]]; then
         return
     fi
@@ -1525,6 +1513,7 @@ ipsw_prepare_1033() {
     fi
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
 
+    # this will not be needed if i get to compile futurerestore on mac
     if [[ $platform == "macos" && ! -e "$ipsw_custom.ipsw" ]]; then
         log "Preparing custom IPSW..."
         mkdir -p Firmware/dfu
@@ -1620,17 +1609,9 @@ ipsw_prepare_32bit_keys() {
     local comp="$1"
     local getcomp="$1"
     case $comp in
-        "RestoreLogo" )
-            getcomp="AppleLogo"
-            ;;
-
-        "RestoreKernelCache" )
-            getcomp="Kernelcache"
-            ;;
-
-        "RestoreDeviceTree" )
-            getcomp="DeviceTree"
-            ;;
+        "RestoreLogo" ) getcomp="AppleLogo";;
+        "RestoreKernelCache" ) getcomp="Kernelcache";;
+        "RestoreDeviceTree" ) getcomp="DeviceTree";;
     esac
     local name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
     local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
@@ -1664,6 +1645,14 @@ ipsw_prepare_32bit() {
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
+    fi
+
+    local xmlstarlet="$dir/xmlstarlet"
+    if [[ ! -e $xmlstarlet ]]; then
+        xmlstarlet="$(which xmlstarlet)"
+        if [[ -z $xmlstarlet ]]; then
+            error "xmlstarlet is not installed. Install xmlstarlet to continue creating custom IPSW"
+        fi
     fi
 
     local ExtraArgs
@@ -1844,7 +1833,6 @@ ipsw_extract() {
 restore_download_bbsep() {
     # restore manifest, baseband, sep
     # sets variables: restore_manifest, restore_baseband, restore_sep
-
     local build_id
     local baseband_sha1
     if [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
@@ -1869,6 +1857,7 @@ restore_download_bbsep() {
         mv $build_id.plist ../saved/$device_type
     fi
     cp ../saved/$device_type/$build_id.plist tmp/BuildManifest.plist
+    log "Restore Manifest: ../saved/$device_type/$build_id.plist"
     restore_manifest="tmp/BuildManifest.plist"
 
     # Baseband
@@ -1882,6 +1871,7 @@ restore_download_bbsep() {
             mv $restore_baseband ../saved/baseband/
         fi
         cp ../saved/baseband/$restore_baseband tmp/bbfw.tmp
+        log "Restore Baseband: ../saved/baseband/$restore_baseband"
         restore_baseband="tmp/bbfw.tmp"
     fi
 
@@ -1893,6 +1883,7 @@ restore_download_bbsep() {
             "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" Firmware/all_flash/$restore_sep.im4p $restore_sep.im4p
             mv $restore_sep.im4p ../saved/$device_type/$restore_sep-$build_id.im4p
         fi
+        log "Restore SEP: ../saved/$device_type/$restore_sep-$build_id.im4p"
         restore_sep="$restore_sep-$build_id.im4p"
         cp ../saved/$device_type/$restore_sep .
     fi
@@ -2222,7 +2213,7 @@ device_ramdisk4() {
     $irecovery -c ramdisk
     $irecovery -f ../resources/ramdisk/kernelcache.release.n90
     $irecovery -c bootx
-    device_find_mode Restore
+    device_find_mode Restore 30
 
     log "Device should now be in SSH ramdisk mode."
     echo
@@ -2255,7 +2246,6 @@ shsh_save_onboard() {
     patch_ibec
     log "Sending iBEC..."
     $irecovery -f pwnediBEC
-    sleep 5
     device_find_mode Recovery
     log "Dumping blobs now"
     if [[ $platform == "windows" ]]; then
@@ -2296,9 +2286,9 @@ main() {
     set_tool_paths
 
     log "Checking Internet connection..."
-    $ping 208.67.222.222 >/dev/null
+    $ping google.com >/dev/null
     if [[ $? != 0 ]]; then
-        $ping 8.8.8.8 >/dev/null
+        $ping 208.67.222.222 >/dev/null
         if [[ $? != 0 ]]; then
             error "Please check your Internet connection before proceeding."
         fi
@@ -2306,7 +2296,7 @@ main() {
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" ]] ||
+    if [[ ! -e "../resources/firstrun" || -z $jq || -z $zenity ]] ||
        [[ $(cat "../resources/firstrun") != "$(uname)" &&
           $(cat "../resources/firstrun") != "$distro" ]]; then
         install_depends

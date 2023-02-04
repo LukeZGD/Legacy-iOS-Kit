@@ -20,10 +20,9 @@ jobs:
 
       - name: Move linux binaries
         run: |
-          mkdir -p ./exclude/lib ./exclude/bin
+          mkdir -p ./exclude/bin
           cp -R ./bin/* ./exclude/bin
-          cp ./resources/lib/* ./exclude/lib
-          rm -r ./bin/linux ./bin/windows ./resources/lib/*
+          rm -r ./bin/linux ./bin/windows
 
       - name: Zip macos files
         run: zip -r ${{ github.event.repository.name }}_macos_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip bin/ LICENSE resources/ restore.sh README.md
@@ -31,7 +30,6 @@ jobs:
       - name: Move macos binaries
         run: |
           rm -r ./bin/macos
-          cp ./exclude/lib/* ./resources/lib
           mkdir ./bin/linux
           cp -R ./exclude/bin/linux/x86_64 ./bin/linux
 
@@ -48,7 +46,7 @@ jobs:
 
       - name: Move linux arm64 binaries and other files
         run: |
-          rm -r ./bin/linux/arm64 ./resources/lib/*
+          rm -r ./bin/linux/arm64
           cp -R ./exclude/bin/linux/arm ./bin/linux
 
       - name: Zip linux arm files
@@ -65,7 +63,6 @@ jobs:
       - name: Copy exclude files back and download other files
         run: |
           cp -R ./exclude/bin/* ./bin
-          cp -R ./exclude/lib/* ./resources/lib
           ./resources/complete.sh
 
       - name: Zip complete files
