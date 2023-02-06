@@ -182,6 +182,7 @@ set_tool_paths() {
             idevicererestore="sudo "
             ipwnder="sudo "
             irecovery="sudo "
+            sudo chmod +x $dir/*
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -235,6 +236,9 @@ set_tool_paths() {
     fi
     log "Running on platform: $platform ($platform_ver)"
     rm ../resources/sudoloop 2>/dev/null
+    if [[ $device_sudoloop != 1 || $platform != "linux" ]]; then
+        chmod +x $dir/*
+    fi
 
     # common
     if [[ $platform != "macos" ]]; then
