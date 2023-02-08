@@ -4,7 +4,6 @@
 - **iPhone4Down: Downgrade iPhone 4 GSM on Linux/Windows (using powdersn0w)**
 - **Linux, macOS, and Windows** are supported
     - Windows usage is not recommended
-    - iPhone4Down focuses on Linux support only - use [cherryflowerJB](https://web.archive.org/web/20210322151509/https://dora2ios.web.app/CFJB/) or [powdersn0w](https://web.archive.org/web/20221213010446/https://dora2ios.web.app/konayuki/index.html) on macOS instead
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
@@ -73,7 +72,7 @@
 
 ## Supported OS versions/distros
 
-#### Supported architectures: x86_64, armhf (Linux), arm64
+#### Supported architectures: x86_64, arm64, armhf (Linux)
 
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)

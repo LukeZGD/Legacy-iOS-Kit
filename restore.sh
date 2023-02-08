@@ -418,7 +418,8 @@ device_get_info() {
             fi
             device_type=$(echo "$device_type" | cut -c -$ProdCut)
             device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
-            device_vers="Unknown"
+            device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
+            [[ -z $device_vers ]] && device_vers="Unknown"
             ;;
 
         "Normal" )
@@ -447,6 +448,10 @@ device_get_info() {
     device_fw_dir="../resources/firmware/$device_type"
     device_model="$(cat $device_fw_dir/hwmodel)"
     if [[ -z $device_model ]]; then
+        print "* Device: $device_type in $device_mode mode"
+        print "* iOS Version: $device_vers"
+        print "* ECID: $device_ecid"
+        echo
         error "Device model not found. Device type ($device_type) is possibly invalid or not supported."
     fi
 
@@ -717,7 +722,7 @@ device_enter_mode() {
             sendfiles+=("kloaders" "pwnediBSS")
 
             log "Entering kDFU mode..."
-            print "* This may take a while."
+            print "* This may take a while, but should not take longer than a minute."
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
                 $ssh -p 2222 root@127.0.0.1 "bash /tmp/kloaders" &
@@ -1678,7 +1683,7 @@ ipsw_prepare_32bit() {
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
     local RootSize=$($xmlstarlet sel -t -m "plist/dict/key[.='SystemPartitionSize']" -v "following-sibling::integer[1]" options.$device_model.plist)
     echo -e $'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>' > $NewPlist
-    echo -e "<key>Filename</key><string>$ipsw_type.ipsw</string>" >> $NewPlist
+    echo -e "<key>Filename</key><string>$ipsw_path.ipsw</string>" >> $NewPlist
     echo -e "<key>RootFilesystem</key><string>$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RootFS")) | .filename')</string>" >> $NewPlist
     echo -e "<key>RootFilesystemKey</key><string>$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RootFS")) | .key')'</string>" >> $NewPlist
     echo -e "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
@@ -1861,11 +1866,20 @@ restore_download_bbsep() {
         mv $build_id.plist ../saved/$device_type
     fi
     cp ../saved/$device_type/$build_id.plist tmp/BuildManifest.plist
-    log "Restore Manifest: ../saved/$device_type/$build_id.plist"
+    if [[ $? != 0 ]]; then
+        rm ../saved/$device_type/$build_id.plist
+        error "An error occurred copying manifest. Please run the script again"
+    fi
+    log "Manifest: ../saved/$device_type/$build_id.plist"
     restore_manifest="tmp/BuildManifest.plist"
 
     # Baseband
     if [[ $restore_baseband != 0 ]]; then
+        if [[ -e ../saved/baseband/$restore_baseband ]]; then
+            if [[ $baseband_sha1 != "$($sha1sum $restore_baseband | awk '{print $1}')" ]]; then
+                rm ../saved/baseband/$restore_baseband
+            fi
+        fi
         if [[ ! -e ../saved/baseband/$restore_baseband ]]; then
             log "Downloading $build_id Baseband"
             "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" Firmware/$restore_baseband $restore_baseband
@@ -1875,7 +1889,11 @@ restore_download_bbsep() {
             mv $restore_baseband ../saved/baseband/
         fi
         cp ../saved/baseband/$restore_baseband tmp/bbfw.tmp
-        log "Restore Baseband: ../saved/baseband/$restore_baseband"
+        if [[ $? != 0 ]]; then
+            rm ../saved/baseband/$restore_baseband
+            error "An error occurred copying baseband. Please run the script again"
+        fi
+        log "Baseband: ../saved/baseband/$restore_baseband"
         restore_baseband="tmp/bbfw.tmp"
     fi
 
@@ -1887,9 +1905,13 @@ restore_download_bbsep() {
             "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" Firmware/all_flash/$restore_sep.im4p $restore_sep.im4p
             mv $restore_sep.im4p ../saved/$device_type/$restore_sep-$build_id.im4p
         fi
-        log "Restore SEP: ../saved/$device_type/$restore_sep-$build_id.im4p"
         restore_sep="$restore_sep-$build_id.im4p"
         cp ../saved/$device_type/$restore_sep .
+        if [[ $? != 0 ]]; then
+            rm ../saved/$device_type/$restore_sep
+            error "An error occurred copying SEP. Please run the script again"
+        fi
+        log "SEP: ../saved/$device_type/$restore_sep"
     fi
 }
 
@@ -1943,6 +1965,9 @@ restore_futurerestore() {
         httpserver_pid=$!
     else
         # python3 http.server for the rest
+        if [[ -z $(which python3) ]]; then
+            error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
+        fi
         $(which python3) -m http.server $port &
         httpserver_pid=$!
     fi
@@ -2185,8 +2210,6 @@ device_ramdisk4() {
     iBSS.n90ap.RELEASE.dfu
     kernelcache.release.n90
     )
-
-    print "Mode: Ramdisk"
     print "* This uses files and script from 4tify by Zurac-Apps"
     print "* Make sure that your device is already in DFU mode"
 
@@ -2245,6 +2268,7 @@ shsh_save_onboard() {
         pause
     fi
     device_target_other=1
+    print "* Download and select the IPSW of your current iOS version."
     ipsw_path_set
     device_enter_mode kDFU
     patch_ibec
