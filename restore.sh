@@ -31,15 +31,15 @@ pause() {
 
 clean() {
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+    if [[ $device_sudoloop == 1 ]]; then
+        sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+    fi
 }
 
 clean_and_exit() {
     if [[ $platform == "windows" ]]; then
         input "Press Enter/Return to exit."
         read -s
-    fi
-    if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf /tmp/futurerestore /tmp/*.json
     fi
     clean
     kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
@@ -182,6 +182,7 @@ set_tool_paths() {
             idevicererestore="sudo "
             ipwnder="sudo "
             irecovery="sudo "
+            irecovery2="sudo "
             sudo chmod +x $dir/*
         fi
 
@@ -259,6 +260,7 @@ set_tool_paths() {
     idevicerestore+="$dir/idevicerestore"
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
+    irecovery2+="$dir/irecovery2"
     scp="$(which scp) -F ../resources/ssh_config"
     ssh="$(which ssh) -F ../resources/ssh_config"
 }
@@ -2283,8 +2285,8 @@ shsh_save_onboard() {
     if [[ $platform == "windows" ]]; then
         "$dir/shshdump"
     else
-        (echo -e "/send ../resources/payload\ngo blobs\n/exit") | ${irecovery}2 -s
-        ${irecovery}2 -g dump.shsh
+        (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
+        $irecovery2 -g dump.shsh
         $irecovery -n
     fi
     "$dir/ticket" dump.shsh dump.plist "$ipsw_path.ipsw" -z
