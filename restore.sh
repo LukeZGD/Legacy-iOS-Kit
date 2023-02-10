@@ -1999,15 +1999,15 @@ restore_futurerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=("-d")
     fi
-    if [[ $platform == "macos" && $device_target_other != 1 && $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
-        futurerestore="$dir/futurerestore_194"
-        ipsw_path="$ipsw_custom"
-    else
+    if [[ $platform != "macos" ]]; then
         if (( device_proc < 7 )); then
             futurerestore+="_old"
         else
             futurerestore+="_new"
         fi
+    elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
+        futurerestore="$dir/futurerestore_194"
+        ipsw_path="$ipsw_custom"
     fi
     ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
