@@ -761,6 +761,10 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
+            if [[ $device_proc == 4 && $device_target_vers != "7.1.2" ]]; then
+                print "* Note that kDFU mode will NOT work for iPhone4Down downgrades!"
+            fi
+
             if [[ $platform == "windows" ]]; then
                 print "* Make sure that your device is in PWNED DFU or kDFU mode."
                 print "* For 32-bit devices, pwned iBSS/kDFU must be already booted."
@@ -779,9 +783,9 @@ device_enter_mode() {
                 clean_and_exit
             fi
 
-            if [[ $device_proc == 4 ]]; then
-                print "* Note that kDFU mode will NOT work for iPhone4Down downgrades!"
-            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" ]] && (( device_proc < 7 )); then
+            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc != 4 ]] && (( device_proc < 7 )); then
+                print "* Select Y if your device is in pwned iBSS/kDFU mode."
+                print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
                     log "Pwned iBSS/kDFU mode specified by user."
@@ -1840,7 +1844,7 @@ ipsw_extract() {
 }
 
 restore_download_bbsep() {
-    # restore manifest, baseband, sep
+    # download and check manifest, baseband, and sep to be used for restoring
     # sets variables: restore_manifest, restore_baseband, restore_sep
     local build_id
     local baseband_sha1
@@ -1876,7 +1880,7 @@ restore_download_bbsep() {
     # Baseband
     if [[ $restore_baseband != 0 ]]; then
         if [[ -e ../saved/baseband/$restore_baseband ]]; then
-            if [[ $baseband_sha1 != "$($sha1sum $restore_baseband | awk '{print $1}')" ]]; then
+            if [[ $baseband_sha1 != "$($sha1sum ../saved/baseband/$restore_baseband | awk '{print $1}')" ]]; then
                 rm ../saved/baseband/$restore_baseband
             fi
         fi
@@ -1995,15 +1999,15 @@ restore_futurerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=("-d")
     fi
-    if [[ $platform != "macos" ]]; then
+    if [[ $platform == "macos" && $device_target_other != 1 && $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
+        futurerestore="$dir/futurerestore_194"
+        ipsw_path="$ipsw_custom"
+    else
         if (( device_proc < 7 )); then
             futurerestore+="_old"
         else
             futurerestore+="_new"
         fi
-    elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-        futurerestore="$dir/futurerestore_194"
-        ipsw_path="$ipsw_custom"
     fi
     ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
