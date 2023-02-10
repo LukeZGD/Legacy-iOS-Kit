@@ -1133,7 +1133,7 @@ patch_ibss() {
     download_comp $build_id iBSS
     log "Patching iBSS..."
     $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
-    cp pwnediBSS ../saved/$device_type
+    cp pwnediBSS ../saved/$device_type/
     log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
 }
 
@@ -1179,7 +1179,7 @@ patch_ibec() {
     $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
     "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
     rm $name.dec $name.orig $name.raw $name.patched
-    cp pwnediBEC ../resources/saved
+    cp pwnediBEC ../saved/$device_type/
     log "Pwned iBEC saved at: saved/$device_type/pwnediBEC"
 }
 
