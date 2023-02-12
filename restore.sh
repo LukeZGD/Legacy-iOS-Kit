@@ -1070,7 +1070,7 @@ download_file() {
 }
 
 device_fw_key_check() {
-    # sets the variable device_fw_key
+    # check and download keys for device_target_build, then set the variable device_fw_key
     local keys_path="$device_fw_dir/$device_target_build"
     log "Checking firmware keys in $keys_path"
     if [[ -e "$keys_path/index.html" ]]; then
@@ -1960,24 +1960,26 @@ restore_futurerestore() {
     local mac_ver=0
     local port=8888
 
-    if [[ $platform == "macos" ]]; then
-        mac_ver=$(echo "$platform_ver" | cut -c -2)
-    fi
-    # local server for firmware keys
-    pushd ../resources >/dev/null
-    if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
-        # python2 SimpleHTTPServer for macos 11 and older
-        /usr/bin/python -m SimpleHTTPServer $port &
-        httpserver_pid=$!
-    else
-        # python3 http.server for the rest
-        if [[ -z $(which python3) ]]; then
-            error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
+    if (( device_proc < 7 )); then
+        if [[ $platform == "macos" ]]; then
+            mac_ver=$(echo "$platform_ver" | cut -c -2)
         fi
-        $(which python3) -m http.server $port &
-        httpserver_pid=$!
+        # local server for firmware keys
+        pushd ../resources >/dev/null
+        if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
+            # python2 SimpleHTTPServer for macos 11 and older
+            /usr/bin/python -m SimpleHTTPServer $port &
+            httpserver_pid=$!
+        else
+            # python3 http.server for the rest
+            if [[ -z $(which python3) ]]; then
+                error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
+            fi
+            $(which python3) -m http.server $port &
+            httpserver_pid=$!
+        fi
+        popd >/dev/null
     fi
-    popd >/dev/null
 
     restore_download_bbsep
     # baseband args
