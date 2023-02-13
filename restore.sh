@@ -572,6 +572,7 @@ device_get_info() {
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
             ;;
     esac
+    # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
         device_latest_vers=$device_use_vers
         device_latest_build=$device_use_build
@@ -1363,7 +1364,8 @@ ipsw_preference_set() {
         ipsw_memory=
     elif [[ -n $ipsw_memory ]]; then
         :
-    elif [[ $ipsw_jailbreak == 1 ]] || [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
+    elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
+         [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
         input "Memory Option for creating custom IPSW"
         print "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
         print "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
@@ -1610,7 +1612,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    log "Preparing custom IPSW..."
+    log "Preparing custom IPSW: $ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
@@ -1711,7 +1713,7 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    log "Preparing custom IPSW..."
+    log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs
 
     if [[ ! -e temp.ipsw ]]; then
@@ -1754,7 +1756,6 @@ ipsw_prepare_powder() {
         done
     fi
 
-    log "Preparing custom IPSW with powdersn0w..."
     cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
     if [[ $device_target_vers == "4.3"* ]]; then
         ExtraArgs+="-apticket $shsh_path"
@@ -1773,6 +1774,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
+    log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_path_712.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_path_712.ipsw" $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
