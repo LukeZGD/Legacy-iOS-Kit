@@ -572,6 +572,10 @@ device_get_info() {
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
             ;;
     esac
+    # disable baseband update for these devices ipad 2 cellular
+    case $device_type in
+        iPad2,[23] ) device_disable_bbupdate=$device_type
+    esac
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
         device_latest_vers=$device_use_vers
