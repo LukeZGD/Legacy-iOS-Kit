@@ -2317,11 +2317,11 @@ shsh_save_onboard() {
 
 shsh_save_cydia() {
     local json=$(curl "https://firmware-keys.ipsw.me/device/$device_type")
-    local len=$(echo "$json" | jq length)
+    local len=$(echo "$json" | $jq length)
     local builds=()
     local i=0
     while (( i < len )); do
-        builds+=($(echo "$json" | jq -r ".[$i].buildid"))
+        builds+=($(echo "$json" | $jq -r ".[$i].buildid"))
         ((i++))
     done
     for build in ${builds[@]}; do
