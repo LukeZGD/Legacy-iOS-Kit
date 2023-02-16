@@ -16,7 +16,7 @@
 - Clear NVRAM for iPhone 4 GSM (Disable/Enable Exploit)
 - Restore iPhone 4 to iOS 7.1.2 with the option to jailbreak
 - Restore supported devices to their latest iOS version
-- Save on-board SHSH blobs for 32-bit devices
+- Save on-board and Cydia SHSH blobs for 32-bit devices
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)

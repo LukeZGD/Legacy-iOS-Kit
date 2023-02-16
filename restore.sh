@@ -965,6 +965,10 @@ main_menu() {
     if [[ $device_proc != 4 && $device_proc != 8 ]]; then
         tmp_items+=("Save OTA Blobs")
     fi
+    # Save Cydia blobs for 32-bit only
+    if (( device_proc < 7 )); then
+        tmp_items+=("Save Cydia Blobs")
+    fi
     if [[ $device_proc != 8 ]]; then
         tmp_items+=("Create Custom IPSW")
     fi
@@ -984,6 +988,7 @@ main_menu() {
             "SSH Ramdisk" ) mode="ramdisk4"; break;;
             "Send Pwned iBSS" ) mode="pwned-ibss"; break;;
             "Save Onboard Blobs" ) mode="save-onboard-blobs"; break;;
+            "Save Cydia Blobs" ) mode="save-cydia-blobs"; break;;
             "(Re-)Install Dependencies" ) install_depends;;
             * ) break;;
         esac
@@ -2310,6 +2315,28 @@ shsh_save_onboard() {
     log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
 }
 
+shsh_save_cydia() {
+    local json=$(curl "https://firmware-keys.ipsw.me/device/$device_type")
+    local len=$(echo "$json" | jq length)
+    local builds=()
+    local i=0
+    while (( i < len )); do
+        builds+=($(echo "$json" | jq -r ".[$i].buildid"))
+        ((i++))
+    done
+    for build in ${builds[@]}; do
+        printf "\n$build "
+        "$dir/tsschecker" -d $device_type -e $device_ecid -S "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
+        if [[ $(ls *$build* 2>/dev/null) ]]; then
+            printf "saved"
+            mv $(ls *$build*) ../saved/shsh/$device_ecid-$device_type-$build.shsh
+        else
+            printf "failed"
+        fi
+    done
+    echo
+}
+
 main() {
     clear
     print "******* iOS-OTA-Downgrader *******"
@@ -2399,6 +2426,10 @@ main() {
 
         "save-onboard-blobs" )
             shsh_save_onboard
+            ;;
+
+        "save-cydia-blobs" )
+            shsh_save_cydia
             ;;
 
         * )
