@@ -162,6 +162,19 @@ set_tool_paths() {
         ping="ping -c1"
         zenity="$(which zenity)"
 
+        # live cd/usb check
+        if [[ $(id -u $USER) == 999 ]]; then
+            log "Linux Live CD/USB detected."
+            if [[ $(pwd) == "/home"* ]]; then
+                warn "Detected iOS-OTA-Downgrader running on temporary storage."
+                print "* You may run out of space and get errors during the downgrade process."
+                print "* Please move iOS-OTA-Downgrader to an external drive that is NOT used for the live USB."
+                print "* This means using another external HDD/flash drive to store iOS-OTA-Downgrader on."
+                pause
+            fi
+        fi
+
+        # sudoloop check
         if [[ $(uname -m) == "x86_64" && -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
             local opt
             log "Previous run failed to detect iOS device."
@@ -172,7 +185,9 @@ set_tool_paths() {
             fi
         fi
         if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $(id -u $USER) == 999 ]]; then
-            print "* Enter your user password when prompted"
+            if [[ $(id -u $USER) != 999 ]]; then
+                print "* Enter your user password when prompted"
+            fi
             sudo -v
             (while true; do sudo -v; sleep 60; done) &
             sudoloop_pid=$!
@@ -184,6 +199,7 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             sudo chmod +x $dir/*
+            sudo systemctl restart usbmuxd
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
