@@ -164,13 +164,19 @@ set_tool_paths() {
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 ]]; then
+            live_cdusb=1
             log "Linux Live CD/USB detected."
             if [[ $(pwd) == "/home"* ]]; then
-                warn "Detected iOS-OTA-Downgrader running on temporary storage."
-                print "* You may run out of space and get errors during the downgrade process."
-                print "* Please move iOS-OTA-Downgrader to an external drive that is NOT used for the live USB."
-                print "* This means using another external HDD/flash drive to store iOS-OTA-Downgrader on."
-                pause
+                if [[ $(lsblk -o label | grep -c "casper-rw") == 1 ]]; then
+                    log "Detected iOS-OTA-Downgrader running on persistent storage."
+                else
+                    warn "Detected iOS-OTA-Downgrader running on temporary storage."
+                    print "* You may run out of space and get errors during the downgrade process."
+                    print "* Please move iOS-OTA-Downgrader to an external drive that is NOT used for the live USB."
+                    print "* This means using another external HDD/flash drive to store iOS-OTA-Downgrader on."
+                    print "* To be able to use one USB drive only, make sure to enable Persistent Storage for the live USB."
+                    pause
+                fi
             fi
         fi
 
@@ -184,8 +190,8 @@ set_tool_paths() {
                 device_sudoloop=1
             fi
         fi
-        if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $(id -u $USER) == 999 ]]; then
-            if [[ $(id -u $USER) != 999 ]]; then
+        if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $live_cdusb == 1 ]]; then
+            if [[ $live_cdusb != 1 ]]; then
                 print "* Enter your user password when prompted"
             fi
             sudo -v
