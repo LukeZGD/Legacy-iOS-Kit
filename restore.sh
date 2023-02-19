@@ -163,11 +163,12 @@ set_tool_paths() {
         zenity="$(which zenity)"
 
         # live cd/usb check
-        if [[ $(id -u $USER) == 999 ]]; then
+        if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
             live_cdusb=1
             log "Linux Live CD/USB detected."
             if [[ $(pwd) == "/home"* ]]; then
-                if [[ $(lsblk -o label | grep -c "casper-rw") == 1 ]]; then
+                df . -h
+                if [[ $(lsblk -o label | grep -c "casper-rw") == 1 || $(lsblk -o label | grep -c "persistence") == 1 ]]; then
                     log "Detected iOS-OTA-Downgrader running on persistent storage."
                 else
                     warn "Detected iOS-OTA-Downgrader running on temporary storage."
@@ -782,7 +783,25 @@ device_enter_mode() {
                 fi
                 $ssh root@$IPAddress "bash /tmp/kloaders" &
             fi
-            device_find_mode DFU
+
+            local attempt=1
+            local device_in
+            while (( attempt < 6 )); do
+                log "Finding device in kDFU mode... (Attempt $attempt)"
+                if [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "DFU" ]]; then
+                    device_in=1
+                fi
+                if [[ $device_in == 1 ]]; then
+                    log "Found device in kDFU mode."
+                    device_mode="DFU"
+                    break
+                fi
+                print "* You may also try to unplug and replug your device"
+                ((attempt++))
+            done
+            if (( attempt >= 6 )); then
+                error "Failed to find device in kDFU mode. Please run the script again"
+            fi
             kill $iproxy_pid
             ;;
 
