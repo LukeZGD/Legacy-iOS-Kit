@@ -1320,6 +1320,11 @@ ipsw_path_set() {
     if [[ $device_target_other != 1 ]]; then
         return
     fi
+    if [[ $mode == "downgrade" ]]; then
+        print "* Make sure to download and select the IPSW and SHSH of your target iOS version."
+        print "* Blobs are device specific: You NEED to have SHSH BLOBS for YOUR device!"
+        pause
+    fi
     input "Select your IPSW file in the file selection window."
     ipsw_path="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select IPSW file")"
     [[ ! -s "$ipsw_path" ]] && read -p "$(input 'Enter path to IPSW file (or press Ctrl+C to cancel): ')" ipsw_path
@@ -1415,7 +1420,8 @@ ipsw_preference_set() {
     elif [[ -n $ipsw_memory ]]; then
         :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
-         [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]]; then
+         [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]] ||
+         [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]]; then
         input "Memory Option for creating custom IPSW"
         print "* This option makes creating the custom IPSW faster, but it requires at least 8GB of RAM."
         print "* If you do not have enough RAM, disable this option and make sure that you have enough storage space."
@@ -1431,7 +1437,8 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" && -z $ipsw_verbose ]]; then
+    if [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" &&
+          $device_target_other != 1 && -z $ipsw_verbose ]]; then
         input "Verbose Boot Option"
         print "* When enabled, the device will have verbose boot on restore."
         print "* This option is enabled by default (Y)."
@@ -1506,7 +1513,7 @@ shsh_save() {
 }
 
 ipsw_download() {
-    if [[ $device_target_vers == "4.3"* ]]; then
+    if [[ $device_target_vers == "4.3"* && $device_type == "iPhone3,1" ]]; then
         ipsw_custom+="_$device_ecid"
     fi
     if [[ $device_target_other == 1 ]]; then
@@ -1631,7 +1638,7 @@ ipsw_prepare_jailbreak() {
         cp -R ../resources/firmware/JailbreakBundles FirmwareBundles
         ExtraArgs+="-daibutsu" # use daibutsuCFW
 
-    else
+    elif [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
             JBFiles+=("fstab8.tar" "etasonJB-untether.tar" "Cydia8.tar")
             JBSHA1="6459dbcbfe871056e6244d23b33c9b99aaeca970"
@@ -1654,6 +1661,8 @@ ipsw_prepare_jailbreak() {
         fi
         cp -R ../resources/firmware/FirmwareBundles .
         ExtraArgs+="-S 50" # system partition add
+    else
+        cp -R ../resources/firmware/FirmwareBundles .
     fi
 
     if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
@@ -1705,6 +1714,14 @@ ipsw_prepare_32bit_keys() {
 }
 
 ipsw_prepare_32bit() {
+    if [[ $device_target_vers == "4"* ]]; then
+        if [[ $device_type == "iPad2"* ]]; then
+            ipsw_prepare_jailbreak
+            return
+        else
+            error "Restoring with iOS 4 blobs is not supported on $device_type. Use iFaith/PwnageTool/sn0wbreeze instead."
+        fi
+    fi
     device_fw_key_check
     if [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $platform"
@@ -1988,10 +2005,16 @@ restore_idevicerestore() {
         re="re"
         cp shsh/$device_ecid-$device_type-$device_target_vers.shsh shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh
     fi
+    ipsw_extract custom
+    if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]]; then
+        ExtraArgs="-e"
+        log "Sending iBEC..."
+        $irecovery -f $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
+        device_find_mode Recovery
+    fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=" -d"
     fi
-    ipsw_extract custom
 
     log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore $ExtraArgs "$ipsw_custom.ipsw"
@@ -2424,6 +2447,9 @@ main() {
             device_target_menu
             ipsw_preference_set
             ipsw_path_set
+            if [[ $device_target_other == 1 ]]; then
+                ipsw_preference_set # intentional repeat
+            fi
             ipsw_prepare
             ;;&
 

@@ -10,7 +10,9 @@
 ## Other features
 - Option to **jailbreak** iOS 6.1.3 and 8.4.1 downgrades
     - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
-- Restore to other iOS versions with SHSH blobs (32-bit/A7/A8 devices, iOS 5 to 12)
+- Restore to other iOS versions **with SHSH blobs**
+    - Supports 32-bit/A7/A8 devices, iOS 5 to 12
+    - Also supports iPad 2 iOS 4.3.x
 - The latest baseband will be used for 32-bit devices if applicable
 - Place device to pwned iBSS/kDFU mode for 32-bit devices
 - Clear NVRAM for iPhone 4 GSM (Disable/Enable Exploit)
@@ -107,6 +109,7 @@
 - [zenity](https://github.com/GNOME/zenity); [macOS/Windows builds](https://github.com/ncruces/zenity)
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
+- iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
