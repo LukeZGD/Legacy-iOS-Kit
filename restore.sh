@@ -738,7 +738,7 @@ device_enter_mode() {
 
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 1 ]]; then
-                echo "[[ -e /.installed_kok3shiX || -e /.installed_p0insettia ]] && /tmp/kloader /tmp/pwnediBSS || \
+                echo "[[ -e /.installed_kok3shiX || -e /.installed_p0insettia || -e /.installed_socket ]] && /tmp/kloader /tmp/pwnediBSS || \
                 /tmp/kloader_hgsp /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader_hgsp")
                 sendfiles+=("../resources/kloader")
