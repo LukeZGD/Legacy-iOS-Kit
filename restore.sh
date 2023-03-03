@@ -1484,7 +1484,7 @@ shsh_save() {
             mv BuildManifest.plist $buildmanifest
         fi
     fi
-    shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-${build_id}_*.shsh*
+    shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-${build_id}_${apnonce}*.shsh*
 
     if [[ $(ls ../saved/shsh/$shsh_check 2>/dev/null) && -z $apnonce ]]; then
         shsh_path="$(ls ../saved/shsh/$shsh_check)"
@@ -2390,7 +2390,7 @@ shsh_save_cydia() {
     done
     for build in ${builds[@]}; do
         printf "\n$build "
-        "$dir/tsschecker" -d $device_type -e $device_ecid -S "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
+        "$dir/tsschecker" -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
             printf "saved"
             mv $(ls *$build*) ../saved/shsh/$device_ecid-$device_type-$build.shsh
