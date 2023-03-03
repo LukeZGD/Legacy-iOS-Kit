@@ -831,6 +831,7 @@ device_enter_mode() {
                 clean_and_exit
             fi
 
+            irec_pwned=$($irecovery -q | grep -c "PWND")
             if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc != 4 ]] && (( device_proc < 7 )); then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
@@ -839,6 +840,8 @@ device_enter_mode() {
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
+            elif [[ $irec_pwned == 1 ]]; then
+                return
             fi
 
             if [[ $device_proc == 5 ]]; then
@@ -2294,7 +2297,6 @@ device_ramdisk4() {
     kernelcache.release.n90
     )
     print "* This uses files and script from 4tify by Zurac-Apps"
-    print "* Make sure that your device is already in DFU mode"
 
     if [[ ! $(ls ../resources/ramdisk) ]]; then
         local JailbreakLink=https://github.com/Zurac-Apps/4tify/raw/ad319e2774f54dc3a355812cc287f39f7c38cc66
