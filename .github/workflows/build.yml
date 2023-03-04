@@ -47,12 +47,12 @@ jobs:
       - name: Move linux arm64 binaries and other files
         run: |
           rm -r ./bin/linux/arm64
-          cp -R ./exclude/bin/linux/arm ./bin/linux
+          cp -R ./exclude/bin/linux/armhf ./bin/linux
 
-      - name: Zip linux arm files
-        run: zip -r ${{ github.event.repository.name }}_linux_arm_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip bin/ LICENSE resources/ restore.sh README.md
+      - name: Zip linux armhf files
+        run: zip -r ${{ github.event.repository.name }}_linux_armhf_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip bin/ LICENSE resources/ restore.sh README.md
 
-      - name: Move linux arm binaries and other files
+      - name: Move linux armhf binaries and other files
         run: |
           rm -r ./bin/linux
           cp -R ./exclude/bin/windows ./bin
@@ -77,7 +77,7 @@ jobs:
           files: |
             ${{ github.event.repository.name }}_complete_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_macos_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
-            ${{ github.event.repository.name }}_linux_arm_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
+            ${{ github.event.repository.name }}_linux_armhf_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_linux_arm64_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_linux_x86_64_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_windows_${{ env.DATE }}-${{ env.SHA_SHORT }}.zip

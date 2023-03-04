@@ -122,7 +122,7 @@ set_tool_paths() {
         if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
             dir+="arm64"
         elif [[ $(uname -m) == "a"* ]]; then
-            dir+="arm"
+            dir+="armhf"
         elif [[ $(uname -m) == "x86_64" ]]; then
             dir+="x86_64"
         else
@@ -284,8 +284,8 @@ set_tool_paths() {
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
     irecovery2+="$dir/irecovery2"
-    scp="$(which scp) -F ../resources/ssh_config"
-    ssh="$(which ssh) -F ../resources/ssh_config"
+    scp="scp -F ../resources/ssh_config"
+    ssh="ssh -F ../resources/ssh_config"
 }
 
 install_depends() {
@@ -661,6 +661,20 @@ device_find_mode() {
     fi
 }
 
+device_sshpass() {
+    # ask for device password and use sshpass for scp and ssh
+    local pass=$1
+    if [[ -z $pass ]]; then
+        read -s -p "$(input 'Enter the root password of your iOS device: ')" pass
+        echo
+    fi
+    if [[ -z $pass ]]; then
+        pass="alpine"
+    fi
+    scp="$dir/sshpass -p $pass $scp"
+    ssh="$dir/sshpass -p $pass $ssh"
+}
+
 device_enter_mode() {
     # usage: device_enter_mode {Recovery, DFU, kDFU, pwnDFU}
     # attempt to enter given mode, and device_find_mode function will then set device_mode variable
@@ -729,7 +743,7 @@ device_enter_mode() {
             log "Please read the message below:"
             print "1. Make sure to have installed the requirements from Cydia."
             print "  - Only proceed if you have followed Section 2 (and 2.1 for iOS 10) in the GitHub wiki."
-            print "  - You will be prompted to enter the root password of your iOS device twice."
+            print "  - You will be prompted to enter the root password of your iOS device."
             print "  - The default root password is \"alpine\""
             print "  - Do not worry that your input is not visible, it is still being entered."
             print "2. Afterwards, the device will disconnect and its screen will stay black."
@@ -738,8 +752,8 @@ device_enter_mode() {
 
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 1 ]]; then
-                echo "[[ -e /.installed_kok3shiX || -e /.installed_p0insettia || -e /.installed_socket ]] && /tmp/kloader /tmp/pwnediBSS || \
-                /tmp/kloader_hgsp /tmp/pwnediBSS" >> kloaders
+                echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
+                /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader_hgsp")
                 sendfiles+=("../resources/kloader")
             elif [[ $device_det == 5 ]]; then
@@ -751,14 +765,20 @@ device_enter_mode() {
             fi
             sendfiles+=("kloaders" "pwnediBSS")
 
+            device_sshpass
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
+            if [[ $device_det == 1 ]]; then
+                print "* If the script seems to be stuck here, read Section 2.1 in the GitHub wiki for more details."
+            fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
                 $ssh -p 2222 root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
-                print "* For Linux users, try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
+                if [[ $platform == "linux" ]]; then
+                    print "* Try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
+                fi
                 if [[ $device_det == 1 ]]; then
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
