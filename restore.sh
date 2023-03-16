@@ -874,7 +874,7 @@ device_enter_mode() {
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
-            elif [[ $irec_pwned == 1 ]]; then
+            elif [[ $irec_pwned == 1 ]] && (( device_proc >= 7 )); then
                 return
             fi
 
