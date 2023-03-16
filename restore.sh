@@ -250,11 +250,25 @@ set_tool_paths() {
 
         ping="ping -n 1"
 
-        # windows warning message
         warn "Using iOS-OTA-Downgrader on Windows is not recommended."
-        print "* Please use it on Linux or macOS instead."
-        print "* You may still continue, but you might encounter issues with restoring the device."
-        pause
+        # itunes version check
+        local itunes_ver="Unknown"
+        if [[ -e "/c/Program Files/iTunes/iTunes.exe" ]]; then
+            itunes_ver=$(powershell "(Get-Item -path 'C:\Program Files\iTunes\iTunes.exe').VersionInfo.ProductVersion")
+        elif [[ -e "/c/Program Files (x86)/iTunes/iTunes.exe" ]]; then
+            itunes_ver=$(powershell "(Get-Item -path 'C:\Program Files (x86)\iTunes\iTunes.exe').VersionInfo.ProductVersion")
+        fi
+        log "iTunes version: $itunes_ver"
+        if [[ $(echo "$itunes_ver" | cut -c -2) == 12 ]]; then
+            itunes_ver=$(echo "$itunes_ver" | cut -c 4-)
+            itunes_ver=${itunes_ver%%.*}
+            if (( itunes_ver > 6 )); then
+                warn "Detected a newer iTunes version."
+                print "* Please downgrade iTunes to 12.6.5, 12.4.3, or older."
+                print "* You may still continue, but you might encounter issues with restoring the device."
+                pause
+            fi
+        fi
     else
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS, Windows"
     fi
@@ -829,7 +843,7 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
-            if [[ $device_proc == 4 && $device_target_vers != "7.1.2" ]]; then
+            if [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" && $mode == "downgrade" ]]; then
                 print "* Note that kDFU mode will NOT work for iPhone4Down downgrades!"
             fi
 
