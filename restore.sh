@@ -21,7 +21,7 @@ warn() {
 
 error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
-    clean_and_exit 1
+    exit 1
 }
 
 pause() {
@@ -43,7 +43,6 @@ clean_and_exit() {
     fi
     clean
     kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
-    exit $1
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
@@ -359,7 +358,7 @@ install_depends() {
 
     log "Install script done! Please run the script again to proceed"
     log "If your iOS device is plugged in, unplug and replug your device"
-    clean_and_exit
+    exit
 }
 
 version_check() {
@@ -403,7 +402,7 @@ version_check() {
                 print "* Current version: $version_current"
                 print "* Latest version:  $version_latest"
                 print "* Please download/pull the latest version before proceeding."
-                clean_and_exit
+                exit
             fi
         fi
     fi
@@ -531,17 +530,17 @@ device_get_info() {
             device_use_build="13G36"
             ;;
 
-        iPad2,[267] | iPad3,[23] | iPhone4,1 )
+        iPad2,[367] | iPad3,[23] | iPhone4,1 )
             device_use_vers="9.3.6"
             device_use_build="13G37"
             ;;
 
-        iPad3,[456] | iPhone5,[12] )
+        iPad3,[56] | iPhone5,[12] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
             ;;
 
-        iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
+        iPad3,4 | iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
             ;;&
@@ -699,7 +698,7 @@ device_enter_mode() {
                 print "* The device needs to be in recovery/DFU mode before proceeding."
                 read -p "$(input 'Send device to recovery mode? (Y/n):')" opt
                 if [[ $opt == 'n' || $opt == 'N' ]]; then
-                    clean_and_exit
+                    exit
                 fi
                 log "Entering recovery mode..."
                 $ideviceenterrecovery "$device_udid" >/dev/null
@@ -722,7 +721,7 @@ device_enter_mode() {
             if [[ $opt == 'N' || $opt == 'n' ]]; then
                 log "Exiting recovery mode."
                 $irecovery -n
-                clean_and_exit
+                exit
             fi
             print "* Hold TOP and HOME buttons for 10 seconds."
             for i in {10..01}; do
@@ -862,7 +861,7 @@ device_enter_mode() {
                         $irecovery -n
                     fi
                 fi
-                clean_and_exit
+                exit
             fi
 
             irec_pwned=$($irecovery -q | grep -c "PWND")
@@ -1137,7 +1136,7 @@ device_target_menu() {
         "4.3.3" ) device_target_build="8J2";;
         "4.3" ) device_target_build="8F190";;
         "Other (use SHSH blobs)" ) device_target_other=1;;
-        * ) log "No valid version selected."; clean_and_exit;;
+        * ) log "No valid version selected."; exit;;
     esac
 
     if [[ $device_target_build == "9B20"* ]]; then
@@ -2292,7 +2291,7 @@ device_remove4() {
     case $opt in
         "Disable exploit" ) rec=0; break;;
         "Enable exploit" ) rec=2; break;;
-        * ) clean_and_exit;;
+        * ) exit;;
     esac
     done
 
@@ -2548,7 +2547,7 @@ for i in "$@"; do
         "--entry-device" ) device_argmode="entry";;
         "--no-version-check" ) no_version_check=1;;
         "--debug" ) set -x; debug_mode=1;;
-        "--help" ) display_help; clean_and_exit;;
+        "--help" ) display_help; exit;;
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
@@ -2557,7 +2556,7 @@ for i in "$@"; do
 done
 
 trap "clean_and_exit" EXIT
-trap "clean_and_exit 1" INT TERM
+trap "exit 1" INT TERM
 
 clean
 mkdir "$(dirname "$0")/tmp"
@@ -2575,4 +2574,3 @@ fi
 main
 
 popd >/dev/null
-clean_and_exit
