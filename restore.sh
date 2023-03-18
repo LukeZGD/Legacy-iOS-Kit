@@ -755,7 +755,7 @@ device_enter_mode() {
 
             log "Please read the message below:"
             print "1. Make sure to have installed the requirements from Cydia."
-            print "  - Only proceed if you have followed Section 2 (and 2.1 for iOS 10) in the GitHub wiki."
+            print "  - Only proceed if you have followed the steps in the GitHub wiki."
             print "  - You will be prompted to enter the root password of your iOS device."
             print "  - The default root password is \"alpine\""
             print "  - Do not worry that your input is not visible, it is still being entered."
@@ -782,7 +782,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             if [[ $device_det == 1 ]]; then
-                print "* If the script seems to be stuck here, read Section 2.1 in the GitHub wiki for more details."
+                print "* If the script seems to be stuck here, try to start over from step 1 the GitHub wiki."
             fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
