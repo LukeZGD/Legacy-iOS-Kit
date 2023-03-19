@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed.
-ipsw_openssh=1 # If this value is 1, OpenSSH will be added to custom IPSW. (8.4.1 daibutsu and 6.1.3 p0sixspwn only)
+ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1. (8.4.1 daibutsu and 6.1.3 p0sixspwn only)
 
 print() {
     echo "${color_B}${1}${color_N}"
@@ -181,6 +181,7 @@ set_tool_paths() {
             fi
         fi
 
+        device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
         # sudoloop check
         if [[ $(uname -m) == "x86_64" && -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
             local opt
