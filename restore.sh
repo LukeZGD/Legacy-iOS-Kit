@@ -207,7 +207,7 @@ set_tool_paths() {
             irecovery2="sudo "
             sudo chmod +x $dir/*
             sudo systemctl stop usbmuxd
-            sudo usbmuxd -p -f &>/dev/null &
+            sudo usbmuxd -px
             usbmuxd_pid=$!
         fi
 
