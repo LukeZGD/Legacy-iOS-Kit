@@ -33,6 +33,7 @@ clean() {
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+        sudo systemctl restart usbmuxd
     fi
 }
 
@@ -41,8 +42,8 @@ clean_and_exit() {
         input "Press Enter/Return to exit."
         read -s
     fi
+    kill $httpserver_pid $iproxy_pid $sudoloop_pid $usbmuxd_pid 2>/dev/null
     clean
-    kill $iproxy_pid $httpserver_pid $sudoloop_pid 2>/dev/null
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
@@ -205,7 +206,9 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             sudo chmod +x $dir/*
-            sudo systemctl restart usbmuxd
+            sudo systemctl stop usbmuxd
+            sudo usbmuxd -p -f &>/dev/null &
+            usbmuxd_pid=$!
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -437,13 +440,12 @@ device_get_info() {
     if [[ -z $device_mode ]]; then
         local error_msg=$'* Make sure to also trust this computer by selecting "Trust" at the pop-up.'
         [[ $platform != "linux" ]] && error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
-        [[ $platform == "macos" ]] && error_msg+=$'\n* Also try installing libimobiledevice and libirecovery from Homebrew/MacPorts before retrying.'
+        [[ $platform == "macos" ]] && error_msg+=$'\n* Make sure to have libimobiledevice and libirecovery installed from Homebrew/MacPorts before retrying.'
         if [[ $platform == "linux" ]]; then
-            error_msg+=$'\n* Also try running "sudo systemctl restart usbmuxd" before retrying.'
-            error_msg+=$'\n* You may also try running the script again and enable sudoloop mode.'
+            error_msg+=$'\n* Try running the script again and enable sudoloop mode.'
             touch ../resources/sudoloop
         fi
-        error_msg+=$'\n* Recovery and DFU mode are also applicable.\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting'
+        error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
 
