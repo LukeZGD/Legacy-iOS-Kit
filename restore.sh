@@ -208,7 +208,7 @@ set_tool_paths() {
             irecovery2="sudo "
             sudo chmod +x $dir/*
             sudo systemctl stop usbmuxd
-            sudo usbmuxd -px
+            sudo usbmuxd -pz
             usbmuxd_pid=$!
         fi
 
@@ -1626,7 +1626,7 @@ ipsw_prepare_1033() {
     fi
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
 
-    # this will not be needed if i get to compile futurerestore on mac
+    # this will not be needed if i get my fork(s) of futurerestore compiled on macos
     if [[ $platform == "macos" && ! -e "$ipsw_custom.ipsw" ]]; then
         log "Preparing custom IPSW..."
         mkdir -p Firmware/dfu
@@ -1758,7 +1758,10 @@ ipsw_prepare_32bit() {
             ipsw_prepare_jailbreak
             return
         else
-            error "Restoring with iOS 4 blobs is not supported on $device_type. Use iFaith/PwnageTool/sn0wbreeze instead."
+            device_enter_mode pwnDFU
+            ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
+            restore_idevicerestore
+            return
         fi
     fi
     device_fw_key_check
@@ -2042,7 +2045,7 @@ restore_idevicerestore() {
         ExtraArgs="-r"
         idevicerestore="$idevicererestore"
         re="re"
-        cp shsh/$device_ecid-$device_type-$device_target_vers.shsh shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh
+        cp shsh/$device_ecid-$device_type-$device_target_vers.shsh shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh # remove this if i get my fork of idevicererestore compiled on macos
     fi
     ipsw_extract custom
     if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]]; then

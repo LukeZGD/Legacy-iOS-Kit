@@ -12,7 +12,7 @@
     - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
 - Restore to other iOS versions **with SHSH blobs**
     - Supports 32-bit/A7/A8 devices, iOS 5 to 12
-    - Also supports iPad 2 iOS 4.3.x
+    - Also supports iPad 2 iOS 4.3.x, iPhone 4 iOS 4.x
 - The latest baseband will be used for 32-bit devices if applicable
 - Place device to pwned iBSS/kDFU mode for 32-bit devices
 - Clear NVRAM for iPhone 4 GSM (Disable/Enable Exploit)
