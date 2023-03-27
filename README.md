@@ -22,7 +22,7 @@
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
-- **iPhone 5C and iPad mini 3 devices are NOT supported by OTA downgrades**
+- **iPhone 5c and iPad mini 3 devices are NOT supported by OTA downgrades**
     - These devices still support restoring to other iOS versions with SHSH blobs
 - **iPhone4Down (downgrading without blobs) supports iPhone 4 GSM only (iPhone3,1)**
     - All iPhone 4 models still support restoring with SHSH blobs and to iOS 7.1.2
