@@ -39,7 +39,7 @@
             <td rowspan=4>iOS 10.3.3</td>
             <td><b>A7 devices:</b></td>
         </tr>
-        <tr><td>iPhone 5S</td></tr>
+        <tr><td>iPhone 5s</td></tr>
         <tr><td>iPad Air 1</td></tr>
         <tr><td>iPad mini 2 (except iPad4,6)</td></tr>
         <tr>
