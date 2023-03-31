@@ -772,9 +772,12 @@ device_enter_mode() {
                 /tmp/kloader2 /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader_hgsp")
                 sendfiles+=("../resources/kloader2")
-            else
+            elif (( device_det < 6 )); then
                 echo "/tmp/kloader /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader")
+            else
+                echo "/tmp/kloader2 /tmp/pwnediBSS" >> kloaders
+                sendfiles+=("../resources/kloader2")
             fi
             sendfiles+=("kloaders" "pwnediBSS")
 
