@@ -769,12 +769,9 @@ device_enter_mode() {
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 1 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
-                /tmp/kloader /tmp/pwnediBSS' >> kloaders
+                /tmp/kloader2 /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader_hgsp")
-                sendfiles+=("../resources/kloader")
-            elif [[ $device_det == 5 ]]; then
-                echo "/tmp/kloader5 /tmp/pwnediBSS" >> kloaders
-                sendfiles+=("../resources/kloader5")
+                sendfiles+=("../resources/kloader2")
             else
                 echo "/tmp/kloader /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader")

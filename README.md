@@ -102,9 +102,9 @@
     - [futurerestore version](https://github.com/futurerestore/futurerestore/) used on macOS
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)
-- [kloader](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
-- [kloader5 for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
-- [kloader_hgsp for iOS 10](https://twitter.com/nyan_satan/status/945203180522045440) (used on h3lix only)
+- [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader)
+- [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc) (used on iOS 10 only)
+- [kloader_hgsp from nyan_satan](https://twitter.com/nyan_satan/status/945203180522045440) (used on h3lix only)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - [zenity](https://github.com/GNOME/zenity); [macOS/Windows builds](https://github.com/ncruces/zenity)
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
