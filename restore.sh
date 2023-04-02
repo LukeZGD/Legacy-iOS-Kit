@@ -385,12 +385,12 @@ version_check() {
         warn "No version check flag detected, update check will be disabled and no support may be provided."
     else
         log "Checking for updates..."
-        version_latest=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null | grep "latest/Legacy-iOS-Kit_complete" | cut -c 127- | cut -c -9 | sed -r 's/\.$//')
+        version_latest=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -r 's/\.$//')
         if [[ -z $version_latest ]]; then
             : warn "Failed to check for updates. GitHub may be down or blocked by your network."
         elif [[ $version_latest != "$version_current" ]]; then
             if (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
-                warn "Current version is newer/different than remote: $version_latest ($(cat latest | grep "latest/iOS-OTA-Downgrader_complete" | cut -c 142- | cut -c -7))"
+                warn "Current version is newer/different than remote: $version_latest ($(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null | grep "latest/iOS-OTA-Downgrader_complete" | cut -c 138- | cut -c -7))"
             elif [[ $(echo $version_current | cut -c 12-) != $(echo $version_latest | cut -c 12-) ]]; then
                 print "* A newer version of Legacy iOS Kit is available."
                 print "* Current version: $version_current"
@@ -606,11 +606,6 @@ device_get_info() {
         device_latest_bb=$device_use_bb
         device_latest_bb_sha1=$device_use_bb_sha1
     fi
-
-    print "* Device: $device_type (${device_model}ap) in $device_mode mode"
-    print "* iOS Version: $device_vers"
-    print "* ECID: device_ecid"
-    echo
 }
 
 device_find_mode() {
