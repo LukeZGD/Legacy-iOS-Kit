@@ -151,7 +151,7 @@
 	<key>hwmodel</key>
 	<string>N42</string>
 	<key>PackagePath</key>
-	<string>./Cydia8.tar</string>
+	<string>./freeze.tar</string>
 	<key>UntetherPath</key>
 	<string>./untether.tar</string>
 	<key>RamdiskPackage</key>

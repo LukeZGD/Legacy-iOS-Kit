@@ -1,31 +1,38 @@
-# iOS-OTA-Downgrader
+# Legacy iOS Kit
 
-- **A multi-purpose script to downgrade/restore and jailbreak supported legacy iOS devices**
-- **iPhone4Down: Downgrade iPhone 4 GSM on Linux/Windows (using powdersn0w)**
+- (formerly iOS-OTA-Downgrader)
+- **A multi-purpose script to save SHSH blobs, downgrade/restore, and jailbreak supported legacy iOS devices**
 - **Linux, macOS, and Windows** are supported
     - Windows usage is not recommended
-- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/How-to-Use) for a step-by-step tutorial**
-- **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/iOS-OTA-Downgrader/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
+- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for usage instructions**
+- **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
-## Other features
-- Option to **jailbreak** iOS 6.1.3 and 8.4.1 downgrades
-    - For iOS 10.3.3 downgrades, use [TotallyNotSpyware](https://totally-not.spyware.lol)
-- Restore to other iOS versions **with SHSH blobs**
+## Features
+- Restore to iOS 8.4.1 or 6.1.3 on supported 32-bit devices **(OTA signed)**
+- Restore iPhone 4 GSM (iPhone3,1) to unsigned iOS versions **(powdersn0w)**
+- Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
+- Option to **jailbreak** iOS 6.1.3 and 8.4.1 restores
+- Restore to unsigned iOS versions **with SHSH blobs**
     - Supports 32-bit/A7/A8 devices, iOS 5 to 12
     - Also supports iPad 2 iOS 4.3.x, iPhone 4 iOS 4.x
+- Restore to unsigned iOS versions **with iOS 7.1.x blobs (powdersn0w)**
+    - Device support is limited, see below
 - The latest baseband will be used for 32-bit devices if applicable
 - Place device to pwned iBSS/kDFU mode for 32-bit devices
-- Clear NVRAM for iPhone 4 GSM (Disable/Enable Exploit)
+- Clear NVRAM for devices that support powdersn0w
 - Restore iPhone 4 to iOS 7.1.2 with the option to jailbreak
 - Restore supported devices to their latest iOS version
-- Save on-board and Cydia SHSH blobs for 32-bit devices
+- Save onboard and Cydia SHSH blobs for 32-bit devices
+- Boot SSH Ramdisk on supported 32-bit devices
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
+- Restoring with powdersn0w supports the following devices:
+    - iPhone 4 GSM - iOS 4.3 to 6.1.3
+    - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - iOS 5.0 to 6.1.3, 8.0 to 9.3.5
 - **iPhone 5C and iPad mini 3 devices are NOT supported by OTA downgrades**
     - These devices still support restoring to other iOS versions with SHSH blobs
-- **iPhone4Down (downgrading without blobs) supports iPhone 4 GSM only (iPhone3,1)**
-    - All iPhone 4 models still support restoring with SHSH blobs and to iOS 7.1.2
+- See the table below for OTA downgrading support:
 
 <table>
     <thead>
@@ -56,21 +63,8 @@
             <td>iPhone 4S</td>
         </tr>
         <tr><td>iPad 2 (except iPad2,4)</td></tr>
-        <tr>
-            <td>iOS 7.1.2</td>
-            <td>iPhone 4 (all models)</td></tr>
-        </tr>
-        <tr>
-            <td>iOS 4.3 to 6.1.3</td>
-            <td>iPhone 4 GSM</td>
-        </tr>
     </tbody>
 </table>
-
-<details>
-    <summary>For 32-bit devices jailbroken with Pangu:</summary>
-    <ul><li>For 32-bit devices using Pangu and jailbroken method, install the latest untether for your iOS version <a href="https://github.com/LukeZGD/iOS-OTA-Downgrader-Keys/releases/tag/untether">here</a></li></ul>
-</details>
 
 ## Supported OS versions/distros
 
@@ -114,3 +108,5 @@
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
+- SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader)
+- Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)

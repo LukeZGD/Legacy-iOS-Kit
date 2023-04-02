@@ -17,7 +17,7 @@
 	<key>FilesystemPackage</key>
 	<dict>
 		<key>bootstrap</key>
-		<string>src/cydia6.tar</string>
+		<string>freeze.tar</string>
 	</dict>
 	<key>RamdiskPackage</key>
 	<dict>
