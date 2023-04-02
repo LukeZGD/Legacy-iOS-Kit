@@ -15,7 +15,7 @@ jobs:
         run: |
           sudo timedatectl set-timezone Asia/Singapore
           echo "DATE=$(date +%y.%m)" >> $GITHUB_ENV
-          echo "COUNT=$(git rev-list --count HEAD --since=$(date +%Y-%m-01))" >> $GITHUB_ENV
+          echo "COUNT=$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")" >> $GITHUB_ENV
           echo "SHA_SHORT=$(echo ${{ github.sha }} | cut -c -7)" >> $GITHUB_ENV
           echo "DATE_OLD=$(date +%Y-%m-%d)" >> $GITHUB_ENV
 

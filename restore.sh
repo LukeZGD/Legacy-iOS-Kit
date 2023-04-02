@@ -362,9 +362,9 @@ version_check() {
     if [[ -d .git ]]; then
         git_hash=$(git rev-parse HEAD | cut -c -7)
         if [[ $platform == "macos" ]]; then
-            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date -j -f "%Y-%m-%d %H:%M:%S" "$(date -v1d -v-1d +%Y-%m-%d) 23:59:59" +%s))
+            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date -j -f "%Y-%m-%d %H:%M:%S" "$(date -v1d -v-1d +%Y-%m-%d) 23:59:59" +%s) | xargs printf "%02d")
         else
-            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s))
+            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")
         fi
     elif [[ -e ./resources/git_hash ]]; then
         version="$(cat ./resources/version)"
