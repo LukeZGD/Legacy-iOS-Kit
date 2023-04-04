@@ -1122,9 +1122,7 @@ patch_ibec() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
-    if [[ $device_target_vers == "$device_latest_vers" && $device_type == "iPhone3"* ]]; then
-        return
-    elif (( device_proc >= 7 )); then
+    if [[ $device_target_vers == "$device_latest_vers" && $device_type != "iPhone3"* ]] || (( device_proc >= 7 )); then
         return
     fi
 
