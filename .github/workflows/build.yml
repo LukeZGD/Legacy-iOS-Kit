@@ -84,10 +84,10 @@ jobs:
       - name: Zip complete files
         run: zip -r ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.cmd restore.sh README.md
 
-      - name: Create this file to make upgrading backward-compatible
+      - name: Create this file to get latest git hash
         run: |
           echo "This file is for compatibility purposes only. Get Legacy-iOS-Kit_complete instead." > README.txt
-          zip -r iOS-OTA-Downgrader_complete_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip README.txt
+          zip -r git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip README.txt
 
       - name: Update latest release
         uses: pyTooling/Actions/releaser@main
@@ -96,7 +96,7 @@ jobs:
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            iOS-OTA-Downgrader_complete_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip
+            git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip

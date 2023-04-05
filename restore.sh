@@ -356,7 +356,9 @@ install_depends() {
 }
 
 version_check() {
+    local github_api
     local version_latest
+    local git_hash_latest
 
     pushd .. >/dev/null
     if [[ -d .git ]]; then
@@ -367,7 +369,7 @@ version_check() {
             version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")
         fi
     elif [[ -e ./resources/git_hash ]]; then
-        version="$(cat ./resources/version)"
+        version_current="$(cat ./resources/version)"
         git_hash="$(cat ./resources/git_hash)"
     else
         log ".git directory and git_hash file not found, cannot determine version."
@@ -385,16 +387,18 @@ version_check() {
         warn "No version check flag detected, update check will be disabled and no support may be provided."
     else
         log "Checking for updates..."
-        version_latest=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -r 's/\.$//')
+        github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
+        version_latest=$(echo "$github_api" | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -r 's/\.$//')
+        git_hash_latest=$(echo "$github_api" | grep "latest/git-hash" | cut -c 119- | cut -c -7)
         if [[ -z $version_latest ]]; then
             : warn "Failed to check for updates. GitHub may be down or blocked by your network."
         elif [[ $version_latest != "$version_current" ]]; then
             if (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
-                warn "Current version is newer/different than remote: $version_latest ($(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null | grep "latest/iOS-OTA-Downgrader_complete" | cut -c 138- | cut -c -7))"
-            elif [[ $(echo $version_current | cut -c 12-) != $(echo $version_latest | cut -c 12-) ]]; then
+                warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
+            else
                 print "* A newer version of Legacy iOS Kit is available."
-                print "* Current version: $version_current"
-                print "* Latest version:  $version_latest"
+                print "* Current version: $version_current ($git_hash)"
+                print "* Latest version:  $version_latest ($git_hash_latest)"
                 print "* Please download/pull the latest version before proceeding."
                 exit
             fi
