@@ -391,7 +391,7 @@ version_check() {
         version_latest=$(echo "$github_api" | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -r 's/\.$//')
         git_hash_latest=$(echo "$github_api" | grep "latest/git-hash" | cut -c 119- | cut -c -7)
         if [[ -z $version_latest ]]; then
-            : warn "Failed to check for updates. GitHub may be down or blocked by your network."
+            warn "Failed to check for updates. GitHub may be down or blocked by your network."
         elif [[ $version_latest != "$version_current" ]]; then
             if (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
                 warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
