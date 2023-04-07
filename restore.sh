@@ -2226,6 +2226,7 @@ device_ramdisk4() {
     local iv
     local key
     local path
+    local url
 
     case $device_type in
         iPhone5,3 ) device_target_build="11B511";;
@@ -2236,6 +2237,11 @@ device_ramdisk4() {
         device_target_build=$device_ramdisk_build
     fi
     device_fw_key_check
+    url=$(cat "$device_fw_dir/$device_target_build/url" 2>/dev/null)
+    if [[ -z $url ]]; then
+        log "Getting URL for $device_type-$build"
+        url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
+    fi
     mkdir ../saved/$device_type/ramdisk 2>/dev/null
     for getcomp in "${comps[@]}"; do
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
@@ -2251,7 +2257,7 @@ device_ramdisk4() {
         if [[ -e ../saved/$device_type/ramdisk/$name ]]; then
             cp ../saved/$device_type/ramdisk/$name .
         else
-            "$dir/partialzip" $(cat "$device_fw_dir/$device_target_build/url") "${path}$name" "$name"
+            "$dir/partialzip" "$url" "${path}$name" "$name"
             cp $name ../saved/$device_type/ramdisk/
         fi
         mv $name $getcomp.orig
@@ -2291,9 +2297,7 @@ device_ramdisk4() {
     $irecovery -c ramdisk
     $irecovery -f ../saved/$device_type/ramdisk/Kernelcache.dec
     $irecovery -c bootx
-    sleep 10
-    print "* Unplug and replug your device"
-    sleep 10
+    sleep 20
 
     if [[ $1 == "nvram" ]]; then
         log "Running iproxy for SSH..."
@@ -2680,11 +2684,12 @@ menu_ipsw() {
                 echo
                 if [[ -n $shsh_path ]]; then
                     print "* Selected Base $text2 SHSH: $shsh_path"
-                else
+                elif [[ $2 != "ipsw" ]]; then
                     print "* Select Base $text2 SHSH to continue"
                 fi
             fi
-            if [[ -n $ipsw_path && -n $ipsw_base_path && -n $shsh_path ]]; then
+            if [[ -n $ipsw_path && -n $ipsw_base_path && -n $shsh_path ]] ||
+               [[ -n $ipsw_path && -n $ipsw_base_path && $device_target_vers != "4"* && $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
 
@@ -2700,10 +2705,11 @@ menu_ipsw() {
             echo
             if [[ -n $shsh_path ]]; then
                 print "* Selected Target SHSH: $shsh_path"
-            else
+            elif [[ $2 != "ipsw" ]]; then
                 print "* Select Target SHSH to continue"
             fi
-            if [[ -n $ipsw_path && -n $shsh_path ]]; then
+            if [[ -n $ipsw_path && -n $shsh_path ]] ||
+               [[ -n $ipsw_path && $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
 
@@ -2952,10 +2958,10 @@ main() {
         install_depends
     fi
 
-    device_get_info
-    mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
-
     while [[ $mode != "exit" ]]; do
+        device_get_info
+        mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
+
         mode=
         if [[ -z $mode ]]; then
             menu_main
