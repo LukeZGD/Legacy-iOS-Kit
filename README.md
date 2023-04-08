@@ -13,7 +13,8 @@
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Option to **jailbreak** iOS 6.1.3 and 8.4.1 restores
 - Restore to unsigned iOS versions **with SHSH blobs**
-    - Supports 32-bit/A7/A8 devices, iOS 5 to 12
+    - Supports 32-bit devices, iOS 5 to 10
+    - Supports A7/A8 devices, see [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636)
     - Also supports iPad 2 iOS 4.3.x, iPhone 4 iOS 4.x
 - Restore to unsigned iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - Device support is limited, see below
@@ -30,6 +31,7 @@
 - Restoring with powdersn0w supports the following devices:
     - iPhone 4 GSM - iOS 4.3 to 6.1.3
     - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - iOS 5.0 to 6.1.3, 8.0 to 9.3.5
+    - Using powdersn0w requires iOS 7.1.x blobs for your device
 - **iPhone 5C and iPad mini 3 devices are NOT supported by OTA downgrades**
     - These devices still support restoring to other iOS versions with SHSH blobs
 - See the table below for OTA downgrading support:

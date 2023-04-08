@@ -142,7 +142,7 @@ set_tool_paths() {
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
         else
-            error "Distro not detected/supported. See the repo README for supported OS versions/distros"
+            error "Your distro is not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
         jq="$(which jq)"
@@ -285,6 +285,10 @@ set_tool_paths() {
     if [[ $platform != "linux" ]]; then
         jq="$dir/jq"
         zenity="$dir/zenity"
+    fi
+    ideviceactivation="$(which ideviceactivation 2>/dev/null)"
+    if [[ -z $ideviceactivation ]]; then
+        ideviceactivation="$dir/ideviceactivation"
     fi
     gaster+="$dir/gaster"
     idevicerestore+="$dir/idevicerestore"
@@ -1732,10 +1736,10 @@ ipsw_prepare_powder() {
     fi
 
     cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
+    cp -R ../resources/firmware/src .
     if [[ $device_target_vers == "4.3"* ]]; then
         ExtraArgs+="-apticket $shsh_path"
     fi
-    cp -R ../resources/firmware/src .
     if [[ $ipsw_jailbreak == 1 && -z ${JBFiles[0]} ]]; then
         ipsw_prepare_config true true
     else
@@ -1816,7 +1820,7 @@ ipsw_prepare_powder2() {
         cp ../resources/jailbreak/freeze.tar .
     fi
     if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
-        ExtraArgs+=" -bbupdate"
+        ExtraArgs+="-bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
@@ -1925,6 +1929,7 @@ restore_download_bbsep() {
 
 restore_idevicerestore() {
     local ExtraArgs="-e -w"
+    local idevicerestore2="$idevicerestore"
     local re
 
     mkdir shsh
@@ -1934,7 +1939,7 @@ restore_idevicerestore() {
         log "Device $device_type has no baseband/disabled baseband update"
     elif [[ $device_type != "iPhone3"* ]]; then
         ExtraArgs="-r"
-        idevicerestore="$idevicererestore"
+        idevicerestore2="$idevicererestore"
         re="re"
         cp shsh/$device_ecid-$device_type-$device_target_vers.shsh shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh # remove this if i get my fork of idevicererestore compiled on macos
     fi
@@ -1949,8 +1954,8 @@ restore_idevicerestore() {
         ExtraArgs+=" -d"
     fi
 
-    log "Running idevicere${re}store with command: $idevicerestore $ExtraArgs \"$ipsw_custom.ipsw\""
-    $idevicerestore $ExtraArgs "$ipsw_custom.ipsw"
+    log "Running idevicere${re}store with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
+    $idevicerestore2 $ExtraArgs "$ipsw_custom.ipsw"
     echo
     log "Restoring done! Read the message below if any error has occurred:"
     if [[ $platform == "windows" ]]; then
@@ -1965,6 +1970,7 @@ restore_idevicerestore() {
 
 restore_futurerestore() {
     local ExtraArgs=()
+    local futurerestore2="$futurerestore"
     local mac_ver=0
     local port=8888
 
@@ -2013,19 +2019,19 @@ restore_futurerestore() {
     fi
     if [[ $platform != "macos" ]]; then
         if (( device_proc < 7 )); then
-            futurerestore+="_old"
+            futurerestore2+="_old"
         else
-            futurerestore+="_new"
+            futurerestore2+="_new"
         fi
     elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
-        futurerestore="$dir/futurerestore_194"
+        futurerestore2+="_194"
         ipsw_path="$ipsw_custom"
     fi
     ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
 
-    log "Running futurerestore with command: $futurerestore ${ExtraArgs[*]}"
-    $futurerestore "${ExtraArgs[@]}"
+    log "Running futurerestore with command: $futurerestore2 ${ExtraArgs[*]}"
+    $futurerestore2 "${ExtraArgs[@]}"
     log "Restoring done! Read the message below if any error has occurred:"
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -2601,59 +2607,60 @@ menu_ipsw() {
     device_target_build=
     device_base_vers=
     device_base_build=
-    case $1 in
-        "iOS 10.3.3" )
-            device_target_vers="10.3.3"
-            device_target_build="14G60"
-        ;;
-
-        "iOS 8.4.1" )
-            device_target_vers="8.4.1"
-            device_target_build="12H321"
-        ;;
-
-        "iOS 6.1.3" )
-            device_target_vers="6.1.3"
-            device_target_build="10B329"
-        ;;
-
-        "Latest iOS" )
-            device_target_vers="$device_latest_vers"
-            device_target_build="$device_latest_build"
-        ;;
-    esac
-    if [[ $device_target_vers == "$device_latest_vers" ]]; then
-        case $device_type in
-            iPad3,[456] ) newpath="iPad_32bit";;
-            iPad4,[123456] ) newpath="iPad_64bit";;
-            iPad4,[789] ) newpath="iPad_64bit_TouchID";;
-            iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
-            iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
-            iPhone7,1 ) newpath="iPhone_5.5";;
-            iPhone7,2 ) newpath="iPhone_4.7";;
-            iPod7,1 ) newpath="iPodtouch";;
-            * ) newpath="${device_type}";;
-        esac
-        newpath+="_${device_target_vers}_${device_target_build}_Restore"
-
-    else
-        case $device_type in
-            iPad4,[12345] ) newpath="iPad_64bit";;
-            iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
-            * ) newpath="${device_type}";;
-        esac
-        newpath+="_${device_target_vers}_${device_target_build}"
-        ipsw_custom_set $newpath
-        newpath+="_Restore"
-    fi
-    if [[ -n $device_target_vers && -e "../$newpath.ipsw" ]]; then
-        ipsw_verify "../$newpath" "$device_target_build" nopause
-        if [[ $? == 0 ]]; then
-            ipsw_path="../$newpath"
-        fi
-    fi
 
     while [[ -z "$mode" && -z "$back" ]]; do
+        case $1 in
+            "iOS 10.3.3" )
+                device_target_vers="10.3.3"
+                device_target_build="14G60"
+            ;;
+
+            "iOS 8.4.1" )
+                device_target_vers="8.4.1"
+                device_target_build="12H321"
+            ;;
+
+            "iOS 6.1.3" )
+                device_target_vers="6.1.3"
+                device_target_build="10B329"
+            ;;
+
+            "Latest iOS" )
+                device_target_vers="$device_latest_vers"
+                device_target_build="$device_latest_build"
+            ;;
+        esac
+        if [[ $device_target_vers == "$device_latest_vers" ]]; then
+            case $device_type in
+                iPad3,[456] ) newpath="iPad_32bit";;
+                iPad4,[123456] ) newpath="iPad_64bit";;
+                iPad4,[789] ) newpath="iPad_64bit_TouchID";;
+                iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
+                iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
+                iPhone7,1 ) newpath="iPhone_5.5";;
+                iPhone7,2 ) newpath="iPhone_4.7";;
+                iPod7,1 ) newpath="iPodtouch";;
+                * ) newpath="${device_type}";;
+            esac
+            newpath+="_${device_target_vers}_${device_target_build}_Restore"
+
+        else
+            case $device_type in
+                iPad4,[12345] ) newpath="iPad_64bit";;
+                iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
+                * ) newpath="${device_type}";;
+            esac
+            newpath+="_${device_target_vers}_${device_target_build}"
+            ipsw_custom_set $newpath
+            newpath+="_Restore"
+        fi
+        if [[ -n $device_target_vers && -e "../$newpath.ipsw" ]]; then
+            ipsw_verify "../$newpath" "$device_target_build" nopause
+            if [[ $? == 0 ]]; then
+                ipsw_path="../$newpath"
+            fi
+        fi
+
         menu_items=("Select Target IPSW")
         menu_print_info
         if [[ $1 == *"powdersn0w"* ]]; then
@@ -2688,8 +2695,7 @@ menu_ipsw() {
                     print "* Select Base $text2 SHSH to continue"
                 fi
             fi
-            if [[ -n $ipsw_path && -n $ipsw_base_path && -n $shsh_path ]] ||
-               [[ -n $ipsw_path && -n $ipsw_base_path && $device_target_vers != "4"* && $2 == "ipsw" ]]; then
+            if [[ -n $ipsw_path && -n $ipsw_base_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
 
@@ -2702,14 +2708,14 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
             fi
-            echo
             if [[ -n $shsh_path ]]; then
+                echo
                 print "* Selected Target SHSH: $shsh_path"
             elif [[ $2 != "ipsw" ]]; then
+                echo
                 print "* Select Target SHSH to continue"
             fi
-            if [[ -n $ipsw_path && -n $shsh_path ]] ||
-               [[ -n $ipsw_path && $2 == "ipsw" ]]; then
+            if [[ -n $ipsw_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
 
@@ -2891,10 +2897,8 @@ menu_other() {
                 fi
                 menu_items+=("SSH Ramdisk")
             fi
-            if [[ $device_type == "iPhone3,1" ]]; then
-                menu_items+=("Disable/Enable Exploit")
-            fi
             case $device_type in
+                iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;&
                 iPhone3,[123] | iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 ) menu_items+=("Clear NVRAM");;
             esac
             menu_items+=("Attempt Activation")
@@ -2983,7 +2987,7 @@ main() {
             "pwned-ibss" ) device_enter_mode pwnDFU;;
             "save-onboard-blobs" ) shsh_save_onboard;;
             "save-cydia-blobs" ) shsh_save_cydia;;
-            "activate" ) "$dir/ideviceactivation" activate;;
+            "activate" ) $ideviceactivation activate;;
             * ) :;;
         esac
 
