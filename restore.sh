@@ -2720,7 +2720,7 @@ menu_ipsw() {
             fi
 
         else
-            # menu for ota versions
+            # menu for ota/latest versions
             menu_items+=("Download Target IPSW")
             if [[ -n $ipsw_path ]]; then
                 print "* Selected IPSW: $ipsw_path.ipsw"
@@ -2740,12 +2740,10 @@ menu_ipsw() {
         done
         case $selected in
             "Start Restore" | "Create IPSW" )
-                if [[ $1 == "Other (use SHSH blobs)" ]]; then
-                    device_target_other=1
-                fi
-                if [[ $1 == *"powdersn0w"* ]]; then
-                    device_target_powder=1
-                fi
+                case $1 in
+                    "Other (use SHSH blobs)" ) device_target_other=1;;
+                    *"powdersn0w"* ) device_target_powder=1;;
+                esac
             ;;&
 
             "Start Restore" )
@@ -2805,11 +2803,10 @@ ipsw_custom_set() {
         device_use_bb=0
         ipsw_custom+="B"
     fi
-    if [[ $ipsw_jailbreak_tool == "daibutsu" ]]; then
-        ipsw_custom+="D"
-    elif [[ $ipsw_jailbreak_tool == "etasonjb" ]]; then
-        ipsw_custom+="E"
-    fi
+    case $ipsw_jailbreak_tool in
+        "daibutsu" ) ipsw_custom+="D";;
+        "etasonjb" ) ipsw_custom+="E";;
+    esac
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
     fi
