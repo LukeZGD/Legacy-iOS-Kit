@@ -1410,7 +1410,7 @@ ipsw_prepare_jailbreak() {
         cp -R ../resources/firmware/FirmwareBundles .
     fi
 
-    if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
@@ -1819,7 +1819,7 @@ ipsw_prepare_powder2() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp ../resources/jailbreak/freeze.tar .
     fi
-    if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+="-bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
@@ -2024,7 +2024,7 @@ restore_futurerestore() {
             futurerestore2+="_new"
         fi
     elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
-        futurerestore2+="_194"
+        futurerestore2="$dir/futurerestore_194"
         ipsw_path="$ipsw_custom"
     fi
     ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
