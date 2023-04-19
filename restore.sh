@@ -392,7 +392,7 @@ version_check() {
     else
         log "Checking for updates..."
         github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
-        version_latest=$(echo "$github_api" | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -r 's/\.$//')
+        version_latest=$(echo "$github_api" | grep "latest/Legacy-iOS-Kit_complete" | cut -c 123- | cut -c -9 | sed -e 's/\.$//')
         git_hash_latest=$(echo "$github_api" | grep "latest/git-hash" | cut -c 119- | cut -c -7)
         if [[ -z $version_latest ]]; then
             warn "Failed to check for updates. GitHub may be down or blocked by your network."
