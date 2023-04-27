@@ -253,13 +253,14 @@ set_tool_paths() {
         fi
         log "iTunes version: $itunes_ver"
         if [[ $(echo "$itunes_ver" | cut -c -2) == 12 ]]; then
-            itunes_ver=$(echo "$itunes_ver" | cut -c 4-)
-            itunes_ver=${itunes_ver%%.*}
-            if (( itunes_ver > 6 )); then
+            local itunes_ver2=$(echo "$itunes_ver" | cut -c 4-)
+            itunes_ver2=${itunes_ver%%.*}
+            if (( itunes_ver2 > 6 )); then
                 warn "Detected a newer iTunes version."
                 print "* Please downgrade iTunes to 12.6.5, 12.4.3, or older."
                 print "* You may still continue, but you might encounter issues with restoring the device."
                 pause
+                itunes_ver+=" (please downgrade to 12.6.5 or older)"
             fi
         fi
     else
