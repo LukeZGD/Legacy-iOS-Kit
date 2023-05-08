@@ -236,6 +236,10 @@ set_tool_paths() {
             $'\n* For MacPorts: sudo port install bash libimobiledevice libirecovery'
         fi
 
+        if [[ $(uname -m) != "x86_64" && ! $(/usr/bin/pgrep oahd >/dev/null 2>&1) ]]; then
+            error "Rosetta 2 does not seem to be installed. Please install Rosetta 2 to continue."
+        fi
+
     elif [[ $OSTYPE == "msys" ]]; then
         platform="windows"
         platform_ver="$(uname)"
@@ -244,6 +248,10 @@ set_tool_paths() {
         ping="ping -n 1"
 
         warn "Using Legacy iOS Kit on Windows is not recommended."
+        print "* Please switch to a Linux or Mac machine to avoid issues."
+        print "* Read the How to Use page: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
+        sleep 5
+        pause
         # itunes version check
         itunes_ver="Unknown"
         if [[ -e "/c/Program Files/iTunes/iTunes.exe" ]]; then
@@ -259,6 +267,7 @@ set_tool_paths() {
                 warn "Detected a newer iTunes version."
                 print "* Please downgrade iTunes to 12.6.5, 12.4.3, or older."
                 print "* You may still continue, but you might encounter issues with restoring the device."
+                sleep 5
                 pause
                 itunes_ver+=" (please downgrade to 12.6.5 or older)"
             fi
@@ -838,14 +847,17 @@ device_enter_mode() {
             fi
 
             if [[ $platform == "windows" ]]; then
-                print "* Make sure that your device is in PWNED DFU or kDFU mode."
-                print "* For 32-bit devices, pwned iBSS/kDFU must be already booted."
-                print "* For A7 devices, signature checks must be already disabled."
+                print "* Place your device in PWNED DFU or kDFU mode using Legacy iOS Kit on Linux or Mac."
+                print "* Do not use pwning tools on Windows, they will NOT work for Legacy iOS Kit."
+                print "* You can also do pwning using another iOS Device with iPwnder Lite."
+                print "* If you do not know what you are doing, exit now and restart your device in normal mode."
+                print "* Troubleshooting links:"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
                 if [[ $device_mode == "DFU" ]]; then
                     pause
                     return
                 elif [[ $device_mode == "Recovery" ]]; then
-                    print "* If you do not know what you are doing, exit now and restart your device in normal mode."
                     read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
                     if [[ $opt != 'N' && $opt != 'n' ]]; then
                         log "Exiting recovery mode."
@@ -866,7 +878,12 @@ device_enter_mode() {
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
-            elif [[ $irec_pwned == 1 ]] && (( device_proc >= 7 )); then
+            elif [[ $irec_pwned == 1 && $device_proc == 7 ]]; then
+                if [[ $platform == "macos" ]]; then
+                    $ipwnder
+                else
+                    device_ipwndfu rmsigchks
+                fi
                 return
             fi
 
@@ -925,8 +942,7 @@ device_enter_mode() {
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwn tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
-                error "Failed to enter pwnDFU mode. Please run the script again." \
-                "* Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+                device_pwnerror
             fi
 
             if [[ $platform == "macos" && $opt != "$gaster pwn" ]]; then
@@ -940,6 +956,18 @@ device_enter_mode() {
             fi
         ;;
     esac
+}
+
+device_pwnerror() {
+    local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for 15 seconds.'
+    error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
+    if [[ $platform == "linux" && $device_proc != 4 ]]; then
+        error_msg+=$'\n* Unfortunately, success rates for checkm8 are low on Linux.'
+        error_msg+=$'\n* Pwning with a Mac or another iOS device are better options.'
+    fi
+    error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
+    error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
+    error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
 }
 
 device_ipwndfu() {
@@ -994,8 +1022,7 @@ device_ipwndfu() {
             $python2 ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 ]]; then
-                error "Failed to enter pwnDFU mode. Please run the script again." \
-                "* Exit DFU mode first by holding the TOP and HOME buttons for about 15 seconds."
+                device_pwnerror
             fi
         ;;
 
