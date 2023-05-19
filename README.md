@@ -85,21 +85,22 @@
 - curl
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
-- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - Linus Henze, synackuk; LukeZGD fork
+- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
-- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker)
+- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux/Windows for restoring A7/A8 devices
-    - [futurerestore version](https://github.com/futurerestore/futurerestore/) used on macOS
+    - [futurerestore](https://github.com/futurerestore/futurerestore/) v259 used on macOS
+- [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)
-- [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader)
-- [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc) (used on iOS 10 only)
+- [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
+- [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
 - [kloader_hgsp from nyan_satan](https://twitter.com/nyan_satan/status/945203180522045440) (used on h3lix only)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - [zenity](https://github.com/GNOME/zenity); [macOS/Windows builds](https://github.com/ncruces/zenity)

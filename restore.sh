@@ -507,8 +507,8 @@ device_get_info() {
     device_latest_bb=0
     # set device_proc (what processor the device has)
     case $device_type in
-        iPhone3,[123] )
-            device_proc=4;; # A4
+        iPhone3,[123] | iPhone2,1 | iPod3,1 | iPad1,1 | iPod4,1 )
+            device_proc=4;; # A4/S5L8920/22
         iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
             device_proc=5;; # A5
         iPad3,[456] | iPhone5,[1234] )
@@ -1110,13 +1110,24 @@ patch_ibss() {
     # creates file pwnediBSS to be sent to device
     local build_id
     case $device_type in
+        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) build_id="9B206";;
         iPad3,1 | iPhone3,[123] ) build_id="11D257";;
         iPod5,1 ) build_id="10B329";;
         * ) build_id="12H321";;
     esac
     download_comp $build_id iBSS
     log "Patching iBSS..."
-    $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
+    if [[ $build_id == "9B206" ]]; then
+        device_fw_key_check
+        local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
+        local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+        "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key -decrypt
+        "$dir/xpwntool" iBSS.dec iBSS.raw
+        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+        "$dir/xpwntool" iBSS.patched pwnediBSS -t iBSS.dec
+    else
+        $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
+    fi
     cp pwnediBSS ../saved/$device_type/
     log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
 }
@@ -1125,6 +1136,7 @@ patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
+        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) build_id="9B206";;
         iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
             build_id="10B329";;
         iPad2,2 | iPhone3,[123] )
@@ -1144,12 +1156,16 @@ patch_ibec() {
     local name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename')
     local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
     local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
-    log "Decrypting iBEC"
+    log "Decrypting iBEC..."
     mv iBEC $name.orig
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
     "$dir/xpwntool" $name.dec $name.raw
-    log "Patching iBEC"
-    $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
+    log "Patching iBEC..."
+    if [[ $build_id == "9B206" ]]; then
+        "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+    else
+        $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
+    fi
     "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
     rm $name.dec $name.orig $name.raw $name.patched
     cp pwnediBEC ../saved/$device_type/
@@ -1703,7 +1719,7 @@ ipsw_prepare_bundle() {
 }
 
 ipsw_prepare_32bit() {
-    if [[ $device_target_vers == "4"* ]]; then
+    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad2"* ]]; then
             ipsw_prepare_jailbreak
             return
@@ -1717,7 +1733,7 @@ ipsw_prepare_32bit() {
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" ]]; then
+    elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $platform"
         return
     fi
@@ -2254,7 +2270,7 @@ device_remove4() {
     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#clearing-nvram"
 }
 
-device_ramdisk4() {
+device_ramdisk() {
     local comps=("iBSS" "iBEC" "RestoreRamdisk" "DeviceTree" "AppleLogo" "Kernelcache")
     local name
     local iv
@@ -2263,6 +2279,7 @@ device_ramdisk4() {
     local url
 
     case $device_type in
+        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) device_target_build="9B206";;
         iPhone5,3 ) device_target_build="11B511";;
         iPhone5,4 ) device_target_build="11B651";;
         * ) device_target_build="10B329";;
@@ -2369,7 +2386,6 @@ device_ramdisk4() {
     print "    mount.sh"
     print "* Clear NVRAM with this command:"
     print "    nvram -c"
-    print "    sync"
     print "* To reboot, use this command:"
     print "    reboot_bak"
 }
@@ -3007,8 +3023,8 @@ main() {
             "save-ota-blobs" ) shsh_save;;
             "kdfu" ) device_enter_mode kDFU;;
             "remove4" ) device_remove4;;
-            "ramdisk4" ) device_ramdisk4;;
-            "ramdisknvram" ) device_ramdisk4 nvram;;
+            "ramdisk4" ) device_ramdisk;;
+            "ramdisknvram" ) device_ramdisk nvram;;
             "pwned-ibss" ) device_enter_mode pwnDFU;;
             "save-onboard-blobs" ) shsh_save_onboard;;
             "save-cydia-blobs" ) shsh_save_cydia;;
