@@ -142,7 +142,7 @@ set_tool_paths() {
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
         else
-            error "Your distro is not detected/supported. See the repo README for supported OS versions/distros"
+            error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
         jq="$(which jq)"
@@ -305,8 +305,8 @@ set_tool_paths() {
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
     irecovery2+="$dir/irecovery2"
-    scp="scp -F ../resources/ssh_config"
-    ssh="ssh -F ../resources/ssh_config"
+    scp2="scp -F ../resources/ssh_config"
+    ssh2="ssh -F ../resources/ssh_config"
 }
 
 install_depends() {
@@ -446,13 +446,13 @@ device_get_info() {
     fi
 
     if [[ -z $device_mode ]]; then
-        local error_msg=$'* Make sure to also trust this computer by selecting "Trust" at the pop-up.'
+        local error_msg=$'* Make sure to trust this computer by selecting "Trust" at the pop-up.'
+        [[ $platform == "macos" ]] && error_msg+=$'\n* Make sure to have the initial setup dependencies installed before retrying.'
         [[ $platform != "linux" ]] && error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
-        [[ $platform == "macos" ]] && error_msg+=$'\n* Make sure to have libimobiledevice and libirecovery installed from Homebrew/MacPorts before retrying.'
-        if [[ $platform == "linux" ]]; then
-            error_msg+=$'\n* Try running the script again and enable sudoloop mode.'
-            touch ../resources/sudoloop
-        fi
+        #if [[ $platform == "linux" ]]; then
+            #error_msg+=$'\n* Try running the script again and enable sudoloop mode.'
+            #touch ../resources/sudoloop
+        #fi
         error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
@@ -552,7 +552,7 @@ device_get_info() {
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
-    # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used
+    # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
     case $device_type in
         iPhone3,[12] ) # XMM6180 7.1.2
             device_use_bb="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
@@ -609,7 +609,7 @@ device_get_info() {
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
         ;;
     esac
-    # disable baseband update for these devices ipad 2 cellular
+    # disable baseband update for ipad 2 cellular devices
     case $device_type in
         iPad2,[23] ) device_disable_bbupdate=$device_type;;
     esac
@@ -667,7 +667,7 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         if [[ $timeout != 1 ]]; then
-            touch ../resources/sudoloop
+            #touch ../resources/sudoloop
             error "Failed to find device in $1 mode (Timed out). Please run the script again."
         fi
         return 1
@@ -684,8 +684,8 @@ device_sshpass() {
     if [[ -z $pass ]]; then
         pass="alpine"
     fi
-    scp="$dir/sshpass -p $pass $scp"
-    ssh="$dir/sshpass -p $pass $ssh"
+    scp="$dir/sshpass -p $pass $scp2"
+    ssh="$dir/sshpass -p $pass $ssh2"
 }
 
 device_enter_mode() {
@@ -782,7 +782,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             if [[ $device_det == 1 ]]; then
-                print "* If the script seems to be stuck here, try to start over from step 1 the GitHub wiki."
+                print "* If the script seems to be stuck here, try to start over from step 1 in the GitHub wiki."
             fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
@@ -2359,26 +2359,15 @@ device_ramdisk() {
         log "Sending clear NVRAM commands..."
         $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
         log "Done! Your device should reboot now."
-        echo
         print "* If the device did not connect, SSH to the device manually."
-        print "* To access SSH ramdisk, run iproxy first:"
-        print "    iproxy 2022 22"
-        print "* Then SSH to 127.0.0.1:2022"
-        print "    ssh -p 2022 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
-        print "* Enter root password:"
-        print "   alpine"
-        print "* Clear NVRAM with this command:"
-        print "    nvram -c"
-        print "* To reboot, use this command:"
-        print "    reboot_bak"
         kill $iproxy_pid
-        return
+    else
+        log "Device should now be in SSH ramdisk mode."
     fi
-    log "Device should now be in SSH ramdisk mode."
     echo
     print "* To access SSH ramdisk, run iproxy first:"
     print "    iproxy 2022 22"
-    print "* Then SSH to 127.0.0.1:2022"
+    print "* Then SSH to 127.0.0.1 port 2022:"
     print "    ssh -p 2022 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
     print "* Enter root password:"
     print "   alpine"
@@ -2397,8 +2386,6 @@ shsh_save_onboard() {
         print "* You may also need iTunes 12.4.3 or older for shshdump to work"
         pause
     fi
-    device_target_other=1
-    print "* Download and select the IPSW of your current iOS version."
     device_enter_mode kDFU
     patch_ibec
     log "Sending iBEC..."

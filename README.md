@@ -13,9 +13,6 @@
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Option to **jailbreak** iOS 6.1.3 and 8.4.1 restores
 - Restore to unsigned iOS versions **with SHSH blobs**
-    - Supports 32-bit devices, iOS 5 to 10
-    - Supports A7/A8 devices, see [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636)
-    - Also supports iPad 2 iOS 4.3.x, iPhone 4 iOS 4.x
 - Restore to unsigned iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - Device support is limited, see below
 - The latest baseband will be used for 32-bit devices if applicable
@@ -25,15 +22,13 @@
 - Restore supported devices to their latest iOS version
 - Save onboard and Cydia SHSH blobs for 32-bit devices
 - Boot SSH Ramdisk on supported 32-bit devices
+- Pwning supported iOS devices using limera1n or checkm8 with iPwnder/gaster
+- Device activation using ideviceactivation on Linux
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
-- Restoring with powdersn0w supports the following devices:
-    - iPhone 4 GSM - iOS 4.3 to 6.1.3
-    - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - iOS 5.0 to 6.1.3, 8.0 to 9.3.5
-    - Using powdersn0w requires iOS 7.1.x blobs for your device
 - **iPhone 5C and iPad mini 3 devices are NOT supported by OTA downgrades**
-    - These devices still support restoring to other iOS versions with SHSH blobs
+    - These devices still support restoring to other iOS versions with SHSH blobs, see below
 - See the table below for OTA downgrading support:
 
 <table>
@@ -68,9 +63,24 @@
     </tbody>
 </table>
 
+- Restoring with SHSH blobs and using SSH Ramdisks are supported on the following devices:
+    - Supports most 32-bit devices (iOS 3 to 10, version range depends on device)
+    - iPhone 3GS, 4, 4S, 5, 5C
+    - iPad 1, 2, 3, 4, mini 1
+    - iPod touch 3, 4, 5
+- Restoring with SHSH blobs is also supported on most A7/A8 devices:
+    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions
+    - iPhone 5S, 6, 6 Plus
+    - iPad Air 1, mini 2, mini 3
+    - iPod touch 6
+- Restoring with powdersn0w is supported on the following devices:
+    - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
+    - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - targets iOS 5.0 to 6.1.3, 8.0 to 9.3.5
+    - Using powdersn0w requires iOS 7.1.x blobs for your device
+
 ## Supported OS versions/distros
 
-#### Supported architectures: x86_64, arm64, armhf (Linux)
+#### Supported architectures: x86_64, arm64, armhf
 
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
@@ -90,7 +100,9 @@
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
-- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
+- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
+- [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
+- [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
