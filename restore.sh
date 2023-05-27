@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed.
-ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1. (8.4.1 daibutsu and 6.1.3 p0sixspwn only)
+ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1. (may not work on 8.4.1 etason)
 device_ramdisk_build="" # You can change the version of SSH Ramdisk here. (default is 10B329 for most devices)
 
 print() {
@@ -1433,7 +1433,7 @@ ipsw_prepare_jailbreak() {
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
         done
-        if [[ $ipsw_openssh == 1 && $device_target_vers == "6.1.3" ]]; then
+        if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("../resources/jailbreak/sshdeb.tar")
         fi
         cp -R ../resources/firmware/FirmwareBundles .
@@ -1718,7 +1718,7 @@ ipsw_prepare_32bit() {
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" &&
-            $device_proc != 4 && $ipsw_jailbreak != 1 && $ipsw_canjailbreak != 1 ]]; then
+            $ipsw_jailbreak != 1 && $ipsw_canjailbreak != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $platform"
         return
     fi
@@ -1753,6 +1753,9 @@ ipsw_prepare_32bit() {
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
         done
+        if [[ $ipsw_openssh == 1 ]]; then
+            JBFiles+=("../resources/jailbreak/sshdeb.tar")
+        fi
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
@@ -1782,6 +1785,9 @@ ipsw_prepare_powder() {
             for i in {0..2}; do
                 JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
             done
+        fi
+        if [[ $ipsw_openssh == 1 ]]; then
+            JBFiles+=("../resources/jailbreak/sshdeb.tar")
         fi
         cp ../resources/jailbreak/freeze.tar .
     fi
@@ -2000,6 +2006,9 @@ restore_idevicerestore() {
         log "Sending iBEC..."
         $irecovery -f $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
         device_find_mode Recovery
+    elif [[ $device_proc == 4 ]]; then
+        log "Sending iBSS..."
+        $irecovery -f $ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=" -d"
@@ -2080,6 +2089,11 @@ restore_futurerestore() {
     fi
     ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
+    if [[ $device_proc == 4 ]]; then
+        patch_ibss
+        log "Sending iBSS..."
+        $irecovery -f pwnediBSS
+    fi
 
     log "Running futurerestore with command: $futurerestore2 ${ExtraArgs[*]}"
     $futurerestore2 "${ExtraArgs[@]}"
@@ -2137,12 +2151,18 @@ restore_prepare() {
                 if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                     device_enter_mode pwnDFU
                     ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
+                    restore_idevicerestore
                 else
                     device_enter_mode kDFU
+                    if [[ $ipsw_jailbreak == 1 ]]; then
+                        restore_idevicerestore
+                    else
+                        restore_futurerestore --use-pwndfu
+                    fi
                 fi
-                restore_idevicerestore
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
+                    shsh_save version $device_latest_vers
                     device_enter_mode kDFU
                     restore_idevicerestore
                 else
