@@ -521,31 +521,34 @@ device_get_info() {
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_vers and device_latest_build are used
     case $device_type in
+        iPad1,1 | iPod3,1 )
+            device_use_vers="5.1.1"
+            device_use_build="9B206"
+        ;;
+        iPhone2,1 | iPod4,1 )
+            device_use_vers="6.1.6"
+            device_use_build="10B500"
+        ;;
         iPhone3,[123] )
             device_use_vers="7.1.2"
             device_use_build="11D257"
         ;;
-
         iPad2,[1245] | iPad3,1 | iPod5,1 )
             device_use_vers="9.3.5"
             device_use_build="13G36"
         ;;
-
         iPad2,[367] | iPad3,[23] | iPhone4,1 )
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-
         iPad3,[56] | iPhone5,[12] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
-
         iPad3,4 | iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
         ;;&
-
         iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
@@ -554,56 +557,30 @@ device_get_info() {
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
     case $device_type in
-        iPhone3,[12] ) # XMM6180 7.1.2
-            device_use_bb="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
-            device_use_bb_sha1="007365a5655ac2f9fbd1e5b6dba8f4be0513e364"
-        ;;
-
-        iPad2,2 ) # XMM6180 9.3.5
-            device_use_bb="ICE3_04.12.09_BOOT_02.13.Release.bbfw"
-            device_use_bb_sha1="e6f54acc5d5652d39a0ef9af5589681df39e0aca"
-        ;;
-
-        iPhone3,3 ) # MDM6600 7.1.2
-            device_use_bb="Phoenix-3.0.04.Release.bbfw"
-            device_use_bb_sha1="a507ee2fe061dfbf8bee7e512df52ade8777e113"
-        ;;
-
-        iPad2,3 ) # MDM6600 9.3.6
-            device_use_bb="Phoenix-3.6.03.Release.bbfw"
-            device_use_bb_sha1="8d4efb2214344ea8e7c9305392068ab0a7168ba4"
-        ;;
-
         iPad2,[67] ) # MDM9615 9.3.6
             device_use_bb="Mav5-11.80.00.Release.bbfw"
             device_use_bb_sha1="aa52cf75b82fc686f94772e216008345b6a2a750"
         ;;
-
         iPad3,[23] ) # MDM9600
             device_use_bb="Mav4-6.7.00.Release.bbfw"
             device_use_bb_sha1="a5d6978ecead8d9c056250ad4622db4d6c71d15e"
         ;;
-
         iPhone4,1 ) # MDM6610
             device_use_bb="Trek-6.7.00.Release.bbfw"
             device_use_bb_sha1="22a35425a3cdf8fa1458b5116cfb199448eecf49"
         ;;
-
         iPad3,[56] | iPhone5,[12] ) # MDM9615 10.3.4 (32bit)
             device_use_bb="Mav5-11.80.00.Release.bbfw"
             device_use_bb_sha1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
         ;;
-
         iPad4,[235] | iPhone5,[34] | iPhone6,[12] ) # MDM9615 10.3.3 (5C, 5S, air, mini2)
             device_use_bb="Mav7Mav8-7.60.00.Release.bbfw"
             device_use_bb_sha1="f397724367f6bed459cf8f3d523553c13e8ae12c"
         ;;&
-
         iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.7
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
         ;;
-
         iPhone7,[12] ) # MDM9625
             device_latest_bb="Mav10-7.80.04.Release.bbfw"
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
@@ -1110,7 +1087,8 @@ patch_ibss() {
     # creates file pwnediBSS to be sent to device
     local build_id
     case $device_type in
-        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) build_id="9B206";;
+        iPad1,1 | iPod3,1 ) build_id="9B206";;
+        iPhone2,1 | iPod4,1 ) build_id="10B500";;
         iPad3,1 | iPhone3,[123] ) build_id="11D257";;
         iPod5,1 ) build_id="10B329";;
         * ) build_id="12H321";;
@@ -1136,7 +1114,10 @@ patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
-        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) build_id="9B206";;
+        iPad1,1 | iPod3,1 )
+            build_id="9B206";;
+        iPhone2,1 | iPod4,1 )
+            build_id="10B500";;
         iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
             build_id="10B329";;
         iPad2,2 | iPhone3,[123] )
@@ -1174,22 +1155,32 @@ patch_ibec() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
-    if [[ $device_target_vers == "$device_latest_vers" && $device_type != "iPhone3"* ]] || (( device_proc >= 7 )); then
+    if [[ $device_target_vers == "$device_latest_vers" && $device_proc != 4 ]] || (( device_proc >= 7 )); then
         return
     fi
 
-    if [[ $device_target_other != 1 && -z $ipsw_jailbreak ]]; then
+    if [[ $device_proc == 4 ]]; then
+        ipsw_canjailbreak=1
+    fi
+    case $device_target_vers in
+        7.1* ) ipsw_canjailbreak=1;;
+        6* ) ipsw_canjailbreak=1;;
+    esac
+
+    if [[ $device_target_other != 1 && -z $ipsw_jailbreak ]] || [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
-        if [[ $device_target_vers == "6.1.3" ]]; then
-            print "* I recommend to enable this for iOS 6.1.3, since it is hard to get p0sixspwn to work."
-        elif [[ $device_target_vers == "8.4.1" ]]; then
-            print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
-            print "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
-        elif [[ $device_target_vers == "5.1" ]]; then
-            print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 5.1."
-            print "* I recommend to use other versions instead, such as 5.1.1."
-        fi
+        case $device_target_vers in
+            6.1.3 ) print "* I recommend to enable this for iOS 6.1.3, since it is hard to get p0sixspwn to work.";;
+            8.4.1 )
+                print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
+                print "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
+            ;;
+            5.1 )
+                print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 5.1."
+                print "* I recommend to use other versions instead, such as 5.1.1."
+            ;;
+        esac
         print "* This option is enabled by default (Y)."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
         if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
@@ -1287,7 +1278,7 @@ shsh_save() {
         build_id="$device_latest_build"
         buildmanifest="../saved/$device_type/$build_id.plist"
         if [[ ! -e $buildmanifest ]]; then
-            if [[ $version == "7.1.2" && -e "$ipsw_base_path.ipsw" ]]; then
+            if [[ -e "$ipsw_base_path.ipsw" ]]; then
                 log "Extracting BuildManifest from $version IPSW..."
                 unzip -o -j "$ipsw_base_path.ipsw" BuildManifest.plist -d .
             else
@@ -1434,13 +1425,10 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+="-daibutsu" # use daibutsuCFW
 
     elif [[ $ipsw_jailbreak == 1 ]]; then
-        if [[ $device_target_vers == "8.4.1" ]]; then
-            JBFiles+=("fstab8.tar" "etasonJB-untether.tar")
-        elif [[ $device_target_vers == "7.1"* ]]; then
-            JBFiles+=("fstab7.tar" "panguaxe.tar")
-        elif [[ $device_target_vers == "6.1.3" ]]; then
-            JBFiles+=("fstab_rw.tar" "p0sixspwn.tar")
-        fi
+        case $device_target_vers in
+            8.4.1 ) JBFiles+=("fstab8.tar" "etasonJB-untether.tar");;
+            6.1.3 ) JBFiles+=("fstab_rw.tar" "p0sixspwn.tar");;
+        esac
         JBFiles+=("freeze.tar")
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
@@ -1454,7 +1442,7 @@ ipsw_prepare_jailbreak() {
         cp -R ../resources/firmware/FirmwareBundles .
     fi
 
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
@@ -1719,36 +1707,55 @@ ipsw_prepare_bundle() {
 }
 
 ipsw_prepare_32bit() {
+    local ExtraArgs
+    local JBFiles=()
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad2"* ]]; then
             ipsw_prepare_jailbreak
-            return
-        else
-            device_enter_mode pwnDFU
-            ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
-            restore_idevicerestore
-            return
         fi
-    fi
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+        return
+    elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" &&
+            $device_proc != 4 && $ipsw_jailbreak != 1 && $ipsw_canjailbreak != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $platform"
         return
     fi
 
     ipsw_prepare_bundle
 
-    local ExtraArgs
-    if [[ $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs"
-    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        case $device_target_vers in
+            7.1* )       JBFiles+=("panguaxe.tar");;
+            7* )         JBFiles+=("evasi0n7-untether.tar");;
+            6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
+            6* )         JBFiles+=("evasi0n6-untether.tar");;
+            5* )
+                if [[ $device_proc == 4 ]]; then
+                    JBFiles+=("unthredeh4il.tar")
+                else
+                    JBFiles+=("pris0nbarake/tar-$device_model-$device_target_build.tar")
+                fi
+            ;;
+        esac
+        case $device_target_vers in
+            7* ) JBFiles+=("fstab7.tar");;
+            * )  JBFiles+=("fstab_rw.tar");;
+        esac
+        JBFiles+=("freeze.tar")
+        for i in {0..2}; do
+            JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
+        done
+    fi
+    log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
+    "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
@@ -1864,7 +1871,7 @@ ipsw_prepare_powder2() {
         cp ../resources/jailbreak/freeze.tar .
     fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
-        ExtraArgs+="-bbupdate"
+        ExtraArgs+=" -bbupdate"
     fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
@@ -1978,10 +1985,10 @@ restore_idevicerestore() {
 
     mkdir shsh
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
-    restore_download_bbsep
     if [[ $device_use_bb == 0 ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
-    elif [[ $device_type != "iPhone3"* ]]; then
+    elif [[ $device_proc != 4 ]]; then
+        restore_download_bbsep
         ExtraArgs="-r"
         idevicerestore2="$idevicererestore"
         re="re"
@@ -2127,15 +2134,15 @@ restore_prepare() {
     case $device_proc in
         4 )
             if [[ $device_target_other == 1 ]]; then
-                device_enter_mode kDFU
-                if [[ -e "$ipsw_custom.ipsw" ]]; then
-                    restore_idevicerestore
+                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+                    device_enter_mode pwnDFU
+                    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
                 else
-                    restore_futurerestore --use-pwndfu
+                    device_enter_mode kDFU
                 fi
-            elif [[ $device_target_vers == "7.1.2" ]]; then
+                restore_idevicerestore
+            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
-                    shsh_save version 7.1.2
                     device_enter_mode kDFU
                     restore_idevicerestore
                 else
@@ -2194,12 +2201,11 @@ ipsw_prepare() {
         4 )
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
-            elif [[ $device_target_vers == "7.1.2" ]]; then
+            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
-                    # jailbroken 7.1.2
-                    ipsw_prepare_jailbreak
+                    ipsw_prepare_32bit
                 else
-                    log "No need to create custom IPSW for non-jailbroken 7.1.2 restores"
+                    log "No need to create custom IPSW for non-jailbroken $device_latest_vers restores"
                 fi
             else
                 # powdersn0w 4.3.x-6.1.3
@@ -2279,7 +2285,7 @@ device_ramdisk() {
     local url
 
     case $device_type in
-        iPhone2,1 | iPad1,1 | iPod3,1 | iPod4,1 ) device_target_build="9B206";;
+        iPhone2,1 | iPod3,1 | iPad1,1 | iPod4,1 ) device_target_build="9B206";;
         iPhone5,3 ) device_target_build="11B511";;
         iPhone5,4 ) device_target_build="11B651";;
         * ) device_target_build="10B329";;
@@ -2663,14 +2669,14 @@ menu_ipsw() {
         esac
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
             case $device_type in
-                iPad3,[456] ) newpath="iPad_32bit";;
+                iPad3,[456]    ) newpath="iPad_32bit";;
                 iPad4,[123456] ) newpath="iPad_64bit";;
-                iPad4,[789] ) newpath="iPad_64bit_TouchID";;
+                iPad4,[789]    ) newpath="iPad_64bit_TouchID";;
                 iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
-                iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
-                iPhone7,1 ) newpath="iPhone_5.5";;
-                iPhone7,2 ) newpath="iPhone_4.7";;
-                iPod7,1 ) newpath="iPodtouch";;
+                iPhone6,[12]   ) newpath="iPhone_4.0_64bit";;
+                iPhone7,1      ) newpath="iPhone_5.5";;
+                iPhone7,2      ) newpath="iPhone_4.7";;
+                iPod7,1        ) newpath="iPodtouch";;
                 * ) newpath="${device_type}";;
             esac
             newpath+="_${device_target_vers}_${device_target_build}_Restore"
@@ -2678,7 +2684,7 @@ menu_ipsw() {
         else
             case $device_type in
                 iPad4,[12345] ) newpath="iPad_64bit";;
-                iPhone6,[12] ) newpath="iPhone_4.0_64bit";;
+                iPhone6,[12]  ) newpath="iPhone_4.0_64bit";;
                 * ) newpath="${device_type}";;
             esac
             newpath+="_${device_target_vers}_${device_target_build}"
@@ -2771,10 +2777,11 @@ menu_ipsw() {
         done
         case $selected in
             "Start Restore" | "Create IPSW" )
-                case $1 in
-                    "Other (use SHSH blobs)" ) device_target_other=1;;
-                    *"powdersn0w"* ) device_target_powder=1;;
-                esac
+                if [[ $1 == "Other (use SHSH blobs)" ]]; then
+                    device_target_other=1
+                elif [[ $1 == *"powdersn0w"* ]]; then
+                    device_target_powder=1
+                fi
             ;;&
 
             "Start Restore" )
@@ -3023,6 +3030,7 @@ main() {
             echo
             print "* Save the terminal output now if needed, before pressing Enter/Return."
             pause
+            break
         fi
     done
     echo
