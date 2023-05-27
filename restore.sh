@@ -1797,7 +1797,7 @@ ipsw_prepare_powder() {
     if [[ $device_target_vers == "4.3"* ]]; then
         ExtraArgs+="-apticket $shsh_path"
     fi
-    if [[ $ipsw_jailbreak == 1 && -z ${JBFiles[0]} ]]; then
+    if [[ $ipsw_jailbreak == 1 && $device_target_vers == "6"* ]]; then
         ipsw_prepare_config true true
     else
         ipsw_prepare_config false true
