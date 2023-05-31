@@ -1095,7 +1095,7 @@ patch_ibss() {
     esac
     download_comp $build_id iBSS
     log "Patching iBSS..."
-    if [[ $build_id == "9B206" ]]; then
+    if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
         device_fw_key_check
         local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
         local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
@@ -1142,7 +1142,7 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
     "$dir/xpwntool" $name.dec $name.raw
     log "Patching iBEC..."
-    if [[ $build_id == "9B206" ]]; then
+    if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
         "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
     else
         $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
@@ -1595,6 +1595,8 @@ ipsw_prepare_bundle() {
         else
             ipsw_prepare_config false true
         fi
+    elif [[ $ipsw_jailbreak == 1 ]]; then
+        ipsw_prepare_config false true
     else
         ipsw_prepare_config false false
     fi
