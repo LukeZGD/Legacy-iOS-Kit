@@ -225,6 +225,7 @@ set_tool_paths() {
         ideviceenterrecovery="$(which ideviceenterrecovery)"
         ideviceinfo="$(which ideviceinfo)"
         iproxy="$(which iproxy)"
+        ipwnder32="$dir/ipwnder32"
         irecovery="$(which irecovery)"
         ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
@@ -881,38 +882,48 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if [[ $device_proc == 6 && $platform != "macos" ]]; then
+            if [[ $device_proc == 4 && $platform != "macos" ]]; then
+                # A4 linux uses ipwnder
+                $ipwnder -p
+                tool_pwned=$?
+            elif [[ $device_proc == 6 && $platform != "macos" ]]; then
                 # A6 linux uses ipwndfu
                 device_ipwndfu pwn
-            elif [[ $device_proc == 7 ]]; then
-                # A7 uses gaster or ipwnder
-                opt="$ipwnder"
-                if [[ $platform != "macos" ]]; then
-                    opt+=" -p"
-                fi
-                if [[ $platform != "macos" ]] || [[ $platform == "macos" && $(uname -m) == "x86_64" ]]; then
-                    input "PwnDFU Tool Option"
-                    print "* Select tool to be used for entering pwned DFU mode."
-                    print "* This option is set to ipwnder by default (1)."
-                    input "Select your option:"
-                    select opt2 in "ipwnder" "gaster"; do
-                        case $opt2 in
-                            "gaster" ) opt="$gaster pwn"; break;;
-                            * ) break;;
-                        esac
-                    done
-                fi
-                log "Placing device to pwnDFU mode using: $opt"
-                $opt
+            elif [[ $device_proc == 7 && $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+                # A7 asi mac uses ipwnder_lite
+                log "Placing device to pwnDFU mode using ipwnder_lite"
+                $ipwnder
                 tool_pwned=$?
             else
-                # A4/A6 uses ipwnder
-                opt="-p"
-                if [[ $platform == "macos" ]]; then
-                    opt=
+                # A4/A6 mac uses ipwnder_lite/ipwnder32
+                # A7 intel mac uses ipwnder_lite/ipwnder32/gaster
+                # A7 linux uses ipwnder/gaster
+                input "PwnDFU Tool Option"
+                print "* Select tool to be used for entering pwned DFU mode."
+                print "* This option is set to ipwnder by default (1)."
+                input "Select your option:"
+                local selection=("ipwnder")
+                if [[ $device_proc == 7 ]]; then
+                    selection+=("gaster")
                 fi
-                log "Placing device to pwnDFU mode using ipwnder"
-                $ipwnder $opt
+                if [[ $platform == "macos" ]]; then
+                    selection+=("ipwnder32")
+                fi
+                select opt2 in "${selection[@]}"; do
+                    case $opt2 in
+                        "gaster" ) opt="$gaster pwn"; break;;
+                        "ipwnder32" ) opt="$ipwnder32 -p"; break;;
+                        * )
+                            opt="$ipwnder"
+                            if [[ $platform != "macos" ]]; then
+                                opt+=" -p"
+                            fi
+                            break
+                        ;;
+                    esac
+                done
+                log "Placing device to pwnDFU mode using: $opt"
+                $opt
                 tool_pwned=$?
             fi
             irec_pwned=$($irecovery -q | grep -c "PWND")
