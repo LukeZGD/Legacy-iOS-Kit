@@ -1040,6 +1040,8 @@ device_fw_key_check() {
     local build="$device_target_build"
     if [[ $1 == "base" ]]; then
         build="$device_base_build"
+    elif [[ $1 == "temp" ]]; then
+        build="$2"
     fi
     local keys_path="$device_fw_dir/$build"
 
@@ -1070,6 +1072,8 @@ device_fw_key_check() {
     fi
     if [[ $1 == "base" ]]; then
         device_fw_key_base="$(cat $keys_path/index.html)"
+    elif [[ $1 == "temp" ]]; then
+        device_fw_key_temp="$(cat $keys_path/index.html)"
     else
         device_fw_key="$(cat $keys_path/index.html)"
     fi
@@ -1107,9 +1111,9 @@ patch_ibss() {
     download_comp $build_id iBSS
     log "Patching iBSS..."
     if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
-        device_fw_key_check
-        local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-        local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+        device_fw_key_check temp $build_id
+        local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
+        local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
         "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key -decrypt
         "$dir/xpwntool" iBSS.dec iBSS.raw
         "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
@@ -1143,18 +1147,17 @@ patch_ibec() {
             build_id="11B651";;
     esac
     download_comp $build_id iBEC
-    device_target_build=$build_id
-    device_fw_key_check
-    local name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename')
-    local iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
-    local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
+    device_fw_key_check temp $build_id
+    local name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename')
+    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
+    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
     log "Decrypting iBEC..."
     mv iBEC $name.orig
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
     "$dir/xpwntool" $name.dec $name.raw
     log "Patching iBEC..."
     if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
-        "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+        "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" 0x40000000 # 0x40000000 for a4 and older, 0x80000000 for a5/a6
     else
         $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
     fi
@@ -1166,16 +1169,22 @@ patch_ibec() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
-    if [[ $device_target_vers == "$device_latest_vers" && $device_proc != 4 ]] || (( device_proc >= 7 )); then
+    case $device_latest_vers in
+        7* | 6* | 5* ) ipsw_canjailbreak=1;;
+    esac
+
+    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )) ||
+       [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
         return
     fi
 
-    if [[ $device_proc == 4 ]]; then
-        ipsw_canjailbreak=1
-    fi
     case $device_target_vers in
-        7.1* ) ipsw_canjailbreak=1;;
-        6* ) ipsw_canjailbreak=1;;
+        7.1* | 6* ) ipsw_canjailbreak=1;;
+        5* )
+            if [[ $device_proc == 4 ]]; then
+                ipsw_canjailbreak=1
+            fi
+        ;;
     esac
 
     if [[ $device_target_other != 1 && -z $ipsw_jailbreak ]] || [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
@@ -2035,6 +2044,8 @@ restore_idevicerestore() {
         print "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
         print "* Follow the troubleshoting link for steps to attempt fixing this issue."
         print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
+    elif [[ $platform == "linux" && $device_target_vers == "4"* ]]; then
+        print "* For device activation on Linux, go to Other Utilities -> Attempt Activation"
     fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -2121,7 +2132,6 @@ restore_latest() {
     ipsw_extract
     log "Running idevicerestore with command: $idevicerestore -e \"$ipsw_path.ipsw\""
     $idevicerestore -e "$ipsw_path.ipsw"
-    log "Restoring done!"
 }
 
 restore_prepare_1033() {
@@ -2173,6 +2183,14 @@ restore_prepare() {
                         restore_futurerestore --use-pwndfu
                     fi
                 fi
+            elif [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
+                device_enter_mode DFU
+                restore_latest
+                log "Ignore the baseband error and do not disconnect your device yet"
+                device_find_mode Recovery
+                log "Attempting to exit recovery mode"
+                $irecovery -n
+                log "Done, your device should boot now"
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     shsh_save version $device_latest_vers
@@ -2234,11 +2252,10 @@ ipsw_prepare() {
         4 )
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
-            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+            elif [[ $device_target_vers == "$device_latest_vers" ]] ||
+                 [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     ipsw_prepare_32bit
-                else
-                    log "No need to create custom IPSW for non-jailbroken $device_latest_vers restores"
                 fi
             else
                 # powdersn0w 4.3.x-6.1.3
@@ -2426,6 +2443,11 @@ shsh_save_onboard() {
         pause
     fi
     device_enter_mode kDFU
+    if [[ $device_proc == 4 ]]; then
+        patch_ibss
+        log "Sending iBSS..."
+        $irecovery -f pwnediBSS
+    fi
     patch_ibec
     log "Sending iBEC..."
     $irecovery -f pwnediBEC
@@ -2445,6 +2467,10 @@ shsh_save_onboard() {
     fi
     if [[ ! -s dump.plist ]]; then
         warn "Saving onboard SHSH blobs failed."
+        if [[ -s dump.shsh ]]; then
+            mv dump.shsh ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump
+            log "Raw dump saved at: ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump"
+        fi
         return
     fi
     mv dump.plist ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
@@ -2630,6 +2656,8 @@ menu_restore() {
                 menu_items+=("powdersn0w");;
             iPhone4,1 | iPhone5,[12] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.1.x blobs)");;
+            iPhone2,1 )
+                menu_items+=("iOS 4.1");;
         esac
         if [[ $platform != "macos" && $1 != "ipsw" ]] && (( device_proc < 7 )); then
             menu_items+=("Latest iOS")
@@ -2684,17 +2712,18 @@ menu_ipsw() {
                 device_target_vers="10.3.3"
                 device_target_build="14G60"
             ;;
-
             "iOS 8.4.1" )
                 device_target_vers="8.4.1"
                 device_target_build="12H321"
             ;;
-
             "iOS 6.1.3" )
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
             ;;
-
+            "iOS 4.1" )
+                device_target_vers="4.1"
+                device_target_build="8B117"
+            ;;
             "Latest iOS" )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
@@ -2819,7 +2848,7 @@ menu_ipsw() {
 
             "Start Restore" )
                 mode="downgrade"
-                if [[ $1 == "Latest iOS" ]]; then
+                if [[ $1 == "Latest iOS" || $1 == "iOS 4.1" ]]; then
                     mode="restore-latest"
                 fi
             ;;
