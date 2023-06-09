@@ -1116,7 +1116,7 @@ patch_ibss() {
     esac
     download_comp $build_id iBSS
     log "Patching iBSS..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
+    if [[ $build_id == "9B206" || $build_id == "10B500" || $device_type == "iPhone3,2" ]]; then
         device_fw_key_check temp $build_id
         local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
         local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
@@ -1162,7 +1162,7 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
     "$dir/xpwntool" $name.dec $name.raw
     log "Patching iBEC..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" ]]; then
+    if [[ $build_id == "9B206" || $build_id == "10B500" || $device_type == "iPhone3,2" ]]; then
         "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" 0x40000000 # 0x40000000 for a4 and older, 0x80000000 for a5/a6
     else
         $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
