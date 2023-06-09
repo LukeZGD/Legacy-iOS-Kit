@@ -238,7 +238,8 @@ set_tool_paths() {
         fi
 
         if [[ $(uname -m) != "x86_64" && ! $(/usr/bin/pgrep oahd >/dev/null 2>&1) ]]; then
-            error "Rosetta 2 does not seem to be installed. Please install Rosetta 2 to continue."
+            warn "Rosetta 2 does not seem to be installed. Please install Rosetta 2 to continue."
+            print "* If you already have Rosetta 2, ignore this message."
         fi
 
     elif [[ $OSTYPE == "msys" ]]; then
@@ -343,7 +344,12 @@ install_depends() {
         sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim xmlstarlet zenity zip
 
     elif [[ $platform == "macos" ]]; then
+        log "Installing Xcode Command Line Tools"
         xcode-select --install
+        if [[ $(uname -m) != "x86_64" ]]; then
+            log "Installing Rosetta 2"
+            softwareupdate --install-rosetta
+        fi
 
     elif [[ $platform == "windows" ]]; then
         popd
@@ -2191,6 +2197,9 @@ restore_prepare() {
                 log "Attempting to exit recovery mode"
                 $irecovery -n
                 log "Done, your device should boot now"
+                if [[ $platform == "linux" ]]; then
+                    print "* For device activation on Linux, go to Other Utilities -> Attempt Activation"
+                fi
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     shsh_save version $device_latest_vers
@@ -2335,7 +2344,9 @@ device_ramdisk() {
     local url
 
     case $device_type in
-        iPhone2,1 | iPod3,1 | iPad1,1 | iPod4,1 ) device_target_build="9B206";;
+        iPhone1,2 | iPod2,1 ) device_target_build="8C148";;
+        iPod3,1 | iPad1,1 ) device_target_build="9B206";;
+        iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,3 ) device_target_build="11B511";;
         iPhone5,4 ) device_target_build="11B651";;
         * ) device_target_build="10B329";;
@@ -2346,7 +2357,7 @@ device_ramdisk() {
     device_fw_key_check
     url=$(cat "$device_fw_dir/$device_target_build/url" 2>/dev/null)
     if [[ -z $url ]]; then
-        log "Getting URL for $device_type-$build"
+        log "Getting URL for $device_type-$device_target_build"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
     fi
     mkdir ../saved/$device_type/ramdisk 2>/dev/null
@@ -2392,9 +2403,14 @@ device_ramdisk() {
     device_enter_mode kDFU
     log "Sending iBSS..."
     $irecovery -f ../saved/$device_type/ramdisk/iBSS
-    sleep 2
-    log "Sending iBEC..."
-    $irecovery -f ../saved/$device_type/ramdisk/iBEC
+    if [[ $device_target_build == "8"* ]]; then
+        mv Kernelcache.dec Kernelcache0.dec
+        $bspatch Kernelcache0.dec Kernelcache.dec ../resources/patch/kernelcache.release.$device_model.patch
+    else
+        sleep 2
+        log "Sending iBEC..."
+        $irecovery -f ../saved/$device_type/ramdisk/iBEC
+    fi
     device_find_mode Recovery
 
     log "Booting, please wait..."
@@ -2406,25 +2422,26 @@ device_ramdisk() {
     $irecovery -c bootx
     sleep 20
 
-    if [[ $1 == "nvram" ]]; then
-        log "Running iproxy for SSH..."
-        $iproxy 2222 22 >/dev/null &
-        iproxy_pid=$!
-        sleep 2
-        device_sshpass alpine
-        log "Sending clear NVRAM commands..."
-        $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
-        log "Done! Your device should reboot now."
-        print "* If the device did not connect, SSH to the device manually."
-        kill $iproxy_pid
-    else
-        log "Device should now be in SSH ramdisk mode."
-    fi
+    case $1 in
+        "nvram" )
+            log "Running iproxy for SSH..."
+            $iproxy 2222 22 >/dev/null &
+            iproxy_pid=$!
+            sleep 2
+            device_sshpass alpine
+            log "Sending commands for clearing NVRAM..."
+            $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
+            log "Done! Your device should reboot now."
+            print "* If the device did not connect, SSH to the device manually."
+            kill $iproxy_pid
+        ;;
+        * ) log "Device should now be in SSH ramdisk mode.";;
+    esac
     echo
     print "* To access SSH ramdisk, run iproxy first:"
-    print "    iproxy 2022 22"
-    print "* Then SSH to 127.0.0.1 port 2022:"
-    print "    ssh -p 2022 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
+    print "    iproxy 2222 22"
+    print "* Then SSH to 127.0.0.1 port 2222:"
+    print "    ssh -p 2222 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
     print "* Enter root password:"
     print "   alpine"
     print "* Mount filesystems with this command:"
