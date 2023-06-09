@@ -1360,10 +1360,14 @@ ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
     log "Verifying $ipsw_dl.ipsw..."
-    local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum")
+    local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    if [[ -z $IPSWSHA1 ]]; then
+        IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
+    fi
     local IPSWSHA1L=$($sha1sum "$ipsw_dl.ipsw" | awk '{print $1}')
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         if [[ -z $3 ]]; then
+            log "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
             warn "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Make sure to download and select the correct IPSW."
             pause
         fi
@@ -1523,6 +1527,9 @@ ipsw_prepare_32bit_keys() {
             fi
         ;;
     esac
+    if [[ $comp == "KernelCache" && $vers == "5"* ]]; then
+        return
+    fi
     echo -e "<key>Decrypt</key><true/></dict>" >> $NewPlist
 }
 
@@ -2964,21 +2971,18 @@ menu_ipsw_browse() {
                 pause
                 return
             fi
+            ipsw_verify "$newpath" "$device_base_build"
             ipsw_base_path="$newpath"
             return
         ;;
     esac
-    if [[ -z $versionc ]]; then
-        ipsw_path="$newpath"
-        return
-    fi
-    if [[ $device_target_vers != "$versionc" ]]; then
+    if [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
         log "Selected IPSW ($device_target_vers) does not match target version ($versionc)."
         pause
         return
     fi
     ipsw_verify "$newpath" "$device_target_build"
-    if [[ $? != 0 ]]; then
+    if [[ -n $versionc && $? != 0 ]]; then
         return
     fi
     ipsw_path="$newpath"
