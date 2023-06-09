@@ -1179,8 +1179,8 @@ ipsw_preference_set() {
         7* | 6* | 5* ) ipsw_canjailbreak=1;;
     esac
 
-    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )) ||
-       [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] ||
+       (( device_proc >= 7 )) || [[ $device_target_vers == "4.1" ]]; then
         return
     fi
 
@@ -2189,14 +2189,16 @@ restore_prepare() {
                         restore_futurerestore --use-pwndfu
                     fi
                 fi
-            elif [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
+            elif [[ $device_target_vers == "4.1" ]]; then
                 device_enter_mode DFU
                 restore_latest
-                log "Ignore the baseband error and do not disconnect your device yet"
-                device_find_mode Recovery
-                log "Attempting to exit recovery mode"
-                $irecovery -n
-                log "Done, your device should boot now"
+                if [[ $device_type == "iPhone2,1" ]]; then
+                    log "Ignore the baseband error and do not disconnect your device yet"
+                    device_find_mode Recovery
+                    log "Attempting to exit recovery mode"
+                    $irecovery -n
+                    log "Done, your device should boot now"
+                fi
                 if [[ $platform == "linux" ]]; then
                     print "* For device activation on Linux, go to Other Utilities -> Attempt Activation"
                 fi
@@ -2262,7 +2264,7 @@ ipsw_prepare() {
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
             elif [[ $device_target_vers == "$device_latest_vers" ]] ||
-                 [[ $device_type == "iPhone2,1" && $device_target_vers == "4.1" ]]; then
+                 [[ $device_target_vers == "4.1" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     ipsw_prepare_32bit
                 fi
@@ -2673,7 +2675,7 @@ menu_restore() {
                 menu_items+=("powdersn0w");;
             iPhone4,1 | iPhone5,[12] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.1.x blobs)");;
-            iPhone2,1 )
+            iPhone2,1 | iPod3,1 )
                 menu_items+=("iOS 4.1");;
         esac
         if [[ $platform != "macos" && $1 != "ipsw" ]] && (( device_proc < 7 )); then
@@ -2954,6 +2956,7 @@ menu_ipsw_browse() {
         "iOS 10.3.3" ) versionc="10.3.3";;
         "iOS 8.4.1" ) versionc="8.4.1";;
         "iOS 6.1.3" ) versionc="6.1.3";;
+        "iOS 4.1" ) versionc="4.1";;
         "Latest iOS" ) versionc="$device_latest_vers";;
         "base" )
             if [[ $device_base_vers != "7.1"* ]]; then
