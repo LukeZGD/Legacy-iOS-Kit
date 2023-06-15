@@ -2011,11 +2011,8 @@ ipsw_prepare_custom() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         log "Extracting Cydia"
         "$dir/hfsplus" out.dmg untar ../resources/jailbreak/freeze.tar
-        if [[ $device_type == "iPod2,1" ]]; then
-            "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab
-        fi
         case $device_target_vers in
-            "3.1.3" | "4.0" ) :;;
+            "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab;;
             * ) "$dir/hfsplus" out.dmg untar ../resources/jailbreak/unthredeh4il.tar;;
         esac
     fi
