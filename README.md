@@ -9,21 +9,23 @@
 
 ## Features
 - Restore to iOS 8.4.1 or 6.1.3 on supported 32-bit devices **(OTA signed)**
-- Restore iPhone 4 GSM (iPhone3,1) to unsigned iOS versions **(powdersn0w)**
-- Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
-- Option to **jailbreak** iOS 6.1.3 and 8.4.1 restores
-- Restore to unsigned iOS versions **with SHSH blobs**
-- Restore to unsigned iOS versions **with iOS 7.1.x blobs (powdersn0w)**
+- Restore iPhone 4 GSM (iPhone3,1) to lower iOS versions **(powdersn0w)**
+- Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
+- Restore 32-bit devices to lower iOS versions **with SHSH blobs**
+- Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - Device support is limited, see below
-- The latest baseband will be used for 32-bit devices if applicable
-- Place device to pwned iBSS/kDFU mode for 32-bit devices
-- Clear NVRAM for devices that support powdersn0w
-- Restore iPhone 4 to iOS 7.1.2 with the option to jailbreak
-- Restore supported devices to their latest iOS version
+- Option to **jailbreak** all of the above devices
+    - Including latest iOS versions for some devices (5.1.1, 6.1.6, 7.1.2)
+    - Available on target versions iOS 4.x to 7.x and 8.4.1
+- Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
+- Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
+    - Limited compatibility due to SEP/BB, see below
+- The latest baseband will be flashed for 32-bit devices if applicable
 - Save onboard and Cydia SHSH blobs for 32-bit devices
+- Place device to pwned iBSS/kDFU mode for supported devices
 - Boot SSH Ramdisk on supported 32-bit devices
-- Pwning supported iOS devices using limera1n or checkm8 with iPwnder/gaster
-- Device activation using ideviceactivation on Linux
+- Clear NVRAM for devices that support powdersn0w
+- Device activation using ideviceactivation
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -67,7 +69,8 @@
     - Supports most 32-bit devices (iOS 3 to 10, version range depends on device)
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
-    - iPod touch 3, 4, 5
+    - iPod touch 2, 3, 4, 5
+    - S5L8900 devices will likely never be supported
 - Restoring with SHSH blobs is also supported on most A7/A8 devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions
     - iPhone 5S, 6, 6 Plus
@@ -77,6 +80,13 @@
     - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
     - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - targets iOS 5.0 to 6.1.3, 8.0 to 9.3.5
     - Using powdersn0w requires iOS 7.1.x blobs for your device
+- Restoring with 24Kpwn/alloc8 is supported on the following devices:
+    - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
+    - iPod touch 2 - targets iOS 3.1.3 to 4.0
+- Restoring to latest iOS version with jailbreak for the following devices:
+    - iPhone 4 - iOS 7.1.2 jailbroken with Pangu
+    - iPhone 3GS, iPod touch 4 - iOS 6.1.6 jailbroken with p0sixspwn
+    - iPad 1, iPod touch 3 - iOS 5.1.1 jailbroken with pris0nbarake
 
 ## Supported OS versions/distros
 
@@ -107,7 +117,6 @@
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux/Windows for restoring A7/A8 devices
-    - [futurerestore](https://github.com/futurerestore/futurerestore/) v259 used on macOS
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)
@@ -123,5 +132,7 @@
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
+- [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
+- [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
 - SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
