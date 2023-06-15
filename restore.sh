@@ -1125,21 +1125,28 @@ patch_ibss() {
     local build_id
     case $device_type in
         iPad1,1 | iPod3,1 ) build_id="9B206";;
-        iPhone5,[34] ) build_id="11D257";;
-        * ) build_id="10B329";;
+        iPhone2,1 | iPod4,1 ) build_id="10B500";;
+        iPad3,1 | iPhone3,[123] ) build_id="11D257";;
+        iPod5,1 ) build_id="10B329";;
+        * ) build_id="12H321";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
         build_id="$device_ramdisk_build"
     fi
     download_comp $build_id iBSS
     log "Patching iBSS..."
-    device_fw_key_check temp $build_id
-    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
-    "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key -decrypt
-    "$dir/xpwntool" iBSS.dec iBSS.raw
-    "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
-    "$dir/xpwntool" iBSS.patched pwnediBSS -t iBSS.dec
+    if [[ $build_id == "9B206" || $build_id == "10B500" ||
+          $device_type == "iPhone3,2" || -n $device_ramdisk_build ]]; then
+        device_fw_key_check temp $build_id
+        local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
+        local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+        "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key -decrypt
+        "$dir/xpwntool" iBSS.dec iBSS.raw
+        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+        "$dir/xpwntool" iBSS.patched pwnediBSS -t iBSS.dec
+    else
+        $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
+    fi
     cp pwnediBSS ../saved/$device_type/
     log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
 }
@@ -1148,9 +1155,22 @@ patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
-        iPad1,1 | iPod3,1 ) build_id="9B206";;
-        iPhone5,[34] ) build_id="11D257";;
-        * ) build_id="10B329";;
+        iPad1,1 | iPod3,1 )
+            build_id="9B206";;
+        iPhone2,1 | iPod4,1 )
+            build_id="10B500";;
+        iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
+            build_id="10B329";;
+        iPad2,2 | iPhone3,[123] )
+            build_id="11D257";;
+        iPad2,[367] | iPad3,[25] )
+            build_id="12H321";;
+        iPad3,1 )
+            build_id="10B146";;
+        iPhone5,3 )
+            build_id="11B511";;
+        iPhone5,4 )
+            build_id="11B651";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
         build_id="$device_ramdisk_build"
@@ -1169,7 +1189,12 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
     "$dir/xpwntool" $name.dec $name.raw
     log "Patching iBEC..."
-    "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+    if [[ $build_id == "9B206" || $build_id == "10B500" ||
+          $device_type == "iPhone3,2" || -n $device_ramdisk_build ]]; then
+        "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+    else
+        $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
+    fi
     "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
     rm $name.dec $name.orig $name.raw $name.patched
     cp pwnediBEC ../saved/$device_type/
