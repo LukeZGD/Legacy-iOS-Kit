@@ -2510,6 +2510,7 @@ device_ramdisk() {
     local key
     local path
     local url
+    local decrypt
 
     case $device_type in
         iPod2,1 ) device_target_build="8C148";;
@@ -2547,34 +2548,48 @@ device_ramdisk() {
             cp $name ../saved/$device_type/ramdisk/
         fi
         mv $name $getcomp.orig
-        "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key -decrypt
+        if [[ $getcomp == "Kernelcache" && $device_type == "iPod2,1" ]]; then
+            decrypt="-iv $iv -k $key"
+            "$dir/xpwntool" $getcomp.orig $getcomp.dec $decrypt
+        else
+            "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key -decrypt
+        fi
     done
 
     log "Patch RestoreRamdisk"
     "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
     "$dir/hfsplus" Ramdisk.raw grow 30000000
-    "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
-    "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
 
-    log "Patch iBSS"
-    "$dir/xpwntool" iBSS.dec iBSS.raw
-    "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
-    "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
+    if [[ $device_type == "iPod2,1" ]]; then
+        "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh_old.tar
+        "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
+        log "Patch iBSS"
+        $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.$device_target_build.patch
+        log "Patch Kernelcache"
+        mv Kernelcache.dec Kernelcache0.dec
+        $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.$device_model.patch
+        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
+        rm DeviceTree.dec
+        mv DeviceTree.orig DeviceTree.dec
+    else
+        "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
+        "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
+        log "Patch iBSS"
+        "$dir/xpwntool" iBSS.dec iBSS.raw
+        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
+        log "Patch iBEC"
+        "$dir/xpwntool" iBEC.dec iBEC.raw
+        "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+        "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
+    fi
 
-    log "Patch iBEC"
-    "$dir/xpwntool" iBEC.dec iBEC.raw
-    "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
-
-    mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg ../saved/$device_type/ramdisk
+    mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg ../saved/$device_type/ramdisk 2>/dev/null
 
     device_enter_mode kDFU
     log "Sending iBSS..."
     $irecovery -f ../saved/$device_type/ramdisk/iBSS
-    if [[ $device_target_build == "8"* ]]; then
-        mv Kernelcache.dec Kernelcache0.dec
-        $bspatch Kernelcache0.dec Kernelcache.dec ../resources/patch/kernelcache.release.$device_model.patch
-    else
+    if [[ $device_type != "iPod2,1" ]]; then
         sleep 2
         log "Sending iBEC..."
         $irecovery -f ../saved/$device_type/ramdisk/iBEC
