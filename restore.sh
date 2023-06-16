@@ -471,6 +471,13 @@ device_get_info() {
             device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
+            if [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
+                warn "Your device is in recovery mode. Enter DFU mode to continue."
+                device_enter_mode DFU
+            fi
+            if [[ $device_type == "iPod2,1" ]]; then
+                device_newbr="$($irecovery -q | grep -c '240.5.1')"
+            fi
         ;;
 
         "Normal" )
@@ -480,6 +487,9 @@ device_get_info() {
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
             [[ -z $device_udid ]] && device_type=$($ideviceinfo -k UniqueDeviceID)
+            if [[ $device_type == "iPod2,1" ]]; then
+                device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
+            fi
         ;;
     esac
 
@@ -2845,8 +2855,14 @@ menu_restore() {
                 menu_items+=("iOS 5.1.1" "iOS 4.3.3");;&
             iPhone2,1 | iPod2,1 | iPod3,1 )
                 menu_items+=("iOS 4.1");;&
-            iPhone2,1 | iPod2,1 )
+            iPhone2,1 )
                 menu_items+=("iOS 4.0" "iPhoneOS 3.1.3");;
+            iPod2,1 )
+                if [[ $device_newbr == 0 ]]; then
+                    menu_items+=("iOS 4.0")
+                fi
+                menu_items+=("iPhoneOS 3.1.3")
+            ;;
         esac
         menu_items+=("Latest iOS ($device_latest_vers)" "Other (use SHSH blobs)" "Go Back")
         menu_print_info
