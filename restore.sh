@@ -1385,7 +1385,7 @@ ipsw_verify() {
     if [[ -z $IPSWSHA1 ]]; then
         IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
     fi
-    local IPSWSHA1L=$($sha1sum "$ipsw_dl.ipsw" | awk '{print $1}')
+    local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         if [[ -z $3 ]]; then
             log "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
