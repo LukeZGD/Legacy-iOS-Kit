@@ -15,7 +15,7 @@
 - Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - Device support is limited, see below
 - Option to **jailbreak** all of the above devices
-    - Including latest iOS versions for some devices (5.1.1, 6.1.6, 7.1.2)
+    - Including latest iOS versions for some devices (4.2.1, 5.1.1, 6.1.6, 7.1.2)
     - Available on target versions iOS 4.x to 7.x and 8.4.1
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
