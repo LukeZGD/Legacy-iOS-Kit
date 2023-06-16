@@ -84,9 +84,10 @@
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.0
 - Restoring to latest iOS version with jailbreak for the following devices:
-    - iPhone 4 - iOS 7.1.2 jailbroken with Pangu
-    - iPhone 3GS, iPod touch 4 - iOS 6.1.6 jailbroken with p0sixspwn
-    - iPad 1, iPod touch 3 - iOS 5.1.1 jailbroken with pris0nbarake
+    - iPhone 4 - iOS 7.1.2 with Pangu
+    - iPhone 3GS, iPod touch 4 - iOS 6.1.6 with p0sixspwn
+    - iPad 1, iPod touch 3 - iOS 5.1.1 with pris0nbarake
+    - iPod touch 2 - iOS 4.2.1 with greenpois0n
 
 ## Supported OS versions/distros
 
