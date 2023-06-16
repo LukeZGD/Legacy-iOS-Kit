@@ -486,7 +486,7 @@ device_get_info() {
             device_ecid=$($ideviceinfo -s -k UniqueChipID)
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
-            [[ -z $device_udid ]] && device_type=$($ideviceinfo -k UniqueDeviceID)
+            [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
             if [[ $device_type == "iPod2,1" ]]; then
                 device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
             fi
@@ -1225,6 +1225,10 @@ ipsw_preference_set() {
         7* | 6* | 5* ) ipsw_canjailbreak=1;;
     esac
 
+    if [[ $device_proc == 4 && $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
+        return
+    fi
+
     if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]]; then
         ipsw_jailbreak=1
     elif [[ $device_target_other != 1 && -z $ipsw_jailbreak ]] || [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
@@ -1278,7 +1282,7 @@ ipsw_preference_set() {
     elif [[ -n $ipsw_memory ]]; then
         :
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] &&
-         [[ $device_target_vers != "$device_latest_vers" || $device_target_vers == "4"* ]]; then
+         [[ $device_target_vers != "$device_latest_vers" && $device_target_other != 1 ]]; then
         :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
          [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]] ||
