@@ -736,8 +736,7 @@ device_enter_mode() {
             local sendfiles=()
             local device_det=$(echo "$device_vers" | cut -c 1)
 
-            if [[ $device_mode != "Normal" ]]; then
-                # cannot enter kdfu if not in normal mode, attempt pwndfu instead
+            if [[ $device_mode != "Normal" ]] || [[ $device_proc == 4 && $device_type != "iPhone3"* ]]; then
                 device_enter_mode pwnDFU
                 return
             fi
@@ -1214,7 +1213,7 @@ patch_ibec() {
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
-        7* | 6* | 5* ) ipsw_canjailbreak=1;;
+        7* | 6* | 5* | 4.2.1 | 4.1 ) ipsw_canjailbreak=1;;
     esac
 
     if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] ||
@@ -1276,7 +1275,10 @@ ipsw_preference_set() {
 
     if [[ $platform == "windows" ]]; then
         ipsw_memory=
-    elif [[ -n $ipsw_memory || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+    elif [[ -n $ipsw_memory ]]; then
+        :
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] &&
+         [[ $device_target_vers != "$device_latest_vers" || $device_target_vers == "4"* ]]; then
         :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
          [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]] ||
@@ -1331,8 +1333,10 @@ shsh_save() {
         version=$2
     fi
 
-    if [[ $version == "$device_latest_vers" ]]; then
-        build_id="$device_latest_build"
+    if [[ $version == "$device_latest_vers" || $version == "4.1" ]]; then
+        if [[ $version != "4.1" ]]; then
+            build_id="$device_latest_build"
+        fi
         buildmanifest="../saved/$device_type/$build_id.plist"
         if [[ ! -e $buildmanifest ]]; then
             if [[ -e "$ipsw_base_path.ipsw" ]]; then
@@ -1776,6 +1780,8 @@ ipsw_prepare_32bit() {
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad2"* ]]; then
             ipsw_prepare_jailbreak
+        elif [[ $ipsw_jailbreak == 1 ]]; then
+            ipsw_prepare_custom
         fi
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -1958,14 +1964,14 @@ ipsw_prepare_powder2() {
 }
 
 ipsw_prepare_custom() {
-    local comps=("RestoreRamdisk" "iBoot" "iBSS" "Kernelcache" "LLB")
+    local comps=("iBSS" "RestoreRamdisk")
     local name
     local iv
     local key
     local path
     local url
     local decrypt
-    local patch="../resources/patch/24Kpwn/$device_type/$device_target_vers"
+    local patch="../resources/patch/old/$device_type/$device_target_vers"
     local RootSize
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -1976,6 +1982,10 @@ ipsw_prepare_custom() {
     if [[ $device_target_vers == "5"* ]]; then
         comps+=("iBEC")
     fi
+    case $device_target_vers in
+        4.2.1 | 4.1 ) :;;
+        * ) comps+=("iBoot" "Kernelcache" "LLB");;
+    esac
 
     ipsw_extract
     device_fw_key_check
@@ -2048,6 +2058,11 @@ ipsw_prepare_custom() {
         "$dir/hfsplus" out.dmg untar ../resources/jailbreak/freeze.tar
         case $device_target_vers in
             "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab;;
+            "4.2.1" | "4.1" )
+                "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab
+                "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
+                "$dir/hfsplus" out.dmg untar ../resources/jailbreak/greenpois0n/${device_type}_${device_target_build}.tar
+            ;;
             * ) "$dir/hfsplus" out.dmg untar ../resources/jailbreak/unthredeh4il.tar;;
         esac
     fi
@@ -2059,7 +2074,10 @@ ipsw_prepare_custom() {
     log "Building IPSW"
     mv "$ipsw_path" "$ipsw_custom"
     pushd "$ipsw_custom"
-    rm BuildManifest.plist
+    case $device_target_vers in
+        4.2.1 | 4.1 ) :;;
+        * ) rm BuildManifest.plist;;
+    esac
     zip -r0 ../tmp/temp.ipsw *
     popd
 
@@ -2346,7 +2364,7 @@ restore_prepare() {
                     $irecovery -n
                     log "Done, your device should boot now"
                 fi
-            elif [[ $device_target_vers == "4.1" ]]; then
+            elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
                 device_enter_mode DFU
                 restore_latest
                 if [[ $device_type == "iPhone2,1" ]]; then
@@ -2356,9 +2374,9 @@ restore_prepare() {
                     $irecovery -n
                     log "Done, your device should boot now"
                 fi
-            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+            elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
-                    shsh_save version $device_latest_vers
+                    shsh_save version $device_target_vers
                     device_enter_mode kDFU
                     restore_idevicerestore
                 else

@@ -134,5 +134,7 @@
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
-- SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader)
+- [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
+- Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool) and [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze)
+- SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
