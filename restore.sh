@@ -1231,7 +1231,7 @@ ipsw_preference_set() {
 
     if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]]; then
         ipsw_jailbreak=1
-    elif [[ $device_target_other != 1 && -z $ipsw_jailbreak ]] || [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
+    elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         case $device_target_vers in
@@ -1239,6 +1239,12 @@ ipsw_preference_set() {
             8.4.1 )
                 print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
                 print "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
+            ;;
+            5* )
+                if [[ $device_proc == 5 ]]; then
+                    print "* The jailbreak option for iOS 5.x on A5 is experimental, and may not work properly."
+                    print "* For 5.0.1 and 5.1.1, I recommend disabling this option and jailbreak with Absinthe manually."
+                fi
             ;;
         esac
         print "* This option is enabled by default (Y)."
@@ -2197,7 +2203,6 @@ restore_idevicerestore() {
         ExtraArgs="-r"
         idevicerestore2="$idevicererestore"
         re="re"
-        cp shsh/$device_ecid-$device_type-$device_target_vers.shsh shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh # remove this if i get my fork of idevicererestore compiled on macos
     fi
     ipsw_extract custom
     if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]]; then
@@ -2469,7 +2474,7 @@ ipsw_prepare() {
             # 32-bit devices A5/A6
             if [[ $device_target_powder == 1 ]]; then
                 ipsw_prepare_powder2
-            elif [[ $ipsw_jailbreak == 1 ]]; then
+            elif [[ $ipsw_jailbreak == 1 && $device_target_other != 1 ]]; then
                 ipsw_prepare_jailbreak
             else
                 ipsw_prepare_32bit
@@ -3387,8 +3392,7 @@ main() {
 
         if [[ $mode != "exit" ]]; then
             echo
-            print "* Save the terminal output now if needed, before pressing Enter/Return."
-            pause
+            print "* Save the terminal output now if needed."
             break
         fi
     done
