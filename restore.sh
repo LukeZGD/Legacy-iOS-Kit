@@ -48,11 +48,8 @@ clean_and_exit() {
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
-if (( bash_version < 5 )); then
-    error "Your bash version ($bash_version) is too old. Install a newer version of bash to continue." \
-    "* For macOS users, install bash, libimobiledevice, and libirecovery from Homebrew or MacPorts" \
-    $'\n* For Homebrew: brew install bash libimobiledevice libirecovery' \
-    $'\n* For MacPorts: sudo port install bash libimobiledevice libirecovery'
+if (( bash_version > 3 )); then
+    shopt -s compat32
 fi
 
 display_help() {
@@ -117,18 +114,16 @@ set_tool_paths() {
         fi
 
         # version check
-        if [[ -e /etc/debian_version ]]; then
+        if [[ -n $UBUNTU_CODENAME ]]; then
+            ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
+        elif [[ -e /etc/debian_version ]]; then
             debian_ver=$(cat /etc/debian_version)
             if [[ $debian_ver == *"sid" ]]; then
                 debian_ver="sid"
             else
                 debian_ver="$(echo "$debian_ver" | cut -c -2)"
             fi
-        fi
-        if [[ -n $UBUNTU_CODENAME ]]; then
-            ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
-        fi
-        if [[ $ID == "fedora" || $ID == "nobara" ]]; then
+        elif [[ $ID == "fedora" || $ID == "nobara" ]]; then
             fedora_ver=$VERSION_ID
         fi
 
@@ -218,25 +213,14 @@ set_tool_paths() {
         fi
 
         bspatch="$(which bspatch)"
-        ideviceenterrecovery="$(which ideviceenterrecovery)"
-        ideviceinfo="$(which ideviceinfo)"
-        iproxy="$(which iproxy)"
+        ideviceenterrecovery="$(which ideviceenterrecovery 2>/dev/null)"
+        ideviceinfo="$(which ideviceinfo 2>/dev/null)"
+        iproxy="$(which iproxy 2>/dev/null)"
         ipwnder32="$dir/ipwnder32"
-        irecovery="$(which irecovery)"
+        irecovery="$(which irecovery 2>/dev/null)"
         ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
         sha256sum="$(which shasum) -a 256"
-
-        if [[ -z $ideviceinfo || -z $irecovery ]]; then
-            error "Install bash, libimobiledevice and libirecovery from Homebrew or MacPorts to continue." \
-            "* For Homebrew: brew install bash libimobiledevice libirecovery" \
-            $'\n* For MacPorts: sudo port install bash libimobiledevice libirecovery'
-        fi
-
-        if [[ $(uname -m) != "x86_64" && ! $(/usr/bin/pgrep oahd >/dev/null 2>&1) ]]; then
-            warn "Rosetta 2 does not seem to be installed. Please install Rosetta 2 to continue."
-            print "* If you already have Rosetta 2, ignore this message."
-        fi
 
     elif [[ $OSTYPE == "msys" ]]; then
         platform="windows"
@@ -288,6 +272,11 @@ set_tool_paths() {
         irecovery+="$dir/irecovery"
         sha1sum="$(which sha1sum)"
         sha256sum="$(which sha256sum)"
+    elif [[ -z $ideviceinfo || -z $irecovery ]]; then
+        ideviceenterrecovery="$dir/ideviceenterrecovery"
+        ideviceinfo="$dir/ideviceinfo"
+        iproxy="$dir/iproxy"
+        irecovery="$dir/irecovery"
     fi
     if [[ $platform != "linux" ]]; then
         jq="$dir/jq"
@@ -566,7 +555,9 @@ device_get_info() {
         iPad3,4 | iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
-        ;;&
+        ;;
+    esac
+    case $device_type in
         iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
@@ -594,7 +585,9 @@ device_get_info() {
         iPad4,[235] | iPhone5,[34] | iPhone6,[12] ) # MDM9615 10.3.3 (5C, 5S, air, mini2)
             device_use_bb="Mav7Mav8-7.60.00.Release.bbfw"
             device_use_bb_sha1="f397724367f6bed459cf8f3d523553c13e8ae12c"
-        ;;&
+        ;;
+    esac
+    case $device_type in
         iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.7
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
@@ -736,7 +729,7 @@ device_enter_mode() {
             local sendfiles=()
             local device_det=$(echo "$device_vers" | cut -c 1)
 
-            if [[ $device_mode != "Normal" ]] || [[ $device_proc == 4 && $device_type != "iPhone3"* ]]; then
+            if [[ $device_mode != "Normal" ]]; then
                 device_enter_mode pwnDFU
                 return
             fi
@@ -1216,8 +1209,7 @@ ipsw_preference_set() {
         7* | 6* | 5* | 4.2.1 | 4.1 ) ipsw_canjailbreak=1;;
     esac
 
-    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] ||
-       (( device_proc >= 7 )) || [[ $device_target_vers == "4.1" ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )); then
         return
     fi
 
@@ -1230,6 +1222,7 @@ ipsw_preference_set() {
     fi
 
     if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]]; then
+        log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
     elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
@@ -1596,9 +1589,11 @@ ipsw_prepare_32bit_paths() {
     local str2
     if [[ $2 == "target" ]]; then
         case $comp in
-            "AppleLogo" ) str2="${name/applelogo/"applelogo7"}";;&
-            "RecoveryMode" ) str2="${name/recoverymode/"recoverymode7"}";;&
-            "NewiBoot" ) str2="${name/iBoot/"iBoot$(echo $device_target_vers | cut -c 1)"}";;&
+            "AppleLogo" ) str2="${name/applelogo/"applelogo7"}";;
+            "RecoveryMode" ) str2="${name/recoverymode/"recoverymode7"}";;
+            "NewiBoot" ) str2="${name/iBoot/"iBoot$(echo $device_target_vers | cut -c 1)"}";;
+        esac
+        case $comp in
             "AppleLogo" | "RecoveryMode" | "NewiBoot" )
                 str+="$str2"
                 echo "$str2" >> $FirmwareBundle/manifest
@@ -1723,7 +1718,9 @@ ipsw_prepare_bundle() {
         case $vers in
             6* ) echo -e "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios6</string></dict>" >> $NewPlist;;
             7* ) error "iOS 7 targets are not supported.";;
-            8* | 9* ) echo -e "<key>package</key><string>src/ios9.tar</string></dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist;;&
+            8* | 9* ) echo -e "<key>package</key><string>src/ios9.tar</string></dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist;;
+        esac
+        case $vers in
             8* ) echo -e "8</string></dict>" >> $NewPlist;;
             9* ) echo -e "9</string></dict>" >> $NewPlist;;
         esac
@@ -2070,7 +2067,9 @@ ipsw_prepare_custom() {
             "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab;;
             "4.2.1" | "4.1" )
                 "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab
-                "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
+                if [[ $device_target_vers == "4.2.1" ]]; then
+                    "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
+                fi
                 "$dir/hfsplus" out.dmg untar ../resources/jailbreak/greenpois0n/${device_type}_${device_target_build}.tar
             ;;
             * ) "$dir/hfsplus" out.dmg untar ../resources/jailbreak/unthredeh4il.tar;;
@@ -2386,12 +2385,17 @@ restore_prepare() {
             elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     shsh_save version $device_target_vers
-                    device_enter_mode kDFU
+                    device_enter_mode pwnDFU
                     restore_idevicerestore
                 else
                     restore_latest
                 fi
-            elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+            elif [[ $device_type == "iPhone3,1" ]]; then
+                # powdersn0w 4.3.x-6.1.3
+                shsh_save version 7.1.2
+                device_enter_mode pwnDFU
+                restore_idevicerestore
+            else
                 device_enter_mode pwnDFU
                 restore_latest custom
                 if [[ $device_type == "iPhone2,1" ]]; then
@@ -2401,11 +2405,6 @@ restore_prepare() {
                 if [[ $device_target_vers == "3"* ]]; then
                     print "* For device activation on Linux, go to: Other Utilities -> Attempt Activation"
                 fi
-            else
-                # powdersn0w 4.3.x-6.1.3
-                shsh_save version 7.1.2
-                device_enter_mode pwnDFU
-                restore_idevicerestore
             fi
         ;;
 
@@ -2454,19 +2453,18 @@ ipsw_prepare() {
         4 )
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
-            elif [[ $device_target_vers == "$device_latest_vers" ]] ||
-                 [[ $device_target_vers == "4.1" ]]; then
+            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 ]]; then
                     ipsw_prepare_32bit
                 fi
-            elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
-                ipsw_prepare_custom
-            else
+            elif [[ $device_type == "iPhone3,1" ]]; then
                 # powdersn0w 4.3.x-6.1.3
                 if [[ $device_target_vers == "4.3"* ]]; then
                     shsh_save version 7.1.2
                 fi
                 ipsw_prepare_powder
+            else
+                ipsw_prepare_custom
             fi
         ;;
 
@@ -2613,7 +2611,11 @@ device_ramdisk() {
 
     mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg ../saved/$device_type/ramdisk 2>/dev/null
 
-    device_enter_mode kDFU
+    if [[ $device_proc == 4 ]]; then
+        device_enter_mode pwnDFU
+    else
+        device_enter_mode kDFU
+    fi
     log "Sending iBSS..."
     $irecovery -f ../saved/$device_type/ramdisk/iBSS
     if [[ $device_type != "iPod2,1" ]]; then
@@ -2669,12 +2671,14 @@ shsh_save_onboard() {
         print "* You may also need iTunes 12.4.3 or older for shshdump to work"
         pause
     fi
-    device_enter_mode kDFU
     if [[ $device_proc == 4 ]]; then
+        device_enter_mode pwnDFU
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS
         sleep 5
+    else
+        device_enter_mode kDFU
     fi
     patch_ibec
     log "Sending iBEC..."
@@ -2797,7 +2801,9 @@ menu_shsh() {
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
             iPad2,[1234567] | iPad3,[123456] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
-                menu_items+=("iOS 8.4.1");;&
+                menu_items+=("iOS 8.4.1");;
+        esac
+        case $device_type in
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
         esac
@@ -2819,18 +2825,17 @@ menu_shsh() {
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
                 device_target_build="14G60"
-            ;;&
-
+            ;;
             "iOS 8.4.1" )
                 device_target_vers="8.4.1"
                 device_target_build="12H321"
-            ;;&
-
+            ;;
             "iOS 6.1.3" )
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
-            ;;&
-
+            ;;
+        esac
+        case $selected in
             "iOS"* ) mode="save-ota-blobs";;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Cydia Blobs" ) mode="save-cydia-blobs";;
@@ -2886,20 +2891,23 @@ menu_restore() {
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
             iPad2,[1234567] | iPad3,[123456] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
-                menu_items+=("iOS 8.4.1");;&
+                menu_items+=("iOS 8.4.1");;
+        esac
+        case $device_type in
             iPad2,[123] | iPhone4,1 )
-                menu_items+=("iOS 6.1.3");;&
-            iPhone3,1 )
-                menu_items+=("powdersn0w (any iOS)");;
+                menu_items+=("iOS 6.1.3");;
+        esac
+        case $device_type in
             iPhone4,1 | iPhone5,[12] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.1.x blobs)");;
+            iPhone3,1 )
+                menu_items+=("powdersn0w (any iOS)");;
             iPhone2,1 )
-                menu_items+=("iOS 5.1.1" "iOS 4.3.3");;&
-            iPhone2,1 | iPod2,1 | iPod3,1 )
-                menu_items+=("iOS 4.1");;&
-            iPhone2,1 )
-                menu_items+=("iOS 4.0" "iPhoneOS 3.1.3");;
+                menu_items+=("iOS 5.1.1" "iOS 4.3.3" "iOS 4.1" "iOS 4.0" "iPhoneOS 3.1.3");;
+            iPod3,1 )
+                menu_items+=("iOS 4.1");;
             iPod2,1 )
+                menu_items+=("iOS 4.1")
                 if [[ $device_newbr == 0 ]]; then
                     menu_items+=("iOS 4.0")
                 fi
@@ -3110,8 +3118,9 @@ menu_ipsw() {
                 elif [[ $1 == *"powdersn0w"* ]]; then
                     device_target_powder=1
                 fi
-            ;;&
-
+            ;;
+        esac
+        case $selected in
             "Start Restore" ) mode="downgrade";;
             "Create IPSW" ) mode="custom-ipsw";;
             "Select Target IPSW" ) menu_ipsw_browse "$1";;
@@ -3283,14 +3292,16 @@ menu_other() {
                 fi
                 menu_items+=("SSH Ramdisk")
             fi
-            case $device_type in
-                iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;&
-                iPhone3,[123] | iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 ) menu_items+=("Clear NVRAM");;
-            esac
-            menu_items+=("Attempt Activation")
+            if [[ $device_type == "iPhone3,1" ]]; then
+                menu_items+=("Disable/Enable Exploit")
+            fi
+            if (( device_proc < 7 )); then
+                menu_items+=("Clear NVRAM")
+            fi
             if [[ $device_type == "iPhone2,1" ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
+            menu_items+=("Attempt Activation")
         fi
         if [[ $device_proc != 8 ]]; then
             menu_items+=("Create Custom IPSW")
@@ -3370,13 +3381,16 @@ main() {
         fi
 
         case $mode in
-            "custom-ipsw" | "downgrade" )
+            "custom-ipsw" )
                 ipsw_preference_set
                 ipsw_prepare
-            ;;&
-
-            "custom-ipsw" ) log "Done creating custom IPSW";;
-            "downgrade" ) restore_prepare;;
+                log "Done creating custom IPSW"
+            ;;
+            "downgrade" )
+                ipsw_preference_set
+                ipsw_prepare
+                restore_prepare
+            ;;
             "save-ota-blobs" ) shsh_save;;
             "kdfu" ) device_enter_mode kDFU;;
             "remove4" ) device_remove4;;
