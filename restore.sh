@@ -136,6 +136,8 @@ set_tool_paths() {
             distro="fedora"
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
+        elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
+            distro="gentoo"
         else
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
@@ -327,6 +329,9 @@ install_depends() {
 
     elif [[ $distro == "opensuse" ]]; then
         sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim zenity zip
+
+    elif [[ $distro == "gentoo" ]]; then
+        sudo emerge -av net-misc/curl app-misc/jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
 
     elif [[ $platform == "macos" ]]; then
         log "Installing Xcode Command Line Tools"
