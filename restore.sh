@@ -465,12 +465,14 @@ device_get_info() {
             device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
-            if [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
+            if [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_mode == "Recovery" ]]; then
                 warn "Your device is in recovery mode. Enter DFU mode to continue."
                 device_enter_mode DFU
             fi
             if [[ $device_type == "iPod2,1" ]]; then
                 device_newbr="$($irecovery -q | grep -c '240.5.1')"
+            elif [[ $device_type == "iPhone2,1" ]]; then
+                device_newbr="$($irecovery -q | grep -c '359.3.2')"
             fi
         ;;
 
@@ -483,6 +485,13 @@ device_get_info() {
             [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
             if [[ $device_type == "iPod2,1" ]]; then
                 device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
+            elif [[ $device_type == "iPhone2,1" ]]; then
+                device_newbr="$($ideviceinfo -k InternationalMobileEquipmentIdentity | cut -c -3 | grep -c '011')"
+                if [[ $device_newbr == 1 ]]; then
+                    device_newbr=0
+                else
+                    device_newbr=1
+                fi
             fi
         ;;
     esac
@@ -2405,7 +2414,7 @@ restore_prepare() {
                 restore_latest custom
                 if [[ $device_type == "iPhone2,1" ]]; then
                     print "* If the restore succeeded but the device does not boot:"
-                    print "* Go to: Other Utiltiies -> Install alloc8 Exploit"
+                    print "* Go to: Other Utilities -> Install alloc8 Exploit"
                 fi
                 if [[ $device_target_vers == "3"* ]]; then
                     print "* For device activation on Linux, go to: Other Utilities -> Attempt Activation"
@@ -2762,6 +2771,11 @@ menu_print_info() {
     fi
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
+    if [[ $device_newbr == 1 ]]; then
+        print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+        print "* This $device_type is an old bootrom model"
+    fi
     print "* iOS Version: $device_vers"
     print "* ECID: $device_ecid"
     echo
