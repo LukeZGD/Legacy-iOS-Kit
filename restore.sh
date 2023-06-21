@@ -115,7 +115,17 @@ set_tool_paths() {
 
         # version check
         if [[ -n $UBUNTU_CODENAME ]]; then
-            ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
+            case $UBUNTU_CODENAME in
+                "jammy" | "kinetic" ) ubuntu_ver=22;;
+                "lunar" | "mantic" ) ubuntu_ver=23;;
+            esac
+            if [[ -z $ubuntu_ver ]]; then
+                . /etc/upstream-release/lsb-release 2>/dev/null
+                ubuntu_ver="$(echo "$DISTRIB_RELEASE" | cut -c -2)"
+            fi
+            if [[ -z $ubuntu_ver ]]; then
+                ubuntu_ver="$(echo "$VERSION_ID" | cut -c -2)"
+            fi
         elif [[ -e /etc/debian_version ]]; then
             debian_ver=$(cat /etc/debian_version)
             if [[ $debian_ver == *"sid" ]]; then
