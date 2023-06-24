@@ -2746,6 +2746,12 @@ device_ramdisk() {
                 vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
                 build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
             fi
+            if [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
+                warn "iOS $vers on $device_type is not supported for jailbreaking with SSHRD."
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                pause
+                return
+            fi
             case $vers in
                 8.4.1 )       untether="etasonJB-untether.tar";;
                 7.1* )        untether="panguaxe.tar";;
@@ -2762,7 +2768,7 @@ device_ramdisk() {
                     return
                 ;;
                 * )
-                    warn "iOS $vers detected. This version is not supported for jailbreaking with SSHRD, sorry."
+                    warn "iOS $vers is not supported for jailbreaking with SSHRD."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                     pause
                     return
@@ -2949,7 +2955,9 @@ menu_main() {
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
         fi
-        if (( device_proc < 7 )); then
+        if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
+            :
+        elif (( device_proc < 7 )); then
             if [[ $device_mode == "Normal" ]]; then
                 case $device_vers in
                     8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) menu_items+=("Jailbreak Device");;
@@ -3525,6 +3533,10 @@ device_alloc8() {
 device_jailbreakrd() {
     if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown" ]]; then
         read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
+        if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
+            warn "This version is not supported for jailbreaking with SSHRD."
+            return
+        fi
         case $device_vers in
             8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) :;;
             * ) warn "This version is not supported for jailbreaking with SSHRD."; return;;
