@@ -1,0 +1,2 @@
+/dev/disk0s1 / hfs rw 0 1
+/dev/disk0s2s1 /private/var hfs rw              0 2

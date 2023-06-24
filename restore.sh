@@ -411,7 +411,7 @@ version_update() {
     fi
     log "Updating..."
     cp resources/firstrun tmp 2>/dev/null
-    rm -r bin/ resources/ LICENSE README.md restore*
+    rm -r bin/ resources/ LICENSE README.md restore.cmd restore.sh
     unzip -q tmp/latest.zip -d .
     cp tmp/firstrun resources 2>/dev/null
     log "Done! Please run the script again"
@@ -435,7 +435,7 @@ version_check() {
         if [[ $no_version_check != 1 ]]; then
             warn "Your copy of Legacy iOS Kit is downloaded incorrectly. Do not use the \"Code\" button in GitHub."
             print "Please download Legacy iOS Kit using git clone or from GitHub releases: https://github.com/LukeZGD/Legacy-iOS-Kit/releases"
-            version_check
+            version_get
             version_update
         fi
     fi
@@ -516,6 +516,10 @@ device_get_info() {
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_mode == "Recovery" ]]; then
+                print "* Device: $device_type in $device_mode mode"
+                print "* iOS Version: $device_vers"
+                print "* ECID: $device_ecid"
+                echo
                 warn "Your device is in recovery mode. Enter DFU mode to continue."
                 device_enter_mode DFU
             fi
@@ -1885,7 +1889,10 @@ ipsw_prepare_32bit() {
             7* ) JBFiles+=("fstab7.tar");;
             * )  JBFiles+=("fstab_rw.tar");;
         esac
-        JBFiles+=("freeze.tar")
+        case $device_target_vers in
+            5* ) JBFiles+=("freeze_old.tar");;
+            * )  JBFiles+=("freeze.tar");;
+        esac
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
         done
@@ -2047,6 +2054,9 @@ ipsw_prepare_custom() {
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
+        log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     fi
 
@@ -2592,6 +2602,14 @@ device_remove4() {
     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#clearing-nvram"
 }
 
+device_ramdisktar() {
+    local jelbrek="../resources/jailbreak"
+    log "Sending $1"
+    $scp -P 2222 $jelbrek/$1 root@127.0.0.1:/mnt1
+    log "Extracting $1"
+    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$1 -C /mnt1; rm /mnt1/$1"
+}
+
 device_ramdisk() {
     local comps=("iBSS" "iBEC" "RestoreRamdisk" "DeviceTree" "AppleLogo" "Kernelcache")
     local name
@@ -2699,12 +2717,100 @@ device_ramdisk() {
     sleep 20
 
     case $1 in
-        "nvram" )
+        "nvram" | "jailbreak" )
             log "Running iproxy for SSH..."
             $iproxy 2222 22 >/dev/null &
             iproxy_pid=$!
             sleep 2
             device_sshpass alpine
+        ;;
+    esac
+    case $1 in
+        "jailbreak" )
+            local vers
+            local build
+            local untether
+            local jelbrek="../resources/jailbreak"
+            log "Mounting root filesystem"
+            $ssh -p 2222 root@127.0.0.1 "mount.sh root"
+            sleep 2
+            log "Getting iOS version"
+            $scp -P 2222 root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
+            if [[ $platform == "macos" ]]; then
+                rm -f BuildVer Version
+                plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
+                vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+                plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
+                build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+            else
+                vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+                build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+            fi
+            case $vers in
+                8.4.1 )       untether="etasonJB-untether.tar";;
+                7.1* )        untether="panguaxe.tar";;
+                7* )          untether="evasi0n7-untether.tar";;
+                6.1.[3456] )  untether="p0sixspwn.tar";;
+                6* )          untether="evasi0n6-untether.tar";;
+                5* )          untether="pris0nbarake/tar-${device_model}_$build.tar";;
+                4.2.1 | 4.1 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.3* | 4.2* ) untether="unthredeh4il.tar";;
+                '' )
+                    warn "Something wrong happened. Failed to get iOS version."
+                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    pause
+                    return
+                ;;
+                * )
+                    warn "iOS $vers detected. This version is not supported for jailbreaking with SSHRD, sorry."
+                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    pause
+                    return
+                ;;
+            esac
+            log "Nice, iOS $vers is compatible."
+            log "Sending $untether"
+            $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
+            if [[ $vers == "4.1" ]]; then
+                untether="${device_type}_${build}.tar"
+                log "Extracting $untether"
+                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+            fi
+            log "Mounting filesystems"
+            $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
+            case $vers in
+                8* ) device_ramdisktar fstab8.tar;;
+                7* ) device_ramdisktar fstab7.tar;;
+                6* ) device_ramdisktar fstab_rw.tar;;
+                5* ) untether="tar-${device_model}_$build.tar";;
+                4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
+            esac
+            case $vers in
+                4.2.1 | 4.1 )
+                    untether="${device_type}_${build}.tar"
+                    if [[ $device_type == "iPod2,1" ]]; then
+                        $scp -P 2222 $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
+                    else
+                        $scp -P 2222 $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
+                    fi
+                    $ssh -p 2222 root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
+                ;;
+            esac
+            if [[ $vers != "4.1" ]]; then
+                log "Extracting $untether"
+                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+            fi
+            case $vers in
+                8* | 7* | 6* ) device_ramdisktar freeze.tar;;
+                5* | 4* ) device_ramdisktar freeze_old.tar;;
+            esac
+            log "Rebooting"
+            $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+            log "Cool, done and jailbroken (hopefully)"
+            return
+        ;;
+            
+        "nvram" )
             log "Sending commands for clearing NVRAM..."
             $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done! Your device should reboot now."
@@ -2843,6 +2949,15 @@ menu_main() {
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
         fi
+        if (( device_proc < 7 )); then
+            if [[ $device_mode == "Normal" ]]; then
+                case $device_vers in
+                    8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) menu_items+=("Jailbreak Device");;
+                esac
+            elif [[ $device_mode != "none" ]]; then
+                menu_items+=("Jailbreak Device")
+            fi
+        fi
         menu_items+=("Save SHSH Blobs" "Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -2850,6 +2965,7 @@ menu_main() {
         done
         case $selected in
             "Restore/Downgrade" ) menu_restore;;
+            "Jailbreak Device" ) mode="jailbreak";;
             "Save SHSH Blobs" ) menu_shsh;;
             "Other Utilities" ) menu_other;;
             "Exit" ) mode="exit";;
@@ -3406,6 +3522,21 @@ device_alloc8() {
     print "* For more troubleshooting, go to: https://github.com/axi0mX/ipwndfu/blob/master/JAILBREAK-GUIDE.md"
 }
 
+device_jailbreakrd() {
+    if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown" ]]; then
+        read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
+        case $device_vers in
+            8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) :;;
+            * ) warn "This version is not supported for jailbreaking with SSHRD."; return;;
+        esac
+    fi
+    print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
+    print "* Before continuing, make sure that your device does not have a jailbreak yet."
+    print "* No data will be lost, but please back up your data just in case."
+    pause
+    device_ramdisk jailbreak
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -3470,6 +3601,7 @@ main() {
             "save-cydia-blobs" ) shsh_save_cydia;;
             "activate" ) $ideviceactivation activate;;
             "alloc8" ) device_alloc8;;
+            "jailbreak" ) device_jailbreakrd;;
             * ) :;;
         esac
 

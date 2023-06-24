@@ -20,3 +20,4 @@ saved/
 sudoloop
 tmp/
 version.xml
+*.DS_Store
