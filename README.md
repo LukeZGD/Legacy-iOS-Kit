@@ -9,7 +9,7 @@
 
 ## Features
 - Restore to iOS 8.4.1 or 6.1.3 on supported 32-bit devices **(OTA signed)**
-- Restore iPhone 4 GSM (iPhone3,1) to lower iOS versions **(powdersn0w)**
+- Restore iPhone 4 GSM and CDMA (iPhone3,1 and 3,3) to lower iOS versions **(powdersn0w)**
 - Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
 - Restore 32-bit devices to lower iOS versions **with SHSH blobs**
 - Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
@@ -18,7 +18,7 @@
     - Including latest iOS versions for some devices (4.2.1, 5.1.1, 6.1.6, 7.1.2)
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
     - Available on target versions iOS 4.1, 4.2.x, 4.3.x, 5.x, 6.x, 7.x, and 8.4.1
-    - Jailbreaking A5 4.3.x devices is not supported (only 5.x and newer will work)
+    - Jailbreaking iPad 2 on 4.3.x is not supported (only 5.x and newer will work)
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
     - Limited compatibility due to SEP/BB, see below
@@ -80,6 +80,7 @@
     - iPod touch 6
 - Restoring with powdersn0w is supported on the following devices:
     - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
+    - iPhone 4 CDMA - targets iOS 5.0 to 6.1.3
     - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - targets iOS 5.0 to 6.1.3, 8.0 to 9.3.5
     - Using powdersn0w requires iOS 7.1.x blobs for your device
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:

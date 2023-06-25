@@ -965,6 +965,7 @@ device_enter_mode() {
                 device_ipwndfu pwn
             elif [[ $device_proc == 4 && $platform != "macos" ]]; then
                 # A4 linux uses ipwnder
+                log "Placing device to pwnDFU mode using ipwnder"
                 $ipwnder -p
                 tool_pwned=$?
             elif [[ $device_proc == 7 && $platform == "macos" && $(uname -m) != "x86_64" ]]; then
@@ -1657,9 +1658,9 @@ ipsw_prepare_32bit_paths() {
     local str2
     if [[ $2 == "target" ]]; then
         case $comp in
-            "AppleLogo" ) str2="${name/applelogo/"applelogo7"}";;
-            "RecoveryMode" ) str2="${name/recoverymode/"recoverymode7"}";;
-            "NewiBoot" ) str2="${name/iBoot/"iBoot$(echo $device_target_vers | cut -c 1)"}";;
+            "AppleLogo" ) str2="${name/applelogo/applelogo7}";;
+            "RecoveryMode" ) str2="${name/recoverymode/recoverymode7}";;
+            "NewiBoot" ) str2="${name/iBoot/iBoot$(echo $device_target_vers | cut -c 1)}";;
         esac
         case $comp in
             "AppleLogo" | "RecoveryMode" | "NewiBoot" )
@@ -2464,7 +2465,7 @@ restore_prepare() {
                 else
                     restore_latest
                 fi
-            elif [[ $device_type == "iPhone3,1" ]]; then
+            elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 # powdersn0w 4.3.x-6.1.3
                 shsh_save version 7.1.2
                 device_enter_mode pwnDFU
@@ -2537,6 +2538,8 @@ ipsw_prepare() {
                     shsh_save version 7.1.2
                 fi
                 ipsw_prepare_powder
+            elif [[ $device_type == "iPhone3,3" ]]; then
+                ipsw_prepare_powder2
             else
                 ipsw_prepare_custom
             fi
@@ -3093,7 +3096,7 @@ menu_restore() {
         case $device_type in
             iPhone4,1 | iPhone5,[12] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.1.x blobs)");;
-            iPhone3,1 )
+            iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
             iPhone2,1 )
                 menu_items+=("iOS 5.1.1" "iOS 4.3.3" "iOS 4.1" "iOS 4.0" "iPhoneOS 3.1.3");;
@@ -3232,6 +3235,7 @@ menu_ipsw() {
                 print "* Select Target IPSW to continue"
                 case $device_type in
                     iPhone3,1 ) print "* Any iOS version from 4.3 to 6.1.3 is supported";;
+                    iPhone3,3 ) print "* Any iOS version from 5.0 to 6.1.3 is supported";;
                     iPhone5,[12] | iPod5,1 ) print "* Any iOS version from 6.0 to 9.3.5 is supported (not iOS 7)";;
                     iPad2,4 ) print "* Any iOS version from 5.1 to 9.3.5 is supported (not iOS 7)";;
                     * ) print "* Any iOS version from 5.0 to 9.3.5 is supported (not iOS 7)";;
@@ -3239,19 +3243,19 @@ menu_ipsw() {
             fi
             echo
             local text2="(iOS 7.1.x)"
-            if [[ $device_type == "iPhone3,1" ]]; then
+            if [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 text2="(iOS 7.1.2)"
             fi
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
-                if [[ $device_type != "iPhone3,1" ]]; then
+                if [[ $device_type != "iPhone3,1" && $device_type != "iPhone3,3" ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
             else
                 print "* Select Base $text2 IPSW to continue"
             fi
-            if [[ $device_type == "iPhone3,1" ]]; then
+            if [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 shsh_path=1
             else
                 echo
