@@ -17,7 +17,7 @@
 - Option to **jailbreak** all of the above devices
     - Including latest iOS versions for some devices (4.2.1, 5.1.1, 6.1.6, 7.1.2)
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
-    - Available on target versions iOS 4.1, 4.2.x, 4.3.x, 5.x, 6.x, 7.x, and 8.4.1
+    - Available on target versions 3.2.2, 4.0.x, 4.1, 4.2.x, 4.3.x, 5.x, 6.x, 7.x, and 8.4.1
     - Jailbreaking iPad 2 on 4.3.x is not supported (only 5.x and newer will work)
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Restore A7/A8 devices to lower iOS versions **with SHSH blobs**

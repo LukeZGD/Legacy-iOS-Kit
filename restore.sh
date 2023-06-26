@@ -2696,7 +2696,7 @@ device_ramdisk() {
 
     mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg ../saved/$device_type/ramdisk 2>/dev/null
 
-    if [[ $device_proc == 4 ]]; then
+    if [[ $device_proc == 4 || $1 == "jailbreak" ]]; then
         device_enter_mode pwnDFU
     else
         device_enter_mode kDFU
@@ -2756,14 +2756,14 @@ device_ramdisk() {
                 return
             fi
             case $vers in
-                8.4.1 )       untether="etasonJB-untether.tar";;
-                7.1* )        untether="panguaxe.tar";;
-                7* )          untether="evasi0n7-untether.tar";;
-                6.1.[3456] )  untether="p0sixspwn.tar";;
-                6* )          untether="evasi0n6-untether.tar";;
-                5* )          untether="pris0nbarake/tar-${device_model}_$build.tar";;
-                4.2.1 | 4.1 ) untether="greenpois0n/${device_type}_${build}.tar";;
-                4.3* | 4.2* ) untether="unthredeh4il.tar";;
+                8.4.1 )      untether="etasonJB-untether.tar";;
+                7.1* )       untether="panguaxe.tar";;
+                7* )         untether="evasi0n7-untether.tar";;
+                6.1.[3456] ) untether="p0sixspwn.tar";;
+                6* )         untether="evasi0n6-untether.tar";;
+                5* )         untether="pris0nbarake/tar-${device_model}_$build.tar";;
+                4.2.1 | 4.1 | 4.0* | 3.2.2 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.3* | 4.2* )                untether="unthredeh4il.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
@@ -2780,11 +2780,13 @@ device_ramdisk() {
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
-            if [[ $vers == "4.1" ]]; then
-                untether="${device_type}_${build}.tar"
-                log "Extracting $untether"
-                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-            fi
+            case $vers in
+                4.1 | 4.0* | 3.2.2 )
+                    untether="${device_type}_${build}.tar"
+                    log "Extracting $untether"
+                    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                ;;
+            esac
             log "Mounting filesystems"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
             case $vers in
@@ -2795,7 +2797,7 @@ device_ramdisk() {
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
-                4.2.1 | 4.1 )
+                4.2.1 | 4.1 | 4.0* | 3.2.2 )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
                         $scp -P 2222 $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
@@ -2805,13 +2807,16 @@ device_ramdisk() {
                     $ssh -p 2222 root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
                 ;;
             esac
-            if [[ $vers != "4.1" ]]; then
-                log "Extracting $untether"
-                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-            fi
+            case $vers in
+                4.1 | 4.0* | 3.2.2 ) :;;
+                * )
+                    log "Extracting $untether"
+                    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                ;;
+            esac
             case $vers in
                 8* | 7* | 6* ) device_ramdisktar freeze.tar;;
-                5* | 4* ) device_ramdisktar freeze_old.tar;;
+                5* | 4* | 3* ) device_ramdisktar freeze_old.tar;;
             esac
             log "Rebooting"
             $ssh -p 2222 root@127.0.0.1 "reboot_bak"
@@ -2941,6 +2946,9 @@ menu_print_info() {
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         print "* This $device_type is an old bootrom model"
     fi
+    if [[ $de_bbupdate == 1 ]]; then
+        warn "Disable bbupdate flag detected, baseband update is disabled."
+    fi
     print "* iOS Version: $device_vers"
     print "* ECID: $device_ecid"
     echo
@@ -2963,7 +2971,7 @@ menu_main() {
         elif (( device_proc < 7 )); then
             if [[ $device_mode == "Normal" ]]; then
                 case $device_vers in
-                    8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) menu_items+=("Jailbreak Device");;
+                    8.4.1 | 7* | 6* | 5* | 4* | 3.2.2 ) menu_items+=("Jailbreak Device");;
                 esac
             elif [[ $device_mode != "none" ]]; then
                 menu_items+=("Jailbreak Device")
@@ -3542,7 +3550,7 @@ device_jailbreakrd() {
             return
         fi
         case $device_vers in
-            8.4.1 | 7* | 6* | 5* | 4.3* | 4.2* | 4.1 ) :;;
+            8.4.1 | 7* | 6* | 5* | 4* | 3.2.2 ) :;;
             * ) warn "This version is not supported for jailbreaking with SSHRD."; return;;
         esac
     fi
@@ -3641,7 +3649,7 @@ for i in "$@"; do
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
-        "--disable-bbupdate" ) device_disable_bbupdate=1;;
+        "--disable-bbupdate" ) de_bbupdate=1; device_disable_bbupdate=1;;
     esac
 done
 
