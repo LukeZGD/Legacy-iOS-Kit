@@ -667,11 +667,11 @@ device_get_info() {
     esac
     # disable baseband update for ipad 2 cellular devices
     case $device_type in
-        iPad2,[23] ) device_disable_bbupdate=$device_type;;
+        iPad2,[23] ) device_disable_bbupdate="$device_type";;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 ]]; then
-        device_disable_bbupdate=$device_type
+        device_disable_bbupdate="$device_type"
     fi
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
@@ -1579,11 +1579,14 @@ ipsw_prepare_jailbreak() {
         cp -R ../resources/firmware/FirmwareBundles .
     fi
 
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
-        ExtraArgs+=" -bbupdate"
-    fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
+    fi
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+        ExtraArgs+=" -bbupdate"
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+        device_dumpbaseband
+        ExtraArgs+=" ../saved/$device_type/baseband.tar"
     fi
     log "Preparing custom IPSW: $ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
@@ -1871,11 +1874,14 @@ ipsw_prepare_32bit() {
 
     ipsw_prepare_bundle
 
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
-        ExtraArgs+=" -bbupdate"
-    fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
+    fi
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+        ExtraArgs+=" -bbupdate"
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+        device_dumpbaseband
+        ExtraArgs+=" ../saved/$device_type/baseband.tar"
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -2025,11 +2031,14 @@ ipsw_prepare_powder2() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp ../resources/jailbreak/freeze.tar .
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
-        ExtraArgs+=" -bbupdate"
-    fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
+    fi
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+        ExtraArgs+=" -bbupdate"
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+        device_dumpbaseband
+        ExtraArgs+=" ../saved/$device_type/baseband.tar"
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
@@ -2720,7 +2729,7 @@ device_ramdisk() {
     sleep 20
 
     case $1 in
-        "nvram" | "jailbreak" )
+        "nvram" | "jailbreak" | "baseband" )
             log "Running iproxy for SSH..."
             $iproxy 2222 22 >/dev/null &
             iproxy_pid=$!
@@ -2729,6 +2738,20 @@ device_ramdisk() {
         ;;
     esac
     case $1 in
+        "baseband" )
+            local baseband="../saved/$device_type/baseband.tar"
+            log "Mounting root filesystem"
+            $ssh -p 2222 root@127.0.0.1 "mount.sh root"
+            sleep 2
+            log "Creating baseband.tar"
+            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone"
+            log "Copying baseband.tar"
+            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar .
+            cp baseband.tar $baseband
+            $ssh -p 2222 root@127.0.0.1 "rm /mnt1/baseband.tar; reboot_bak"
+            return
+        ;;
+
         "jailbreak" )
             local vers
             local build
@@ -2829,8 +2852,8 @@ device_ramdisk() {
             $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done! Your device should reboot now."
             print "* If the device did not connect, SSH to the device manually."
-            kill $iproxy_pid
         ;;
+
         * ) log "Device should now be in SSH ramdisk mode.";;
     esac
     echo
@@ -2947,7 +2970,8 @@ menu_print_info() {
         print "* This $device_type is an old bootrom model"
     fi
     if [[ $de_bbupdate == 1 ]]; then
-        warn "Disable bbupdate flag detected, baseband update is disabled."
+        warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
+        print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
     fi
     print "* iOS Version: $device_vers"
     print "* ECID: $device_ecid"
@@ -3495,15 +3519,14 @@ menu_other() {
                 else
                     menu_items+=("Send Pwned iBSS")
                 fi
-                menu_items+=("SSH Ramdisk")
+                if [[ $device_type == "iPhone"* ]]; then
+                    menu_items+=("Dump Baseband")
+                fi
+                menu_items+=("SSH Ramdisk" "Clear NVRAM")
             fi
             if [[ $device_type == "iPhone3,1" ]]; then
                 menu_items+=("Disable/Enable Exploit")
-            fi
-            if (( device_proc < 7 )); then
-                menu_items+=("Clear NVRAM")
-            fi
-            if [[ $device_type == "iPhone2,1" ]]; then
+            elif [[ $device_type == "iPhone2,1" ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
             menu_items+=("Attempt Activation")
@@ -3529,6 +3552,7 @@ menu_other() {
             "(Re-)Install Dependencies" ) install_depends;;
             "Attempt Activation" ) mode="activate";;
             "Install alloc8 Exploit" ) mode="alloc8";;
+            "Dump Baseband" ) mode="baseband";;
             "Go Back" ) back=1;;
         esac
     done
@@ -3559,6 +3583,40 @@ device_jailbreakrd() {
     print "* No data will be lost, but please back up your data just in case."
     pause
     device_ramdisk jailbreak
+}
+
+device_dumpbaseband() {
+    local baseband="../saved/$device_type/baseband.tar"
+    if [[ -e $baseband ]]; then
+        log "Found existing dumped baseband: $baseband"
+        return
+    fi
+    if [[ $device_mode == "Recovery" ]]; then
+        device_enter_mode pwnDFU
+    fi
+    if [[ $device_mode == "Normal" ]]; then
+        print "* Make sure to have installed the requirements from Cydia."
+        print "* Only proceed if you have followed the steps in the GitHub wiki."
+        print "* You will be prompted to enter the root password of your iOS device."
+        print "* The default root password is \"alpine\""
+        log "Running iproxy for SSH..."
+        $iproxy 2222 22 >/dev/null &
+        iproxy_pid=$!
+        sleep 2
+        device_sshpass
+        log "Creating baseband.tar"
+        $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/standalone"
+        log "Copying baseband.tar"
+        $scp -P 2222 root@127.0.0.1:/tmp/baseband.tar .
+        cp baseband.tar $baseband
+    elif [[ $device_mode == "DFU" ]]; then
+        device_ramdisk baseband
+    fi
+    kill $iproxy_pid
+    if [[ ! -e $baseband ]]; then
+        error "Failed to dump baseband from device. Please run the script again"
+    fi
+    log "Dumping baseband done: $baseband"
 }
 
 main() {
@@ -3626,6 +3684,7 @@ main() {
             "activate" ) $ideviceactivation activate;;
             "alloc8" ) device_alloc8;;
             "jailbreak" ) device_jailbreakrd;;
+            "baseband" ) device_dumpbaseband;;
             * ) :;;
         esac
 
@@ -3667,6 +3726,10 @@ if [[ $no_color != 1 ]]; then
     color_B=$(tput setaf 12)
     color_Y=$(tput setaf 11)
     color_N=$(tput sgr0)
+fi
+
+if [[ $device_disable_bbupdate != "iPad2,3" ]]; then
+    de_bbupdate=1
 fi
 
 main
