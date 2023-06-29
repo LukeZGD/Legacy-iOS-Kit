@@ -13,6 +13,7 @@
 - Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
 - Restore 32-bit devices to lower iOS versions **with SHSH blobs**
 - Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
+    - For iPhone 5 (not 5C), 7.0.x blobs can also be used
     - Device support is limited, see below
 - Option to **jailbreak** all of the above devices
     - Including latest iOS versions for some devices (4.2.1, 5.1.1, 6.1.6, 7.1.2)
@@ -81,8 +82,8 @@
 - Restoring with powdersn0w is supported on the following devices:
     - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
     - iPhone 4 CDMA - targets iOS 5.0 to 6.1.3
-    - iPhone 4S, iPhone 5 (not 5C), iPad 2 Rev A, iPod 5th generation - targets iOS 5.0 to 6.1.3, 8.0 to 9.3.5
-    - Using powdersn0w requires iOS 7.1.x blobs for your device
+    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - targets iOS 5.0 to 9.3.5 (not iOS 7)
+    - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x can also be used for iPhone 5)
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.0
@@ -109,6 +110,7 @@
 - curl
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
+    - [Exploits used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)
@@ -132,6 +134,8 @@
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
+- [sshpass](https://sourceforge.net/project/sshpass)
+- Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
 - [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
@@ -141,4 +145,3 @@
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool) and [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze)
 - SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
-- Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)

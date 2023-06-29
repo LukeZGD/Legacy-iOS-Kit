@@ -1275,7 +1275,7 @@ patch_ibec() {
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_jailbreak_tool, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
-        7* | 6* | 5* | 4.2.1 | 4.1 ) ipsw_canjailbreak=1;;
+        7* | 6* | 5* | 4.2.1 ) ipsw_canjailbreak=1;;
     esac
 
     if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )); then
@@ -1725,6 +1725,7 @@ ipsw_prepare_bundle() {
     local vers="$device_target_vers"
     local build="$device_target_build"
     local hw="$device_model"
+    local base_build="11D257"
     local RootSize
     FirmwareBundle="FirmwareBundles/"
 
@@ -1779,10 +1780,14 @@ ipsw_prepare_bundle() {
     if [[ $1 == "base" ]]; then
         case $device_type in
             iPhone5,[12] ) hw="iphone5";;
+            iPhone5,[34] ) hw="iphone5c";;
+        esac
+        case $device_base_build in
+            "11A"* | "11B"* ) base_build="11B554a";;
         esac
         echo -e "<key>RamdiskExploit</key><dict>" >> $NewPlist
-        echo -e "<key>exploit</key><string>src/target/$hw/11D257/exploit</string>" >> $NewPlist
-        echo -e "<key>inject</key><string>src/target/$hw/11D257/partition</string></dict>" >> $NewPlist
+        echo -e "<key>exploit</key><string>src/target/$hw/$base_build/exploit</string>" >> $NewPlist
+        echo -e "<key>inject</key><string>src/target/$hw/$base_build/partition</string></dict>" >> $NewPlist
     elif [[ $1 == "target" && $vers == "5"* ]]; then
         echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios5</string></dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
@@ -1896,10 +1901,7 @@ ipsw_prepare_32bit() {
             7* ) JBFiles+=("fstab7.tar");;
             * )  JBFiles+=("fstab_rw.tar");;
         esac
-        case $device_target_vers in
-            5* ) JBFiles+=("freeze_old.tar");;
-            * )  JBFiles+=("freeze.tar");;
-        esac
+        JBFiles+=("freeze.tar")
         for i in {0..2}; do
             JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
         done
@@ -2616,10 +2618,14 @@ device_remove4() {
 
 device_ramdisktar() {
     local jelbrek="../resources/jailbreak"
+    local target="/mnt1"
+    if [[ $2 == "data" ]]; then
+        target+="/private/var"
+    fi
     log "Sending $1"
-    $scp -P 2222 $jelbrek/$1 root@127.0.0.1:/mnt1
+    $scp -P 2222 $jelbrek/$1 root@127.0.0.1:$target
     log "Extracting $1"
-    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$1 -C /mnt1; rm /mnt1/$1"
+    $ssh -p 2222 root@127.0.0.1 "tar -xvf $target/$1 -C /mnt1; rm $target/$1"
 }
 
 device_ramdisk() {
@@ -2803,6 +2809,7 @@ device_ramdisk() {
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
+            # 3.2.2-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
                 4.1 | 4.0* | 3.2.2 )
                     untether="${device_type}_${build}.tar"
@@ -2810,7 +2817,7 @@ device_ramdisk() {
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
-            log "Mounting filesystems"
+            log "Mounting data partition"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
             case $vers in
                 8* ) device_ramdisktar fstab8.tar;;
@@ -2837,10 +2844,8 @@ device_ramdisk() {
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
-            case $vers in
-                8* | 7* | 6* ) device_ramdisktar freeze.tar;;
-                5* | 4* | 3* ) device_ramdisktar freeze_old.tar;;
-            esac
+            device_ramdisktar freeze.tar data
+            sleep 3
             log "Rebooting"
             $ssh -p 2222 root@127.0.0.1 "reboot_bak"
             log "Cool, done and jailbroken (hopefully)"
@@ -3126,8 +3131,8 @@ menu_restore() {
                 menu_items+=("iOS 6.1.3");;
         esac
         case $device_type in
-            iPhone4,1 | iPhone5,[12] | iPad2,4 | iPod5,1 )
-                menu_items+=("Other (powdersn0w 7.1.x blobs)");;
+            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
+                menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
             iPhone2,1 )
@@ -3275,9 +3280,10 @@ menu_ipsw() {
             fi
             echo
             local text2="(iOS 7.1.x)"
-            if [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
-                text2="(iOS 7.1.2)"
-            fi
+            case $device_type in
+                iPhone3,[13] ) text2="(iOS 7.1.2)";;
+                iPhone5,[12] ) text2="(iOS 7.x)";;
+            esac
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
@@ -3445,8 +3451,9 @@ menu_ipsw_browse() {
         "iPhoneOS 3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
-            if [[ $device_base_vers != "7.1"* ]]; then
+            if [[ $device_base_vers != "7.1"* && $device_type != "iPhone5,1" && $device_target_type != "iPhone5,2" ]]; then
                 log "Selected IPSW is not for iOS 7.1.x."
+                print "* You need iOS 7.1.x IPSW and SHSH blobs for this device to use powdersn0w."
                 pause
                 return
             fi
@@ -3480,6 +3487,7 @@ menu_ipsw_browse() {
 menu_shsh_browse() {
     local newpath
     local text="target"
+    local val="$ipsw_path.ipsw"
     [[ $1 == "base" ]] && text="base"
 
     input "Select your $text SHSH file in the file selection window."
@@ -3489,17 +3497,12 @@ menu_shsh_browse() {
     log "Selected SHSH file: $newpath"
     log "Validating..."
     if [[ $1 == "base" ]]; then
-        "$dir/validate" "$newpath" "$ipsw_base_path.ipsw" -z
-        if [[ $? != 0 ]]; then
-            warn "Validation failed. Did you select the correct IPSW/SHSH?"
-            pause
-        fi
-    else
-        "$dir/validate" "$newpath" "$ipsw_path.ipsw" -z
-        if [[ $? != 0 ]]; then
-            warn "Validation failed. Did you select the correct IPSW/SHSH?"
-            pause
-        fi
+        val="$ipsw_base_path.ipsw"
+    fi
+    "$dir/validate" "$newpath" "$val" -z
+    if [[ $? != 0 ]]; then
+        warn "Validation failed. Did you select the correct IPSW/SHSH?"
+        pause
     fi
     shsh_path="$newpath"
 }
