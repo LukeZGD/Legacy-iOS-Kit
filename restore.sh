@@ -422,11 +422,16 @@ version_check() {
     pushd .. >/dev/null
     if [[ -d .git ]]; then
         git_hash=$(git rev-parse HEAD | cut -c -7)
+        local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
+        version_current=v$(echo "$dm" | sed 's/-/./g').
+        dm="20$dm"
         if [[ $platform == "macos" ]]; then
-            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date -j -f "%Y-%m-%d %H:%M:%S" "$(date -v1d -v-1d +%Y-%m-%d) 23:59:59" +%s) | xargs printf "%02d")
+            dm="$(date -j -f "%Y-%m-%d %H:%M:%S" "${dm}-01 00:00:00" +%s)"
         else
-            version_current=v$(date +%y.%m).$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")
+            dm="$(date --date="${dm}-01" +%s)"
         fi
+        dm=$((dm-1))
+        version_current+=$(git rev-list --count HEAD --since=$dm | xargs printf "%02d")
     elif [[ -e ./resources/git_hash ]]; then
         version_current="$(cat ./resources/version)"
         git_hash="$(cat ./resources/git_hash)"
@@ -448,7 +453,7 @@ version_check() {
         version_get
         if [[ -z $version_latest ]]; then
             warn "Failed to check for updates. GitHub may be down or blocked by your network."
-        elif [[ $version_latest != "$version_current" ]]; then
+        elif [[ $git_hash_latest != "$git_hash" ]]; then
             if (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
                 warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
             else
@@ -3447,7 +3452,7 @@ menu_ipsw_browse() {
         "iPhoneOS 3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
-            if [[ $device_base_vers != "7.1"* && $device_type != "iPhone5,1" && $device_target_type != "iPhone5,2" ]]; then
+            if [[ $device_base_vers != "7.1"* && $device_type != "iPhone5,1" && $device_type != "iPhone5,2" ]]; then
                 log "Selected IPSW is not for iOS 7.1.x."
                 print "* You need iOS 7.1.x IPSW and SHSH blobs for this device to use powdersn0w."
                 pause
