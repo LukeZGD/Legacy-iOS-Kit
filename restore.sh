@@ -2808,7 +2808,6 @@ device_ramdisk() {
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
-                8.4.1 ) untether="untether.tar";;
                 4.2.1 | 4.1 | 4.0* | 3.2.2 )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
@@ -2820,7 +2819,7 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                4.1 | 4.0* | 3.2.2 ) :;;
+                8.4.1 | 4.1 | 4.0* | 3.2.2 ) :;;
                 * )
                     log "Extracting $untether"
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -2829,6 +2828,13 @@ device_ramdisk() {
             device_ramdisktar freeze.tar data
             sleep 3
             if [[ $vers == "8.4.1" ]]; then
+                log "Sending daibutsu/move.sh"
+                $scp -P 2222 $jelbrek/daibutsu/move.sh root@127.0.0.1:/
+                log "Moving files"
+                $ssh -p 2222 root@127.0.0.1 "bash /move.sh"
+                untether="untether.tar"
+                log "Extracting $untether"
+                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 log "Sending daibutsu/bin.tar"
                 $scp -P 2222 $jelbrek/daibutsu/bin.tar root@127.0.0.1:/mnt1
                 log "Extracting bin.tar"
