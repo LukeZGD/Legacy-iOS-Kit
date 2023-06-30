@@ -136,7 +136,6 @@
 - iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
 - [sshpass](https://sourceforge.net/project/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
-- [EtasonJB](https://www.theiphonewiki.com/wiki/EtasonJB)
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed.
-ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1. (may not work on 8.4.1 etason)
+ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1.
 device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 
 print() {
@@ -1299,13 +1299,13 @@ ipsw_preference_set() {
         case $device_target_vers in
             6.1.3 ) print "* I recommend to enable this for iOS 6.1.3, since it is hard to get p0sixspwn to work.";;
             8.4.1 )
-                print "* Based on some reported issues, Jailbreak Option might not work properly for iOS 8.4.1."
-                print "* I recommend to disable the option for these devices and sideload EtasonJB, HomeDepot, or daibutsu manually."
+                print "* It is possible for the jailbreak option on iOS 8.4.1 to not work properly."
+                print "* If the jailbreak does not work after the restore, try again with this option disabled."
             ;;
             5* )
                 if [[ $device_proc == 5 ]]; then
                     print "* The jailbreak option for iOS 5.x on A5 is experimental, and may not work properly."
-                    print "* For 5.0.1 and 5.1.1, I recommend disabling this option and jailbreak with Absinthe manually."
+                    print "* If the jailbreak does not work after the restore, try again with this option disabled."
                 fi
             ;;
         esac
@@ -1323,26 +1323,7 @@ ipsw_preference_set() {
 
     if [[ $ipsw_jailbreak == 1 && $device_target_vers == "8.4.1" &&
           -z $ipsw_jailbreak_tool && $device_target_powder != 1 ]]; then
-        case $device_type in
-            iPhone4,1 | iPhone5,2 )
-                input "Jailbreak Tool Option"
-                print "* This option is set to daibutsu by default (1)."
-                Selection=("daibutsu" "EtasonJB")
-                input "Select your option:"
-                select opt in "${Selection[@]}"; do
-                    case $opt in
-                        "EtasonJB" ) ipsw_jailbreak_tool="etasonjb"; break;;
-                        * ) ipsw_jailbreak_tool="daibutsu"; break;;
-                    esac
-                done
-                log "Jailbreak tool option set to: $ipsw_jailbreak_tool"
-                echo
-            ;;
-
-            iPad2,[4567] | iPad3,[123] | iPod5,1 )
-                ipsw_jailbreak_tool="daibutsu";;
-            * ) ipsw_jailbreak_tool="etasonjb";;
-        esac
+        ipsw_jailbreak_tool="daibutsu"
     fi
 
     if [[ $platform == "windows" ]]; then
@@ -1547,6 +1528,7 @@ ipsw_prepare_jailbreak() {
         if [[ $platform == "windows" ]]; then
             ipsw+="2"
         fi
+        log "Generating reboot.sh"
         echo '#!/bin/bash' > reboot.sh
         echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> reboot.sh
         echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> reboot.sh
@@ -1563,7 +1545,6 @@ ipsw_prepare_jailbreak() {
 
     elif [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            8.4.1 ) JBFiles+=("fstab8.tar" "etasonJB-untether.tar");;
             6.1.3 ) JBFiles+=("fstab_rw.tar" "p0sixspwn.tar");;
         esac
         JBFiles+=("freeze.tar")
@@ -2750,7 +2731,7 @@ device_ramdisk() {
             $ssh -p 2222 root@127.0.0.1 "mount.sh root"
             sleep 2
             log "Creating baseband.tar"
-            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone"
+            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone usr/local/standalone"
             log "Copying baseband.tar"
             $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar .
             cp baseband.tar $baseband
@@ -2785,7 +2766,7 @@ device_ramdisk() {
                 return
             fi
             case $vers in
-                8.4.1 )      untether="etasonJB-untether.tar";;
+                8.4.1 )      untether="daibutsu/untether.tar";;
                 7.1* )       untether="panguaxe.tar";;
                 7* )         untether="evasi0n7-untether.tar";;
                 6.1.[3456] ) untether="p0sixspwn.tar";;
@@ -2827,6 +2808,7 @@ device_ramdisk() {
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
+                8.4.1 ) untether="untether.tar";;
                 4.2.1 | 4.1 | 4.0* | 3.2.2 )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
@@ -2846,8 +2828,17 @@ device_ramdisk() {
             esac
             device_ramdisktar freeze.tar data
             sleep 3
-            log "Rebooting"
-            $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+            if [[ $vers == "8.4.1" ]]; then
+                log "Sending daibutsu/bin.tar"
+                $scp -P 2222 $jelbrek/daibutsu/bin.tar root@127.0.0.1:/mnt1
+                log "Extracting bin.tar"
+                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/bin.tar -C /; rm /mnt1/bin.tar"
+                log "Running haxx_overwrite"
+                $ssh -p 2222 root@127.0.0.1 "/usr/bin/haxx_overwrite -$device_model"
+            else
+                log "Rebooting"
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+            fi
             log "Cool, done and jailbroken (hopefully)"
             return
         ;;
@@ -3412,7 +3403,6 @@ ipsw_custom_set() {
     fi
     case $ipsw_jailbreak_tool in
         "daibutsu" ) ipsw_custom+="D";;
-        "etasonjb" ) ipsw_custom+="E";;
     esac
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
@@ -3608,7 +3598,7 @@ device_dumpbaseband() {
         sleep 2
         device_sshpass
         log "Creating baseband.tar"
-        $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/standalone"
+        $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/standalone /usr/local/standalone"
         log "Copying baseband.tar"
         $scp -P 2222 root@127.0.0.1:/tmp/baseband.tar .
         cp baseband.tar $baseband
