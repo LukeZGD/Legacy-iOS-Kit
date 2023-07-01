@@ -34,7 +34,9 @@ clean() {
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
-        sudo systemctl restart usbmuxd
+        if [[ -z $device_disable_usbmuxd ]]; then
+            sudo systemctl restart usbmuxd
+        fi
     fi
 }
 
@@ -61,6 +63,8 @@ Usage: ./restore.sh [Options]
 List of options:
     --debug                   For script debugging (set -x and debug mode)
     --disable-bbupdate        Disable baseband update
+    --disable-sudoloop        Disable running tools as root for Linux
+    --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
     --help                    Display this help message
     --no-color                Disable colors for script output
@@ -179,7 +183,9 @@ set_tool_paths() {
             fi
         fi
 
-        device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
+        if [[ -z $device_disable_sudoloop ]]; then
+            device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
+        fi
         # sudoloop check
         if [[ $(uname -m) == "x86_64" && -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
             local opt
@@ -205,9 +211,11 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             sudo chmod +x $dir/*
-            sudo systemctl stop usbmuxd
-            sudo usbmuxd -pz
-            usbmuxd_pid=$!
+            if [[ -z $device_disable_usbmuxd ]]; then
+                sudo systemctl stop usbmuxd
+                sudo usbmuxd -pz
+                usbmuxd_pid=$!
+            fi
         fi
 
     elif [[ $OSTYPE == "darwin"* ]]; then
@@ -2294,8 +2302,9 @@ restore_idevicerestore() {
         print "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
         print "* Follow the troubleshoting link for steps to attempt fixing this issue."
         print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
-    elif [[ $platform == "linux" && $device_target_vers == "4"* ]]; then
-        print "* For device activation on Linux, go to: Other Utilities -> Attempt Activation"
+    fi
+    if [[ $device_target_vers == "4"* ]]; then
+        print "* For device activation, go to: Other Utilities -> Attempt Activation"
     fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -2390,8 +2399,8 @@ restore_latest() {
         print "* Your problem may have already been addressed within the wiki page."
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
-    if [[ $platform == "linux" && $device_target_vers == "4"* ]]; then
-        print "* For device activation on Linux, go to: Other Utilities -> Attempt Activation"
+    if [[ $device_target_vers == "4"* ]]; then
+        print "* For device activation, go to: Other Utilities -> Attempt Activation"
     fi
 }
 
@@ -2475,7 +2484,7 @@ restore_prepare() {
                     print "* Go to: Other Utilities -> Install alloc8 Exploit"
                 fi
                 if [[ $device_target_vers == "3"* ]]; then
-                    print "* For device activation on Linux, go to: Other Utilities -> Attempt Activation"
+                    print "* For device activation, go to: Other Utilities -> Attempt Activation"
                 fi
             fi
         ;;
@@ -3149,6 +3158,9 @@ menu_restore() {
                 menu_items+=("iPhoneOS 3.1.3")
             ;;
         esac
+        case $device_type in
+            iPhone2,1 | iPod2,1 ) menu_items+=("Other (Custom IPSW)");;
+        esac
         menu_items+=("Latest iOS ($device_latest_vers)" "Other (use SHSH blobs)" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
@@ -3164,6 +3176,7 @@ menu_restore() {
         case $selected in
             "" ) :;;
             "Go Back" ) back=1;;
+            "Other (Custom IPSW)" ) mode="customipsw";;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -3478,9 +3491,11 @@ menu_ipsw_browse() {
         pause
         return
     fi
-    ipsw_verify "$newpath" "$device_target_build"
-    if [[ -n $versionc && $? != 0 ]]; then
-        return
+    if [[ $1 != "custom" ]]; then
+        ipsw_verify "$newpath" "$device_target_build"
+        if [[ -n $versionc && $? != 0 ]]; then
+            return
+        fi
     fi
     ipsw_path="$newpath"
 }
@@ -3623,6 +3638,31 @@ device_dumpbaseband() {
     log "Dumping baseband done: $baseband"
 }
 
+restore_customipsw() {
+    print "* You are about to restore with a custom IPSW."
+    print "* Note that this might only work on old bootrom devices."
+    print "* Also note that Legacy iOS Kit does not support tethered booting."
+    print "* Legacy iOS Kit will not support tethered boots, downgrades, and jailbreaks."
+    print "* Proceed with caution when restoring to custom IPSWs not made with Legacy iOS Kit."
+    if [[ $device_newbr == 1 ]]; then
+        warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
+        print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+    fi
+    pause
+    menu_ipsw_browse custom
+    if [[ -z $ipsw_path ]]; then
+        error "No IPSW selected, cannot continue."
+    fi
+    device_enter_mode pwnDFU
+    ipsw_extract
+    log "Running idevicerestore with command: $idevicerestore -ce \"$ipsw_path.ipsw\""
+    $idevicerestore -ce "$ipsw_path.ipsw"
+    log "Restoring done!"
+    if [[ $device_target_vers == "4"* ]]; then
+        print "* For device activation, go to: Other Utilities -> Attempt Activation"
+    fi
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -3689,6 +3729,7 @@ main() {
             "alloc8" ) device_alloc8;;
             "jailbreak" ) device_jailbreakrd;;
             "baseband" ) device_dumpbaseband;;
+            "customipsw" ) restore_customipsw;;
             * ) :;;
         esac
 
@@ -3713,6 +3754,8 @@ for i in "$@"; do
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
         "--disable-bbupdate" ) de_bbupdate=1; device_disable_bbupdate=1;;
+        "--disable-sudoloop" ) device_disable_sudoloop=1;;
+        "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
     esac
 done
 
