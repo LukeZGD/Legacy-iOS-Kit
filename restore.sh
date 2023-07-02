@@ -413,12 +413,14 @@ version_update() {
     else
         req=".assets[] | select (.name|test(\"${platform}\")) | .browser_download_url"
     fi
+    pushd "$(dirname "$0")/tmp" >/dev/null
     url="$(echo "$github_api" | $jq -r "$req")"
     log "Downloading: $url"
-    curl -L $url -o tmp/latest.zip
-    if [[ ! -s tmp/latest.zip ]]; then
+    curl -L $url -o latest.zip
+    if [[ ! -s latest.zip ]]; then
         error "Download failed. Please run the script again"
     fi
+    popd >/dev/null
     log "Updating..."
     cp resources/firstrun tmp 2>/dev/null
     rm -r bin/ resources/ LICENSE README.md restore.cmd restore.sh
