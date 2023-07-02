@@ -164,13 +164,13 @@ set_tool_paths() {
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
             live_cdusb=1
-            live_cdusb_r="Live"
+            live_cdusb_str="Live"
             log "Linux Live CD/USB detected."
             if [[ $(pwd) == "/home"* ]]; then
                 df . -h
                 if [[ $(lsblk -o label | grep -c "casper-rw") == 1 || $(lsblk -o label | grep -c "persistence") == 1 ]]; then
                     log "Detected Legacy iOS Kit running on persistent storage."
-                    live_cdusb_r="Live - Persistent storage"
+                    live_cdusb_str="Live - Persistent storage"
                 else
                     warn "Detected Legacy iOS Kit running on temporary storage."
                     print "* You may run out of space and get errors during the downgrade process."
@@ -178,7 +178,7 @@ set_tool_paths() {
                     print "* This means using another external HDD/flash drive to store Legacy iOS Kit on."
                     print "* To be able to use one USB drive only, make sure to enable Persistent Storage for the live USB."
                     pause
-                    live_cdusb_r="Live - Temporary storage"
+                    live_cdusb_str="Live - Temporary storage"
                 fi
             fi
         fi
@@ -388,8 +388,10 @@ install_depends() {
 version_get() {
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
+    pushd "$(dirname "$0")/tmp" >/dev/null
     version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
     git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
+    popd >/dev/null
 }
 
 version_update() {
@@ -431,7 +433,7 @@ version_check() {
     if [[ -d .git ]]; then
         git_hash=$(git rev-parse HEAD | cut -c -7)
         local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
-        version_current=v$(echo "$dm" | sed 's/-/./g').
+        version_current=v${dm//-/.}.
         dm="20$dm"
         if [[ $platform == "macos" ]]; then
             dm="$(date -j -f "%Y-%m-%d %H:%M:%S" "${dm}-01 00:00:00" +%s)"
@@ -2312,7 +2314,7 @@ restore_idevicerestore() {
 }
 
 restore_futurerestore() {
-    local ExtraArgs=()
+    local ExtraArr=()
     local futurerestore2="$futurerestore"
     local mac_ver=0
     local port=8888
@@ -2341,20 +2343,20 @@ restore_futurerestore() {
     restore_download_bbsep
     # baseband args
     if [[ $restore_baseband == 0 ]]; then
-        ExtraArgs+=("--no-baseband")
+        ExtraArr+=("--no-baseband")
     else
-        ExtraArgs+=("-b" "$restore_baseband" "-p" "$restore_manifest")
+        ExtraArr+=("-b" "$restore_baseband" "-p" "$restore_manifest")
     fi
     if [[ -n $restore_sep ]]; then
         # sep args for 64bit
-        ExtraArgs+=("-s" "$restore_sep" "-m" "$restore_manifest")
+        ExtraArr+=("-s" "$restore_sep" "-m" "$restore_manifest")
     fi
     if [[ -n "$1" ]]; then
         # custom arg, either --use-pwndfu or --skip-blob
-        ExtraArgs+=("$1")
+        ExtraArr+=("$1")
     fi
     if [[ $debug_mode == 1 ]]; then
-        ExtraArgs+=("-d")
+        ExtraArr+=("-d")
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
@@ -2365,11 +2367,11 @@ restore_futurerestore() {
           $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
         ipsw_path="$ipsw_custom"
     fi
-    ExtraArgs+=("-t" "$shsh_path" "$ipsw_path.ipsw")
+    ExtraArr+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
 
-    log "Running futurerestore with command: $futurerestore2 ${ExtraArgs[*]}"
-    $futurerestore2 "${ExtraArgs[@]}"
+    log "Running futurerestore with command: $futurerestore2 ${ExtraArr[*]}"
+    $futurerestore2 "${ExtraArr[@]}"
     log "Restoring done! Read the message below if any error has occurred:"
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -2862,7 +2864,7 @@ device_ramdisk() {
             log "Cool, done and jailbroken (hopefully)"
             return
         ;;
-            
+
         "nvram" )
             log "Sending commands for clearing NVRAM..."
             $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
@@ -2945,7 +2947,7 @@ shsh_save_cydia() {
         if [[ $build == "10"* && $build != "10B329" && $build != "10B350" ]]; then
             continue
         fi
-        printf "\n$build "
+        printf "\n%s " "$build"
         "$dir/tsschecker" -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
             printf "saved"
@@ -2973,7 +2975,7 @@ menu_print_info() {
     if [[ $git_hash_latest != "$git_hash" ]]; then
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
-    print "* Platform: $platform ($platform_ver) $live_cdusb_r"
+    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     if [[ $platform == "windows" ]]; then
         warn "Using Legacy iOS Kit on Windows is not recommended."
         print "* iTunes version: $itunes_ver"
@@ -3771,7 +3773,7 @@ if [[ $no_color != 1 ]]; then
     color_R=$(tput setaf 9)
     color_G=$(tput setaf 10)
     color_B=$(tput setaf 12)
-    color_Y=$(tput setaf 11)
+    color_Y=$(tput setaf 208)
     color_N=$(tput sgr0)
 fi
 
