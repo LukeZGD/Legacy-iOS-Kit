@@ -61,8 +61,9 @@ display_help() {
 Usage: ./restore.sh [Options]
 
 List of options:
+    --activation-records      Enable dumping/stitching activation records
     --debug                   For script debugging (set -x and debug mode)
-    --disable-bbupdate        Disable baseband update
+    --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --disable-sudoloop        Disable running tools as root for Linux
     --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
@@ -1047,10 +1048,12 @@ device_pwnerror() {
     error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are low on Linux.'
-        error_msg+=$'\n* Pwning with a Mac or another iOS device are better options.'
+        error_msg+=$'\n* Pwning with a Mac or another iOS device using iPwnder Lite are better options.'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
-    error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
+    error_msg+=$'\n* Troubleshooting links:
+    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
+    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
     error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
 }
 
@@ -1464,11 +1467,12 @@ ipsw_download() {
 ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
-    log "Verifying $ipsw_dl.ipsw..."
     local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
     if [[ -z $IPSWSHA1 ]]; then
+        log "Getting SHA1 hash from ipsw.me..."
         IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
     fi
+    log "Verifying $ipsw_dl.ipsw..."
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         if [[ -z $3 ]]; then
@@ -1583,8 +1587,12 @@ ipsw_prepare_jailbreak() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
-        device_dumpbaseband
+        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband.tar"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        device_dump activation
+        ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
     log "Preparing custom IPSW: $ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
@@ -1870,7 +1878,7 @@ ipsw_prepare_32bit() {
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" &&
-            $ipsw_jailbreak != 1 && $device_proc != 4 ]]; then
+            $ipsw_jailbreak != 1 && $device_proc != 4 && $device_actrec != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     fi
@@ -1883,8 +1891,12 @@ ipsw_prepare_32bit() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
-        device_dumpbaseband
+        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband.tar"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        device_dump activation
+        ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -1960,6 +1972,10 @@ ipsw_prepare_powder() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
+    if [[ $device_actrec == 1 ]]; then
+        device_dump activation
+        ExtraArgs+=" ../saved/$device_type/activation.tar"
+    fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs ${JBFiles[@]}
 
@@ -2034,11 +2050,15 @@ ipsw_prepare_powder2() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
-        device_dumpbaseband
+        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband.tar"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        device_dump activation
+        ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
@@ -2072,11 +2092,14 @@ ipsw_prepare_custom() {
 
     if [[ $device_target_vers == "5"* ]]; then
         comps+=("iBEC")
+    elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+        :
+    else
+        case $device_target_vers in
+            4.2.1 | 4.1 ) :;;
+            * ) comps+=("iBoot" "Kernelcache" "LLB");;
+        esac
     fi
-    case $device_target_vers in
-        4.2.1 | 4.1 ) :;;
-        * ) comps+=("iBoot" "Kernelcache" "LLB");;
-    esac
 
     ipsw_extract
     device_fw_key_check
@@ -2158,6 +2181,9 @@ ipsw_prepare_custom() {
             ;;
             * ) "$dir/hfsplus" out.dmg untar ../resources/jailbreak/unthredeh4il.tar;;
         esac
+        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+            "$dir/hfsplus" out.dmg untar ../resources/jailbreak/greenpois0n/${device_type}_${device_target_build}.tar
+        fi
     fi
     rm $RootName
     log "Building RootFS"
@@ -2743,17 +2769,41 @@ device_ramdisk() {
         ;;
     esac
     case $1 in
-        "baseband" )
-            local baseband="../saved/$device_type/baseband.tar"
+        "activation" | "baseband" )
+            local arg="$1"
+            local dump="../saved/$device_type"
+            local opt
             log "Mounting root filesystem"
             $ssh -p 2222 root@127.0.0.1 "mount.sh root"
             sleep 2
+            log "Let's just dump both activation and baseband tars"
             log "Creating baseband.tar"
             $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone usr/local/standalone"
-            log "Copying baseband.tar"
-            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar .
-            cp baseband.tar $baseband
-            $ssh -p 2222 root@127.0.0.1 "rm /mnt1/baseband.tar; reboot_bak"
+            log "Mounting data partition"
+            $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
+            log "Creating activation.tar"
+            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
+            log "Copying tars"
+            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
+            print "* Reminder to backup dump tars if needed"
+            if [[ -s $dump/baseband.tar ]]; then
+                read -p "Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n)" opt
+                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                    cp baseband.tar $dump
+                fi
+            else
+                cp baseband.tar $dump
+            fi
+            opt=
+            if [[ -s $dump/activation.tar ]]; then
+                read -p "Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)" opt
+                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                    cp activation.tar $dump
+                fi
+            else
+                cp activation.tar $dump
+            fi
+            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; reboot_bak"
             return
         ;;
 
@@ -2992,6 +3042,11 @@ menu_print_info() {
     if [[ $de_bbupdate == 1 ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
+        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (with SHSH), powdersn0w"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        warn "Activation records flag detected. The activation records of your device will be dumped/stitched to IPSWs"
+        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (with SHSH), powdersn0w"
     fi
     print "* iOS Version: $device_vers"
     print "* ECID: $device_ecid"
@@ -3538,20 +3593,21 @@ menu_other() {
         if [[ $device_mode != "none" ]]; then
             if (( device_proc < 7 )); then
                 if [[ $device_mode == "Normal" ]]; then
-                    menu_items+=("Put Device in kDFU Mode")
-                else
-                    menu_items+=("Send Pwned iBSS")
+                    menu_items+=("Enter kDFU Mode")
                 fi
+                case $device_proc in
+                    5 | 6 ) menu_items+=("Send Pwned iBSS");;
+                    * ) menu_items+=("Enter pwnDFU Mode");;
+                esac
                 if [[ $device_type == "iPhone"* ]]; then
                     menu_items+=("Dump Baseband")
                 fi
-                menu_items+=("SSH Ramdisk" "Clear NVRAM")
+                menu_items+=("Activation Records" "SSH Ramdisk" "Clear NVRAM")
             fi
-            if [[ $device_type == "iPhone3,1" ]]; then
-                menu_items+=("Disable/Enable Exploit")
-            elif [[ $device_type == "iPhone2,1" ]]; then
-                menu_items+=("Install alloc8 Exploit")
-            fi
+            case $device_type in
+                iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;
+                iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
+            esac
             menu_items+=("Attempt Activation")
         fi
         if [[ $device_proc != 8 ]]; then
@@ -3567,15 +3623,16 @@ menu_other() {
         done
         case $selected in
             "Create Custom IPSW" ) menu_restore ipsw;;
-            "Put Device in kDFU Mode" ) mode="kdfu";;
+            "Enter kDFU Mode" ) mode="kdfu";;
             "Disable/Enable Exploit" ) mode="remove4";;
             "SSH Ramdisk" ) mode="ramdisk4";;
             "Clear NVRAM" ) mode="ramdisknvram";;
-            "Send Pwned iBSS" ) mode="pwned-ibss";;
+            "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
             "(Re-)Install Dependencies" ) install_depends;;
             "Attempt Activation" ) mode="activate";;
             "Install alloc8 Exploit" ) mode="alloc8";;
             "Dump Baseband" ) mode="baseband";;
+            "Activation Records" ) mode="actrec";;
             "Go Back" ) back=1;;
         esac
     done
@@ -3608,11 +3665,20 @@ device_jailbreakrd() {
     device_ramdisk jailbreak
 }
 
-device_dumpbaseband() {
-    local baseband="../saved/$device_type/baseband.tar"
-    if [[ -e $baseband ]]; then
-        log "Found existing dumped baseband: $baseband"
-        return
+device_dump() {
+    local arg="$1"
+    local dump="../saved/$device_type/$arg.tar"
+    local dmps
+    if [[ -s $dump ]]; then
+        log "Found existing dumped $arg: $dump"
+        print "* Select Y to use this, or N to delete it"
+        print "* Make sure to keep a backup of the dump if needed"
+        read -p "$(input 'Use this existing dump? (y/N) ')" opt
+        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+            return
+        fi
+        log "Deleting existing dumped $arg"
+        rm $dump
     fi
     if [[ $device_mode == "Recovery" ]]; then
         device_enter_mode pwnDFU
@@ -3627,19 +3693,23 @@ device_dumpbaseband() {
         iproxy_pid=$!
         sleep 2
         device_sshpass
-        log "Creating baseband.tar"
-        $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/standalone /usr/local/standalone"
-        log "Copying baseband.tar"
-        $scp -P 2222 root@127.0.0.1:/tmp/baseband.tar .
-        cp baseband.tar $baseband
+        log "Creating $arg.tar"
+        case $arg in
+            "baseband" ) dmps="/usr/standalone /usr/local/standalone";;
+            "activation" ) dmps="/private/var/root/Library/Lockdown";;
+        esac
+        $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/$arg.tar $dmps"
+        log "Copying $arg.tar"
+        $scp -P 2222 root@127.0.0.1:/tmp/$arg.tar .
+        cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
-        device_ramdisk baseband
+        device_ramdisk $arg
     fi
     kill $iproxy_pid
-    if [[ ! -e $baseband ]]; then
-        error "Failed to dump baseband from device. Please run the script again"
+    if [[ ! -e $dump ]]; then
+        error "Failed to dump $arg from device. Please run the script again"
     fi
-    log "Dumping baseband done: $baseband"
+    log "Dumping $arg done: $dump"
 }
 
 restore_customipsw() {
@@ -3721,6 +3791,18 @@ main() {
                 ipsw_prepare
                 restore_prepare
             ;;
+            "baseband" )
+                device_dump baseband
+                log "Baseband dumping is done"
+                print "* To stitch baseband to IPSW, run Legacy iOS Kit with --disable-bbupdate argument:"
+                print "    > ./restore.sh --disable-bbupdate"
+            ;;
+            "actrec" )
+                device_dump activation
+                log "Activation records dumping is done"
+                print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
+                print "    > ./restore.sh --activation-records"
+            ;;
             "save-ota-blobs" ) shsh_save;;
             "kdfu" ) device_enter_mode kDFU;;
             "remove4" ) device_remove4;;
@@ -3732,7 +3814,6 @@ main() {
             "activate" ) $ideviceactivation activate;;
             "alloc8" ) device_alloc8;;
             "jailbreak" ) device_jailbreakrd;;
-            "baseband" ) device_dumpbaseband;;
             "customipsw" ) restore_customipsw;;
             * ) :;;
         esac
@@ -3760,6 +3841,7 @@ for i in "$@"; do
         "--disable-bbupdate" ) de_bbupdate=1; device_disable_bbupdate=1;;
         "--disable-sudoloop" ) device_disable_sudoloop=1;;
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
+        "--activation-records" ) device_actrec=1;;
     esac
 done
 

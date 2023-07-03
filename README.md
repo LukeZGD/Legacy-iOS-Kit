@@ -29,6 +29,8 @@
 - Boot SSH Ramdisk on supported 32-bit devices
 - Clear NVRAM for devices that support powdersn0w
 - Device activation using ideviceactivation
+- Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
+- Dumping and stitching activation records to IPSW (requires `--activation-records`)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
