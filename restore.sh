@@ -558,11 +558,13 @@ device_get_info() {
             if [[ $device_type == "iPod2,1" ]]; then
                 device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
             elif [[ $device_type == "iPhone2,1" ]]; then
-                device_newbr="$($ideviceinfo -k InternationalMobileEquipmentIdentity | cut -c -3 | grep -c '011')"
-                if [[ $device_newbr == 1 ]]; then
-                    device_newbr=0
-                else
+                device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
+                if (( device_serial >= 945 )) || (( device_serial < 900 )); then
                     device_newbr=1
+                elif (( device_serial >= 940 )); then
+                    device_newbr=2
+                else
+                    device_newbr=0
                 fi
             fi
         ;;
@@ -2336,6 +2338,10 @@ restore_idevicerestore() {
     if [[ $device_target_vers == "4"* ]]; then
         print "* For device activation, go to: Other Utilities -> Attempt Activation"
     fi
+    if [[ $device_target_powder == 1 ]] || [[ $device_proc == 5 && $device_target_vers == "6.1.3" ]]; then
+        print "* If you are getting the error: \"could not retrieve device serial number\","
+        print "* This means that your device is not compatible with $device_target_vers"
+    fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
@@ -2401,6 +2407,10 @@ restore_futurerestore() {
     log "Running futurerestore with command: $futurerestore2 ${ExtraArr[*]}"
     $futurerestore2 "${ExtraArr[@]}"
     log "Restoring done! Read the message below if any error has occurred:"
+    if [[ $device_proc == 5 && $device_target_vers == "6.1.3" ]]; then
+        print "* If you are getting the error: \"could not retrieve device serial number\","
+        print "* This means that your device is not compatible with $device_target_vers"
+    fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
@@ -2425,6 +2435,8 @@ restore_latest() {
             print "* Follow the troubleshoting link for steps to attempt fixing this issue."
             print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
         fi
+        print "* If you are getting the error: \"unable to find AppleNANDFTL\","
+        print "* This means that your device is not compatible with $device_target_vers"
         print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
         print "* Your problem may have already been addressed within the wiki page."
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
@@ -3036,8 +3048,21 @@ menu_print_info() {
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     if [[ $device_newbr == 1 ]]; then
         print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
+    elif [[ $device_newbr == 2 ]]; then
+        print "* This $device_type bootrom model cannot be determined. Enter DFU mode and run the script again"
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         print "* This $device_type is an old bootrom model"
+    fi
+    if [[ -n $device_serial ]]; then
+        local week=$(echo "$device_serial" | cut -c 2-)
+        local year=$(echo "$device_serial" | cut -c 1)
+        case $year in
+            9 ) year="2009";;
+            0 ) year="2010";;
+            1 ) year="2011";;
+            2 ) year="2012";;
+        esac
+        print "* Manufactured in Week $week $year"
     fi
     if [[ $de_bbupdate == 1 ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
