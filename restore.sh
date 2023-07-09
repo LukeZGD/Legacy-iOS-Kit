@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed.
-ipsw_openssh=1 # OpenSSH will be added to custom IPSW if set to 1.
+ipsw_openssh=1 # OpenSSH will be added to custom IPSW/jailbreak if set to 1.
 device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 
 print() {
@@ -252,6 +252,7 @@ set_tool_paths() {
         ping="ping -n 1"
 
         warn "Using Legacy iOS Kit on Windows is not recommended."
+        print "* Many features of Legacy iOS Kit will not work on Windows."
         print "* Please switch to a Linux or Mac machine to avoid issues."
         print "* Read the How to Use page: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
         sleep 5
@@ -362,11 +363,11 @@ install_depends() {
         fi
 
     elif [[ $platform == "windows" ]]; then
-        popd
+        popd >/dev/null
         rm -rf "$(dirname "$0")/tmp"
         pacman -Syu --noconfirm --needed ca-certificates curl libcurl libopenssl openssh openssl unzip zip
         mkdir "$(dirname "$0")/tmp"
-        pushd "$(dirname "$0")/tmp"
+        pushd "$(dirname "$0")/tmp" >/dev/null
     fi
 
     uname > "../resources/firstrun"
@@ -1093,7 +1094,7 @@ device_ipwndfu() {
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
     fi
 
-    pushd ../resources/ipwndfu/
+    pushd ../resources/ipwndfu/ >/dev/null
     case $1 in
         "send_ibss" )
             log "Sending iBSS..."
@@ -1129,7 +1130,7 @@ device_ipwndfu() {
             $python2 ipwndfu -x
         ;;
     esac
-    popd
+    popd >/dev/null
 }
 
 download_file() {
@@ -1552,10 +1553,10 @@ ipsw_prepare_jailbreak() {
             ipsw+="2"
         fi
         log "Generating reboot.sh"
-        echo '#!/bin/bash' > reboot.sh
-        echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" >> reboot.sh
-        echo "nvram -d boot-partition; nvram -d boot-ramdisk" >> reboot.sh
-        echo "/usr/bin/haxx_overwrite -$device_model" >> reboot.sh
+        echo '#!/bin/bash' | tee reboot.sh
+        echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
+        echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
+        echo "/usr/bin/haxx_overwrite -$device_model" | tee -a reboot.sh
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles=("../resources/jailbreak/sshdeb.tar")
         fi
@@ -2046,9 +2047,6 @@ ipsw_prepare_powder2() {
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
     cp -R ../resources/firmware/src .
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        cp ../resources/jailbreak/freeze.tar .
-    fi
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
@@ -2061,6 +2059,12 @@ ipsw_prepare_powder2() {
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation.tar"
+    fi
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        cp ../resources/jailbreak/freeze.tar .
+        if [[ $ipsw_openssh == 1 ]]; then
+            ExtraArgs+=" ../resources/jailbreak/sshdeb.tar"
+        fi
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
@@ -2083,6 +2087,7 @@ ipsw_prepare_custom() {
     local decrypt
     local patch="../resources/patch/old/$device_type/$device_target_vers"
     local RootSize
+    local jelbrek="../resources/jailbreak"
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -2171,20 +2176,23 @@ ipsw_prepare_custom() {
     "$dir/hfsplus" out.dmg grow $RootSize
     if [[ $ipsw_jailbreak == 1 ]]; then
         log "Extracting Cydia"
-        "$dir/hfsplus" out.dmg untar ../resources/jailbreak/freeze.tar
+        "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
         case $device_target_vers in
-            "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab;;
+            "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
             "4.2.1" | "4.1" )
-                "$dir/hfsplus" out.dmg add ../resources/jailbreak/fstab_old private/etc/fstab
+                "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
                 if [[ $device_target_vers == "4.2.1" ]]; then
                     "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
                 fi
-                "$dir/hfsplus" out.dmg untar ../resources/jailbreak/greenpois0n/${device_type}_${device_target_build}.tar
+                "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
             ;;
-            * ) "$dir/hfsplus" out.dmg untar ../resources/jailbreak/unthredeh4il.tar;;
+            * ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
         esac
         if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
-            "$dir/hfsplus" out.dmg untar ../resources/jailbreak/greenpois0n/${device_type}_${device_target_build}.tar
+            "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+        fi
+        if [[ $ipsw_openssh == 1 ]]; then
+            "$dir/hfsplus" out.dmg untar $jelbrek/sshdeb.tar
         fi
     fi
     rm $RootName
@@ -2194,13 +2202,13 @@ ipsw_prepare_custom() {
 
     log "Building IPSW"
     mv "$ipsw_path" "$ipsw_custom"
-    pushd "$ipsw_custom"
+    pushd "$ipsw_custom" >/dev/null
     case $device_target_vers in
         4.2.1 | 4.1 ) :;;
         * ) rm BuildManifest.plist;;
     esac
     zip -r0 ../tmp/temp.ipsw *
-    popd
+    popd >/dev/null
 
     if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again"
@@ -2301,7 +2309,7 @@ restore_download_bbsep() {
 }
 
 restore_idevicerestore() {
-    local ExtraArgs="-e -w"
+    local ExtraArgs="-ew"
     local idevicerestore2="$idevicerestore"
     local re
 
@@ -2323,7 +2331,7 @@ restore_idevicerestore() {
         device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
-        ExtraArgs+=" -d"
+        ExtraArgs+="d"
     fi
 
     log "Running idevicere${re}store with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
@@ -2872,7 +2880,7 @@ device_ramdisk() {
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.2.2-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.1 | 4.0* | 3.2.2 )
+                4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -2888,7 +2896,7 @@ device_ramdisk() {
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
-                4.2.1 | 4.1 | 4.0* | 3.2.2 )
+                4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
                         $scp -P 2222 $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
@@ -2899,15 +2907,18 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                8.4.1 | 4.1 | 4.0* | 3.2.2 ) :;;
+                8* | 4.1 | 4.0* | 3* ) :;;
                 * )
                     log "Extracting $untether"
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
             device_ramdisktar freeze.tar data
+            if [[ $ipsw_openssh == 1 ]]; then
+                device_ramdisktar sshdeb.tar
+            fi
             sleep 3
-            if [[ $vers == "8.4.1" ]]; then
+            if [[ $vers == "8"* ]]; then
                 log "Sending daibutsu/move.sh"
                 $scp -P 2222 $jelbrek/daibutsu/move.sh root@127.0.0.1:/
                 log "Moving files"
@@ -3042,6 +3053,7 @@ menu_print_info() {
     print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     if [[ $platform == "windows" ]]; then
         warn "Using Legacy iOS Kit on Windows is not recommended."
+        print "* Many features of Legacy iOS Kit will not work on Windows."
         print "* iTunes version: $itunes_ver"
     fi
     echo
@@ -3092,7 +3104,7 @@ menu_main() {
         fi
         if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
             :
-        elif (( device_proc < 7 )); then
+        elif (( device_proc < 7 )) && [[ $platform != "windows" ]]; then
             if [[ $device_mode == "Normal" ]]; then
                 case $device_vers in
                     8.4.1 | 7* | 6* | 5* | 4* | 3.2.2 ) menu_items+=("Jailbreak Device");;

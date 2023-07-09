@@ -2,8 +2,8 @@
 
 - (formerly iOS-OTA-Downgrader)
 - **A multi-purpose script to save SHSH blobs, downgrade/restore, and jailbreak supported legacy iOS devices**
-- **Linux, macOS, and Windows** are supported
-    - Windows usage is not recommended
+- **Linux and macOS** are supported
+    - Windows usage is not recommended, many features will not work
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for usage instructions**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
