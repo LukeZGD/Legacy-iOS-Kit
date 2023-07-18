@@ -71,12 +71,13 @@ jobs:
         run: zip -r ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md
 
       - name: Move linux armhf binaries and other files
-        run: |
-          rm -r ./bin/linux
-          cp -R ./exclude/bin/windows ./bin
-
-      - name: Zip win files
-        run: zip -r ${{ github.event.repository.name }}_windows_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.cmd restore.sh README.md
+        run: rm -r ./bin/linux ./exclude/bin/windows
+      #   run: |
+      #     rm -r ./bin/linux
+      #     cp -R ./exclude/bin/windows ./bin
+      #
+      # - name: Zip win files
+      #   run: zip -r ${{ github.event.repository.name }}_windows_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.cmd restore.sh README.md
 
       - name: Copy exclude files back
         run: cp -R ./exclude/bin/* ./bin
@@ -102,4 +103,3 @@ jobs:
             ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip
-            ${{ github.event.repository.name }}_windows_v${{ env.DATE }}.${{ env.COUNT }}.zip

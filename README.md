@@ -1,10 +1,10 @@
 # Legacy iOS Kit
 
 - (formerly iOS-OTA-Downgrader)
-- **A multi-purpose script to save SHSH blobs, downgrade/restore, and jailbreak supported legacy iOS devices**
-- **Linux and macOS** are supported
-    - Windows usage is not recommended, many features will not work
-- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for usage instructions**
+- **A multi-purpose script to downgrade/restore, save SHSH blobs, and jailbreak legacy iOS devices**
+- Supported on **Linux and macOS**
+    - Usage on Windows is not recommended, many features will not work
+- **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for instructions**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
@@ -15,11 +15,10 @@
 - Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - For iPhone 5 (not 5C), 7.0.x blobs can also be used
     - Device support is limited, see below
-- Option to **jailbreak** all of the above devices
-    - Including latest iOS versions for some devices (4.2.1, 5.1.1, 6.1.6, 7.1.2)
+- Option to **jailbreak** all supported 32-bit devices
+    - Available on iOS versions 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x
+    - Only unsupported version is jailbreaking iPad 2 on 4.3.x
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
-    - Available on target versions 3.2.2, 4.0.x, 4.1, 4.2.x, 4.3.x, 5.x, 6.x, 7.x, and 8.4.1
-    - Jailbreaking iPad 2 on 4.3.x is not supported (only 5.x and newer will work)
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
     - Limited compatibility due to SEP/BB, see below
@@ -118,6 +117,7 @@
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
+- [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
 - [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
