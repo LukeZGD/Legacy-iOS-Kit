@@ -16,7 +16,7 @@
     - For iPhone 5 (not 5C), 7.0.x blobs can also be used
     - Device support is limited, see below
 - Option to **jailbreak** all supported 32-bit devices
-    - Available on iOS versions 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x
+    - Available on iOS versions 3.1.3, 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x
     - Only unsupported version is jailbreaking iPad 2 on 4.3.x
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**

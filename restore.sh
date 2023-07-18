@@ -257,9 +257,8 @@ set_tool_paths() {
 
         ping="ping -n 1"
 
-        error "Using Legacy iOS Kit on Windows is not supported. Use on Linux or macOS instead." "You can continue by commenting this line, but I do not recommend doing that."
         if [[ ! -d $dir || ! -d ../.git ]]; then
-            error "stuff's missing, git clone the repo"
+            error "Using Legacy iOS Kit on Windows is not supported. Use on Linux or macOS instead." "You can continue by git cloning this repo, but I do not recommend using this on Windows in any case."
         fi
         warn "Using Legacy iOS Kit on Windows is not recommended."
         print "* Many features of Legacy iOS Kit will not work on Windows."
@@ -344,7 +343,7 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
@@ -352,6 +351,9 @@ install_depends() {
         fi
         sudo apt update
         sudo apt install -y curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
+        if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
+            sudo apt install -y python2
+        fi
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
@@ -359,7 +361,7 @@ install_depends() {
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av net-misc/curl app-misc/jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
@@ -1092,9 +1094,16 @@ device_ipwndfu() {
             python2="sudo "
         fi
         python2+="$HOME/.pyenv/versions/2.7.18/bin/python2"
+    elif [[ $(which pyenv) ]]; then
+        log "Installing python2 using pyenv"
+        $(which pyenv) install 2.7.18
     elif [[ -z $python2 ]]; then
-        error "Python 2 is not installed, cannot continue. Make sure to have python2 installed to use ipwndfu." \
-        "* You may install python2 from pyenv: pyenv install 2.7.18"
+        warn "pyenv and python2 is not installed. Attempting to install pyenv and python2 before continuing"
+        print "* You may install python2 from pyenv: pyenv install 2.7.18"
+        log "Installing pyenv"
+        curl https://pyenv.run | bash
+        log "Installing python2 using pyenv"
+        $HOME/.pyenv/bin/pyenv install 2.7.18
     fi
 
     device_enter_mode DFU
@@ -2582,11 +2591,16 @@ restore_prepare() {
                 restore_latest
             else
                 # 64-bit devices A7/A8
-                print "* Make sure to set the nonce generator of your device!"
+                local generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
+                log "The generator for your SHSH blob is: $generator"
+                print "* Before continuing, make sure to set the nonce generator of your device!"
                 print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
-                print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#method"
-                print "* Also check the SEP/BB Compatibility Chart (Legacy iOS 12 sheet): https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
+                print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#using-dimentio"
+                print "* Also check the SEP/BB Compatibility Chart (Legacy iOS 12 sheet): https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636"
                 pause
+                if [[ $device_mode == "Normal" ]]; then
+                    device_enter_mode Recovery
+                fi
                 restore_futurerestore
             fi
         ;;
@@ -3634,14 +3648,16 @@ menu_shsh_browse() {
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected SHSH file: $newpath"
-    log "Validating..."
-    if [[ $1 == "base" ]]; then
-        val="$ipsw_base_path.ipsw"
-    fi
-    "$dir/validate" "$newpath" "$val" -z
-    if [[ $? != 0 ]]; then
-        warn "Validation failed. Did you select the correct IPSW/SHSH?"
-        pause
+    if (( device_proc < 7 )); then
+        log "Validating..."
+        if [[ $1 == "base" ]]; then
+            val="$ipsw_base_path.ipsw"
+        fi
+        "$dir/validate" "$newpath" "$val" -z
+        if [[ $? != 0 ]]; then
+            warn "Validation failed. Did you select the correct IPSW/SHSH?"
+            pause
+        fi
     fi
     shsh_path="$newpath"
 }
