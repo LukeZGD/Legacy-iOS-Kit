@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-device_disable_bbupdate="iPad2,3" # Disable baseband update for this device. You can also change this to your device if needed.
-ipsw_openssh=1 # OpenSSH will be added to custom IPSW/jailbreak if set to 1.
+ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
+device_verbose_boot=0 # By setting this to 1 and changing the build version above, the SSH Ramdisk option turns to tethered verbose boot.
 
 print() {
     echo "${color_B}${1}${color_N}"
@@ -72,7 +72,7 @@ List of options:
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
 
-For devices compatible with powdersn0w and OTA restores (see README):
+For 32-bit devices compatible with restores/downgrades (see README):
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
@@ -2360,13 +2360,18 @@ restore_idevicerestore() {
         print "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
         print "* Follow the troubleshoting link for steps to attempt fixing this issue."
         print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
+        echo
     fi
     if [[ $device_target_vers == "4"* ]]; then
         print "* For device activation, go to: Other Utilities -> Attempt Activation"
+        echo
     fi
     if [[ $opt != 0 ]]; then
         print "* If you are getting the error \"could not retrieve device serial number\":"
         print " -> This means that your device is not compatible with $device_target_vers"
+        print "* If the restore failed on updating baseband:"
+        print " -> Try disabling baseband update: ./restore.sh --disable-bbupdate"
+        echo
     fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -2709,6 +2714,7 @@ device_ramdisk() {
     local path
     local url
     local decrypt
+    local ramdisk_path
 
     case $device_type in
         iPod2,1 ) device_target_build="8C148";;
@@ -2721,14 +2727,14 @@ device_ramdisk() {
     if [[ -n $device_ramdisk_build ]]; then
         device_target_build=$device_ramdisk_build
     fi
-    #local verbose_boot=1
+    ramdisk_path="../saved/$device_type/ramdisk_$device_target_build"
     device_fw_key_check
     url=$(cat "$device_fw_dir/$device_target_build/url" 2>/dev/null)
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$device_target_build"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
     fi
-    mkdir ../saved/$device_type/ramdisk 2>/dev/null
+    mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
@@ -2740,11 +2746,11 @@ device_ramdisk() {
         esac
 
         log "$getcomp"
-        if [[ -e ../saved/$device_type/ramdisk/$name ]]; then
-            cp ../saved/$device_type/ramdisk/$name .
+        if [[ -e $ramdisk_path/$name ]]; then
+            cp $ramdisk_path/$name .
         else
             "$dir/partialzip" "$url" "${path}$name" "$name"
-            cp $name ../saved/$device_type/ramdisk/
+            cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
         if [[ $getcomp == "Kernelcache" && $device_type == "iPod2,1" ]]; then
@@ -2779,7 +2785,7 @@ device_ramdisk() {
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         log "Patch iBEC"
         "$dir/xpwntool" iBEC.dec iBEC.raw
-        if [[ $verbose_boot == 1 ]]; then
+        if [[ $device_verbose_boot == 1 ]]; then
             "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
         else
             "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
@@ -2787,7 +2793,7 @@ device_ramdisk() {
         "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
     fi
 
-    mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg ../saved/$device_type/ramdisk 2>/dev/null
+    mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
 
     if [[ $device_proc == 4 || $1 == "jailbreak" ]]; then
         device_enter_mode pwnDFU
@@ -2795,22 +2801,22 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
     log "Sending iBSS..."
-    $irecovery -f ../saved/$device_type/ramdisk/iBSS
+    $irecovery -f $ramdisk_path/iBSS
     if [[ $device_type != "iPod2,1" ]]; then
         sleep 2
         log "Sending iBEC..."
-        $irecovery -f ../saved/$device_type/ramdisk/iBEC
+        $irecovery -f $ramdisk_path/iBEC
     fi
     device_find_mode Recovery
 
     log "Booting, please wait..."
-    $irecovery -f ../saved/$device_type/ramdisk/DeviceTree.dec
+    $irecovery -f $ramdisk_path/DeviceTree.dec
     $irecovery -c devicetree
-    if [[ $verbose_boot != 1 ]]; then
-        $irecovery -f ../saved/$device_type/ramdisk/Ramdisk.dmg
+    if [[ $device_verbose_boot != 1 ]]; then
+        $irecovery -f $ramdisk_path/Ramdisk.dmg
         $irecovery -c ramdisk
     fi
-    $irecovery -f ../saved/$device_type/ramdisk/Kernelcache.dec
+    $irecovery -f $ramdisk_path/Kernelcache.dec
     $irecovery -c bootx
     sleep 20
 
@@ -2858,7 +2864,8 @@ device_ramdisk() {
             else
                 cp activation.tar $dump
             fi
-            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
+            log "Done, device should boot to recovery mode now"
             return
         ;;
 
@@ -2995,6 +3002,8 @@ device_ramdisk() {
     print "    mount.sh"
     print "* Clear NVRAM with this command:"
     print "    nvram -c"
+    print "* Erase All Content and Settings with this command (iOS 9+ only):"
+    print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
     print "    reboot_bak"
 }
@@ -3545,9 +3554,9 @@ ipsw_custom_set() {
         ipsw_custom="../$1_Custom"
     fi
     # disable bbupdate for iphone 5 devices on other/powder
-    if [[ $device_type == "iPhone5"* ]] && [[ $device_target_other == 1 || $device_target_powder == 1 ]]; then
-        device_disable_bbupdate="$device_type"
-    fi
+    #if [[ $device_type == "iPhone5"* ]] && [[ $device_target_other == 1 || $device_target_powder == 1 ]]; then
+    #    device_disable_bbupdate="$device_type"
+    #fi
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         device_use_bb=0
         ipsw_custom+="B"
@@ -3751,10 +3760,10 @@ device_dump() {
     local dmps
     if [[ -s $dump ]]; then
         log "Found existing dumped $arg: $dump"
-        print "* Select Y to use this, or N to delete and re-dump $arg"
+        print "* Select Y to overwrite, or N to use existing dump"
         print "* Make sure to keep a backup of the dump if needed"
-        read -p "$(input 'Use this existing dump? (y/N) ')" opt
-        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+        read -p "$(input 'Overwrite this existing dump? (Y/n) ')" opt
+        if [[ $opt == 'N' || $opt == 'n' ]]; then
             return
         fi
         log "Deleting existing dumped $arg"
@@ -3764,7 +3773,7 @@ device_dump() {
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
-        print "* Make sure to have installed the requirements from Cydia."
+        print "* Make sure to have installed the requirements from Cydia/Zebra."
         print "* Only proceed if you have followed the steps in the GitHub wiki."
         print "* You will be prompted to enter the root password of your iOS device."
         print "* The default root password is \"alpine\""
@@ -3784,6 +3793,7 @@ device_dump() {
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         device_ramdisk $arg
+        device_enter_mode pwnDFU
     fi
     kill $iproxy_pid
     if [[ ! -e $dump ]]; then
@@ -3792,11 +3802,16 @@ device_dump() {
     log "Dumping $arg done: $dump"
 }
 
+device_activate() {
+    log "Attempting to activate device with ideviceactivation"
+    $ideviceactivation activate
+}
+
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
     print "* Note that this might only work on old bootrom devices."
     print "* Also note that Legacy iOS Kit does not support tethered booting."
-    print "* Legacy iOS Kit will not support tethered boots, downgrades, and jailbreaks."
+    print "* Legacy iOS Kit will not support tethered downgrades and jailbreaks."
     print "* Proceed with caution when restoring to custom IPSWs not made with Legacy iOS Kit."
     if [[ $device_newbr == 1 ]]; then
         warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
@@ -3851,59 +3866,54 @@ main() {
         install_depends
     fi
 
-    while [[ $mode != "exit" ]]; do
-        device_get_info
-        mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
+    device_get_info
+    mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
 
-        mode=
-        if [[ -z $mode ]]; then
-            menu_main
-        fi
+    mode=
+    if [[ -z $mode ]]; then
+        menu_main
+    fi
 
-        case $mode in
-            "custom-ipsw" )
-                ipsw_preference_set
-                ipsw_prepare
-                log "Done creating custom IPSW"
-            ;;
-            "downgrade" )
-                ipsw_preference_set
-                ipsw_prepare
-                restore_prepare
-            ;;
-            "baseband" )
-                device_dump baseband
-                log "Baseband dumping is done"
-                print "* To stitch baseband to IPSW, run Legacy iOS Kit with --disable-bbupdate argument:"
-                print "    > ./restore.sh --disable-bbupdate"
-            ;;
-            "actrec" )
-                device_dump activation
-                log "Activation records dumping is done"
-                print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
-                print "    > ./restore.sh --activation-records"
-            ;;
-            "save-ota-blobs" ) shsh_save;;
-            "kdfu" ) device_enter_mode kDFU;;
-            "remove4" ) device_remove4;;
-            "ramdisk4" ) device_ramdisk;;
-            "ramdisknvram" ) device_ramdisk nvram;;
-            "pwned-ibss" ) device_enter_mode pwnDFU;;
-            "save-onboard-blobs" ) shsh_save_onboard;;
-            "save-cydia-blobs" ) shsh_save_cydia;;
-            "activate" ) $ideviceactivation activate;;
-            "alloc8" ) device_alloc8;;
-            "jailbreak" ) device_jailbreakrd;;
-            "customipsw" ) restore_customipsw;;
-            * ) :;;
-        esac
+    case $mode in
+        "custom-ipsw" )
+            ipsw_preference_set
+            ipsw_prepare
+            log "Done creating custom IPSW"
+        ;;
+        "downgrade" )
+            ipsw_preference_set
+            ipsw_prepare
+            restore_prepare
+        ;;
+        "baseband" )
+            device_dump baseband
+            log "Baseband dumping is done"
+            print "* To stitch baseband to IPSW, run Legacy iOS Kit with --disable-bbupdate argument:"
+            print "    > ./restore.sh --disable-bbupdate"
+        ;;
+        "actrec" )
+            device_dump activation
+            log "Activation records dumping is done"
+            print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
+            print "    > ./restore.sh --activation-records"
+        ;;
+        "save-ota-blobs" ) shsh_save;;
+        "kdfu" ) device_enter_mode kDFU;;
+        "remove4" ) device_remove4;;
+        "ramdisk4" ) device_ramdisk;;
+        "ramdisknvram" ) device_ramdisk nvram;;
+        "pwned-ibss" ) device_enter_mode pwnDFU;;
+        "save-onboard-blobs" ) shsh_save_onboard;;
+        "save-cydia-blobs" ) shsh_save_cydia;;
+        "activate" ) device_activate;;
+        "alloc8" ) device_alloc8;;
+        "jailbreak" ) device_jailbreakrd;;
+        "customipsw" ) restore_customipsw;;
+        * ) :;;
+    esac
 
-        if [[ $mode != "exit" ]]; then
-            echo
-            print "* Save the terminal output now if needed."
-            break
-        fi
-    done
+    echo
+    print "* Save the terminal output now if needed."
     echo
 }
 
@@ -3939,10 +3949,6 @@ if [[ $no_color != 1 ]]; then
     color_B=$(tput setaf 12)
     color_Y=$(tput setaf 208)
     color_N=$(tput sgr0)
-fi
-
-if [[ $device_disable_bbupdate != "iPad2,3" ]]; then
-    de_bbupdate=1
 fi
 
 main
