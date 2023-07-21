@@ -2935,13 +2935,6 @@ device_ramdisk() {
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                5.1.1 ) device_ramdisktar rockyracoon.tar;;
-                5.0.1 ) device_ramdisktar corona.tar;;
-                5.0 )
-                    if [[ $device_type == "iPhone4,1" ]]; then
-                        device_ramdisktar corona.tar
-                    fi
-                ;;
                 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
@@ -2958,6 +2951,13 @@ device_ramdisk() {
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
+                5.1.1 ) device_ramdisktar rockyracoon.tar;;
+                5.0.1 ) device_ramdisktar corona.tar;;
+                5.0 )
+                    if [[ $device_type == "iPhone4,1" ]]; then
+                        device_ramdisktar corona.tar
+                    fi
+                ;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
