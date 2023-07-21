@@ -3,6 +3,7 @@
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 device_verbose_boot=0 # By setting this to 1 and changing the build version above, the SSH Ramdisk option turns to tethered verbose boot.
+jelbrek="../resources/jailbreak"
 
 print() {
     echo "${color_B}${1}${color_N}"
@@ -41,10 +42,6 @@ clean() {
 }
 
 clean_and_exit() {
-    if [[ $platform == "windows" ]]; then
-        input "Press Enter/Return to exit."
-        read -s
-    fi
     kill $httpserver_pid $iproxy_pid $sudoloop_pid $usbmuxd_pid 2>/dev/null
     clean
 }
@@ -222,6 +219,7 @@ set_tool_paths() {
                 sudo systemctl stop usbmuxd
                 sudo usbmuxd -pz
                 usbmuxd_pid=$!
+                sleep 1
             fi
         fi
 
@@ -338,7 +336,7 @@ install_depends() {
         pause
     elif [[ $platform == "windows" ]]; then
         print "* Legacy iOS Kit will be installing dependencies from MSYS2"
-        print "* You may have to run the script more than once. If the prompt exits on its own, just run restore.cmd again"
+        print "* You may have to run the script more than once. If the prompt exits on its own, just run restore.sh again"
         pause
     fi
 
@@ -437,7 +435,7 @@ version_update() {
     popd >/dev/null
     log "Updating..."
     cp resources/firstrun tmp 2>/dev/null
-    rm -r bin/ resources/ LICENSE README.md restore.cmd restore.sh
+    rm -r bin/ resources/ LICENSE README.md restore.sh
     unzip -q tmp/latest.zip -d .
     cp tmp/firstrun resources 2>/dev/null
     log "Done! Please run the script again"
@@ -857,7 +855,10 @@ device_enter_mode() {
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/hgsp")
                 sendfiles+=("../resources/kloader/kloader")
-            elif (( device_det < 6 )); then
+            elif [[ $device_det == 5 ]]; then
+                echo "/tmp/kloader5 /tmp/pwnediBSS" >> kloaders
+                sendfiles+=("../resources/kloader/kloader5")
+            elif (( device_det < 5 )); then
                 echo "/tmp/axi0mX /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/axi0mX")
             else
@@ -1332,8 +1333,9 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]]; then
-        log "Jailbreak Option is always enabled for $device_target_vers"
+    if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]] ||
+       [[ $device_target_vers == "4.3.3" && $device_type == "iPhone2,1" ]]; then
+        #log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
     elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
@@ -1562,21 +1564,21 @@ ipsw_prepare_jailbreak() {
             echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
             echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
             if [[ $ipsw_openssh == 1 ]]; then
-                JBFiles=("../resources/jailbreak/sshdeb.tar")
+                JBFiles=("$jelbrek/sshdeb.tar")
             fi
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
             for i in {0..2}; do
-                cp ../resources/jailbreak/${JBFiles2[$i]} .
+                cp $jelbrek/${JBFiles2[$i]} .
             done
             cp -R ../resources/firmware/JailbreakBundles FirmwareBundles
             ExtraArgs+="-daibutsu" # use daibutsuCFW
         elif [[ $device_target_vers == "6.1.3" ]]; then
             JBFiles+=("fstab_rw.tar" "p0sixspwn.tar" "freeze.tar")
             for i in {0..2}; do
-                JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
+                JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
             if [[ $ipsw_openssh == 1 ]]; then
-                JBFiles+=("../resources/jailbreak/sshdeb.tar")
+                JBFiles+=("$jelbrek/sshdeb.tar")
             fi
             cp -R ../resources/firmware/FirmwareBundles .
             ExtraArgs+="-S 30" # system partition add
@@ -1875,7 +1877,6 @@ ipsw_prepare_bundle() {
 ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
-    local jelbrek="../resources/jailbreak"
     local JBFiles=()
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad2"* ]]; then
@@ -1935,6 +1936,15 @@ ipsw_prepare_32bit() {
         for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
+        case $device_target_vers in
+            5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
+            5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
+            5.0 )
+                if [[ $device_type == "iPhone4,1" ]]; then
+                    JBFiles+=("$jelbrek/corona.tar")
+                fi
+            ;;
+        esac
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
@@ -1970,13 +1980,17 @@ ipsw_prepare_powder() {
             fi
             JBFiles+=("fstab_rw.tar" "freeze.tar")
             for i in {0..2}; do
-                JBFiles[i]=../resources/jailbreak/${JBFiles[$i]}
+                JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
+            case $device_target_vers in
+                5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
+                5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
+            esac
         fi
         if [[ $ipsw_openssh == 1 ]]; then
-            JBFiles+=("../resources/jailbreak/sshdeb.tar")
+            JBFiles+=("$jelbrek/sshdeb.tar")
         fi
-        cp ../resources/jailbreak/freeze.tar .
+        cp $jelbrek/freeze.tar .
     fi
 
     cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
@@ -2078,9 +2092,9 @@ ipsw_prepare_powder2() {
         ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
-        cp ../resources/jailbreak/freeze.tar .
+        cp $jelbrek/freeze.tar .
         if [[ $ipsw_openssh == 1 ]]; then
-            ExtraArgs+=" ../resources/jailbreak/sshdeb.tar"
+            ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
@@ -2104,7 +2118,6 @@ ipsw_prepare_custom() {
     local decrypt
     local patch="../resources/patch/old/$device_type/$device_target_vers"
     local RootSize
-    local jelbrek="../resources/jailbreak"
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -2116,7 +2129,8 @@ ipsw_prepare_custom() {
 
     if [[ $device_target_vers == "5"* ]]; then
         comps+=("iBEC")
-    elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+    fi
+    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
         :
     else
         case $device_target_vers in
@@ -2195,7 +2209,8 @@ ipsw_prepare_custom() {
         log "Extracting Cydia"
         "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
         case $device_target_vers in
-            "3.1.3" | "4.0" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
+            "5.1.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/rockyracoon.tar;;
+            "3.1.3" | "4.0" | "4.3.3" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
             "4.2.1" | "4.1" )
                 "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
                 if [[ $device_target_vers == "4.2.1" ]]; then
@@ -2695,7 +2710,6 @@ device_remove4() {
 }
 
 device_ramdisktar() {
-    local jelbrek="../resources/jailbreak"
     local target="/mnt1"
     if [[ $2 == "data" ]]; then
         target+="/private/var"
@@ -2873,7 +2887,6 @@ device_ramdisk() {
             local vers
             local build
             local untether
-            local jelbrek="../resources/jailbreak"
             log "Mounting root filesystem"
             $ssh -p 2222 root@127.0.0.1 "mount.sh root"
             sleep 2
@@ -2902,8 +2915,8 @@ device_ramdisk() {
                 6.1.[3456] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
                 5* )         untether="pris0nbarake/tar-${device_model}_$build.tar";;
-                4.2.1 | 4.1 | 4.0* | 3.2.2 ) untether="greenpois0n/${device_type}_${build}.tar";;
-                4.3* | 4.2* )                untether="unthredeh4il.tar";;
+                4.2.1 | 4.1 | 4.0* | 3.2.2 | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.3* | 4.2* ) untether="unthredeh4il.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
@@ -2920,8 +2933,15 @@ device_ramdisk() {
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
-            # 3.2.2-4.1 untether needs to be extracted early (before data partition is mounted)
+            # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
+                5.1.1 ) device_ramdisktar rockyracoon.tar;;
+                5.0.1 ) device_ramdisktar corona.tar;;
+                5.0 )
+                    if [[ $device_type == "iPhone4,1" ]]; then
+                        device_ramdisktar corona.tar
+                    fi
+                ;;
                 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
@@ -3149,10 +3169,10 @@ menu_main() {
         fi
         if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
             :
-        elif (( device_proc < 7 )) && [[ $platform != "windows" ]]; then
+        elif (( device_proc < 7 )); then
             if [[ $device_mode == "Normal" ]]; then
                 case $device_vers in
-                    8* | 7* | 6* | 5* | 4* | 3.2.2 ) menu_items+=("Jailbreak Device");;
+                    8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) menu_items+=("Jailbreak Device");;
                 esac
             elif [[ $device_mode != "none" ]]; then
                 menu_items+=("Jailbreak Device")
@@ -3743,7 +3763,7 @@ device_jailbreakrd() {
             return
         fi
         case $device_vers in
-            8* | 7* | 6* | 5* | 4* | 3.2.2 ) :;;
+            8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
             * ) warn "This version is not supported for jailbreaking with SSHRD."; return;;
         esac
     fi

@@ -129,7 +129,8 @@
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
-- [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
+- [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4 only)
+- [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp from nyan_satan](https://twitter.com/nyan_satan/status/945203180522045440) (used on h3lix only)
 - [partial-zip](https://github.com/matteyeux/partial-zip)
 - [zenity](https://github.com/GNOME/zenity); [macOS/Windows builds](https://github.com/ncruces/zenity)
@@ -143,6 +144,7 @@
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
+- [Corona](https://www.theiphonewiki.com/wiki/Corona) and [Rocky Racoon](https://www.theiphonewiki.com/wiki/Rocky_Racoon)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool) and [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze)
 - SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
