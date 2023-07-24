@@ -285,7 +285,7 @@ set_tool_paths() {
             fi
         fi
     else
-        error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS, Windows"
+        error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
     log "Running on platform: $platform ($platform_ver)"
     rm ../resources/sudoloop 2>/dev/null
@@ -853,14 +853,14 @@ device_enter_mode() {
             if [[ $device_det == 1 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
-                sendfiles+=("../resources/kloader/hgsp")
+                sendfiles+=("../resources/kloader/kloader_hgsp")
                 sendfiles+=("../resources/kloader/kloader")
             elif [[ $device_det == 5 ]]; then
                 echo "/tmp/kloader5 /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader5")
             elif (( device_det < 5 )); then
                 echo "/tmp/axi0mX /tmp/pwnediBSS" >> kloaders
-                sendfiles+=("../resources/kloader/axi0mX")
+                sendfiles+=("../resources/kloader/kloader_axi0mX")
             else
                 echo "/tmp/kloader /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader")
@@ -1792,7 +1792,7 @@ ipsw_prepare_bundle() {
     if [[ $1 == "base" ]]; then
         case $device_type in
             iPhone5,[12] ) hw="iphone5";;
-            iPhone5,[34] ) hw="iphone5c";;
+            iPhone5,[34] ) hw="iphone5b";;
         esac
         case $device_base_build in
             "11A"* | "11B"* ) base_build="11B554a";;
@@ -3140,15 +3140,15 @@ menu_print_info() {
         esac
         print "* Manufactured in Week $week $year"
     fi
-    if [[ $de_bbupdate == 1 ]]; then
+    if [[ -n $device_disable_bbupdate ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
     fi
     if [[ $device_actrec == 1 ]]; then
         warn "Activation records flag detected. Proceed with caution"
     fi
-    if [[ $de_bbupdate == 1 || $device_actrec == 1 ]]; then
-        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (with SHSH), powdersn0w"
+    if [[ -n $device_disable_bbupdate || $device_actrec == 1 ]]; then
+        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
     fi
     print "* iOS Version: $device_vers"
     print "* ECID: $device_ecid"
@@ -3948,7 +3948,7 @@ for i in "$@"; do
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
         "--memory" ) ipsw_memory=1;;
-        "--disable-bbupdate" ) de_bbupdate=1; device_disable_bbupdate=1;;
+        "--disable-bbupdate" ) device_disable_bbupdate=1;;
         "--disable-sudoloop" ) device_disable_sudoloop=1;;
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
         "--activation-records" ) device_actrec=1;;
