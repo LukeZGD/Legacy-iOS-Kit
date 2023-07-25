@@ -341,14 +341,14 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel curl jq libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl jq libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
+        sudo apt install -y ca-certificates curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
         if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
             sudo apt install -y python2
         fi
@@ -359,10 +359,10 @@ install_depends() {
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in curl jq libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n in ca-certificates curl jq libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av net-misc/curl app-misc/jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
+        sudo emerge -av app-misc/ca-certificates net-misc/curl app-misc/jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
 
     elif [[ $platform == "macos" ]]; then
         log "Installing Xcode Command Line Tools"
