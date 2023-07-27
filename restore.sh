@@ -155,7 +155,6 @@ set_tool_paths() {
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
 
-        jq="$(which jq)"
         ping="ping -c1"
         zenity="$(which zenity)"
 
@@ -217,7 +216,7 @@ set_tool_paths() {
             sudo chmod +x $dir/*
             if [[ -z $device_disable_usbmuxd ]]; then
                 sudo systemctl stop usbmuxd
-                sudo usbmuxd -pz
+                sudo -b $dir/usbmuxd -pf 2>/dev/null
                 usbmuxd_pid=$!
                 sleep 1
             fi
@@ -308,13 +307,13 @@ set_tool_paths() {
         iproxy="$dir/iproxy"
         irecovery="$dir/irecovery"
     fi
-    if [[ $platform != "linux" ]]; then
-        jq="$dir/jq"
-        zenity="$dir/zenity"
-    fi
     ideviceactivation="$(which ideviceactivation 2>/dev/null)"
     if [[ -z $ideviceactivation ]]; then
         ideviceactivation="$dir/ideviceactivation"
+    fi
+    jq="$dir/jq"
+    if [[ $platform != "linux" ]]; then
+        zenity="$dir/zenity"
     fi
     futurerestore="$dir/futurerestore"
     gaster+="$dir/gaster"
@@ -341,28 +340,28 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl jq libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y ca-certificates curl jq libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
+        sudo apt install -y ca-certificates curl libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
         if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
             sudo apt install -y python2
         fi
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates jq libimobiledevice openssl python3 systemd udev usbmuxd vim-common zenity zip
+        sudo dnf install -y ca-certificates libimobiledevice openssl python3 systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in ca-certificates curl jq libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av app-misc/ca-certificates net-misc/curl app-misc/jq libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
+        sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
 
     elif [[ $platform == "macos" ]]; then
         log "Installing Xcode Command Line Tools"
