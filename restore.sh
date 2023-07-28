@@ -315,7 +315,7 @@ set_tool_paths() {
     if [[ $platform != "linux" ]]; then
         zenity="$dir/zenity"
     fi
-    futurerestore="$dir/futurerestore"
+    futurerestore+="$dir/futurerestore"
     gaster+="$dir/gaster"
     idevicerestore+="$dir/idevicerestore"
     idevicererestore+="$dir/idevicererestore"
