@@ -244,6 +244,10 @@ set_tool_paths() {
         chmod +x $dir/*
     fi
 
+    ideviceenterrecovery="$dir/ideviceenterrecovery"
+    ideviceinfo="$dir/ideviceinfo"
+    iproxy="$dir/iproxy"
+    irecovery+="$dir/irecovery"
     if [[ $platform == "macos" ]]; then
         local ideviceinfot="$(which ideviceinfo 2>/dev/null)"
         local irecoveryt="$(which irecovery 2>/dev/null)"
@@ -256,10 +260,6 @@ set_tool_paths() {
         fi
     else
         bspatch="$dir/bspatch"
-        ideviceenterrecovery="$dir/ideviceenterrecovery"
-        ideviceinfo="$dir/ideviceinfo"
-        iproxy="$dir/iproxy"
-        irecovery+="$dir/irecovery"
         sha1sum="$(which sha1sum)"
         sha256sum="$(which sha256sum)"
     fi
