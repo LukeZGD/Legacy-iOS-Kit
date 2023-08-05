@@ -3,7 +3,6 @@
 - (formerly iOS-OTA-Downgrader)
 - **A multi-purpose script to downgrade/restore, save SHSH blobs, and jailbreak legacy iOS devices**
 - Supported on **Linux and macOS**
-    - Usage on Windows is not recommended, many features will not work
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for instructions**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
@@ -100,12 +99,11 @@
 
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
-- [**Fedora**](https://getfedora.org/) 36 and newer
+- [**Fedora**](https://getfedora.org/) 37 and newer
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed
 - [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
 - **macOS** 10.13 and newer
-- **Windows** 8.1 and newer
 
 ## Tools and other stuff used
 - curl
@@ -124,7 +122,7 @@
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux/Windows for restoring A7/A8 devices
+    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux for restoring A7/A8 devices
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)
@@ -132,8 +130,9 @@
 - [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4 only)
 - [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
 - [kloader_hgsp from nyan_satan](https://twitter.com/nyan_satan/status/945203180522045440) (used on h3lix only)
-- [partial-zip](https://github.com/matteyeux/partial-zip)
-- [zenity](https://github.com/GNOME/zenity); [macOS/Windows builds](https://github.com/ncruces/zenity)
+- [jq](https://github.com/jqlang/jq)
+- [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser)
+- [zenity](https://github.com/GNOME/zenity); [macOS build](https://github.com/ncruces/zenity)
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)

@@ -145,7 +145,7 @@ set_tool_paths() {
             distro="arch"
         elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
             distro="debian"
-        elif (( fedora_ver >= 36 )); then
+        elif (( fedora_ver >= 37 )); then
             distro="fedora"
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
@@ -189,16 +189,6 @@ set_tool_paths() {
         if [[ -z $device_disable_sudoloop ]]; then
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
         fi
-        # sudoloop check
-        if [[ $(uname -m) == "x86_64" && -e ../resources/sudoloop && $device_sudoloop != 1 ]]; then
-            local opt
-            log "Previous run failed to detect iOS device."
-            print "* You may enable sudoloop mode, which will run some tools as root."
-            read -p "$(input 'Enable sudoloop mode? (y/N) ')" opt
-            if [[ $opt == 'Y' || $opt == 'y' ]]; then
-                device_sudoloop=1
-            fi
-        fi
         if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $live_cdusb == 1 ]]; then
             if [[ $live_cdusb != 1 ]]; then
                 print "* Enter your user password when prompted"
@@ -214,6 +204,9 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             sudo chmod +x $dir/*
+            if [[ $? != 0 ]]; then
+                error "Failed setting up permissions, cannot continue."
+            fi
             if [[ -z $device_disable_usbmuxd ]]; then
                 sudo systemctl stop usbmuxd
                 sudo -b $dir/usbmuxd -pf 2>/dev/null
@@ -228,8 +221,8 @@ set_tool_paths() {
         dir="../bin/macos"
 
         # macos version check
-        if [[ $(echo "$platform_ver" | cut -c -2) == 10 ]]; then
-            local mac_ver=$(echo "$platform_ver" | cut -c 4-)
+        if [[ ${platform_ver:0:2} == 10 ]]; then
+            local mac_ver=${platform_ver:3}
             mac_ver=${mac_ver%.*}
             if (( mac_ver < 13 )); then
                 error "Your macOS version ($platform_ver) is not supported." \
@@ -238,62 +231,30 @@ set_tool_paths() {
         fi
 
         bspatch="$(which bspatch)"
-        ideviceenterrecovery="$(which ideviceenterrecovery 2>/dev/null)"
-        ideviceinfo="$(which ideviceinfo 2>/dev/null)"
-        iproxy="$(which iproxy 2>/dev/null)"
         ipwnder32="$dir/ipwnder32"
-        irecovery="$(which irecovery 2>/dev/null)"
         ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
         sha256sum="$(which shasum) -a 256"
 
-    elif [[ $OSTYPE == "msys" ]]; then
-        platform="windows"
-        platform_ver="$(uname)"
-        dir="../bin/windows"
-
-        ping="ping -n 1"
-
-        if [[ ! -d $dir || ! -d ../.git ]]; then
-            error "Using Legacy iOS Kit on Windows is not supported. Use on Linux or macOS instead." "You can continue by git cloning this repo, but I do not recommend using this on Windows in any case."
-        fi
-        warn "Using Legacy iOS Kit on Windows is not recommended."
-        print "* Many features of Legacy iOS Kit will not work on Windows."
-        print "* Please switch to a Linux or Mac machine to avoid issues."
-        print "* Read the How to Use page: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
-        sleep 5
-        pause
-        # itunes version check
-        itunes_ver="Unknown"
-        if [[ -e "/c/Program Files/iTunes/iTunes.exe" ]]; then
-            itunes_ver=$(powershell "(Get-Item -path 'C:\Program Files\iTunes\iTunes.exe').VersionInfo.ProductVersion")
-        elif [[ -e "/c/Program Files (x86)/iTunes/iTunes.exe" ]]; then
-            itunes_ver=$(powershell "(Get-Item -path 'C:\Program Files (x86)\iTunes\iTunes.exe').VersionInfo.ProductVersion")
-        fi
-        log "iTunes version: $itunes_ver"
-        if [[ $(echo "$itunes_ver" | cut -c -2) == 12 ]]; then
-            local itunes_ver2=$(echo "$itunes_ver" | cut -c 4-)
-            itunes_ver2=${itunes_ver%%.*}
-            if (( itunes_ver2 > 6 )); then
-                warn "Detected a newer iTunes version."
-                print "* Please downgrade iTunes to 12.6.5, 12.4.3, or older."
-                print "* You may still continue, but you might encounter issues with restoring the device."
-                sleep 5
-                pause
-                itunes_ver+=" (please downgrade to 12.6.5 or older)"
-            fi
-        fi
     else
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
     log "Running on platform: $platform ($platform_ver)"
-    rm ../resources/sudoloop 2>/dev/null
     if [[ $device_sudoloop != 1 || $platform != "linux" ]]; then
         chmod +x $dir/*
     fi
 
-    # common
-    if [[ $platform != "macos" ]]; then
+    if [[ $platform == "macos" ]]; then
+        local ideviceinfot="$(which ideviceinfo 2>/dev/null)"
+        local irecoveryt="$(which irecovery 2>/dev/null)"
+        if [[ -n $ideviceinfot && -n $irecoveryt ]]; then
+            log "Detected libimobiledevice and libirecovery from Homebrew/MacPorts"
+            ideviceenterrecovery="$(which ideviceenterrecovery)"
+            ideviceinfo="$(which ideviceinfo)"
+            iproxy="$(which iproxy)"
+            irecovery="$(which irecovery)"
+        fi
+    else
         bspatch="$dir/bspatch"
         ideviceenterrecovery="$dir/ideviceenterrecovery"
         ideviceinfo="$dir/ideviceinfo"
@@ -301,11 +262,6 @@ set_tool_paths() {
         irecovery+="$dir/irecovery"
         sha1sum="$(which sha1sum)"
         sha256sum="$(which sha256sum)"
-    elif [[ -z $ideviceinfo || -z $irecovery ]]; then
-        ideviceenterrecovery="$dir/ideviceenterrecovery"
-        ideviceinfo="$dir/ideviceinfo"
-        iproxy="$dir/iproxy"
-        irecovery="$dir/irecovery"
     fi
     ideviceactivation="$(which ideviceactivation 2>/dev/null)"
     if [[ -z $ideviceactivation ]]; then
@@ -333,10 +289,6 @@ install_depends() {
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
         print "* Enter your user password when prompted"
         pause
-    elif [[ $platform == "windows" ]]; then
-        print "* Legacy iOS Kit will be installing dependencies from MSYS2"
-        print "* You may have to run the script more than once. If the prompt exits on its own, just run restore.sh again"
-        pause
     fi
 
     if [[ $distro == "arch" ]]; then
@@ -361,7 +313,7 @@ install_depends() {
         sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity
+        sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
         log "Installing Xcode Command Line Tools"
@@ -370,13 +322,6 @@ install_depends() {
             log "Installing Rosetta 2"
             softwareupdate --install-rosetta
         fi
-
-    elif [[ $platform == "windows" ]]; then
-        popd >/dev/null
-        rm -rf "$(dirname "$0")/tmp"
-        pacman -Syu --noconfirm --needed ca-certificates curl libcurl libopenssl openssh openssl unzip zip
-        mkdir "$(dirname "$0")/tmp"
-        pushd "$(dirname "$0")/tmp" >/dev/null
     fi
 
     uname > "../resources/firstrun"
@@ -524,16 +469,13 @@ device_get_info() {
         local error_msg=$'* Make sure to trust this computer by selecting "Trust" at the pop-up.'
         [[ $platform == "macos" ]] && error_msg+=$'\n* Make sure to have the initial setup dependencies installed before retrying.'
         [[ $platform != "linux" ]] && error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
-        #if [[ $platform == "linux" ]]; then
-            #error_msg+=$'\n* Try running the script again and enable sudoloop mode.'
-            #touch ../resources/sudoloop
-        #fi
         error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
 
     case $device_mode in
         "DFU" | "Recovery" )
+            #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
             local ProdCut=7 # cut 7 for ipod/ipad
             device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
             if [[ $(echo "$device_type" | cut -c 3) == 'h' ]]; then
@@ -541,10 +483,11 @@ device_get_info() {
             fi
             device_type=$(echo "$device_type" | cut -c -$ProdCut)
             device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
+            device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_mode == "Recovery" ]]; then
-                print "* Device: $device_type in $device_mode mode"
+                print "* Device: $device_type (${device_model}ap) in $device_mode mode"
                 print "* iOS Version: $device_vers"
                 print "* ECID: $device_ecid"
                 echo
@@ -562,6 +505,7 @@ device_get_info() {
             device_type=$($ideviceinfo -s -k ProductType)
             [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
             device_ecid=$($ideviceinfo -s -k UniqueChipID)
+            device_model=$($ideviceinfo -s -k HardwareModel)
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
             [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -579,6 +523,8 @@ device_get_info() {
             fi
         ;;
     esac
+    device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
+    device_model="${device_model%??}" # remove "ap" from the end
 
     # enable manual entry
     if [[ -n $device_argmode ]]; then
@@ -595,15 +541,9 @@ device_get_info() {
     fi
 
     device_fw_dir="../resources/firmware/$device_type"
-    device_model="$(cat $device_fw_dir/hwmodel)"
-    if [[ -z $device_model ]]; then
-        print "* Device: $device_type in $device_mode mode"
-        print "* iOS Version: $device_vers"
-        print "* ECID: $device_ecid"
-        echo
-        error "Device model not found. Device type ($device_type) is possibly invalid or not supported."
+    if [[ -s $device_fw_dir/hwmodel ]]; then
+        device_model="$(cat $device_fw_dir/hwmodel)"
     fi
-
     device_use_bb=0
     device_latest_bb=0
     # set device_proc (what processor the device has)
@@ -619,6 +559,13 @@ device_get_info() {
         iPhone7,[12] | iPod7,1 )
             device_proc=8;; # A8
     esac
+    if [[ -z $device_proc ]]; then
+        print "* Device: $device_type (${device_model}ap) in $device_mode mode"
+        print "* iOS Version: $device_vers"
+        print "* ECID: $device_ecid"
+        echo
+        error "This device is not supported by Legacy iOS Kit."
+    fi
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_vers and device_latest_build are used
     case $device_type in
@@ -660,6 +607,10 @@ device_get_info() {
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
         ;;
+        iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
+            device_latest_vers="15.7.8"
+            device_latest_build="19H364"
+        ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
@@ -693,6 +644,18 @@ device_get_info() {
         iPhone7,[12] ) # MDM9625
             device_latest_bb="Mav10-7.80.04.Release.bbfw"
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
+        ;;
+        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.7.8
+            device_latest_bb="Mav10-11.61.01.Release.bbfw"
+            device_latest_bb_sha1="212cbb1e5bfd60912c01adda7dca66a569ddf758"
+        ;;
+        iPhone9,[12] ) # MDM9645
+            device_latest_bb="Mav16-9.61.00.Release.bbfw"
+            device_latest_bb_sha1="7c742e0fc4857e7c07df1e4c48ccafbb60ae38bb"
+        ;;
+        iPhone9,[34] ) # PMB9943
+            device_latest_bb="ICE16-6.03.01.Release.bbfw"
+            device_latest_bb_sha1="0e62ac6a7c8299f69f9410bdda27f6a3f9601a8f"
         ;;
     esac
     # disable bbupdate for ipad 2 cellular devices
@@ -753,7 +716,6 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         if [[ $timeout != 1 ]]; then
-            #touch ../resources/sudoloop
             error "Failed to find device in $1 mode (Timed out). Please run the script again."
         fi
         return 1
@@ -934,27 +896,6 @@ device_enter_mode() {
                 print "* Note that kDFU mode will likely not work for powdersn0w restores!"
             fi
 
-            if [[ $platform == "windows" ]]; then
-                print "* Place your device in PWNED DFU or kDFU mode using Legacy iOS Kit on Linux or Mac."
-                print "* Do not use pwning tools on Windows, they will NOT work for Legacy iOS Kit."
-                print "* You can also do pwning using another iOS Device with iPwnder Lite."
-                print "* If you do not know what you are doing, exit now and restart your device in normal mode."
-                print "* Troubleshooting links:"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
-                if [[ $device_mode == "DFU" ]]; then
-                    pause
-                    return
-                elif [[ $device_mode == "Recovery" ]]; then
-                    read -p "$(input 'Select Y to exit recovery mode (Y/n) ')" opt
-                    if [[ $opt != 'N' && $opt != 'n' ]]; then
-                        log "Exiting recovery mode."
-                        $irecovery -n
-                    fi
-                fi
-                exit
-            fi
-
             if [[ $device_mode != "Normal" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
@@ -992,7 +933,12 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if [[ $device_proc == 6 && $platform != "macos" ]] || [[ $device_type == "iPod2,1" ]]; then
+            if (( device_proc > 7 )); then
+                # A8/A9/A10 uses gaster
+                log "Placing device to pwnDFU mode using gaster"
+                $gaster pwn
+                tool_pwned=$?
+            elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $device_type == "iPod2,1" ]]; then
                 # A6 linux uses ipwndfu
                 # ipod touch 2g uses ipwndfu
                 device_ipwndfu pwn
@@ -1001,26 +947,31 @@ device_enter_mode() {
                 log "Placing device to pwnDFU mode using ipwnder"
                 $ipwnder -p
                 tool_pwned=$?
-            elif [[ $device_proc == 7 && $platform == "macos" && $(uname -m) != "x86_64" ]]; then
-                # A7 asi mac uses ipwnder_lite
+            elif (( device_proc > 5 )) && [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+                # A6/A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
                 $ipwnder
                 tool_pwned=$?
             else
-                # A4/A6 mac uses ipwnder_lite/ipwnder32
+                # A4/A6 intel mac uses ipwnder_lite/ipwnder32
                 # A7 intel mac uses ipwnder_lite/ipwnder32/gaster
                 # A7 linux uses ipwnder/gaster
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ipwnder by default (1)."
-                input "Select your option:"
-                local selection=("ipwnder")
+                local selection=()
+                if [[ $platform == "macos" ]]; then
+                    print "* This option is set to ipwnder32 by default (1)."
+                    selection+=("ipwnder32" "ipwnder")
+                elif [[ $device_proc == 7 ]]; then
+                    print "* This option is set to gaster by default (1)."
+                fi
                 if [[ $device_proc == 7 ]]; then
                     selection+=("gaster")
                 fi
-                if [[ $platform == "macos" ]]; then
-                    selection+=("ipwnder32")
+                if [[ $platform != "macos" ]]; then
+                    selection+=("ipwnder")
                 fi
+                input "Select your option:"
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
                         "gaster" ) opt="$gaster pwn"; break;;
@@ -1045,7 +996,7 @@ device_enter_mode() {
                 device_pwnerror
             fi
 
-            if [[ $platform == "macos" && $opt != "$gaster pwn" ]]; then
+            if [[ $platform == "macos" && $opt != "$gaster pwn" ]] || (( device_proc > 7 )); then
                 return
             fi
 
@@ -1076,6 +1027,8 @@ device_ipwndfu() {
     local tool_pwned=0
     local mac_ver=0
     local python2=$(which python2 2>/dev/null)
+    local pyenv=$(which pyenv 2>/dev/null)
+    local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
     if [[ $1 == "send_ibss" ]]; then
         patch_ibss
@@ -1087,23 +1040,33 @@ device_ipwndfu() {
     fi
     if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
         python2=/usr/bin/python
-    elif [[ -e $HOME/.pyenv/versions/2.7.18/bin/python2 ]]; then
+    elif [[ -z $python2 && ! -e $pyenv2 ]]; then
+        warn "python2 is not installed. Attempting to install python2 before continuing"
+        print "* You may install python2 from pyenv: pyenv install 2.7.18"
+        if [[ -z $pyenv && ! -d $HOME/.pyenv ]]; then
+            warn "pyenv is not installed. Attempting to install pyenv before continuing"
+            print "* You may install pyenv by running: curl https://pyenv.run | bash"
+            log "Installing pyenv"
+            curl https://pyenv.run | bash
+            pyenv="$HOME/.pyenv/bin/pyenv"
+        fi
+        log "Installing python2 using pyenv"
+        $pyenv install 2.7.18
+        if [[ ! -e $pyenv2 ]]; then
+            warn "Cannot detect python2 from pyenv, its installation may have failed."
+            print "* Try installing pyenv and python2 manually:"
+            print "    > curl https://pyenv.run | bash"
+            print "    > ~/.pyenv/bin/pyenv install 2.7.18"
+            error "Cannot detect python2 for ipwndfu, cannot continue."
+        fi
+    fi
+    if [[ -e $pyenv2 ]]; then
         log "python2 from pyenv detected"
         python2=
         if [[ $device_sudoloop == 1 ]]; then
             python2="sudo "
         fi
-        python2+="$HOME/.pyenv/versions/2.7.18/bin/python2"
-    elif [[ $(which pyenv) ]]; then
-        log "Installing python2 using pyenv"
-        $(which pyenv) install 2.7.18
-    elif [[ -z $python2 ]]; then
-        warn "pyenv and python2 is not installed. Attempting to install pyenv and python2 before continuing"
-        print "* You may install python2 from pyenv: pyenv install 2.7.18"
-        log "Installing pyenv"
-        curl https://pyenv.run | bash
-        log "Installing python2 using pyenv"
-        $HOME/.pyenv/bin/pyenv install 2.7.18
+        python2+="$pyenv2"
     fi
 
     device_enter_mode DFU
@@ -1143,7 +1106,7 @@ device_ipwndfu() {
         "alloc8" )
             if [[ ! -s n88ap-iBSS-4.3.5.img3 ]]; then
                 log "Downloading iOS 4.3.5 iBSS"
-                "../$dir/partialzip" http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" n88ap-iBSS-4.3.5.img3
+                "../$dir/pzb" -g "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" -o n88ap-iBSS-4.3.5.img3 http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw
             fi
             log "Installing alloc8 to device"
             $python2 ipwndfu -x
@@ -1217,6 +1180,7 @@ download_comp() {
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/url)
+        echo "$url" > $device_fw_dir/$build_id/url
     fi
     download_targetfile="$comp.$device_model"
     if [[ $build_id != "12"* ]]; then
@@ -1228,7 +1192,7 @@ download_comp() {
         cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
     else
         log "Downloading ${comp}..."
-        "$dir/partialzip" "$url" "Firmware/dfu/$download_targetfile.dfu" ${comp}
+        "$dir/pzb" -g "Firmware/dfu/$download_targetfile.dfu" -o ${comp} "$url"
         cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
     fi
 }
@@ -1352,9 +1316,7 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $platform == "windows" ]]; then
-        ipsw_memory=
-    elif [[ -n $ipsw_memory ]]; then
+    if [[ -n $ipsw_memory ]]; then
         :
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] &&
          [[ $device_target_vers != "$device_latest_vers" && $device_target_other != 1 ]]; then
@@ -1424,7 +1386,7 @@ shsh_save() {
                 unzip -o -j "$ipsw_base_path.ipsw" BuildManifest.plist -d .
             else
                 log "Downloading BuildManifest for $version..."
-                "$dir/partialzip" "$(cat "$device_fw_dir/$build_id/url")" BuildManifest.plist BuildManifest.plist
+                "$dir/pzb" -g BuildManifest.plist -o BuildManifest.plist "$(cat "$device_fw_dir/$build_id/url")"
             fi
             mv BuildManifest.plist $buildmanifest
         fi
@@ -1475,9 +1437,13 @@ ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
     local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    if (( device_proc > 7 )); then
+        return
+    fi
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from ipsw.me..."
         IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
+        echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
     log "Verifying $ipsw_dl.ipsw..."
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
@@ -1554,9 +1520,6 @@ ipsw_prepare_jailbreak() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
-            if [[ $platform == "windows" ]]; then
-                ipsw+="2"
-            fi
             log "Generating reboot.sh"
             echo '#!/bin/bash' | tee reboot.sh
             echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
@@ -1887,8 +1850,8 @@ ipsw_prepare_32bit() {
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $platform != "windows" && $device_type != "$device_disable_bbupdate" &&
-            $ipsw_jailbreak != 1 && $device_proc != 4 && $device_actrec != 1 ]]; then
+    elif [[ $device_type != "$device_disable_bbupdate" && $ipsw_jailbreak != 1 &&
+            $device_proc != 4 && $device_actrec != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
@@ -2268,6 +2231,7 @@ restore_download_bbsep() {
     # sets variables: restore_manifest, restore_baseband, restore_sep
     local build_id
     local baseband_sha1
+    local restore_baseband_check
     if [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
         restore_baseband="$device_use_bb"
@@ -2285,7 +2249,7 @@ restore_download_bbsep() {
             cp ../resources/manifest/BuildManifest_${device_type}_10.3.3.plist $build_id.plist
         else
             log "Downloading $build_id BuildManifest"
-            "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" BuildManifest.plist $build_id.plist
+            "$dir/pzb" -g BuildManifest.plist -o $build_id.plist "$(cat $device_fw_dir/$build_id/url)"
         fi
         mv $build_id.plist ../saved/$device_type
     fi
@@ -2299,25 +2263,29 @@ restore_download_bbsep() {
 
     # Baseband
     if [[ $restore_baseband != 0 ]]; then
-        if [[ -e ../saved/baseband/$restore_baseband ]]; then
-            if [[ $baseband_sha1 != "$($sha1sum ../saved/baseband/$restore_baseband | awk '{print $1}')" ]]; then
-                rm ../saved/baseband/$restore_baseband
+        restore_baseband_check="../saved/baseband/$restore_baseband"
+        if [[ $restore_baseband == "Mav5-11.80.00.Release.bbfw" ]]; then
+            restore_baseband_check="../saved/baseband/Mav5-11.80.00.Release_${baseband_sha1}.bbfw"
+        fi
+        if [[ -e $restore_baseband_check ]]; then
+            if [[ $baseband_sha1 != "$($sha1sum $restore_baseband_check | awk '{print $1}')" ]]; then
+                rm $restore_baseband_check
             fi
         fi
-        if [[ ! -e ../saved/baseband/$restore_baseband ]]; then
+        if [[ ! -e $restore_baseband_check ]]; then
             log "Downloading $build_id Baseband"
-            "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" Firmware/$restore_baseband $restore_baseband
+            "$dir/pzb" -g Firmware/$restore_baseband -o $restore_baseband "$(cat $device_fw_dir/$build_id/url)"
             if [[ $baseband_sha1 != "$($sha1sum $restore_baseband | awk '{print $1}')" ]]; then
                 error "Downloading/verifying baseband failed. Please run the script again"
             fi
-            mv $restore_baseband ../saved/baseband/
+            mv $restore_baseband $restore_baseband_check
         fi
-        cp ../saved/baseband/$restore_baseband tmp/bbfw.tmp
+        cp $restore_baseband_check tmp/bbfw.tmp
         if [[ $? != 0 ]]; then
-            rm ../saved/baseband/$restore_baseband
+            rm $restore_baseband_check
             error "An error occurred copying baseband. Please run the script again"
         fi
-        log "Baseband: ../saved/baseband/$restore_baseband"
+        log "Baseband: $restore_baseband_check"
         restore_baseband="tmp/bbfw.tmp"
     fi
 
@@ -2326,7 +2294,7 @@ restore_download_bbsep() {
         restore_sep="sep-firmware.$device_model.RELEASE"
         if [[ ! -e ../saved/$device_type/$restore_sep-$build_id.im4p ]]; then
             log "Downloading $build_id SEP"
-            "$dir/partialzip" "$(cat $device_fw_dir/$build_id/url)" Firmware/all_flash/$restore_sep.im4p $restore_sep.im4p
+            "$dir/pzb" -g Firmware/all_flash/$restore_sep.im4p -o $restore_sep.im4p "$(cat $device_fw_dir/$build_id/url)"
             mv $restore_sep.im4p ../saved/$device_type/$restore_sep-$build_id.im4p
         fi
         restore_sep="$restore_sep-$build_id.im4p"
@@ -2370,12 +2338,6 @@ restore_idevicerestore() {
     opt=$?
     echo
     log "Restoring done! Read the message below if any error has occurred:"
-    if [[ $platform == "windows" ]]; then
-        print "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-        print "* Follow the troubleshoting link for steps to attempt fixing this issue."
-        print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
-        echo
-    fi
     if [[ $device_target_vers == "4"* ]]; then
         print "* For device activation, go to: Other Utilities -> Attempt Activation"
         echo
@@ -2398,7 +2360,7 @@ restore_futurerestore() {
     local mac_ver=0
     local port=8888
 
-    if (( device_proc < 7 )); then
+    if [[ $1 == "--use-pwndfu" ]]; then
         if [[ $platform == "macos" ]]; then
             mac_ver=$(echo "$platform_ver" | cut -c -2)
         fi
@@ -2440,6 +2402,8 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
+    elif [[ $device_latest_vers == "15"* ]]; then
+        :
     else
         futurerestore2+="_new"
     fi
@@ -2465,6 +2429,7 @@ restore_futurerestore() {
 }
 
 restore_latest() {
+    local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
     if [[ $1 == "custom" ]]; then
         ExtraArgs+="c"
@@ -2473,16 +2438,11 @@ restore_latest() {
     else
         ipsw_extract
     fi
-    log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$ipsw_path.ipsw\""
-    $idevicerestore $ExtraArgs "$ipsw_path.ipsw"
+    log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
+    $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
     opt=$?
     if [[ $1 == "custom" ]]; then
         log "Restoring done! Read the message below if any error has occurred:"
-        if [[ $platform == "windows" ]]; then
-            print "* Windows users may encounter errors like \"Unable to send APTicket\" or \"Unable to send iBEC\" in the restore process."
-            print "* Follow the troubleshoting link for steps to attempt fixing this issue."
-            print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#windows"
-        fi
         if [[ $opt != 0 ]]; then
             print "* If you are getting the error \"unable to find AppleNANDFTL\":"
             print " -> This means that your device is not compatible with $device_target_vers"
@@ -2524,7 +2484,7 @@ restore_prepare_1033() {
     done
 
     if (( attempt >= 5 )); then
-        error "Failed to enter pwnREC mode. You may have to force restart your device and start over entering pwnDFU mode again"
+        error "Failed to enter pwnREC mode. You might have to force restart your device and start over entering pwnDFU mode again"
     fi
     shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
 }
@@ -2598,24 +2558,23 @@ restore_prepare() {
         ;;
 
         [78] )
-            if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+            if [[ $device_latest_vers == "15"* ]]; then
+                :
+            elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 # A7 devices 10.3.3
                 local opt="--skip-blob"
-                restore_prepare_1033
                 if [[ $platform == "macos" ]]; then
                     opt=
                 fi
+                restore_prepare_1033
                 restore_futurerestore $opt
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
             else
-                # 64-bit devices A7/A8
-                local generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
-                log "The generator for your SHSH blob is: $generator"
+                log "The generator for your SHSH blob is: $shsh_generator"
                 print "* Before continuing, make sure to set the nonce generator of your device!"
                 print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
-                print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#using-dimentio"
-                print "* Also check the SEP/BB Compatibility Chart (Legacy iOS 12 sheet): https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636"
+                print "* For iOS 11 and 12: https://github.com/futurerestore/futurerestore/#using-dimentio"
                 pause
                 if [[ $device_mode == "Normal" ]]; then
                     device_enter_mode Recovery
@@ -2624,6 +2583,17 @@ restore_prepare() {
             fi
         ;;
     esac
+    if [[ $device_latest_vers == "15"* ]]; then
+        device_enter_mode pwnDFU
+        $irecovery -f ../README.md # send dummy file
+        device_fw_key_check
+        if [[ ! -s ../resources/firmware.json ]]; then
+            log "Downloading firmwares.json from ipsw.me"
+            curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmware.json
+            cp firmware.json ../resources/firmware.json
+        fi
+        restore_futurerestore --use-pwndfu
+    fi
 }
 
 ipsw_prepare() {
@@ -2684,7 +2654,7 @@ device_remove4() {
 
     if [[ ! -e ../saved/$device_type/iBSS_8L1.dfu ]]; then
         log "Downloading 8L1 iBSS..."
-        "$dir/partialzip" $(cat $device_fw_dir/8L1/url) Firmware/dfu/iBSS.n90ap.RELEASE.dfu iBSS_8L1.dfu
+        "$dir/pzb" -g Firmware/dfu/iBSS.n90ap.RELEASE.dfu -o iBSS_8L1.dfu $(cat $device_fw_dir/8L1/url)
         cp iBSS_8L1.dfu ../saved/$device_type
     else
         cp ../saved/$device_type/iBSS_8L1.dfu .
@@ -2746,6 +2716,7 @@ device_ramdisk() {
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$device_target_build"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
+        echo "$url" > $device_fw_dir/$device_target_build/url
     fi
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
@@ -2762,7 +2733,7 @@ device_ramdisk() {
         if [[ -e $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
-            "$dir/partialzip" "$url" "${path}$name" "$name"
+            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
@@ -3028,12 +2999,6 @@ device_ramdisk() {
 }
 
 shsh_save_onboard() {
-    if [[ $platform == "windows" ]]; then
-        print "* Saving onboard SHSH is not tested on Windows"
-        print "* It is recommended to do this on Linux/macOS instead"
-        print "* You may also need iTunes 12.4.3 or older for shshdump to work"
-        pause
-    fi
     if [[ $device_proc == 4 ]]; then
         device_enter_mode pwnDFU
         patch_ibss
@@ -3048,13 +3013,9 @@ shsh_save_onboard() {
     $irecovery -f pwnediBEC
     device_find_mode Recovery
     log "Dumping blobs now"
-    if [[ $platform == "windows" ]]; then
-        "$dir/shshdump"
-    else
-        (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
-        $irecovery2 -g dump.shsh
-        $irecovery -n
-    fi
+    (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
+    $irecovery2 -g dump.shsh
+    $irecovery -n
     "$dir/ticket" dump.shsh dump.plist "$ipsw_path.ipsw" -z
     "$dir/validate" dump.plist "$ipsw_path.ipsw" -z
     if [[ $? != 0 ]]; then
@@ -3073,12 +3034,12 @@ shsh_save_onboard() {
 }
 
 shsh_save_cydia() {
-    local json=$(curl "https://firmware-keys.ipsw.me/device/$device_type")
-    local len=$(echo "$json" | $jq length)
+    local json=$(curl "https://api.ipsw.me/v4/device/${device_type}?type=ipsw")
+    local len=$(echo "$json" | $jq -r ".firmwares | length")
     local builds=()
     local i=0
     while (( i < len )); do
-        builds+=($(echo "$json" | $jq -r ".[$i].buildid"))
+        builds+=($(echo "$json" | $jq -r ".firmwares[$i].buildid"))
         ((i++))
     done
     for build in ${builds[@]}; do
@@ -3114,11 +3075,6 @@ menu_print_info() {
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
     print "* Platform: $platform ($platform_ver) $live_cdusb_str"
-    if [[ $platform == "windows" ]]; then
-        warn "Using Legacy iOS Kit on Windows is not recommended."
-        print "* Many features of Legacy iOS Kit will not work on Windows."
-        print "* iTunes version: $itunes_ver"
-    fi
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     if [[ $device_newbr == 1 ]]; then
@@ -3177,7 +3133,10 @@ menu_main() {
                 menu_items+=("Jailbreak Device")
             fi
         fi
-        menu_items+=("Save SHSH Blobs" "Other Utilities" "Exit")
+        if (( device_proc < 8 )); then
+            menu_items+=("Save SHSH Blobs")
+        fi
+        menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
             selected="$opt"
             break
@@ -3320,7 +3279,10 @@ menu_restore() {
             iPhone2,1 | iPod2,1 )
                 menu_items+=("Other (Custom IPSW)");;
         esac
-        menu_items+=("Latest iOS ($device_latest_vers)" "Other (use SHSH blobs)" "Go Back")
+        if (( device_proc < 7 )); then
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        fi
+        menu_items+=("Other (use SHSH blobs)" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Other Utilities > Create Custom IPSW"
@@ -3497,9 +3459,17 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
             fi
+            if (( device_proc > 6 )); then
+                print "* Check the SEP/BB compatibility sheet: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
+            fi
             if [[ -n $shsh_path ]]; then
                 echo
                 print "* Selected Target SHSH: $shsh_path"
+                if (( device_proc > 6 )); then
+                    shsh_generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
+                    print "* Generator: $shsh_generator"
+                fi
+
             elif [[ $2 != "ipsw" ]]; then
                 echo
                 print "* Select Target SHSH to continue"
@@ -3611,6 +3581,36 @@ menu_ipsw_browse() {
         log "Selected IPSW is not for your device $device_type."
         pause
         return
+    elif [[ $device_proc == 8 && $device_latest_vers == "12"* ]] || [[ $device_type == "iPad4,6" ]]; then
+        # SEP/BB check for iPhone 6/6+, iPad mini 2 China, iPod touch 6
+        case $device_target_build in
+            "11"* | "12"* | "13"* | "14"* | "15A"* | "15B"* | "15C"* | "15D"* )
+                log "Selected IPSW ($device_target_vers) is not supported as target version."
+                print "* Latest SEP/BB is not compatible."
+                pause
+                return
+            ;;
+        esac
+    elif [[ $device_proc == 7 ]]; then
+        # SEP/BB check for iPhone 5S, iPad Air 1/mini 2
+        case $device_target_build in
+            "11"* | "12"* | "13"* | "14A"* | "15A"* | "15B"* | "15C"* | "15D"* )
+                log "Selected IPSW ($device_target_vers) is not supported as target version."
+                print "* Latest SEP/BB is not compatible."
+                pause
+                return
+            ;;
+        esac
+    elif [[ $device_latest_vers == "15"* ]]; then
+        # SEP/BB check for iPhone 6S/6S+/SE 2016/7/7+, iPad Air 2/mini 4, iPod touch 7
+        case $device_target_build in
+            "12"* | "13"* | "14"* | "15"* | "16"* | "17"* )
+                log "Selected IPSW ($device_target_vers) is not supported as target version."
+                print "* Latest SEP/BB is not compatible."
+                pause
+                return
+            ;;
+        esac
     fi
     case $1 in
         "iOS 10.3.3" ) versionc="10.3.3";;
@@ -3711,6 +3711,8 @@ menu_other() {
                     menu_items+=("Dump Baseband")
                 fi
                 menu_items+=("Activation Records" "SSH Ramdisk" "Clear NVRAM")
+            else
+                menu_items+=("Enter pwnDFU Mode")
             fi
             case $device_type in
                 iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;

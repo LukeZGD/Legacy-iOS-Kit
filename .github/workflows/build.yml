@@ -40,7 +40,7 @@ jobs:
         run: |
           mkdir -p ./exclude/bin
           cp -R ./bin/* ./exclude/bin
-          rm -r ./bin/linux ./bin/windows
+          rm -r ./bin/linux
 
       - name: Zip macos files
         run: zip -r ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md
@@ -71,13 +71,7 @@ jobs:
         run: zip -r ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md
 
       - name: Move linux armhf binaries and other files
-        run: rm -r ./bin/linux ./exclude/bin/windows
-      #   run: |
-      #     rm -r ./bin/linux
-      #     cp -R ./exclude/bin/windows ./bin
-      #
-      # - name: Zip win files
-      #   run: zip -r ${{ github.event.repository.name }}_windows_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.cmd restore.sh README.md
+        run: rm -r ./bin/linux
 
       - name: Copy exclude files back
         run: cp -R ./exclude/bin/* ./bin
@@ -87,7 +81,7 @@ jobs:
 
       - name: Create this file to get latest git hash
         run: |
-          echo "This file is for compatibility purposes only. Get Legacy-iOS-Kit_complete instead." > README.txt
+          echo "This file is for version checking purposes only. Get the correct zip file for your platform in the release assets." > README.txt
           zip -r git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip README.txt
 
       - name: Update latest release
