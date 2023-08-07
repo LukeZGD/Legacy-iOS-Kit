@@ -1180,6 +1180,7 @@ download_comp() {
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/url)
+        mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
     fi
     download_targetfile="$comp.$device_model"
@@ -1443,6 +1444,7 @@ ipsw_verify() {
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from ipsw.me..."
         IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
+        mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
     log "Verifying $ipsw_dl.ipsw..."
@@ -2716,6 +2718,7 @@ device_ramdisk() {
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$device_target_build"
         url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
+        mkdir $device_fw_dir/$device_target_build 2>/dev/null
         echo "$url" > $device_fw_dir/$device_target_build/url
     fi
     mkdir $ramdisk_path 2>/dev/null
@@ -3460,7 +3463,7 @@ menu_ipsw() {
                 print "* Select Target IPSW to continue"
             fi
             if (( device_proc > 6 )); then
-                print "* Check the SEP/BB compatibility sheet: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
+                print "* Check the SEP/BB compatibility chart: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
             fi
             if [[ -n $shsh_path ]]; then
                 echo
@@ -3623,11 +3626,13 @@ menu_ipsw_browse() {
         "iPhoneOS 3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
-            if [[ $device_base_vers != "7"* ]] && [[ $device_type == "iPhone5,1" || $device_type == "iPhone5,2" ]]; then
-                log "Selected IPSW is not for iOS 7.x."
-                print "* You need iOS 7.x IPSW and SHSH blobs for this device to use powdersn0w."
-                pause
-                return
+            if [[ $device_type == "iPhone5,1" || $device_type == "iPhone5,2" ]]; then
+                if [[ $device_base_vers != "7"* ]]; then
+                    log "Selected IPSW is not for iOS 7.x."
+                    print "* You need iOS 7.x IPSW and SHSH blobs for this device to use powdersn0w."
+                    pause
+                    return
+                fi
             elif [[ $device_base_vers != "7.1"* ]]; then
                 log "Selected IPSW is not for iOS 7.1.x."
                 print "* You need iOS 7.1.x IPSW and SHSH blobs for this device to use powdersn0w."
