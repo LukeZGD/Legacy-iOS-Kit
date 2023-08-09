@@ -240,7 +240,7 @@ set_tool_paths() {
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
     log "Running on platform: $platform ($platform_ver)"
-    if [[ $device_sudoloop != 1 || $platform != "linux" ]]; then
+    if [[ $device_sudoloop != 1 ]]; then
         chmod +x $dir/*
     fi
 
@@ -283,7 +283,7 @@ set_tool_paths() {
 
 install_depends() {
     log "Installing dependencies..."
-    rm "../resources/firstrun" 2>/dev/null
+    rm -f "../resources/firstrun"
 
     if [[ $platform == "linux" ]]; then
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
@@ -316,6 +316,11 @@ install_depends() {
         sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
+        print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
+        print "* Enter your user password when prompted"
+        pause
+        sudo xattr -cr $dir
+        chown -R $USER:staff $dir
         log "Installing Xcode Command Line Tools"
         xcode-select --install
         if [[ $(uname -m) != "x86_64" ]]; then
@@ -324,7 +329,7 @@ install_depends() {
         fi
     fi
 
-    uname > "../resources/firstrun"
+    echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" ]]; then
         # from linux_fix script by Cryptiiiic
         sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
@@ -333,7 +338,6 @@ install_depends() {
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger
-        echo "$distro" > "../resources/firstrun"
     fi
 
     log "Install script done! Please run the script again to proceed"
@@ -444,11 +448,12 @@ device_get_info() {
     device_latest_bb, device_latest_bb_sha1, device_proc
     '
 
-    log "Getting device info..."
-    if  [[ $device_argmode == "none" ]]; then
+    if [[ $device_argmode == "none" ]]; then
         log "No device mode is enabled."
         device_mode="none"
         device_vers="Unknown"
+    else
+        log "Finding device in Normal mode..."
     fi
 
     $ideviceinfo -s >/dev/null
@@ -462,6 +467,7 @@ device_get_info() {
     fi
 
     if [[ -z $device_mode ]]; then
+        log "Finding device in Recovery/DFU mode..."
         device_mode="$($irecovery -q | grep -w "MODE" | cut -c 7-)"
     fi
 
@@ -473,6 +479,7 @@ device_get_info() {
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
 
+    log "Getting device info..."
     case $device_mode in
         "DFU" | "Recovery" )
             #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
@@ -533,12 +540,12 @@ device_get_info() {
         device_ecid=
     fi
 
-    if [[ -z $device_type ]]; then
+    until [[ -n $device_type ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
-    fi
-    if [[ -z $device_ecid ]]; then
+    done
+    until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
         read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
-    fi
+    done
 
     device_fw_dir="../resources/firmware/$device_type"
     if [[ -s $device_fw_dir/hwmodel ]]; then
@@ -1399,7 +1406,7 @@ shsh_save() {
         log "Found existing saved $version blobs: $shsh_path"
         return
     fi
-    rm *.shsh* 2>/dev/null
+    rm -f *.shsh*
 
     ExtraArgs="-d $device_type -i $version -e $device_ecid -m $buildmanifest -o -s -B ${device_model}ap -b "
     if [[ -n $apnonce ]]; then
@@ -2140,13 +2147,13 @@ ipsw_prepare_custom() {
     done
 
     log "Getting RootFS information"
-    "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
+    "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist >/dev/null
     if [[ ! -s options.$device_model.plist ]]; then
         rm options.$device_model.plist
         "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.plist
         mv options.plist options.$device_model.plist
     fi
-    if [[ $device_target_vers == "3.1.3" ]]; then
+    if [[ $device_target_vers == "3"* ]]; then
         case $device_type in
             iPod2,1 ) RootSize=450;;
             iPhone2,1 ) RootSize=530;;
@@ -2174,7 +2181,7 @@ ipsw_prepare_custom() {
         "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
         case $device_target_vers in
             "5.1.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/rockyracoon.tar;;
-            "3.1.3" | "4.0" | "4.3.3" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
+            "3"* | "4.0"* | "4.3.3" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
             "4.2.1" | "4.1" )
                 "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
                 if [[ $device_target_vers == "4.2.1" ]]; then
@@ -2808,7 +2815,7 @@ device_ramdisk() {
     sleep 20
 
     case $1 in
-        "nvram" | "jailbreak" | "baseband" )
+        "nvram" | "jailbreak" | "activation" | "baseband" )
             log "Running iproxy for SSH..."
             $iproxy 2222 22 >/dev/null &
             iproxy_pid=$!
@@ -3084,7 +3091,7 @@ menu_print_info() {
         print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
     elif [[ $device_newbr == 2 ]]; then
         print "* This $device_type bootrom model cannot be determined. Enter DFU mode and run the script again"
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_argmode != "none" ]]; then
         print "* This $device_type is an old bootrom model"
     fi
     if [[ -n $device_serial ]]; then
@@ -3263,15 +3270,15 @@ menu_restore() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
             iPhone2,1 )
-                menu_items+=("iOS 5.1.1" "iOS 4.3.3" "iOS 4.1" "iOS 4.0" "iPhoneOS 3.1.3");;
+                menu_items+=("5.1.1" "5.1" "5.0.1" "5.0" "4.3.3" "4.1" "4.0" "3.1.3" "3.1.2" "3.1");;
             iPod3,1 )
-                menu_items+=("iOS 4.1");;
+                menu_items+=("4.1");;
             iPod2,1 )
-                menu_items+=("iOS 4.1")
+                menu_items+=("4.1")
                 if [[ $device_newbr == 0 ]]; then
-                    menu_items+=("iOS 4.0")
+                    menu_items+=("4.0")
                 fi
-                menu_items+=("iPhoneOS 3.1.3")
+                menu_items+=("3.1.3")
             ;;
         esac
         case $device_type in
@@ -3346,25 +3353,45 @@ menu_ipsw() {
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
             ;;
-            "iOS 5.1.1" )
+            "5.1.1" )
                 device_target_vers="5.1.1"
                 device_target_build="9B206"
             ;;
-            "iOS 4.3.3" )
+            "5.1" )
+                device_target_vers="5.1"
+                device_target_build="9B176"
+            ;;
+            "5.0.1" )
+                device_target_vers="5.0.1"
+                device_target_build="9A405"
+            ;;
+            "5.0" )
+                device_target_vers="5.0"
+                device_target_build="9A334"
+            ;;
+            "4.3.3" )
                 device_target_vers="4.3.3"
                 device_target_build="8J2"
             ;;
-            "iOS 4.1" )
+            "4.1" )
                 device_target_vers="4.1"
                 device_target_build="8B117"
             ;;
-            "iOS 4.0" )
+            "4.0" )
                 device_target_vers="4.0"
                 device_target_build="8A293"
             ;;
-            "iPhoneOS 3.1.3" )
+            "3.1.3" )
                 device_target_vers="3.1.3"
                 device_target_build="7E18"
+            ;;
+            "3.1.2" )
+                device_target_vers="3.1.2"
+                device_target_build="7D11"
+            ;;
+            "3.1" )
+                device_target_vers="3.1"
+                device_target_build="7C144"
             ;;
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
@@ -3706,12 +3733,13 @@ menu_other() {
         if [[ $device_mode != "none" ]]; then
             if (( device_proc < 7 )); then
                 if [[ $device_mode == "Normal" ]]; then
-                    menu_items+=("Enter kDFU Mode")
+                    menu_items+=("Enter kDFU Mode" "Enter pwnDFU Mode")
+                else
+                    case $device_proc in
+                        5 | 6 ) menu_items+=("Send Pwned iBSS");;
+                        * ) menu_items+=("Enter pwnDFU Mode");;
+                    esac
                 fi
-                case $device_proc in
-                    5 | 6 ) menu_items+=("Send Pwned iBSS");;
-                    * ) menu_items+=("Enter pwnDFU Mode");;
-                esac
                 if [[ $device_type == "iPhone"* ]]; then
                     menu_items+=("Dump Baseband")
                 fi
@@ -3886,9 +3914,7 @@ main() {
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" || -z $jq || -z $zenity ]] ||
-       [[ $(cat "../resources/firstrun") != "$(uname)" &&
-          $(cat "../resources/firstrun") != "$distro" ]]; then
+    if [[ ! -e "../resources/firstrun" || -z $zenity || $(cat "../resources/firstrun") != "$platform_ver" ]]; then
         install_depends
     fi
 
