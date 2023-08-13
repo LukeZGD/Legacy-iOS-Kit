@@ -808,10 +808,14 @@ device_enter_mode() {
             sleep 2
 
             log "Please read the message below:"
-            print "1. Make sure to have installed the requirements from Cydia."
-            print "  - Only proceed if you have followed the steps in the GitHub wiki."
+            print "1. Make sure to have OpenSSH installed on your iOS device."
+            if [[ $device_det == 1 ]]; then
+                print " - Make sure to also have Dropbear installed from my repo."
+                print " - Repo: https://lukezgd.github.io/repo"
+            fi
+            print "  - Only proceed if you have these requirements installed using Cydia/Zebra."
             print "  - You will be prompted to enter the root password of your iOS device."
-            print "  - The default root password is \"alpine\""
+            print "  - The default root password is: alpine"
             print "  - Do not worry that your input is not visible, it is still being entered."
             print "2. Afterwards, the device will disconnect and its screen will stay black."
             print "  - Proceed to either press the TOP/HOME button, or unplug and replug the device."
@@ -967,10 +971,10 @@ device_enter_mode() {
                 print "* Select tool to be used for entering pwned DFU mode."
                 local selection=()
                 if [[ $platform == "macos" ]]; then
-                    print "* This option is set to ipwnder32 by default (1)."
+                    print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
                     selection+=("ipwnder32" "ipwnder")
                 elif [[ $device_proc == 7 ]]; then
-                    print "* This option is set to gaster by default (1)."
+                    print "* This option is set to gaster by default (1). Select this option if unsure."
                 fi
                 if [[ $device_proc == 7 ]]; then
                     selection+=("gaster")
@@ -1304,15 +1308,14 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1.3" || $device_target_vers == "4.0" ]] ||
-       [[ $device_target_vers == "4.3.3" && $device_type == "iPhone2,1" ]]; then
+    if [[ $device_target_vers == "3.1"* || $device_target_vers == "4.0" ]]; then
         #log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
     elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
-        print "* This option is enabled by default (Y)."
+        print "* This option is enabled by default (Y). Select this option if unsure."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
         if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
             ipsw_jailbreak=
@@ -1337,7 +1340,7 @@ ipsw_preference_set() {
         print "* When this option is enabled, system RAM will be used for the IPSW creation process."
         print "* I recommend to enable this option to speed up creating the custom IPSW."
         print "* However, if you have less than 8 GB of RAM, disable this option."
-        print "* This option is enabled by default (Y)."
+        print "* This option is enabled by default (Y). Select this option if unsure."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_memory
         if [[ $ipsw_memory == 'N' || $ipsw_memory == 'n' ]]; then
             log "Memory option disabled by user."
@@ -1352,7 +1355,7 @@ ipsw_preference_set() {
     if [[ $device_target_powder == 1 && -z $ipsw_verbose ]]; then
         input "Verbose Boot Option"
         print "* When this option is enabled, the device will have verbose boot on restore."
-        print "* This option is enabled by default (Y)."
+        print "* This option is enabled by default (Y). Select this option if unsure."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_verbose
         if [[ $ipsw_verbose == 'N' || $ipsw_verbose == 'n' ]]; then
             ipsw_verbose=
@@ -1916,6 +1919,9 @@ ipsw_prepare_32bit() {
                 fi
             ;;
         esac
+        if [[ $device_target_vers == "5"* ]]; then
+            JBFiles+=("$jelbrek/cydiasubstrate.tar")
+        fi
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
@@ -1957,6 +1963,7 @@ ipsw_prepare_powder() {
                 5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
                 5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
             esac
+            JBFiles+=("$jelbrek/cydiasubstrate.tar")
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
@@ -2064,6 +2071,9 @@ ipsw_prepare_powder2() {
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
+        if [[ $device_target_vers == "5"* ]]; then
+            ExtraArgs+=" $jelbrek/cydiasubstrate.tar"
+        fi
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
@@ -2098,10 +2108,10 @@ ipsw_prepare_custom() {
         return
     fi
 
-    if [[ $device_target_vers == "5"* ]]; then
+    if [[ $device_target_vers == "5"* || $device_target_vers == "6"* ]]; then
         comps+=("iBEC")
     fi
-    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1"* ]]; then
         :
     else
         case $device_target_vers in
@@ -2179,11 +2189,17 @@ ipsw_prepare_custom() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         log "Extracting Cydia"
         "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
+        log "Extracting untether"
         case $device_target_vers in
             "5.1.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/rockyracoon.tar;;
-            "3"* | "4.0"* | "4.3.3" ) "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab;;
-            "4.2.1" | "4.1" )
+            "5.0.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/corona.tar;;
+            "3.1"* | "4"* )
+                "$dir/hfsplus" out.dmg rm private/etc/fstab
                 "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
+            ;;
+        esac
+        case $device_target_vers in
+            "4.2.1" | "4.1" )
                 if [[ $device_target_vers == "4.2.1" ]]; then
                     "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
                 fi
@@ -2191,8 +2207,12 @@ ipsw_prepare_custom() {
             ;;
             * ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
         esac
-        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1"* ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+        fi
+        "$dir/hfsplus" out.dmg untar $jelbrek/cydiasubstrate.tar
+        if [[ $device_target_vers == "3.1"* ]]; then
+            "$dir/hfsplus" out.dmg untar $jelbrek/cydiahttpatch.tar
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/sshdeb.tar
@@ -2361,6 +2381,11 @@ restore_idevicerestore() {
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        case $device_target_vers in
+            5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+        esac
+    fi
 }
 
 restore_futurerestore() {
@@ -2462,6 +2487,11 @@ restore_latest() {
     fi
     if [[ $device_target_vers == "4"* ]]; then
         print "* For device activation, go to: Other Utilities -> Attempt Activation"
+    fi
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        case $device_target_vers in
+            5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+        esac
     fi
 }
 
@@ -2955,6 +2985,12 @@ device_ramdisk() {
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
+            case $vers in
+                5* | 4* | 3* ) device_ramdisktar cydiasubstrate.tar;;
+            esac
+            case $vers in
+                3* ) device_ramdisktar cydiahttpatch.tar;;
+            esac
             device_ramdisktar freeze.tar data
             if [[ $ipsw_openssh == 1 ]]; then
                 device_ramdisktar sshdeb.tar
@@ -2979,6 +3015,9 @@ device_ramdisk() {
                 $ssh -p 2222 root@127.0.0.1 "reboot_bak"
             fi
             log "Cool, done and jailbroken (hopefully)"
+            case $vers in
+                5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            esac
             return
         ;;
 
@@ -3270,17 +3309,16 @@ menu_restore() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
             iPhone2,1 )
-                menu_items+=("5.1.1" "5.1" "5.0.1" "5.0" "4.3.3" "4.1" "4.0" "3.1.3" "3.1.2" "3.1");;
+                menu_items+=("5.1.1" "5.0.1" "4.3.3" "4.1" "3.1.3");;
             iPod3,1 )
                 menu_items+=("4.1");;
             iPod2,1 )
-                menu_items+=("4.1")
-                if [[ $device_newbr == 0 ]]; then
-                    menu_items+=("4.0")
-                fi
-                menu_items+=("3.1.3")
+                menu_items+=("4.1" "3.1.3")
             ;;
         esac
+        if (( device_proc < 7 )); then
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        fi
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
@@ -3289,10 +3327,7 @@ menu_restore() {
             iPhone2,1 | iPod2,1 )
                 menu_items+=("Other (Custom IPSW)");;
         esac
-        if (( device_proc < 7 )); then
-            menu_items+=("Latest iOS ($device_latest_vers)")
-        fi
-        menu_items+=("Other (use SHSH blobs)" "Go Back")
+        menu_items+=("Other (Use SHSH blobs)" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Other Utilities > Create Custom IPSW"
@@ -3422,7 +3457,7 @@ menu_ipsw() {
             ipsw_custom_set $newpath
             newpath+="_Restore"
         fi
-        if [[ $1 == "Other (use SHSH blobs)" ]]; then
+        if [[ $1 == "Other (Use SHSH blobs)" ]]; then
             device_target_other=1
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
@@ -3827,10 +3862,14 @@ device_dump() {
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
-        print "* Make sure to have installed the requirements from Cydia/Zebra."
-        print "* Only proceed if you have followed the steps in the GitHub wiki."
+        print "* Make sure to have OpenSSH installed on your iOS device."
+        if [[ $(echo "$device_vers" | cut -c 1) == 1 ]]; then
+            print "* Make sure to also have Dropbear installed from my repo."
+            print "* Repo: https://lukezgd.github.io/repo"
+        fi
+        print "* Only proceed if you have these requirements installed using Cydia/Zebra."
         print "* You will be prompted to enter the root password of your iOS device."
-        print "* The default root password is \"alpine\""
+        print "* The default root password is: alpine"
         log "Running iproxy for SSH..."
         $iproxy 2222 22 >/dev/null &
         iproxy_pid=$!

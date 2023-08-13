@@ -138,6 +138,7 @@
 - iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
 - [sshpass](https://sourceforge.net/project/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
+- [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
@@ -145,5 +146,5 @@
 - [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
 - [Corona](https://www.theiphonewiki.com/wiki/Corona) and [Rocky Racoon](https://www.theiphonewiki.com/wiki/Rocky_Racoon)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
-- Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool) and [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze)
+- Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theiphonewiki.com/wiki/redsn0w)
 - SSH Ramdisk tar from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
