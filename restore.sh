@@ -1308,7 +1308,7 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1"* || $device_target_vers == "4.0" ]]; then
+    if [[ $device_target_vers == "3.1"* ]]; then
         #log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
     elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
@@ -3392,17 +3392,9 @@ menu_ipsw() {
                 device_target_vers="5.1.1"
                 device_target_build="9B206"
             ;;
-            "5.1" )
-                device_target_vers="5.1"
-                device_target_build="9B176"
-            ;;
             "5.0.1" )
                 device_target_vers="5.0.1"
                 device_target_build="9A405"
-            ;;
-            "5.0" )
-                device_target_vers="5.0"
-                device_target_build="9A334"
             ;;
             "4.3.3" )
                 device_target_vers="4.3.3"
@@ -3412,21 +3404,9 @@ menu_ipsw() {
                 device_target_vers="4.1"
                 device_target_build="8B117"
             ;;
-            "4.0" )
-                device_target_vers="4.0"
-                device_target_build="8A293"
-            ;;
             "3.1.3" )
                 device_target_vers="3.1.3"
                 device_target_build="7E18"
-            ;;
-            "3.1.2" )
-                device_target_vers="3.1.2"
-                device_target_build="7D11"
-            ;;
-            "3.1" )
-                device_target_vers="3.1"
-                device_target_build="7C144"
             ;;
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
@@ -3681,11 +3661,11 @@ menu_ipsw_browse() {
         "iOS 10.3.3" ) versionc="10.3.3";;
         "iOS 8.4.1" ) versionc="8.4.1";;
         "iOS 6.1.3" ) versionc="6.1.3";;
-        "iOS 5.1.1" ) versionc="5.1.1";;
-        "iOS 4.3.3" ) versionc="4.3.3";;
-        "iOS 4.1" ) versionc="4.1";;
-        "iOS 4.0" ) versionc="4.0";;
-        "iPhoneOS 3.1.3" ) versionc="3.1.3";;
+        "5.1.1" ) versionc="5.1.1";;
+        "5.0.1" ) versionc="5.0.1";;
+        "4.3.3" ) versionc="4.3.3";;
+        "4.1" ) versionc="4.1";;
+        "3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
             if [[ $device_type == "iPhone5,1" || $device_type == "iPhone5,2" ]]; then
@@ -3847,6 +3827,11 @@ device_dump() {
     local arg="$1"
     local dump="../saved/$device_type/$arg.tar"
     local dmps
+    case $arg in
+        "baseband" ) dmps="/usr/standalone /usr/local/standalone";;
+        "activation" ) dmps="/private/var/root/Library/Lockdown";;
+    esac
+    log "Dumping files for $arg: $dmps"
     if [[ -s $dump ]]; then
         log "Found existing dumped $arg: $dump"
         print "* Select Y to overwrite, or N to use existing dump"
@@ -3876,10 +3861,6 @@ device_dump() {
         sleep 2
         device_sshpass
         log "Creating $arg.tar"
-        case $arg in
-            "baseband" ) dmps="/usr/standalone /usr/local/standalone";;
-            "activation" ) dmps="/private/var/root/Library/Lockdown";;
-        esac
         $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/$arg.tar $dmps"
         log "Copying $arg.tar"
         $scp -P 2222 root@127.0.0.1:/tmp/$arg.tar .
