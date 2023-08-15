@@ -65,6 +65,7 @@ List of options:
     --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
     --help                    Display this help message
+    --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 3GS only)
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
@@ -1327,10 +1328,25 @@ ipsw_preference_set() {
         echo
     fi
 
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate ]]; then
+        input "Hacktivate Option"
+        print "* When this option is enabled, your device will be activated on restore."
+        print "* Enable this option if you have no valid SIM card to activate the phone."
+        print "* This option is disabled by default (N). Select this option if unsure."
+        read -p "$(input 'Enable this option? (y/N): ')" ipsw_hacktivate
+        if [[ $ipsw_hacktivate == 'Y' || $ipsw_hacktivate == 'y' ]]; then
+            log "Hacktivate option enabled by user."
+            ipsw_hacktivate=1
+        else
+            log "Hacktivate option disabled."
+            ipsw_hacktivate=
+        fi
+        echo
+    fi
+
     if [[ -n $ipsw_memory ]]; then
         :
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] &&
-         [[ $device_target_vers != "$device_latest_vers" && $device_target_other != 1 ]]; then
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_target_other != 1 ]]; then
         :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
          [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]] ||
@@ -2115,7 +2131,7 @@ ipsw_prepare_custom() {
         :
     else
         case $device_target_vers in
-            4.2.1 | 4.1 ) :;;
+            6.1.6 | 4.2.1 | 4.1 ) :;;
             * ) comps+=("iBoot" "Kernelcache" "LLB");;
         esac
     fi
@@ -2205,17 +2221,28 @@ ipsw_prepare_custom() {
                 fi
                 "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
             ;;
+            "6.1.6" ) "$dir/hfsplus" out.dmg untar $jelbrek/p0sixspwn.tar;;
             * ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
         esac
         if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1"* ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
         fi
-        "$dir/hfsplus" out.dmg untar $jelbrek/cydiasubstrate.tar
+        if [[ $device_target_vers != "6"* ]]; then
+            "$dir/hfsplus" out.dmg untar $jelbrek/cydiasubstrate.tar
+        fi
         if [[ $device_target_vers == "3.1"* ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/cydiahttpatch.tar
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/sshdeb.tar
+        fi
+        if [[ $ipsw_hacktivate == 1 ]]; then
+            log "Hacktivate"
+            "$dir/hfsplus" out.dmg extract usr/libexec/lockdownd
+            "$dir/hfsplus" out.dmg mv usr/libexec/lockdownd usr/libexec/lockdownd.orig
+            $bspatch lockdownd lockdownd.patched $patch/lockdownd.patch
+            "$dir/hfsplus" out.dmg add lockdownd.patched usr/libexec/lockdownd
+            "$dir/hfsplus" out.dmg chmod 100755 usr/libexec/lockdownd
         fi
     fi
     rm $RootName
@@ -2227,7 +2254,7 @@ ipsw_prepare_custom() {
     mv "$ipsw_path" "$ipsw_custom"
     pushd "$ipsw_custom" >/dev/null
     case $device_target_vers in
-        4.2.1 | 4.1 ) :;;
+        6.1.6 | 4.2.1 | 4.1 ) :;;
         * ) rm BuildManifest.plist;;
     esac
     zip -r0 ../tmp/temp.ipsw *
@@ -2641,7 +2668,9 @@ ipsw_prepare() {
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 ]]; then
+                if [[ $ipsw_jailbreak == 1 && $device_type == "iPhone2,1" ]]; then
+                    ipsw_prepare_custom
+                elif [[ $ipsw_jailbreak == 1 ]]; then
                     ipsw_prepare_32bit
                 fi
             elif [[ $device_type == "iPhone3,1" ]]; then
@@ -2929,6 +2958,7 @@ device_ramdisk() {
                 4.3* | 4.2* ) untether="unthredeh4il.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
+                    print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                     pause
                     return
@@ -3391,26 +3421,34 @@ menu_ipsw() {
             "5.1.1" )
                 device_target_vers="5.1.1"
                 device_target_build="9B206"
+                device_canhacktivate=1
             ;;
             "5.0.1" )
                 device_target_vers="5.0.1"
                 device_target_build="9A405"
+                device_canhacktivate=1
             ;;
             "4.3.3" )
                 device_target_vers="4.3.3"
                 device_target_build="8J2"
+                device_canhacktivate=1
             ;;
             "4.1" )
                 device_target_vers="4.1"
                 device_target_build="8B117"
+                device_canhacktivate=1
             ;;
             "3.1.3" )
                 device_target_vers="3.1.3"
                 device_target_build="7E18"
+                device_canhacktivate=1
             ;;
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
+                if [[ $device_latest_vers == "6.1.6" ]]; then
+                    device_canhacktivate=1
+                fi
             ;;
         esac
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -3532,6 +3570,9 @@ menu_ipsw() {
             else
                 print "* Select $1 IPSW to continue"
             fi
+            if [[ $device_canhacktivate == 1 && $device_type == "iPhone2,1" ]]; then
+                print "* Hacktivation is supported for this restore"
+            fi
         fi
         echo
         menu_items+=("Go Back")
@@ -3594,6 +3635,9 @@ ipsw_custom_set() {
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         device_use_bb=0
         ipsw_custom+="B"
+    fi
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        ipsw_custom+="H"
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         ipsw_custom+="J"
@@ -4004,6 +4048,7 @@ for i in "$@"; do
         "--disable-sudoloop" ) device_disable_sudoloop=1;;
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
         "--activation-records" ) device_actrec=1;;
+        "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
     esac
 done
 

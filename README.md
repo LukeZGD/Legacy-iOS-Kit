@@ -29,6 +29,7 @@
 - Device activation using ideviceactivation
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
+- Hacktivation for iPhone 3GS (activate without valid SIM card)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -112,7 +113,7 @@
     - [Exploits used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
-- [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb, used on Linux)
+- [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
 - [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
