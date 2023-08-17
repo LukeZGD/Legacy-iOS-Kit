@@ -824,7 +824,7 @@ device_enter_mode() {
 
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 1 ]]; then
-                echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/hgsp /tmp/pwnediBSS || \
+                echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp")
                 sendfiles+=("../resources/kloader/kloader")
@@ -832,7 +832,7 @@ device_enter_mode() {
                 echo "/tmp/kloader5 /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader5")
             elif (( device_det < 5 )); then
-                echo "/tmp/axi0mX /tmp/pwnediBSS" >> kloaders
+                echo "/tmp/kloader_axi0mX /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader_axi0mX")
             else
                 echo "/tmp/kloader /tmp/pwnediBSS" >> kloaders
@@ -962,10 +962,11 @@ device_enter_mode() {
             elif (( device_proc > 5 )) && [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
                 # A6/A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                $ipwnder
+                opt="${ipwnder}2 -p"
+                $opt
                 tool_pwned=$?
             else
-                # A4/A6 intel mac uses ipwnder_lite/ipwnder32
+                # A4/A6 mac uses ipwnder_lite/ipwnder32
                 # A7 intel mac uses ipwnder_lite/ipwnder32/gaster
                 # A7 linux uses ipwnder/gaster
                 input "PwnDFU Tool Option"
@@ -990,8 +991,8 @@ device_enter_mode() {
                         "ipwnder32" ) opt="$ipwnder32 -p"; break;;
                         * )
                             opt="$ipwnder"
-                            if [[ $platform != "macos" ]]; then
-                                opt+=" -p"
+                            if (( device_proc > 5 )); then
+                                opt="${ipwnder}2 -p"
                             fi
                             break
                         ;;
@@ -1006,6 +1007,9 @@ device_enter_mode() {
             # tool_pwned is error code of pwn tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
+            fi
+            if [[ $opt == "${ipwnder}2 -p" && $device_proc == 6 ]]; then
+                ${ipwnder}2 --upload-iboot
             fi
 
             if [[ $platform == "macos" && $opt != "$gaster pwn" ]] || (( device_proc > 7 )); then
@@ -1328,7 +1332,7 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate ]]; then
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $device_type == "iPhone2,1" ]]; then
         input "Hacktivate Option"
         print "* When this option is enabled, your device will be activated on restore."
         print "* Enable this option if you have no valid SIM card to activate the phone."
@@ -3811,6 +3815,13 @@ menu_other() {
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
             menu_items+=("Attempt Activation")
+            case $device_mode in
+                "Normal" ) menu_items+=("Enter Recovery Mode");;
+                "Recovery" ) menu_items+=("Exit Recovery Mode");;
+            esac
+            if [[ $device_mode != "DFU" ]]; then
+                menu_items+=("Enter DFU Mode")
+            fi
         fi
         if [[ $device_proc != 8 ]]; then
             menu_items+=("Create Custom IPSW")
@@ -3835,6 +3846,9 @@ menu_other() {
             "Install alloc8 Exploit" ) mode="alloc8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
+            "Enter Recovery Mode" ) mode="enterreccovery";;
+            "Exit Recovery Mode" ) mode="exitrecovery";;
+            "Enter DFU Mode" ) mode="enterdfu";;
             "Go Back" ) back=1;;
         esac
     done
@@ -4025,6 +4039,9 @@ main() {
         "alloc8" ) device_alloc8;;
         "jailbreak" ) device_jailbreakrd;;
         "customipsw" ) restore_customipsw;;
+        "enterrecovery" ) device_enter_mode Recovery;;
+        "exitrecovery" ) $irecovery -n;;
+        "enterdfu" ) device_enter_mode DFU;;
         * ) :;;
     esac
 
