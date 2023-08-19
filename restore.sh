@@ -32,18 +32,21 @@ pause() {
 }
 
 clean() {
-    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
-    if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
-        if [[ -z $device_disable_usbmuxd ]]; then
-            sudo systemctl restart usbmuxd
-        fi
-    fi
+    kill $httpserver_pid $iproxy_pid 2>/dev/null
+    popd &>/dev/null
+    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" 2>/dev/null
 }
 
-clean_and_exit() {
-    kill $httpserver_pid $iproxy_pid $sudoloop_pid $usbmuxd_pid 2>/dev/null
+clean_sudo() {
     clean
+    sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+    sudo kill $sudoloop_pid
+}
+
+clean_usbmuxd() {
+    clean_sudo
+    ps aux | awk '/usbmuxd/ {print "sudo kill "$2" 2>/dev/null"}' | bash
+    sudo systemctl restart usbmuxd
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
@@ -189,6 +192,8 @@ set_tool_paths() {
 
         if [[ -z $device_disable_sudoloop ]]; then
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
+            #log "new trap"
+            trap "clean_sudo" EXIT
         fi
         if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $live_cdusb == 1 ]]; then
             if [[ $live_cdusb != 1 ]]; then
@@ -211,8 +216,9 @@ set_tool_paths() {
             if [[ -z $device_disable_usbmuxd ]]; then
                 sudo systemctl stop usbmuxd
                 sudo -b $dir/usbmuxd -pf 2>/dev/null
-                usbmuxd_pid=$!
                 sleep 1
+                #log "new trap"
+                trap "clean_usbmuxd" EXIT
             fi
         fi
 
@@ -1100,6 +1106,7 @@ device_ipwndfu() {
             tool_pwned=$?
             rm pwnediBSS
             if [[ $tool_pwned != 0 ]]; then
+                popd >/dev/null
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
                 "* Please exit DFU and (re-)enter PWNED DFU mode before retrying."
             fi
@@ -2398,10 +2405,9 @@ restore_idevicerestore() {
     opt=$?
     echo
     log "Restoring done! Read the message below if any error has occurred:"
-    if [[ $device_target_vers == "4"* ]]; then
-        print "* For device activation, go to: Other Utilities -> Attempt Activation"
-        echo
-    fi
+    case $device_target_vers in
+        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+    esac
     if [[ $opt != 0 ]]; then
         print "* If you are getting the error \"could not retrieve device serial number\":"
         print " -> This means that your device is not compatible with $device_target_vers"
@@ -2516,9 +2522,9 @@ restore_latest() {
         print "* Your problem may have already been addressed within the wiki page."
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
-    if [[ $device_target_vers == "4"* ]]; then
-        print "* For device activation, go to: Other Utilities -> Attempt Activation"
-    fi
+    case $device_target_vers in
+        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+    esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
@@ -2603,10 +2609,7 @@ restore_prepare() {
                 restore_latest custom
                 if [[ $device_type == "iPhone2,1" ]]; then
                     print "* If the restore succeeded but the device does not boot:"
-                    print "* Go to: Other Utilities -> Install alloc8 Exploit"
-                fi
-                if [[ $device_target_vers == "3"* ]]; then
-                    print "* For device activation, go to: Other Utilities -> Attempt Activation"
+                    print " -> Go to: Other Utilities -> Install alloc8 Exploit"
                 fi
             fi
         ;;
@@ -2618,12 +2621,24 @@ restore_prepare() {
             fi
             if [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
-            elif [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom.ipsw" ]]; then
-                device_enter_mode kDFU
-                restore_idevicerestore
             else
-                device_enter_mode kDFU
-                restore_futurerestore --use-pwndfu
+                if [[ $device_proc == 6 && $platform == "macos" ]]; then
+                    print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
+                    print "* Select Y for pwnDFU mode, N for kDFU mode. Select Y if unsure."
+                    read -p "$(input 'Are both your home and power buttons working properly? (Y/n): ')" opt
+                    if [[ $opt != 'N' && $opt != 'n' ]]; then
+                        device_enter_mode pwnDFU
+                    else
+                        device_enter_mode kDFU
+                    fi
+                else
+                    device_enter_mode kDFU
+                fi
+                if [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom.ipsw" ]]; then
+                    restore_idevicerestore
+                else
+                    restore_futurerestore --use-pwndfu
+                fi
             fi
         ;;
 
@@ -3905,8 +3920,9 @@ device_dump() {
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
-        print "* Make sure to have OpenSSH installed on your iOS device."
+        print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
         if [[ $(echo "$device_vers" | cut -c 1) == 1 ]]; then
+            print "* Install all updates in Cydia/Zebra."
             print "* Make sure to also have Dropbear installed from my repo."
             print "* Repo: https://lukezgd.github.io/repo"
         fi
@@ -3959,9 +3975,9 @@ restore_customipsw() {
     log "Running idevicerestore with command: $idevicerestore -ce \"$ipsw_path.ipsw\""
     $idevicerestore -ce "$ipsw_path.ipsw"
     log "Restoring done!"
-    if [[ $device_target_vers == "4"* ]]; then
-        print "* For device activation, go to: Other Utilities -> Attempt Activation"
-    fi
+    case $device_target_vers in
+        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+    esac
 }
 
 main() {
@@ -4069,7 +4085,7 @@ for i in "$@"; do
     esac
 done
 
-trap "clean_and_exit" EXIT
+trap "clean" EXIT
 trap "exit 1" INT TERM
 
 clean
