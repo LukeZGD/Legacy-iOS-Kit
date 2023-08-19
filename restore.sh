@@ -537,8 +537,71 @@ device_get_info() {
             fi
         ;;
     esac
+
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
     device_model="${device_model%??}" # remove "ap" from the end
+    if [[ -z $device_type && -n $device_model ]]; then
+        case $device_model in
+            k48  ) device_type="iPad1,1";;
+            k93  ) device_type="iPad2,1";;
+            k94  ) device_type="iPad2,2";;
+            k95  ) device_type="iPad2,3";;
+            k93a ) device_type="iPad2,4";;
+            p105 ) device_type="iPad2,5";;
+            p106 ) device_type="iPad2,6";;
+            p107 ) device_type="iPad2,7";;
+            j1   ) device_type="iPad3,1";;
+            j2   ) device_type="iPad3,2";;
+            j2a  ) device_type="iPad3,3";;
+            p101 ) device_type="iPad3,4";;
+            p102 ) device_type="iPad3,5";;
+            p103 ) device_type="iPad3,6";;
+            j71  ) device_type="iPad4,1";;
+            j72  ) device_type="iPad4,2";;
+            j73  ) device_type="iPad4,3";;
+            j85  ) device_type="iPad4,4";;
+            j86  ) device_type="iPad4,5";;
+            j87  ) device_type="iPad4,6";;
+            j85m ) device_type="iPad4,7";;
+            j86m ) device_type="iPad4,8";;
+            j87m ) device_type="iPad4,9";;
+            j96  ) device_type="iPad5,1";;
+            j97  ) device_type="iPad5,2";;
+            j81  ) device_type="iPad5,3";;
+            j82  ) device_type="iPad5,4";;
+            m68  ) device_type="iPhone1,1";;
+            n82  ) device_type="iPhone1,2";;
+            n88  ) device_type="iPhone2,1";;
+            n90  ) device_type="iPhone3,1";;
+            n90b ) device_type="iPhone3,2";;
+            n92  ) device_type="iPhone3,3";;
+            n94  ) device_type="iPhone4,1";;
+            n41  ) device_type="iPhone5,1";;
+            n42  ) device_type="iPhone5,2";;
+            n48  ) device_type="iPhone5,3";;
+            n49  ) device_type="iPhone5,4";;
+            n51  ) device_type="iPhone6,1";;
+            n53  ) device_type="iPhone6,2";;
+            n56  ) device_type="iPhone7,1";;
+            n61  ) device_type="iPhone7,2";;
+            n71  ) device_type="iPhone8,1";;
+            n66  ) device_type="iPhone8,2";;
+            n69  ) device_type="iPhone8,4";;
+            n71m ) device_type="iPhone8,1";;
+            n66m ) device_type="iPhone8,2";;
+            n69u ) device_type="iPhone8,4";;
+            d10  ) device_type="iPhone9,1";;
+            d11  ) device_type="iPhone9,2";;
+            d101 ) device_type="iPhone9,3";;
+            d111 ) device_type="iPhone9,4";;
+            n45  ) device_type="iPod1,1";;
+            n72  ) device_type="iPod2,1";;
+            n18  ) device_type="iPod3,1";;
+            n81  ) device_type="iPod4,1";;
+            n78  ) device_type="iPod5,1";;
+            n102 ) device_type="iPod7,1";;
+        esac
+    fi
 
     # enable manual entry
     if [[ -n $device_argmode ]]; then
@@ -583,7 +646,11 @@ device_get_info() {
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_vers and device_latest_build are used
     case $device_type in
-        iPod2,1 )
+        iPhone1,1 | iPod1,1 )
+            device_use_vers="3.1.3"
+            device_use_vers="7E18"
+        ;;
+        iPhone1,2 | iPod2,1 )
             device_use_vers="4.2.1"
             device_use_build="8C148"
         ;;

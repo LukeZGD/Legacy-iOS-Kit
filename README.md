@@ -74,7 +74,7 @@
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
-    - S5L8900 devices will likely never be supported
+    - S5L8900 devices are not (yet) supported
 - Restoring with SHSH blobs is also supported on most A7/A8 devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions
     - iPhone 5S, 6, 6 Plus
