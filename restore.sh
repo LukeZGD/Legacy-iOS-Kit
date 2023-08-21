@@ -45,7 +45,7 @@ clean_sudo() {
 
 clean_usbmuxd() {
     clean_sudo
-    ps aux | awk '/usbmuxd/ {print "sudo kill "$2" 2>/dev/null"}' | bash
+    sudo systemctl restart usbmuxd
     sudo systemctl restart usbmuxd
 }
 
