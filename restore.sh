@@ -209,9 +209,10 @@ set_tool_paths() {
             ipwnder="sudo "
             irecovery="sudo "
             irecovery2="sudo "
-            sudo chmod +x $dir/*
-            if [[ $? != 0 ]]; then
-                error "Failed setting up permissions, cannot continue."
+            if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
+                log "Running on platform: $platform ($platform_ver)"
+                error "Failed to find bin directory, detected $(ls -x ../bin/linux) instead of $platform_arch." \
+                "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
             if [[ -z $device_disable_usbmuxd ]]; then
                 sudo systemctl stop usbmuxd
@@ -247,7 +248,16 @@ set_tool_paths() {
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
     log "Running on platform: $platform ($platform_ver)"
-    if [[ $device_sudoloop != 1 ]]; then
+    if [[ ! -d $dir ]]; then
+        error "Failed to find bin directory ($dir), cannot continue." \
+        "* Re-download Legacy iOS Kit from releases (or do a git clone/reset)"
+    fi
+    if [[ $device_sudoloop == 1 ]]; then
+        sudo chmod +x $dir/*
+        if [[ $? != 0 ]]; then
+            error "Failed setting up permissions, cannot continue."
+        fi
+    else
         chmod +x $dir/*
     fi
 
@@ -917,7 +927,8 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             if [[ $device_det == 1 ]]; then
-                print "* If the script seems to be stuck here, try to start over from step 1 in the GitHub wiki."
+                print "* If the script seems to be stuck here, try to re-install the requirements and restart the device."
+                print "* Follow the steps in the GitHub wiki."
             fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
@@ -1119,11 +1130,9 @@ device_ipwndfu() {
     local pyenv=$(which pyenv 2>/dev/null)
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
-    if [[ $1 == "send_ibss" ]]; then
-        patch_ibss
-        cp pwnediBSS ../resources/ipwndfu/
+    if [[ -z $pyenv && -e "$HOME/.pyenv/bin/pyenv" ]]; then
+        pyenv="$HOME/.pyenv/bin/pyenv"
     fi
-
     if [[ $platform == "macos" ]]; then
         mac_ver=$(echo "$platform_ver" | cut -c -2)
     fi
@@ -1132,14 +1141,19 @@ device_ipwndfu() {
     elif [[ -z $python2 && ! -e $pyenv2 ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* You may install python2 from pyenv: pyenv install 2.7.18"
-        if [[ -z $pyenv && ! -d $HOME/.pyenv ]]; then
+        if [[ -z $pyenv ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
             print "* You may install pyenv by running: curl https://pyenv.run | bash"
             log "Installing pyenv"
             curl https://pyenv.run | bash
             pyenv="$HOME/.pyenv/bin/pyenv"
+            if [[ ! -e $pyenv ]]; then
+                error "Cannot detect python2 from pyenv, its installation may have failed." \
+                "* Also try installing pyenv and python2 manually before retrying."
+            fi
         fi
         log "Installing python2 using pyenv"
+        print "* This may take a while, but should not take longer than a few minutes."
         $pyenv install 2.7.18
         if [[ ! -e $pyenv2 ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
@@ -1156,6 +1170,11 @@ device_ipwndfu() {
             python2="sudo "
         fi
         python2+="$pyenv2"
+    fi
+
+    if [[ $1 == "send_ibss" ]]; then
+        patch_ibss
+        cp pwnediBSS ../resources/ipwndfu/
     fi
 
     device_enter_mode DFU
