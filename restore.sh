@@ -1034,6 +1034,7 @@ device_enter_mode() {
                 log "Placing device to pwnDFU mode using gaster"
                 $gaster pwn
                 tool_pwned=$?
+                $gaster reset
             elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $device_type == "iPod2,1" ]]; then
                 # A6 linux uses ipwndfu
                 # ipod touch 2g uses ipwndfu
@@ -1058,7 +1059,7 @@ device_enter_mode() {
                 local selection=()
                 if [[ $platform == "macos" ]]; then
                     print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
-                    selection+=("ipwnder32" "ipwnder")
+                    selection+=("ipwnder32" "ipwnder_lite")
                 elif [[ $device_proc == 7 ]]; then
                     print "* This option is set to gaster by default (1). Select this option if unsure."
                 fi
@@ -1088,7 +1089,7 @@ device_enter_mode() {
             fi
             irec_pwned=$($irecovery -q | grep -c "PWND")
             # irec_pwned is instances of "PWND" in serial, must be 1
-            # tool_pwned is error code of pwn tool, must be 0
+            # tool_pwned is error code of pwning tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
@@ -1390,20 +1391,23 @@ patch_ibec() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
+
+    # latest version check
     case $device_latest_vers in
         7.1.2 | 6.1.6 | 5.1.1 | 4.2.1 ) ipsw_canjailbreak=1;;
     esac
-
     if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )); then
         return
+    elif [[ $device_target_vers != "$device_latest_vers" ]]; then
+        ipsw_canjailbreak=
     fi
-
+    # target version check
     case $device_target_vers in
         8* | 7* | 6* | 5* ) ipsw_canjailbreak=1;;
     esac
-
-    if [[ $device_proc == 4 && $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
-        return
+    if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.3"* ]] ||
+       [[ $device_proc == 4 && $device_type != "iPhone3,1" ]]; then
+        ipsw_canjailbreak=1
     fi
 
     if [[ $device_target_vers == "3.1"* ]]; then
@@ -1445,10 +1449,9 @@ ipsw_preference_set() {
         :
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_target_other != 1 ]]; then
         :
-    elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ]] ||
-         [[ $device_type == "iPhone3,1" && $device_target_vers != "7.1.2" ]] ||
+    elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" || $device_target_powder == 1 ]] ||
          [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]] ||
-         [[ $device_target_powder == 1 ]]; then
+         [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* ]]; then
         input "Memory Option for creating custom IPSW"
         print "* When this option is enabled, system RAM will be used for the IPSW creation process."
         print "* I recommend to enable this option to speed up creating the custom IPSW."
@@ -1639,7 +1642,6 @@ ipsw_prepare_jailbreak() {
         return
     fi
     local ExtraArgs=
-    local ipsw="$dir/ipsw"
     local JBFiles=()
     local JBFiles2=()
 
@@ -1659,8 +1661,12 @@ ipsw_prepare_jailbreak() {
             done
             cp -R ../resources/firmware/JailbreakBundles FirmwareBundles
             ExtraArgs+="-daibutsu" # use daibutsuCFW
-        elif [[ $device_target_vers == "6.1.3" ]]; then
-            JBFiles+=("fstab_rw.tar" "p0sixspwn.tar" "freeze.tar")
+        else
+            JBFiles+=("fstab_rw.tar" "freeze.tar")
+            case $device_target_vers in
+                "6.1.3" ) JBFiles+=("p0sixspwn.tar");;
+                "4.3"* )  JBFiles+=("unthredeh4il.tar");;
+            esac
             for i in {0..2}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
@@ -1677,7 +1683,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -1688,7 +1694,7 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
     log "Preparing custom IPSW: $ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
-    "$ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
+    "$dir/ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
         error "Failed to find custom IPSW. Please run the script again" \
@@ -1966,7 +1972,7 @@ ipsw_prepare_32bit() {
     local daibutsu
     local JBFiles=()
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-        if [[ $device_type == "iPad2"* ]]; then
+        if [[ $device_type == "iPad2"* || $device_type == "iPhone3,1" ]]; then
             ipsw_prepare_jailbreak
         elif [[ $ipsw_jailbreak == 1 ]]; then
             ipsw_prepare_custom
@@ -1995,7 +2001,7 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -2654,19 +2660,22 @@ restore_prepare_1033() {
 restore_prepare() {
     case $device_proc in
         4 )
-            if [[ $device_target_other == 1 ]]; then
-                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+            if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+                if [[ $device_type != "iPhone3,1" ]]; then
                     ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
                 fi
                 device_enter_mode pwnDFU
                 restore_idevicerestore
-                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $device_type == "iPhone"* ]]; then
+                if [[ $device_type == "iPhone2,1" ]]; then
                     log "Ignore the baseband error and do not disconnect your device yet"
                     device_find_mode Recovery
                     log "Attempting to exit recovery mode"
                     $irecovery -n
                     log "Done, your device should boot now"
                 fi
+            elif [[ $device_target_other == 1 ]]; then
+                device_enter_mode pwnDFU
+                restore_idevicerestore
             elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
                 device_enter_mode DFU
                 restore_latest
@@ -2756,7 +2765,6 @@ restore_prepare() {
     esac
     if [[ $device_latest_vers == "15"* ]]; then
         device_enter_mode pwnDFU
-        $irecovery -f ../README.md # send dummy file
         device_fw_key_check
         if [[ ! -s ../resources/firmware.json ]]; then
             log "Downloading firmwares.json from ipsw.me"
@@ -3644,6 +3652,10 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 menu_items+=("Select Target SHSH")
+                if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
+                    warn "There currently seems to be an issue with 4.2.1 restores for iPhone 4."
+                    print "* The device might get stuck at the Apple logo after the restore."
+                fi
             else
                 print "* Select Target IPSW to continue"
             fi
@@ -3753,7 +3765,7 @@ ipsw_custom_set() {
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
     fi
-    if [[ $device_target_vers == "4.3"* && $device_type == "iPhone3,1" ]]; then
+    if [[ $device_target_vers == "4.3"* && $device_type == "iPhone3,1" && $device_target_powder == 1 ]]; then
         ipsw_custom+="_$device_ecid"
     fi
 }
@@ -3915,9 +3927,8 @@ menu_other() {
                 iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
-            menu_items+=("Attempt Activation")
             case $device_mode in
-                "Normal" ) menu_items+=("Enter Recovery Mode");;
+                "Normal" ) menu_items+=("Attempt Activation" "Enter Recovery Mode");;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
             if [[ $device_mode != "DFU" ]]; then
