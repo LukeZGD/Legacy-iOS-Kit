@@ -2,7 +2,6 @@
 
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
-device_verbose_boot=0 # By setting this to 1 and changing the build version above, the SSH Ramdisk option turns to tethered verbose boot.
 jelbrek="../resources/jailbreak"
 
 print() {
@@ -955,7 +954,9 @@ device_enter_mode() {
                 print "* Make sure that your iOS device and PC/Mac are on the same network."
                 print "* To get your device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' next to your network name"
                 local IPAddress
-                read -p "$(input 'Enter the IP Address of your device:') " IPAddress
+                until [[ -n $IPAddress ]]; do
+                    read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
+                done
                 $scp ${sendfiles[@]} root@$IPAddress:/tmp
                 if [[ $? != 0 ]]; then
                     error "Failed to connect to device via SSH, cannot continue."
@@ -1405,9 +1406,11 @@ ipsw_preference_set() {
     case $device_target_vers in
         8* | 7* | 6* | 5* ) ipsw_canjailbreak=1;;
     esac
-    if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.3"* ]] ||
-       [[ $device_proc == 4 && $device_type != "iPhone3,1" ]]; then
+    if [[ $device_target_powder == 1 ]] ||
+       [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* && $device_target_vers != "4.2.1" ]]; then
         ipsw_canjailbreak=1
+    elif [[ $device_proc == 4 && $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
+        return
     fi
 
     if [[ $device_target_vers == "3.1"* ]]; then
@@ -1666,6 +1669,7 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 "6.1.3" ) JBFiles+=("p0sixspwn.tar");;
                 "4.3"* )  JBFiles+=("unthredeh4il.tar");;
+                "4"* )    JBFiles=("fstab_new.tar" "freeze.tar" "greenpois0n/${device_type}_${device_target_build}.tar");;
             esac
             for i in {0..2}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
@@ -3171,6 +3175,11 @@ device_ramdisk() {
             print "* If the device did not connect, SSH to the device manually."
         ;;
 
+        "justboot" )
+            log "Device should now boot."
+            return
+        ;;
+
         * ) log "Device should now be in SSH ramdisk mode.";;
     esac
     echo
@@ -3467,10 +3476,17 @@ menu_restore() {
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
-            iPhone2,1 | iPod2,1 )
-                menu_items+=("Other (Custom IPSW)");;
+            iPhone2,1 | iPhone3,2 | iPad1,1 | iPod2,1 | iPod3,1 | iPod4,1 )
+                if [[ -z $1 ]]; then
+                    menu_items+=("Other (Custom IPSW)")
+                fi
+            ;;
         esac
-        menu_items+=("Other (Use SHSH blobs)" "Go Back")
+        menu_items+=("Other (Use SHSH Blobs)")
+        if (( device_proc < 7 )); then
+            menu_items+=("DFU IPSW")
+        fi
+        menu_items+=("Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Other Utilities > Create Custom IPSW"
@@ -3486,6 +3502,7 @@ menu_restore() {
             "" ) :;;
             "Go Back" ) back=1;;
             "Other (Custom IPSW)" ) mode="customipsw";;
+            "DFU IPSW" ) mode="dfuipsw${1}";;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -3588,7 +3605,7 @@ menu_ipsw() {
             ipsw_custom_set $newpath
             newpath+="_Restore"
         fi
-        if [[ $1 == "Other (Use SHSH blobs)" ]]; then
+        if [[ $1 == "Other (Use SHSH Blobs)" ]]; then
             device_target_other=1
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
@@ -3920,6 +3937,9 @@ menu_other() {
                     menu_items+=("Dump Baseband")
                 fi
                 menu_items+=("Activation Records" "SSH Ramdisk" "Clear NVRAM")
+                if [[ $device_type != "iPod2,1" ]]; then
+                    menu_items+=("Just Boot")
+                fi
             else
                 menu_items+=("Enter pwnDFU Mode")
             fi
@@ -3961,6 +3981,7 @@ menu_other() {
             "Enter Recovery Mode" ) mode="enterreccovery";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "Enter DFU Mode" ) mode="enterdfu";;
+            "Just Boot" ) mode="justboot";;
             "Go Back" ) back=1;;
         esac
     done
@@ -4077,6 +4098,63 @@ restore_customipsw() {
     esac
 }
 
+restore_dfuipsw() {
+    # the only change done to the "dfu ipsw" is just applelogo copied and renamed to llb
+    print "* You are about to restore with a DFU IPSW."
+    print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
+    print "* All device data will be wiped! Only proceed if you have backed up your data."
+    print "* Expect the restore to fail and the device to be stuck in DFU mode."
+    pause
+    device_target_vers="$device_latest_vers"
+    device_target_build="$device_latest_build"
+    local ipsw_p="../${device_type}_${device_target_vers}_${device_target_build}"
+    local ipsw_dfuipsw="${ipsw_p}_DFUIPSW"
+    ipsw_path="${ipsw_p}_Restore"
+    if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
+        ipsw_verify "$ipsw_path" "$device_target_build"
+    elif [[ ! -e "$ipsw_path.ipsw" ]]; then
+        ipsw_download "$ipsw_path"
+    fi
+    if [[ -s "$ipsw_dfuipsw.ipsw" ]]; then
+        log "Found existing DFU IPSW. Skipping IPSW creation."
+    else
+        cp $ipsw_path.ipsw temp.ipsw
+        device_fw_key_check
+        local applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        local llb=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("LLB")) | .filename')
+        local all="Firmware/all_flash/all_flash.${device_model}ap.production"
+        mkdir -p $all
+        unzip -o -j temp.ipsw $all/$applelogo -d .
+        mv $applelogo $all/$llb
+        zip -r0 temp.ipsw $all/*
+        mv temp.ipsw $ipsw_dfuipsw.ipsw
+    fi
+    if [[ $1 == "ipsw" ]]; then
+        return
+    fi
+    ipsw_path="$ipsw_dfuipsw"
+    ipsw_extract
+    log "Running idevicerestore with command: $idevicerestore -e \"$ipsw_path.ipsw\""
+    $idevicerestore -e "$ipsw_path.ipsw"
+    log "Restoring done! Device should now be in DFU mode"
+}
+
+device_justboot() {
+    print "* You are about to do a tethered verbose boot."
+    print "* Enter the build version of the iOS version to use. This supports iOS 5 and newer only."
+    read -p "$(input 'Enter build version (eg. 9B206): ')" device_ramdisk_build
+    case $device_ramdisk_build in
+        "7"* | "8"* ) error "Tethered verbose boot is supported for iOS 5 and newer only."
+    esac
+    device_verbose_boot=1
+    if [[ $device_proc == 4 ]]; then
+        device_enter_mode pwnDFU
+    else
+        device_enter_mode kDFU
+    fi
+    device_ramdisk justboot
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -4155,6 +4233,9 @@ main() {
         "enterrecovery" ) device_enter_mode Recovery;;
         "exitrecovery" ) $irecovery -n;;
         "enterdfu" ) device_enter_mode DFU;;
+        "dfuipsw" ) restore_dfuipsw;;
+        "dfuipswipsw" ) restore_dfuipsw ipsw;;
+        "justboot" ) device_justboot;;
         * ) :;;
     esac
 
