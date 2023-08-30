@@ -4175,11 +4175,6 @@ device_justboot() {
         "7"* | "8"* ) error "Tethered verbose boot is supported for iOS 5 and newer only."
     esac
     device_verbose_boot=1
-    if [[ $device_proc == 4 ]]; then
-        device_enter_mode pwnDFU
-    else
-        device_enter_mode kDFU
-    fi
     device_ramdisk justboot
 }
 
