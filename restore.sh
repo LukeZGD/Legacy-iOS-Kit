@@ -456,6 +456,53 @@ version_check() {
     popd >/dev/null
 }
 
+device_entry() {
+    # enable manual entry
+    log "Manual device/ECID entry is enabled."
+    until [[ -n $device_type ]]; do
+        read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
+    done
+    until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
+        read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
+    done
+}
+
+device_manufacturing() {
+    if [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]] || [[ $device_argmode == "none" ]]; then
+        return
+    fi
+    if [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
+        if (( device_serial >= 946 )) || (( device_serial < 900 )); then
+            device_newbr=1
+        elif (( device_serial >= 940 )); then
+            device_newbr=2 # gray area
+        else
+            device_newbr=0
+        fi
+    elif [[ $device_type == "iPod2,1" && -z $device_newbr ]]; then
+        device_newbr=2
+        return
+    fi
+    if [[ $device_newbr == 1 ]]; then
+        print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
+    elif [[ $device_newbr == 2 ]]; then
+        print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model"
+    else
+        print "* This $device_type is an old bootrom model"
+    fi
+    if [[ $device_type == "iPhone2,1" && -n $device_serial ]]; then
+        local week=$(echo "$device_serial" | cut -c 2-)
+        local year=$(echo "$device_serial" | cut -c 1)
+        case $year in
+            9 ) year="2009";;
+            0 ) year="2010";;
+            1 ) year="2011";;
+            2 ) year="2012";;
+        esac
+        print "* Manufactured in Week $week $year"
+    fi
+}
+
 device_get_info() {
     : '
     usage: device_get_info (no arguments)
@@ -504,13 +551,19 @@ device_get_info() {
             if [[ $(echo "$device_type" | cut -c 3) == 'h' ]]; then
                 ProdCut=9 # cut 9 for iphone
             fi
-            device_type=$(echo "$device_type" | cut -c -$ProdCut)
-            device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
+            if [[ -n $device_argmode ]]; then
+                device_entry
+            else
+                device_type=$(echo "$device_type" | cut -c -$ProdCut)
+                device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
+            fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
-            if [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_mode == "Recovery" ]]; then
-                print "* Device: $device_type (${device_model}ap) in $device_mode mode"
+            device_serial="$($irecovery -q | grep "SRNM" | cut -c 7- | cut -c 3- | cut -c -3)"
+            device_manufacturing
+            if [[ $device_mode == "Recovery" && $device_newbr == 2 ]]; then
+                print "* Device: $device_type (${device_model}) in $device_mode mode"
                 print "* iOS Version: $device_vers"
                 print "* ECID: $device_ecid"
                 echo
@@ -525,9 +578,13 @@ device_get_info() {
         ;;
 
         "Normal" )
-            device_type=$($ideviceinfo -s -k ProductType)
-            [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
-            device_ecid=$($ideviceinfo -s -k UniqueChipID)
+            if [[ -n $device_argmode ]]; then
+                device_entry
+            else
+                device_type=$($ideviceinfo -s -k ProductType)
+                [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
+                device_ecid=$($ideviceinfo -s -k UniqueChipID)
+            fi
             device_model=$($ideviceinfo -s -k HardwareModel)
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
@@ -536,13 +593,6 @@ device_get_info() {
                 device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
             elif [[ $device_type == "iPhone2,1" ]]; then
                 device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
-                if (( device_serial >= 945 )) || (( device_serial < 900 )); then
-                    device_newbr=1
-                elif (( device_serial >= 940 )); then
-                    device_newbr=2
-                else
-                    device_newbr=0
-                fi
             fi
         ;;
     esac
@@ -611,20 +661,6 @@ device_get_info() {
             n102 ) device_type="iPod7,1";;
         esac
     fi
-
-    # enable manual entry
-    if [[ -n $device_argmode ]]; then
-        log "Manual device entry is enabled."
-        device_type=
-        device_ecid=
-    fi
-
-    until [[ -n $device_type ]]; do
-        read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
-    done
-    until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
-        read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
-    done
 
     device_fw_dir="../resources/firmware/$device_type"
     if [[ -s $device_fw_dir/hwmodel ]]; then
@@ -2991,7 +3027,7 @@ device_ramdisk() {
     sleep 20
 
     case $1 in
-        "nvram" | "jailbreak" | "activation" | "baseband" )
+        "nvram" | "jailbreak" | "activation" | "baseband" | "getversion" )
             log "Running iproxy for SSH..."
             $iproxy 2222 22 >/dev/null &
             iproxy_pid=$!
@@ -3039,7 +3075,7 @@ device_ramdisk() {
             return
         ;;
 
-        "jailbreak" )
+        "jailbreak" | "getversion" )
             local vers
             local build
             local untether
@@ -3058,10 +3094,13 @@ device_ramdisk() {
                 vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
                 build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
             fi
-            if [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
+            if [[ $1 == "getversion" && -n $vers ]]; then
+                log "The current iOS version of this device is: $vers ($build)"
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                return
+            elif [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
                 warn "iOS $vers on $device_type is not supported for jailbreaking with SSHRD."
                 $ssh -p 2222 root@127.0.0.1 "reboot_bak"
-                pause
                 return
             fi
             case $vers in
@@ -3077,13 +3116,11 @@ device_ramdisk() {
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
-                    pause
                     return
                 ;;
                 * )
                     warn "iOS $vers is not supported for jailbreaking with SSHRD."
                     $ssh -p 2222 root@127.0.0.1 "reboot_bak"
-                    pause
                     return
                 ;;
             esac
@@ -3278,24 +3315,7 @@ menu_print_info() {
     print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
-    if [[ $device_newbr == 1 ]]; then
-        print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
-    elif [[ $device_newbr == 2 ]]; then
-        print "* This $device_type bootrom model cannot be determined. Enter DFU mode and run the script again"
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_argmode != "none" ]]; then
-        print "* This $device_type is an old bootrom model"
-    fi
-    if [[ -n $device_serial ]]; then
-        local week=$(echo "$device_serial" | cut -c 2-)
-        local year=$(echo "$device_serial" | cut -c 1)
-        case $year in
-            9 ) year="2009";;
-            0 ) year="2010";;
-            1 ) year="2011";;
-            2 ) year="2012";;
-        esac
-        print "* Manufactured in Week $week $year"
-    fi
+    device_manufacturing
     if [[ -n $device_disable_bbupdate ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
@@ -3307,6 +3327,9 @@ menu_print_info() {
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
     fi
     print "* iOS Version: $device_vers"
+    if [[ $device_vers == "Unknown" ]]; then
+        print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
+    fi
     print "* ECID: $device_ecid"
     echo
 }
@@ -3326,13 +3349,7 @@ menu_main() {
         if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
             :
         elif (( device_proc < 7 )); then
-            if [[ $device_mode == "Normal" ]]; then
-                case $device_vers in
-                    8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) menu_items+=("Jailbreak Device");;
-                esac
-            elif [[ $device_mode != "none" ]]; then
-                menu_items+=("Jailbreak Device")
-            fi
+            menu_items+=("Jailbreak Device")
         fi
         if (( device_proc < 8 )); then
             menu_items+=("Save SHSH Blobs")
@@ -3932,6 +3949,7 @@ menu_other() {
                         5 | 6 ) menu_items+=("Send Pwned iBSS");;
                         * ) menu_items+=("Enter pwnDFU Mode");;
                     esac
+                    menu_items+=("Get iOS Version")
                 fi
                 if [[ $device_type == "iPhone"* ]]; then
                     menu_items+=("Dump Baseband")
@@ -3978,10 +3996,11 @@ menu_other() {
             "Install alloc8 Exploit" ) mode="alloc8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
-            "Enter Recovery Mode" ) mode="enterreccovery";;
+            "Enter Recovery Mode" ) mode="enterrecovery";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "Enter DFU Mode" ) mode="enterdfu";;
             "Just Boot" ) mode="justboot";;
+            "Get iOS Version" ) mode="getversion";;
             "Go Back" ) back=1;;
         esac
     done
@@ -3996,15 +4015,20 @@ device_alloc8() {
 }
 
 device_jailbreakrd() {
-    if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown" ]]; then
+    if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
         if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
-            warn "This version is not supported for jailbreaking with SSHRD."
+            warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+            print "* Supported versions for iPad 2 are: 5.0 to 8.4.1"
             return
         fi
         case $device_vers in
             8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
-            * ) warn "This version is not supported for jailbreaking with SSHRD."; return;;
+            * )
+                warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+                print "* Supported versions are: 3.1.3 to 8.4.1"
+                return
+            ;;
         esac
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
@@ -4236,6 +4260,7 @@ main() {
         "dfuipsw" ) restore_dfuipsw;;
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
         "justboot" ) device_justboot;;
+        "getversion" ) device_ramdisk getversion;;
         * ) :;;
     esac
 
