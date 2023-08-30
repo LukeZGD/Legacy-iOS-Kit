@@ -555,7 +555,7 @@ device_get_info() {
                 device_entry
             else
                 device_type=$(echo "$device_type" | cut -c -$ProdCut)
-                device_ecid=$((16#$($irecovery -q | grep "ECID" | cut -c 9-))) # converts hex ecid to dec
+                device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             device_vers=$(echo "/exit" | $irecovery -s | grep "iBoot-")
