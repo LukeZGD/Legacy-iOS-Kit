@@ -597,6 +597,10 @@ device_get_info() {
         ;;
     esac
 
+    if [[ $device_argmode == "none" ]]; then
+        device_entry
+    fi
+
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
     device_model="${device_model%??}" # remove "ap" from the end
     if [[ -z $device_type && -n $device_model ]]; then
@@ -3345,11 +3349,11 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-        fi
-        if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
-            :
-        elif (( device_proc < 7 )); then
-            menu_items+=("Jailbreak Device")
+            if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
+                :
+            elif (( device_proc < 7 )); then
+                menu_items+=("Jailbreak Device")
+            fi
         fi
         if (( device_proc < 8 )); then
             menu_items+=("Save SHSH Blobs")
