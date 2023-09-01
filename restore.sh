@@ -674,6 +674,8 @@ device_get_info() {
     device_latest_bb=0
     # set device_proc (what processor the device has)
     case $device_type in
+        iPhone1,[12] | iPod1,1 )
+            device_proc=1;; # S5L8900
         iPhone3,[123] | iPhone2,1 | iPod2,1 | iPod3,1 | iPad1,1 | iPod4,1 )
             device_proc=4;; # A4/S5L8920/22/8720
         iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
@@ -697,7 +699,7 @@ device_get_info() {
     case $device_type in
         iPhone1,1 | iPod1,1 )
             device_use_vers="3.1.3"
-            device_use_vers="7E18"
+            device_use_build="7E18"
         ;;
         iPhone1,2 | iPod2,1 )
             device_use_vers="4.2.1"
@@ -812,12 +814,18 @@ device_find_mode() {
     local timeout=4
     local i=0
     local device_in
+    local mode="$1"
 
-    case $1 in
-        "DFU" ) usb=1227;;
-        "Recovery" ) usb=1281;;
-        "Restore" ) usb=1297;;
-    esac
+    if [[ $mode == "Recovery" ]]; then
+        usb=1281
+    elif [[ $device_proc == 1 ]]; then
+        usb=1222
+        if [[ $mode == "DFU" ]]; then
+            mode="WTF"
+        fi
+    else
+        usb=1227
+    fi
 
     if [[ -n $2 ]]; then
         timeout=$2
@@ -825,19 +833,19 @@ device_find_mode() {
         timeout=24
     fi
 
-    log "Finding device in $1 mode..."
+    log "Finding device in $mode mode..."
     while (( i < timeout )); do
         if [[ $platform == "linux" ]]; then
             device_in=$(lsusb | grep -c "05ac:$usb")
-        elif [[ $1 == "Restore" && $($ideviceinfo -s) ]]; then
+        elif [[ $mode == "Restore" && $($ideviceinfo -s) ]]; then
             device_in=1
-        elif [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$1" ]]; then
+        elif [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$mode" ]]; then
             device_in=1
         fi
 
         if [[ $device_in == 1 ]]; then
-            log "Found device in $1 mode."
-            device_mode="$1"
+            log "Found device in $mode mode."
+            device_mode="$mode"
             break
         fi
         sleep 1
@@ -846,7 +854,7 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         if [[ $timeout != 1 ]]; then
-            error "Failed to find device in $1 mode (Timed out). Please run the script again."
+            error "Failed to find device in $mode mode (Timed out). Please run the script again."
         fi
         return 1
     fi
@@ -1435,7 +1443,7 @@ ipsw_preference_set() {
 
     # latest version check
     case $device_latest_vers in
-        7.1.2 | 6.1.6 | 5.1.1 | 4.2.1 ) ipsw_canjailbreak=1;;
+        7.1.2 | 6.1.6 | 5.1.1 | 4.2.1 | 3.1.3 ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]] || (( device_proc >= 7 )); then
         return
@@ -1453,10 +1461,10 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1"* ]]; then
+    if [[ $device_target_vers == "3.1.3" && $device_proc != 1 ]]; then
         #log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
-    elif [[ $device_target_other != 1 || $ipsw_canjailbreak == 1 ]] && [[ -z $ipsw_jailbreak ]]; then
+    elif [[ -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
@@ -1472,7 +1480,8 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $device_type == "iPhone2,1" ]]; then
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate ]] &&
+       [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
         input "Hacktivate Option"
         print "* When this option is enabled, your device will be activated on restore."
         print "* Enable this option if you have no valid SIM card to activate the phone."
@@ -1490,7 +1499,7 @@ ipsw_preference_set() {
 
     if [[ -n $ipsw_memory ]]; then
         :
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] && [[ $device_target_other != 1 ]]; then
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" || $device_proc == 1 ]] && [[ $device_target_other != 1 ]]; then
         :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" || $device_target_powder == 1 ]] ||
          [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]] ||
@@ -2274,8 +2283,10 @@ ipsw_prepare_custom() {
     if [[ $device_target_vers == "5"* || $device_target_vers == "6"* ]]; then
         comps+=("iBEC")
     fi
-    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1"* ]]; then
+    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
         :
+    elif [[ $device_proc == 1 ]]; then
+        comps+=("iBoot" "Kernelcache" "LLB")
     else
         case $device_target_vers in
             6.1.6 | 4.2.1 | 4.1 ) :;;
@@ -2298,8 +2309,14 @@ ipsw_prepare_custom() {
         if [[ -n $iv && -n $key ]]; then
             decrypt="-iv $iv -k $key"
         fi
+        if [[ -z $name ]]; then
+            case $getcomp in
+                "iBSS" ) name="iBSS.${device_model}ap.RELEASE.dfu";;
+                "LLB" )  name="LLB.${device_model}ap.RELEASE.img3";;
+            esac
+        fi
 
-        log "$getcomp"
+        log "Patching $getcomp: $name"
         cp "$ipsw_path/${path}$name" .
         mv $name $name.orig
         if [[ $getcomp == "iBoot" || $getcomp == "LLB" ]]; then
@@ -2318,6 +2335,15 @@ ipsw_prepare_custom() {
         fi
         cp $name "$ipsw_path/$path"
     done
+    if [[ $device_proc == 1 ]]; then
+        local path="Firmware/dfu/"
+        local name="WTF.s5l8900xall.RELEASE.dfu"
+        log "Patching WTF: $name"
+        cp "$ipsw_path/${path}$name" .
+        mv $name $name.orig
+        $bspatch $name.orig $name $patch/$name.patch
+        cp $name "$ipsw_path/$path"
+    fi
 
     log "Getting RootFS information"
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist >/dev/null
@@ -2328,8 +2354,10 @@ ipsw_prepare_custom() {
     fi
     if [[ $device_target_vers == "3"* ]]; then
         case $device_type in
-            iPod2,1 ) RootSize=450;;
-            iPhone2,1 ) RootSize=530;;
+            iPhone1,[12] ) RootSize=420;;
+            iPhone2,1 )    RootSize=530;;
+            iPod1,1 )      RootSize=413;;
+            iPod2,1 )      RootSize=450;;
         esac
     elif [[ $platform == "macos" ]]; then
         plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
@@ -2354,37 +2382,38 @@ ipsw_prepare_custom() {
         "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
         log "Extracting untether"
         case $device_target_vers in
+            "6.1.6" ) "$dir/hfsplus" out.dmg untar $jelbrek/p0sixspwn.tar;;
+            "5"* | "4.3"* ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
+            "4.2.1" )
+                if [[ $device_proc != 1 ]]; then
+                    "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
+                    "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+                fi
+            ;;
+            "4.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar;;
+        esac
+        case $device_target_vers in
             "5.1.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/rockyracoon.tar;;
             "5.0.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/corona.tar;;
-            "3.1"* | "4"* )
+            "4"* | "3.1.3" )
                 "$dir/hfsplus" out.dmg rm private/etc/fstab
                 "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
             ;;
         esac
-        case $device_target_vers in
-            "4.2.1" | "4.1" )
-                if [[ $device_target_vers == "4.2.1" ]]; then
-                    "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
-                fi
-                "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
-            ;;
-            "6.1.6" ) "$dir/hfsplus" out.dmg untar $jelbrek/p0sixspwn.tar;;
-            * ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
-        esac
-        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1"* ]]; then
+        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
         fi
         if [[ $device_target_vers != "6"* ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/cydiasubstrate.tar
         fi
-        if [[ $device_target_vers == "3.1"* ]]; then
+        if [[ $device_target_vers == "3.1.3" ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/cydiahttpatch.tar
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             "$dir/hfsplus" out.dmg untar $jelbrek/sshdeb.tar
         fi
         if [[ $ipsw_hacktivate == 1 ]]; then
-            log "Hacktivate"
+            log "Patching lockdownd for hacktivation"
             "$dir/hfsplus" out.dmg extract usr/libexec/lockdownd
             "$dir/hfsplus" out.dmg mv usr/libexec/lockdownd usr/libexec/lockdownd.orig
             $bspatch lockdownd lockdownd.patched $patch/lockdownd.patch
@@ -2715,6 +2744,15 @@ device_buttons() {
 
 restore_prepare() {
     case $device_proc in
+        1 )
+            device_enter_mode DFU
+            if [[ $ipsw_jailbreak == 1 ]]; then
+                restore_latest custom
+            else
+                restore_latest
+            fi
+        ;;
+
         4 )
             if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                 if [[ $device_type == "iPhone3,1" ]]; then
@@ -2834,6 +2872,12 @@ restore_prepare() {
 
 ipsw_prepare() {
     case $device_proc in
+        1 )
+            if [[ $ipsw_jailbreak == 1 ]]; then
+                ipsw_prepare_custom
+            fi
+        ;;
+
         4 )
             if [[ $device_target_other == 1 ]]; then
                 ipsw_prepare_32bit
@@ -2938,6 +2982,7 @@ device_ramdisk() {
     local ramdisk_path
 
     case $device_type in
+        iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
         iPod2,1 ) device_target_build="8C148";;
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
@@ -2967,6 +3012,11 @@ device_ramdisk() {
             "DeviceTree" | "AppleLogo" ) path="Firmware/all_flash/all_flash.${device_model}ap.production/";;
             * ) path="";;
         esac
+        if [[ -z $name ]]; then
+            case $getcomp in
+                "iBSS" ) name="iBSS.${device_model}ap.RELEASE.dfu";;
+            esac
+        fi
 
         log "$getcomp"
         if [[ -e $ramdisk_path/$name ]]; then
@@ -2976,7 +3026,7 @@ device_ramdisk() {
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
-        if [[ $getcomp == "Kernelcache" && $device_type == "iPod2,1" ]]; then
+        if [[ $getcomp == "Kernelcache" || $getcomp == "iBSS" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
             decrypt="-iv $iv -k $key"
             "$dir/xpwntool" $getcomp.orig $getcomp.dec $decrypt
         else
@@ -2988,14 +3038,19 @@ device_ramdisk() {
     "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
     "$dir/hfsplus" Ramdisk.raw grow 30000000
 
-    if [[ $device_type == "iPod2,1" ]]; then
+    if [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
         log "Patch iBSS"
-        $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.$device_target_build.patch
+        $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
+        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.orig
         log "Patch Kernelcache"
         mv Kernelcache.dec Kernelcache0.dec
-        $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.$device_model.patch
+        if [[ $device_proc == 1 ]]; then
+            $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.s5l8900x.patch
+        else
+            $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.patch
+        fi
         "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
         rm DeviceTree.dec
         mv DeviceTree.orig DeviceTree.dec
@@ -3041,7 +3096,9 @@ device_ramdisk() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.dec
     $irecovery -c bootx
-    sleep 20
+    if [[ -n $1 ]]; then
+        sleep 20
+    fi
 
     case $1 in
         "nvram" | "jailbreak" | "activation" | "baseband" | "getversion" )
@@ -3364,11 +3421,11 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
                 :
-            elif (( device_proc < 7 )); then
+            elif (( device_proc < 7 )) && [[ $device_proc != 1 ]]; then
                 menu_items+=("Jailbreak Device")
             fi
         fi
-        if (( device_proc < 8 )); then
+        if (( device_proc < 8 )) && [[ $device_proc != 1 ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
         menu_items+=("Other Utilities" "Exit")
@@ -3498,9 +3555,8 @@ menu_restore() {
                 menu_items+=("5.1.1" "5.0.1" "4.3.3" "4.1" "3.1.3");;
             iPod3,1 )
                 menu_items+=("4.1");;
-            iPod2,1 )
-                menu_items+=("4.1" "3.1.3")
-            ;;
+            iPhone1,2 | iPod2,1 )
+                menu_items+=("4.1" "3.1.3");;
         esac
         if (( device_proc < 7 )); then
             menu_items+=("Latest iOS ($device_latest_vers)")
@@ -3510,15 +3566,17 @@ menu_restore() {
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
-            iPhone2,1 | iPhone3,2 | iPad1,1 | iPod2,1 | iPod3,1 | iPod4,1 )
+            iPhone1,[12] | iPhone2,1 | iPhone3,2 | iPad1,1 | iPod1,1 | iPod2,1 | iPod3,1 | iPod4,1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
                 fi
             ;;
         esac
-        menu_items+=("Other (Use SHSH Blobs)")
-        if (( device_proc < 7 )); then
-            menu_items+=("DFU IPSW")
+        if [[ $device_proc != 1 ]]; then
+            menu_items+=("Other (Use SHSH Blobs)")
+            if (( device_proc < 7 )); then
+                menu_items+=("DFU IPSW")
+            fi
         fi
         menu_items+=("Go Back")
         menu_print_info
@@ -3610,9 +3668,9 @@ menu_ipsw() {
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
-                if [[ $device_latest_vers == "6.1.6" ]]; then
-                    device_canhacktivate=1
-                fi
+                case $device_latest_vers in
+                    "6.1.6" | "4.2.1" | "3.1.3" ) device_canhacktivate=1;;
+                esac
             ;;
         esac
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -3738,7 +3796,7 @@ menu_ipsw() {
             else
                 print "* Select $1 IPSW to continue"
             fi
-            if [[ $device_canhacktivate == 1 && $device_type == "iPhone2,1" ]]; then
+            if [[ $device_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
         fi
@@ -3957,7 +4015,7 @@ menu_other() {
     ipsw_path=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
-        if [[ $device_mode != "none" ]]; then
+        if [[ $device_mode != "none" && $device_proc != 1 ]]; then
             if (( device_proc < 7 )); then
                 if [[ $device_mode == "Normal" ]]; then
                     menu_items+=("Enter kDFU Mode" "Enter pwnDFU Mode")
@@ -3971,7 +4029,7 @@ menu_other() {
                 if [[ $device_type == "iPhone"* ]]; then
                     menu_items+=("Dump Baseband")
                 fi
-                menu_items+=("Activation Records" "SSH Ramdisk" "Clear NVRAM")
+                menu_items+=("Activation Records" "Clear NVRAM")
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
                 fi
@@ -3982,6 +4040,9 @@ menu_other() {
                 iPhone3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
+        fi
+        if [[ $device_mode != "none" ]]; then
+            menu_items+=("SSH Ramdisk")
             case $device_mode in
                 "Normal" ) menu_items+=("Attempt Activation" "Enter Recovery Mode");;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;

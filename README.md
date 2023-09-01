@@ -29,7 +29,7 @@
 - Device activation using ideviceactivation
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
-- Hacktivation for iPhone 3GS (activate without valid SIM card)
+- Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -71,10 +71,9 @@
 
 - Restoring with SHSH blobs and using SSH Ramdisks are supported on the following devices:
     - Supports most 32-bit devices (iOS 3 to 10, version range depends on device)
-    - iPhone 3GS, 4, 4S, 5, 5C
+    - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
-    - iPod touch 2, 3, 4, 5
-    - S5L8900 devices are not (yet) supported
+    - iPod touch 1, 2, 3, 4, 5
 - Restoring with SHSH blobs is also supported on most A7/A8 devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions
     - iPhone 5S, 6, 6 Plus
@@ -87,12 +86,13 @@
     - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x can also be used for iPhone 5)
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
-    - iPod touch 2 - targets iOS 3.1.3 to 4.0
+    - iPod touch 2 - targets iOS 3.1.3 to 4.1
 - Restoring to latest iOS version with jailbreak for the following devices:
-    - iPhone 4 - iOS 7.1.2 with Pangu
-    - iPhone 3GS, iPod touch 4 - iOS 6.1.6 with p0sixspwn
-    - iPad 1, iPod touch 3 - iOS 5.1.1 with pris0nbarake
-    - iPod touch 2 - iOS 4.2.1 with greenpois0n
+    - iPhone 4 - iOS 7.1.2
+    - iPhone 3GS, iPod touch 4 - iOS 6.1.6
+    - iPad 1, iPod touch 3 - iOS 5.1.1
+    - iPhone 3G, iPod touch 2 - iOS 4.2.1
+    - iPhone 2G, iPod touch 1 - iOS 3.1.3
 
 ## Supported OS versions/distros
 
