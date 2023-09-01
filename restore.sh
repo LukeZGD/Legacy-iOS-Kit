@@ -1449,7 +1449,7 @@ ipsw_preference_set() {
     if [[ $device_target_powder == 1 ]] ||
        [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* && $device_target_vers != "4.2.1" ]]; then
         ipsw_canjailbreak=1
-    elif [[ $device_proc == 4 && $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
+    elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
     fi
 
@@ -2701,14 +2701,28 @@ restore_prepare_1033() {
     shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
 }
 
+device_buttons() {
+    local opt
+    print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
+    print "* Select Y for pwnDFU mode, N for kDFU mode. Select Y if unsure."
+    read -p "$(input 'Are both your home and power buttons working properly? (Y/n): ')" opt
+    if [[ $opt != 'N' && $opt != 'n' ]]; then
+        device_enter_mode pwnDFU
+    else
+        device_enter_mode kDFU
+    fi
+}
+
 restore_prepare() {
     case $device_proc in
         4 )
             if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                if [[ $device_type != "iPhone3,1" ]]; then
+                if [[ $device_type == "iPhone3,1" ]]; then
+                    device_enter_mode pwnDFU
+                else
                     ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
+                    device_enter_mode DFU
                 fi
-                device_enter_mode pwnDFU
                 restore_idevicerestore
                 if [[ $device_type == "iPhone2,1" ]]; then
                     log "Ignore the baseband error and do not disconnect your device yet"
@@ -2718,7 +2732,7 @@ restore_prepare() {
                     log "Done, your device should boot now"
                 fi
             elif [[ $device_target_other == 1 ]]; then
-                device_enter_mode pwnDFU
+                device_buttons
                 restore_idevicerestore
             elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
                 device_enter_mode DFU
@@ -2741,7 +2755,11 @@ restore_prepare() {
             elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 # powdersn0w 4.3.x-6.1.3
                 shsh_save version 7.1.2
-                device_enter_mode pwnDFU
+                if [[ $device_target_powder == 1 && $device_target_vers == "6"* ]]; then
+                    device_buttons
+                else
+                    device_enter_mode pwnDFU
+                fi
                 restore_idevicerestore
             else
                 device_enter_mode pwnDFU
@@ -2762,14 +2780,9 @@ restore_prepare() {
                 restore_latest
             else
                 if [[ $device_proc == 6 && $platform == "macos" ]]; then
-                    print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
-                    print "* Select Y for pwnDFU mode, N for kDFU mode. Select Y if unsure."
-                    read -p "$(input 'Are both your home and power buttons working properly? (Y/n): ')" opt
-                    if [[ $opt != 'N' && $opt != 'n' ]]; then
-                        device_enter_mode pwnDFU
-                    else
-                        device_enter_mode kDFU
-                    fi
+                    device_buttons
+                elif [[ $device_target_powder == 1 && $device_target_vers == "5"* ]]; then
+                    device_enter_mode pwnDFU
                 else
                     device_enter_mode kDFU
                 fi
