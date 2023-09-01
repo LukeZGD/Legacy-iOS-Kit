@@ -2732,6 +2732,10 @@ restore_prepare_1033() {
 
 device_buttons() {
     local opt
+    if [[ $device_mode != "Normal" ]]; then
+        device_enter_mode pwnDFU
+        return
+    fi
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
     print "* Select Y for pwnDFU mode, N for kDFU mode. Select Y if unsure."
     read -p "$(input 'Are both your home and power buttons working properly? (Y/n): ')" opt
