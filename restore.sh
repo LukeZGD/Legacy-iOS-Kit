@@ -544,7 +544,7 @@ device_get_info() {
 
     log "Getting device info..."
     case $device_mode in
-        "DFU" | "Recovery" )
+        "WTF" | "DFU" | "Recovery" )
             #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
             local ProdCut=7 # cut 7 for ipod/ipad
             device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
