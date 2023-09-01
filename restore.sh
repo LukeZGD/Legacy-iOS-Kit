@@ -3073,8 +3073,24 @@ device_ramdisk() {
 
     mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
 
-    if [[ $device_proc == 4 || $1 == "jailbreak" ]]; then
+    if [[ $1 == "jailbreak" ]]; then
         device_enter_mode pwnDFU
+    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+        device_buttons
+    elif [[ $device_proc == 1 ]]; then
+        local ipswj="../${device_type}_3.1.3_7E18_Custom"
+        if [[ -e "${ipswj}J.ipsw" ]]; then
+            ipswj="${ipswj}J"
+        elif [[ -e "${ipswj}HJ.ipsw" ]]; then
+            ipswj="${ipswj}HJ"
+        else
+            warn "Cannot detect 3.1.3 custom IPSW for $device_type."
+            print "* To proceed, you need to create a 3.1.3 custom IPSW with the jailbreak option enabled."
+            print "* Go to: Other Utilities -> Create Custom IPSW -> 3.1.3"
+            return
+        fi
+        device_enter_mode DFU
+        $idevicerestore -p "$ipswj.ipsw"
     else
         device_enter_mode kDFU
     fi
