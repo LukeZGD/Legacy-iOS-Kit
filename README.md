@@ -104,7 +104,7 @@
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**openSUSE**](https://www.opensuse.org/) Tumbleweed
 - [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
-- **macOS** 10.13 and newer
+- **macOS** 10.13 and newer (10.15 and newer recommended)
 
 ## Tools and other stuff used
 - curl

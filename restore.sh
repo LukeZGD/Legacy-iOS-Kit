@@ -34,6 +34,9 @@ clean() {
     kill $httpserver_pid $iproxy_pid 2>/dev/null
     popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" 2>/dev/null
+    if [[ $platform == "macos" ]]; then
+        killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
+    fi
 }
 
 clean_sudo() {
@@ -242,6 +245,9 @@ set_tool_paths() {
         ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
         sha256sum="$(which shasum) -a 256"
+
+        # kill macos daemons
+        killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
 
     else
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
@@ -694,6 +700,14 @@ device_get_info() {
         echo
         error "This device is not supported by Legacy iOS Kit."
     fi
+
+    if [[ $device_mode == "DFU" && $device_proc == 1 ]]; then
+        warn "Your device $device_type seems to be on an incorrect mode for restoring."
+        print "* Force restart your device and place it in normal or recovery mode, then run the script again."
+        print "* Or proceed to do the DFU mode procedure below."
+        device_dfuhelper
+    fi
+
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_vers and device_latest_build are used
     case $device_type in
@@ -816,7 +830,9 @@ device_find_mode() {
     local device_in
     local mode="$1"
 
-    if [[ $mode == "Recovery" ]]; then
+    if [[ $mode == "Restore" ]]; then
+        :
+    elif [[ $mode == "Recovery" ]]; then
         usb=1281
     elif [[ $device_proc == 1 ]]; then
         usb=1222
@@ -829,16 +845,19 @@ device_find_mode() {
 
     if [[ -n $2 ]]; then
         timeout=$2
-    elif [[ $platform == "linux" ]]; then
+    elif [[ $platform == "linux" || $mode == "Restore" ]]; then
         timeout=24
     fi
 
     log "Finding device in $mode mode..."
     while (( i < timeout )); do
-        if [[ $platform == "linux" ]]; then
+        if [[ $mode == "Restore" ]]; then
+            $ideviceinfo -s >/dev/null
+            if [[ $? == 0 ]]; then
+                device_in=1
+            fi
+        elif [[ $platform == "linux" ]]; then
             device_in=$(lsusb | grep -c "05ac:$usb")
-        elif [[ $mode == "Restore" && $($ideviceinfo -s) ]]; then
-            device_in=1
         elif [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$mode" ]]; then
             device_in=1
         fi
@@ -874,6 +893,31 @@ device_sshpass() {
     ssh="$dir/sshpass -p $pass $ssh2"
 }
 
+device_dfuhelper() {
+    print "* Get ready to enter DFU mode."
+    read -p "$(input 'Select Y to continue, N to exit (Y/n) ')" opt
+    if [[ $opt == 'N' || $opt == 'n' ]]; then
+        exit
+    fi
+    print "* Get ready..."
+    for i in {03..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n$(print '* Hold TOP and HOME buttons.')"
+    for i in {10..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
+    for i in {08..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo
+    device_find_mode DFU
+}
+
 device_enter_mode() {
     # usage: device_enter_mode {Recovery, DFU, kDFU, pwnDFU}
     # attempt to enter given mode, and device_find_mode function will then set device_mode variable
@@ -898,7 +942,7 @@ device_enter_mode() {
         "DFU" )
             if [[ $device_mode == "Normal" ]]; then
                 device_enter_mode Recovery
-            elif [[ $device_mode == "DFU" ]]; then
+            elif [[ $device_mode == "DFU" || $device_mode == "WTF" ]]; then
                 return
             fi
             # DFU Helper for recovery mode
@@ -909,12 +953,20 @@ device_enter_mode() {
                 $irecovery -n
                 exit
             fi
-            print "* Hold TOP and HOME buttons for 10 seconds."
-            for i in {10..01}; do
+            print "* Get ready..."
+            for i in {03..01}; do
                 echo -n "$i "
                 sleep 1
             done
-            echo -e "\n$(print '* Release TOP button and hold HOME button for 8 seconds.')"
+            echo -e "\n$(print '* Hold TOP and HOME buttons.')"
+            for i in {04..01}; do
+                echo -n "$i "
+                if (( i <= 1 )); then
+                    $irecovery -n
+                fi
+                sleep 1
+            done
+            echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
             for i in {08..01}; do
                 echo -n "$i "
                 sleep 1
@@ -3100,7 +3152,7 @@ device_ramdisk() {
     fi
     log "Sending iBSS..."
     $irecovery -f $ramdisk_path/iBSS
-    if [[ $device_type != "iPod2,1" ]]; then
+    if [[ $device_type != "iPod2,1" && $device_proc != 1 ]]; then
         sleep 2
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
@@ -3117,7 +3169,7 @@ device_ramdisk() {
     $irecovery -f $ramdisk_path/Kernelcache.dec
     $irecovery -c bootx
     if [[ -n $1 ]]; then
-        sleep 20
+        device_find_mode Restore
     fi
 
     case $1 in
@@ -3421,7 +3473,7 @@ menu_print_info() {
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
     fi
     print "* iOS Version: $device_vers"
-    if [[ $device_vers == "Unknown" ]]; then
+    if [[ $device_vers == "Unknown" && $device_proc != 1 ]]; then
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
     print "* ECID: $device_ecid"
@@ -4064,7 +4116,7 @@ menu_other() {
         if [[ $device_mode != "none" ]]; then
             menu_items+=("SSH Ramdisk")
             case $device_mode in
-                "Normal" ) menu_items+=("Attempt Activation" "Enter Recovery Mode");;
+                "Normal" ) menu_items+=("Attempt Activation" "Shutdown Device" "Restart Device" "Enter Recovery Mode");;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
             if [[ $device_mode != "DFU" ]]; then
@@ -4099,6 +4151,8 @@ menu_other() {
             "Enter DFU Mode" ) mode="enterdfu";;
             "Just Boot" ) mode="justboot";;
             "Get iOS Version" ) mode="getversion";;
+            "Shutdown Device" ) mode="shutdown";;
+            "Restart Device" ) mode="restart";;
             "Go Back" ) back=1;;
         esac
     done
@@ -4192,7 +4246,14 @@ device_dump() {
 
 device_activate() {
     log "Attempting to activate device with ideviceactivation"
+    if (( device_proc <= 4 )) && [[ $device_type == "iPhone"* ]]; then
+        print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
+        if [[ $device_proc == 1 || $device_type == "iPhone2,1" ]]; then
+            print "* For hacktivation, go to Restore/Downgrade instead."
+        fi
+    fi
     $ideviceactivation activate
+    print "* If it returns an error, just try again."
 }
 
 restore_customipsw() {
@@ -4354,6 +4415,8 @@ main() {
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
         "justboot" ) device_justboot;;
         "getversion" ) device_ramdisk getversion;;
+        "shutdown" ) "$dir/idevicediagnostics" shutdown;;
+        "restart" ) "$dir/idevicediagnostics" restart;;
         * ) :;;
     esac
 
