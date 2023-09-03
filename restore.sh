@@ -929,6 +929,7 @@ device_dfuhelper() {
     opt=$?
     if [[ $opt == 1 ]]; then
         log "Found device in DFU mode."
+        device_mode="DFU"
         return
     fi
     print "* Get ready..."
@@ -943,6 +944,7 @@ device_dfuhelper() {
         opt=$?
         if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
+            device_mode="DFU"
             return
         fi
         sleep 1
@@ -954,6 +956,7 @@ device_dfuhelper() {
         opt=$?
         if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
+            device_mode="DFU"
             return
         fi
         sleep 1
