@@ -682,7 +682,7 @@ device_get_info() {
     case $device_type in
         iPhone1,[12] | iPod1,1 )
             device_proc=1;; # S5L8900
-        iPhone3,[123] | iPhone2,1 | iPod2,1 | iPod3,1 | iPad1,1 | iPod4,1 )
+        iPhone3,[123] | iPhone2,1 | iPad1,1 | iPod[234],1 )
             device_proc=4;; # A4/S5L8920/22/8720
         iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
             device_proc=5;; # A5
@@ -705,7 +705,7 @@ device_get_info() {
         warn "Your device $device_type seems to be on an incorrect mode for restoring."
         print "* Force restart your device and place it in normal or recovery mode, then run the script again."
         print "* Or proceed to do the DFU mode procedure below."
-        device_dfuhelper
+        device_dfuhelper norec
     fi
 
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
@@ -852,8 +852,8 @@ device_find_mode() {
     log "Finding device in $mode mode..."
     while (( i < timeout )); do
         if [[ $mode == "Restore" ]]; then
-            $ideviceinfo -s >/dev/null
-            if [[ $? == 0 ]]; then
+            device_find_all
+            if [[ $? == 4 ]]; then
                 device_in=1
             fi
         elif [[ $platform == "linux" ]]; then
@@ -893,25 +893,69 @@ device_sshpass() {
     ssh="$dir/sshpass -p $pass $ssh2"
 }
 
+device_find_all() {
+    # find device stuff from palera1n legacy
+    local opt
+    if [[ $platform == "macos" ]]; then
+        opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
+    elif [[ $platform == "linux" ]]; then
+        opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
+    fi
+    case $opt in
+        1227 ) return 1;; # dfu
+        1281 ) return 2;; # recovery
+        1222 ) return 3;; # wtf
+        12[9a][0123456789abc] ) return 4;; # normal
+    esac
+}
+
 device_dfuhelper() {
+    local opt
+    local rec="recovery mode "
+    if [[ $1 == "norec" ]]; then
+        rec=
+    fi
     print "* Get ready to enter DFU mode."
-    read -p "$(input 'Select Y to continue, N to exit (Y/n) ')" opt
+    print "* If you already know how to enter DFU mode, you may do so right now before continuing."
+    read -p "$(input "Select Y to continue, N to exit $rec(Y/n) ")" opt
     if [[ $opt == 'N' || $opt == 'n' ]]; then
+        if [[ -z $1 ]]; then
+            log "Exiting recovery mode."
+            $irecovery -n
+        fi
         exit
     fi
+    device_find_all
+    opt=$?
+    if [[ $opt == 1 ]]; then
+        log "Found device in DFU mode."
+        return
+    fi
     print "* Get ready..."
-    for i in {03..01}; do
+    for i in {02..01}; do
         echo -n "$i "
         sleep 1
     done
     echo -e "\n$(print '* Hold TOP and HOME buttons.')"
     for i in {10..01}; do
         echo -n "$i "
+        device_find_all
+        opt=$?
+        if [[ $opt == 1 ]]; then
+            echo -e "\n$(log 'Found device in DFU mode.')"
+            return
+        fi
         sleep 1
     done
     echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
     for i in {08..01}; do
         echo -n "$i "
+        device_find_all
+        opt=$?
+        if [[ $opt == 1 ]]; then
+            echo -e "\n$(log 'Found device in DFU mode.')"
+            return
+        fi
         sleep 1
     done
     echo
@@ -945,34 +989,7 @@ device_enter_mode() {
             elif [[ $device_mode == "DFU" || $device_mode == "WTF" ]]; then
                 return
             fi
-            # DFU Helper for recovery mode
-            print "* Get ready to enter DFU mode."
-            read -p "$(input 'Select Y to continue, N to exit recovery mode (Y/n) ')" opt
-            if [[ $opt == 'N' || $opt == 'n' ]]; then
-                log "Exiting recovery mode."
-                $irecovery -n
-                exit
-            fi
-            print "* Get ready..."
-            for i in {03..01}; do
-                echo -n "$i "
-                sleep 1
-            done
-            echo -e "\n$(print '* Hold TOP and HOME buttons.')"
-            for i in {04..01}; do
-                echo -n "$i "
-                if (( i <= 1 )); then
-                    $irecovery -n
-                fi
-                sleep 1
-            done
-            echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
-            for i in {08..01}; do
-                echo -n "$i "
-                sleep 1
-            done
-            echo
-            device_find_mode DFU
+            device_dfuhelper
         ;;
 
         "kDFU" )
@@ -3168,7 +3185,7 @@ device_ramdisk() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.dec
     $irecovery -c bootx
-    if [[ -n $1 ]]; then
+    if [[ -n $1 && $1 != "justboot" ]]; then
         device_find_mode Restore
     fi
 
@@ -3473,7 +3490,7 @@ menu_print_info() {
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
     fi
     print "* iOS Version: $device_vers"
-    if [[ $device_vers == "Unknown" && $device_proc != 1 ]]; then
+    if [[ $device_vers == "Unknown" && $device_proc != 1 ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
     print "* ECID: $device_ecid"
@@ -3638,7 +3655,7 @@ menu_restore() {
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
-            iPhone1,[12] | iPhone2,1 | iPhone3,2 | iPad1,1 | iPod1,1 | iPod2,1 | iPod3,1 | iPod4,1 )
+            iPhone1,[12] | iPhone2,1 | iPhone3,2 | iPad1,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
                 fi
@@ -4114,7 +4131,9 @@ menu_other() {
             esac
         fi
         if [[ $device_mode != "none" ]]; then
-            menu_items+=("SSH Ramdisk")
+            if (( device_proc < 7 )); then
+                menu_items+=("SSH Ramdisk")
+            fi
             case $device_mode in
                 "Normal" ) menu_items+=("Attempt Activation" "Shutdown Device" "Restart Device" "Enter Recovery Mode");;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
@@ -4123,7 +4142,7 @@ menu_other() {
                 menu_items+=("Enter DFU Mode")
             fi
         fi
-        if [[ $device_proc != 8 ]]; then
+        if (( device_proc < 8 )); then
             menu_items+=("Create Custom IPSW")
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
