@@ -7,6 +7,7 @@
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
+- Legacy iOS Kit supports all 32-bit iOS devices, and some A7/A8 64-bit devices
 - Restore to iOS 8.4.1 or 6.1.3 on supported 32-bit devices **(OTA signed)**
 - Restore iPhone 4 GSM and CDMA (iPhone3,1 and 3,3) to lower iOS versions **(powdersn0w)**
 - Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
@@ -14,22 +15,22 @@
 - Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
     - For iPhone 5 (not 5C), 7.0.x blobs can also be used
     - Device support is limited, see below
-- Option to **jailbreak** all supported 32-bit devices
+- Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
+- Option to **jailbreak** all 32-bit iOS devices
     - Available on iOS versions 3.1.3, 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x
     - Only unsupported version is jailbreaking iPad 2 on 4.3.x
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
 - Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
     - Limited compatibility due to SEP/BB, see below
-- The latest baseband will be flashed for 32-bit devices if applicable
 - Save onboard and Cydia SHSH blobs for 32-bit devices
 - Place device to pwned iBSS/kDFU mode for supported devices
 - Boot SSH Ramdisk on supported 32-bit devices
 - Clear NVRAM for devices that support powdersn0w
-- Device activation using ideviceactivation
+- Device activation using ideviceactivation (useful for iOS 4 and lower)
+- The latest baseband will be flashed for A5(X)/A6(X) devices if applicable
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
-- Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -70,7 +71,7 @@
 </table>
 
 - Restoring with SHSH blobs and using SSH Ramdisks are supported on the following devices:
-    - Supports most 32-bit devices (iOS 3 to 10, version range depends on device)
+    - Supports all 32-bit iOS devices (iOS 3 to 10)
     - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 1, 2, 3, 4, 5

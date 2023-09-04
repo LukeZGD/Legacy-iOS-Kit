@@ -63,19 +63,19 @@ display_help() {
 Usage: ./restore.sh [Options]
 
 List of options:
-    --activation-records      Enable dumping/stitching activation records
     --debug                   For script debugging (set -x and debug mode)
-    --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --disable-sudoloop        Disable running tools as root for Linux
     --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
     --help                    Display this help message
-    --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 3GS only)
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
 
 For 32-bit devices compatible with restores/downgrades (see README):
+    --activation-records      Enable dumping/stitching activation records
+    --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
+    --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
@@ -177,9 +177,9 @@ set_tool_paths() {
                 else
                     warn "Detected Legacy iOS Kit running on temporary storage."
                     print "* You may run out of space and get errors during the downgrade process."
-                    print "* Please move Legacy iOS Kit to an external drive that is NOT used for the live USB."
-                    print "* This means using another external HDD/flash drive to store Legacy iOS Kit on."
-                    print "* To be able to use one USB drive only, make sure to enable Persistent Storage for the live USB."
+                    print "* Please move Legacy iOS Kit to a drive that is NOT used for the live USB."
+                    print "* This may mean using another external HDD/flash drive to store Legacy iOS Kit on."
+                    print "* To use one USB drive only, create the live USB using Rufus with Persistent Storage enabled."
                     pause
                     live_cdusb_str="Live - Temporary storage"
                 fi
@@ -188,7 +188,7 @@ set_tool_paths() {
 
         # if "/media" is detected in pwd, warn user of possible permission issues
         if [[ $(pwd) == *"/media"* ]]; then
-            warn "You may get permission issues like \"Permission denied\" on getting device info."
+            warn "You might get permission errors like \"Permission denied\" on getting device info."
             print "* If this is the case, try moving Legacy iOS Kit to the Desktop or Documents folder."
         fi
 
@@ -490,13 +490,15 @@ device_manufacturing() {
         return
     fi
     if [[ $device_newbr == 1 ]]; then
-        print "* This $device_type is a new bootrom model, some iOS versions might not be compatible"
+        print "* This $device_type is a new bootrom model"
     elif [[ $device_newbr == 2 ]]; then
         print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model"
     else
         print "* This $device_type is an old bootrom model"
     fi
-    if [[ $device_type == "iPhone2,1" && -n $device_serial ]]; then
+    if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
+        print "* Cannot check for manufacturing date in DFU mode"
+    elif [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
         local week=$(echo "$device_serial" | cut -c 2-)
         local year=$(echo "$device_serial" | cut -c 1)
         case $year in
@@ -573,7 +575,7 @@ device_get_info() {
                 print "* iOS Version: $device_vers"
                 print "* ECID: $device_ecid"
                 echo
-                warn "Your device is in recovery mode. Enter DFU mode to continue."
+                log "Your device is in recovery mode. Enter DFU mode to continue."
                 device_enter_mode DFU
             fi
             if [[ $device_type == "iPod2,1" ]]; then
@@ -702,7 +704,7 @@ device_get_info() {
     fi
 
     if [[ $device_mode == "DFU" && $device_proc == 1 ]]; then
-        warn "Your device $device_type seems to be on an incorrect mode for restoring."
+        log "Your device $device_type seems to be on an incorrect mode for restoring."
         print "* Force restart your device and place it in normal or recovery mode, then run the script again."
         print "* Or proceed to do the DFU mode procedure below."
         device_dfuhelper norec
@@ -1070,9 +1072,9 @@ device_enter_mode() {
                 fi
                 input "Press Enter/Return to try again with Wi-Fi SSH (or press Ctrl+C to cancel and try again)"
                 read -s
-                log "Will try again with Wi-Fi SSH..."
+                log "Trying again with Wi-Fi SSH..."
                 print "* Make sure that your iOS device and PC/Mac are on the same network."
-                print "* To get your device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' next to your network name"
+                print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' next to your network name"
                 local IPAddress
                 until [[ -n $IPAddress ]]; do
                     read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
@@ -1109,16 +1111,16 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
-            if [[ $device_target_powder == 1 && $mode == "downgrade" ]]; then
-                print "* Note that kDFU mode will likely not work for powdersn0w restores!"
-            fi
-
             if [[ $device_mode != "Normal" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
             if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc != 4 ]] && (( device_proc < 7 )); then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
+                if [[ $device_proc == 5 ]]; then
+                    print "* Select N if this is not the case."
+                else
+                    print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
+                fi
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
                     log "Pwned iBSS/kDFU mode specified by user."
@@ -1236,7 +1238,7 @@ device_pwnerror() {
     error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are low on Linux.'
-        error_msg+=$'\n* Pwning with a Mac or another iOS device using iPwnder Lite are better options.'
+        error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -1262,7 +1264,7 @@ device_ipwndfu() {
         python2=/usr/bin/python
     elif [[ -z $python2 && ! -e $pyenv2 ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
-        print "* You may install python2 from pyenv: pyenv install 2.7.18"
+        print "* You may install python2 from pyenv by running: pyenv install 2.7.18"
         if [[ -z $pyenv ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
             print "* You may install pyenv by running: curl https://pyenv.run | bash"
@@ -3188,7 +3190,11 @@ device_ramdisk() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.dec
     $irecovery -c bootx
-    if [[ -n $1 && $1 != "justboot" ]]; then
+
+    if [[ $1 == "justboot" ]]; then
+        log "Device should now boot."
+        return
+    elif [[ -n $1 ]]; then
         device_find_mode Restore
     fi
 
@@ -3201,6 +3207,7 @@ device_ramdisk() {
             device_sshpass alpine
         ;;
     esac
+
     case $1 in
         "activation" | "baseband" )
             local arg="$1"
@@ -3378,11 +3385,6 @@ device_ramdisk() {
             print "* If the device did not connect, SSH to the device manually."
         ;;
 
-        "justboot" )
-            log "Device should now boot."
-            return
-        ;;
-
         * ) log "Device should now be in SSH ramdisk mode.";;
     esac
     echo
@@ -3408,7 +3410,7 @@ shsh_save_onboard() {
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS
-        sleep 5
+        sleep 2
     else
         device_enter_mode kDFU
     fi
@@ -4280,9 +4282,6 @@ device_activate() {
 
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
-    print "* Note that this might only work on old bootrom devices."
-    print "* Also note that Legacy iOS Kit does not support tethered booting."
-    print "* Legacy iOS Kit will not support tethered downgrades and jailbreaks."
     print "* Proceed with caution when restoring to custom IPSWs not made with Legacy iOS Kit."
     if [[ $device_newbr == 1 ]]; then
         warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
