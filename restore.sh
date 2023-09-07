@@ -1015,6 +1015,7 @@ device_enter_mode() {
             log "Please read the message below:"
             print "1. Make sure to have OpenSSH installed on your iOS device."
             if [[ $device_det == 1 ]]; then
+                print " - Make sure to jailbreak with kok3shiX, and enable \"use legacy patches\""
                 print " - Make sure to also have Dropbear installed from my repo."
                 print " - Repo: https://lukezgd.github.io/repo"
             fi
@@ -1049,7 +1050,7 @@ device_enter_mode() {
             print "* This may take a while, but should not take longer than a minute."
             if [[ $device_det == 1 ]]; then
                 print "* If the script seems to be stuck here, try to re-install the requirements and restart the device."
-                print "* Follow the steps in the GitHub wiki."
+                print "* Follow the steps in the GitHub wiki under \"A6(X) devices, jailbroken on iOS 10\""
             fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
@@ -1074,7 +1075,7 @@ device_enter_mode() {
                 read -s
                 log "Trying again with Wi-Fi SSH..."
                 print "* Make sure that your iOS device and PC/Mac are on the same network."
-                print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' next to your network name"
+                print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' or '>' next to your network name"
                 local IPAddress
                 until [[ -n $IPAddress ]]; do
                     read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
@@ -2046,10 +2047,10 @@ ipsw_prepare_bundle() {
         ipsw_prepare_32bit_keys RestoreRamdisk $1
         ipsw_prepare_32bit_keys RestoreDeviceTree $1
         ipsw_prepare_32bit_keys RestoreLogo $1
-        if [[ $1 == "target" ]]; then
-            ipsw_prepare_32bit_keys KernelCache $1
-        else
+        if [[ $1 != "target" || $vers == "5"* ]]; then
             ipsw_prepare_32bit_keys RestoreKernelCache $1
+        else
+            ipsw_prepare_32bit_keys KernelCache $1
         fi
         echo -e "</dict>" >> $NewPlist
     fi
@@ -2871,10 +2872,10 @@ restore_prepare() {
             elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 # powdersn0w 4.3.x-6.1.3
                 shsh_save version 7.1.2
-                if [[ $device_target_powder == 1 && $device_target_vers == "6"* ]]; then
-                    device_buttons
-                else
+                if [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
                     device_enter_mode pwnDFU
+                else
+                    device_buttons
                 fi
                 restore_idevicerestore
             else
@@ -2897,8 +2898,6 @@ restore_prepare() {
             else
                 if [[ $device_proc == 6 && $platform == "macos" ]]; then
                     device_buttons
-                elif [[ $device_target_powder == 1 && $device_target_vers == "5"* ]]; then
-                    device_enter_mode pwnDFU
                 else
                     device_enter_mode kDFU
                 fi
@@ -2965,13 +2964,10 @@ ipsw_prepare() {
                 elif [[ $ipsw_jailbreak == 1 ]]; then
                     ipsw_prepare_32bit
                 fi
-            elif [[ $device_type == "iPhone3,1" ]]; then
-                # powdersn0w 4.3.x-6.1.3
-                if [[ $device_target_vers == "4.3"* ]]; then
-                    shsh_save version 7.1.2
-                fi
+            elif [[ $device_type == "iPhone3,1" && $device_target_vers == "4.3"* ]]; then
+                shsh_save version 7.1.2
                 ipsw_prepare_powder
-            elif [[ $device_type == "iPhone3,3" ]]; then
+            elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 ipsw_prepare_powder2
             else
                 ipsw_prepare_custom
