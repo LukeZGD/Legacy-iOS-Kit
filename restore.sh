@@ -2672,17 +2672,21 @@ restore_futurerestore() {
     local port=8888
 
     if [[ $1 == "--use-pwndfu" ]]; then
+        device_fw_key_check
         if [[ $platform == "macos" ]]; then
             mac_ver=$(echo "$platform_ver" | cut -c -2)
         fi
         log "Starting local server for firmware keys"
         pushd ../resources >/dev/null
-        if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
-            # python2 SimpleHTTPServer for macos 11 and older
-            /usr/bin/python -m SimpleHTTPServer $port &
-            httpserver_pid=$!
+        if [[ $platform == "macos" ]]; then
+            if (( mac_ver >= 12 )); then
+                /usr/bin/python3 -m http.server -b 127.0.0.1 $port &
+                httpserver_pid=$!
+            else
+                /usr/bin/python -m SimpleHTTPServer $port &
+                httpserver_pid=$!
+            fi
         else
-            # python3 http.server for the rest
             if [[ -z $(which python3) ]]; then
                 error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
             fi
@@ -2937,7 +2941,6 @@ restore_prepare() {
     esac
     if [[ $device_latest_vers == "15"* ]]; then
         device_enter_mode pwnDFU
-        device_fw_key_check
         if [[ ! -s ../resources/firmware.json ]]; then
             log "Downloading firmwares.json from ipsw.me"
             curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmware.json
