@@ -2670,31 +2670,34 @@ restore_futurerestore() {
     local futurerestore2="$futurerestore"
     local mac_ver=0
     local port=8888
+    local opt
 
     if [[ $1 == "--use-pwndfu" ]]; then
         device_fw_key_check
         if [[ $platform == "macos" ]]; then
             mac_ver=$(echo "$platform_ver" | cut -c -2)
         fi
-        log "Starting local server for firmware keys"
         pushd ../resources >/dev/null
         if [[ $platform == "macos" ]]; then
             if (( mac_ver >= 12 )); then
-                /usr/bin/python3 -m http.server -b 127.0.0.1 $port &
-                httpserver_pid=$!
+                opt="/usr/bin/python3 -m http.server -b 127.0.0.1 $port"
             else
-                /usr/bin/python -m SimpleHTTPServer $port &
-                httpserver_pid=$!
+                opt="/usr/bin/python -m SimpleHTTPServer $port"
             fi
         else
             if [[ -z $(which python3) ]]; then
                 error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
             fi
-            $(which python3) -m http.server -b 127.0.0.1 $port &
-            httpserver_pid=$!
+            opt="$(which python3) -m http.server -b 127.0.0.1 $port"
         fi
+        log "Starting local server for firmware keys: $opt"
+        $opt &
+        httpserver_pid=$!
         popd >/dev/null
-        sleep 1
+        log "Waiting for local server"
+        until [[ $(curl http://127.0.0.1:$port 2>/dev/null) ]]; do
+            sleep 1
+        done
     fi
 
     restore_download_bbsep
