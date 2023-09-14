@@ -17,7 +17,7 @@
     - Device support is limited, see below
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 - Option to **jailbreak** all 32-bit iOS devices
-    - Available on iOS versions 3.1.3, 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x
+    - Available on iOS versions 3.1.3, 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x, 9.1-9.3.4
     - Only unsupported version is jailbreaking iPad 2 on 4.3.x
     - There are two methods of jailbreaking: Custom IPSW and SSH Ramdisk
 - Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
@@ -146,6 +146,7 @@
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
+- [UntetherHomeDepot](https://www.theiphonewiki.com/wiki/UntetherHomeDepot)
 - [Corona](https://www.theiphonewiki.com/wiki/Corona) and [Rocky Racoon](https://www.theiphonewiki.com/wiki/Rocky_Racoon)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theiphonewiki.com/wiki/redsn0w)

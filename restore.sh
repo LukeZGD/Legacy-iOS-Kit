@@ -756,8 +756,8 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
-            device_latest_vers="15.7.8"
-            device_latest_build="19H364"
+            device_latest_vers="15.7.9"
+            device_latest_build="19H365"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -793,7 +793,7 @@ device_get_info() {
             device_latest_bb="Mav10-7.80.04.Release.bbfw"
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
         ;;
-        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.7.8
+        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.7.9
             device_latest_bb="Mav10-11.61.01.Release.bbfw"
             device_latest_bb_sha1="212cbb1e5bfd60912c01adda7dca66a569ddf758"
         ;;
@@ -1031,11 +1031,15 @@ device_enter_mode() {
             if [[ $device_det == 1 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
-                sendfiles+=("../resources/kloader/kloader_hgsp")
-                sendfiles+=("../resources/kloader/kloader")
+                sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
             elif [[ $device_det == 5 ]]; then
-                echo "/tmp/kloader5 /tmp/pwnediBSS" >> kloaders
-                sendfiles+=("../resources/kloader/kloader5")
+                if [[ $device_proc == 5 ]]; then
+                    opt="kloader5"
+                else
+                    opt="kloader_axi0mX"
+                fi
+                echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
+                sendfiles+=("../resources/kloader/$opt")
             elif (( device_det < 5 )); then
                 echo "/tmp/kloader_axi0mX /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader_axi0mX")
@@ -1187,6 +1191,7 @@ device_enter_mode() {
                 elif [[ $device_proc == 7 ]]; then
                     print "* This option is set to gaster by default (1). Select this option if unsure."
                 fi
+                print "* If the first option does not work, try many times and/or try the other option(s)."
                 if [[ $device_proc == 7 ]]; then
                     selection+=("gaster")
                 fi
@@ -1299,7 +1304,7 @@ device_ipwndfu() {
 
     if [[ $1 == "send_ibss" ]]; then
         patch_ibss
-        cp pwnediBSS ../resources/ipwndfu/
+        cp pwnediBSS.dfu ../resources/ipwndfu/
     fi
 
     device_enter_mode DFU
@@ -1313,9 +1318,9 @@ device_ipwndfu() {
     case $1 in
         "send_ibss" )
             log "Sending iBSS..."
-            $python2 ipwndfu -l pwnediBSS
+            $python2 ipwndfu -l pwnediBSS.dfu
             tool_pwned=$?
-            rm pwnediBSS
+            rm pwnediBSS.dfu
             if [[ $tool_pwned != 0 ]]; then
                 popd >/dev/null
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
@@ -1411,9 +1416,16 @@ download_comp() {
     local build_id="$1"
     local comp="$2"
     local url="$(cat "$device_fw_dir/$build_id/url")"
+    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+        rm "$device_fw_dir/$build_id/url"
+        url=
+    fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
-        url=$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/url)
+        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
+        if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
+        fi
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
     fi
@@ -1438,8 +1450,6 @@ patch_ibss() {
     case $device_type in
         iPad1,1 | iPod3,1 ) build_id="9B206";;
         iPhone2,1 | iPod4,1 ) build_id="10B500";;
-        iPad3,1 | iPhone3,[123] ) build_id="11D257";;
-        iPod5,1 ) build_id="10B329";;
         * ) build_id="12H321";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
@@ -1447,49 +1457,31 @@ patch_ibss() {
     fi
     download_comp $build_id iBSS
     log "Patching iBSS..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" ||
-          $device_type == "iPhone3,2" || -n $device_ramdisk_build ]]; then
-        device_fw_key_check temp $build_id
-        local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-        local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
-        "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key -decrypt
-        "$dir/xpwntool" iBSS.dec iBSS.raw
-        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
-        "$dir/xpwntool" iBSS.patched pwnediBSS -t iBSS.dec
-    else
-        $bspatch iBSS pwnediBSS "../resources/patch/$download_targetfile.patch"
-    fi
-    cp pwnediBSS ../saved/$device_type/
+    device_fw_key_check temp $build_id
+    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
+    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+    "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key
+    "$dir/iBoot32Patcher" iBSS.dec pwnediBSS --rsa
+    "$dir/xpwntool" pwnediBSS pwnediBSS.dfu -t iBSS
+    cp pwnediBSS pwnediBSS.dfu ../saved/$device_type/
     log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
+    log "Pwned iBSS img3 saved at: saved/$device_type/pwnediBSS.dfu"
 }
 
 patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
-        iPad1,1 | iPod3,1 )
-            build_id="9B206";;
-        iPhone2,1 | iPod4,1 )
-            build_id="10B500";;
-        iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
-            build_id="10B329";;
-        iPad2,2 | iPhone3,[123] )
-            build_id="11D257";;
-        iPad2,[367] | iPad3,[25] )
-            build_id="12H321";;
-        iPad3,1 )
-            build_id="10B146";;
-        iPhone5,3 )
-            build_id="11B511";;
-        iPhone5,4 )
-            build_id="11B651";;
+        iPad1,1 | iPod3,1 ) build_id="9B206";;
+        iPhone2,1 | iPod4,1 ) build_id="10B500";;
+        * ) build_id="12H321";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
         build_id="$device_ramdisk_build"
     fi
     download_comp $build_id iBEC
     device_fw_key_check temp $build_id
-    local name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .filename')
+    local name="iBEC"
     local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
     local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
     local address="0x80000000"
@@ -1498,19 +1490,13 @@ patch_ibec() {
     fi
     log "Decrypting iBEC..."
     mv iBEC $name.orig
-    "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key -decrypt
-    "$dir/xpwntool" $name.dec $name.raw
+    "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" ||
-          $device_type == "iPhone3,2" || -n $device_ramdisk_build ]]; then
-        "$dir/iBoot32Patcher" $name.raw $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
-    else
-        $bspatch $name.raw $name.patched "../resources/patch/$download_targetfile.patch"
-    fi
-    "$dir/xpwntool" $name.patched pwnediBEC -t $name.dec
-    rm $name.dec $name.orig $name.raw $name.patched
-    cp pwnediBEC ../saved/$device_type/
-    log "Pwned iBEC saved at: saved/$device_type/pwnediBEC"
+    "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+    "$dir/xpwntool" $name.patched pwnediBEC.dfu -t $name.orig
+    rm $name.dec $name.orig $name.patched
+    cp pwnediBEC.dfu ../saved/$device_type/
+    log "Pwned iBEC img3 saved at: saved/$device_type/pwnediBEC.dfu"
 }
 
 ipsw_preference_set() {
@@ -1527,7 +1513,7 @@ ipsw_preference_set() {
     fi
     # target version check
     case $device_target_vers in
-        8* | 7* | 6* | 5* ) ipsw_canjailbreak=1;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_target_powder == 1 ]] ||
        [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* && $device_target_vers != "4.2.1" ]]; then
@@ -1694,9 +1680,16 @@ ipsw_verify() {
     if (( device_proc > 7 )); then
         return
     fi
+    if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
+        rm "$device_fw_dir/$build_id/sha1sum"
+        IPSWSHA1=
+    fi
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from ipsw.me..."
-        IPSWSHA1="$(curl https://api.ipsw.me/v2.1/$device_type/$build_id/sha1sum)"
+        IPSWSHA1="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".sha1sum")"
+        if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
+            IPSWSHA1="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .sha1sum")"
+        fi
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
@@ -2141,6 +2134,8 @@ ipsw_prepare_32bit() {
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
+            9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
+            9.2* | 9.1 ) JBFiles+=("untetherhomedepot921.tar");;
             7.1* )       JBFiles+=("panguaxe.tar");;
             7* )         JBFiles+=("evasi0n7-untether.tar");;
             6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
@@ -2149,7 +2144,7 @@ ipsw_prepare_32bit() {
             ;;
         esac
         case $device_target_vers in
-            8* ) JBFiles+=("fstab8.tar");;
+            9* | 8* ) JBFiles+=("fstab8.tar");;
             7* ) JBFiles+=("fstab7.tar");;
             * )  JBFiles+=("fstab_rw.tar");;
         esac
@@ -2183,8 +2178,8 @@ ipsw_prepare_32bit() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_powder() {
-    local ExtraArgs
+ipsw_prepare_powder4() {
+    local ExtraArgs="-apticket $shsh_path"
     local ExtraArgs2="--logo4 "
     local IV
     local JBFiles=()
@@ -2196,22 +2191,10 @@ ipsw_prepare_powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
-            if [[ $device_target_vers == "5"* ]]; then
-                JBFiles=("pris0nbarake/tar-${device_model}_$device_target_build.tar")
-            else
-                JBFiles=("unthredeh4il.tar")
-            fi
-            JBFiles+=("fstab_rw.tar" "freeze.tar")
-            for i in {0..2}; do
-                JBFiles[i]=$jelbrek/${JBFiles[$i]}
-            done
-            case $device_target_vers in
-                5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
-                5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
-            esac
-            JBFiles+=("$jelbrek/cydiasubstrate.tar")
-        fi
+        JBFiles=("unthredeh4il.tar" "fstab_rw.tar" "freeze.tar" "cydiasubstrate.tar")
+        for i in {0..3}; do
+            JBFiles[i]=$jelbrek/${JBFiles[$i]}
+        done
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
@@ -2220,14 +2203,7 @@ ipsw_prepare_powder() {
 
     cp -R ../resources/firmware/powdersn0wBundles ./FirmwareBundles
     cp -R ../resources/firmware/src .
-    if [[ $device_target_vers == "4.3"* ]]; then
-        ExtraArgs+="-apticket $shsh_path"
-    fi
-    if [[ $ipsw_jailbreak == 1 && $device_target_vers == "6"* ]]; then
-        ipsw_prepare_config true true
-    else
-        ipsw_prepare_config false true
-    fi
+    ipsw_prepare_config false true
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
@@ -2243,57 +2219,55 @@ ipsw_prepare_powder() {
         "* You may try selecting N for memory option"
     fi
 
-    if [[ $device_target_vers == "4.3"* ]]; then
-        device_fw_key_check
-        log "Applying iOS 4 patches"
-        log "Patch iBoot"
-        IV=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
-        Key=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
-        if [[ $device_target_vers != "4.3.5" ]]; then
-            ExtraArgs2+="--433 "
-        fi
-        if [[ $ipsw_verbose == 1 ]]; then
-            ExtraArgs2+="-b -v"
-        fi
-        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.n90ap.production/iBoot*
-        mv iBoot.n90ap.RELEASE.img3 ibot
-        "$dir/xpwntool" ibot ibot.dec -iv $IV -k $Key
-        "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs2
-        "$dir/xpwntool" ibot.pwned iBoot -t ibot
-        rm ibot*
-        echo "0000010: 6365" | xxd -r - iBoot
-        echo "0000020: 6365" | xxd -r - iBoot
-        mkdir -p Firmware/all_flash/all_flash.n90ap.production Firmware/dfu
-        cp iBoot Firmware/all_flash/all_flash.n90ap.production/iBoot4.n90ap.RELEASE.img3
-        log "Patch iBSS"
-        unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.n90ap.RELEASE.dfu
-        $bspatch iBSS.n90ap.RELEASE.dfu Firmware/dfu/iBSS.n90ap.RELEASE.dfu FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/iBSS.n90ap.RELEASE.patch
-        log "Patch Ramdisk"
-        local RamdiskName=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
-        unzip -o -j "$ipsw_path.ipsw" $RamdiskName
-        if [[ $device_target_vers == "4.3" ]]; then
-            "$dir/xpwntool" $RamdiskName ramdisk.orig -iv d11772b6a3bdd4f0b4cd8795b9f10ad9 -k 9873392c91743857cf5b35c9017c6683d5659c9358f35c742be27bfb03dee77c -decrypt
-        else
-            mv $RamdiskName ramdisk.orig
-        fi
-        $bspatch ramdisk.orig ramdisk.patched FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/${RamdiskName%????}.patch
-        "$dir/xpwntool" ramdisk.patched ramdisk.raw
-        "$dir/hfsplus" ramdisk.raw rm iBoot
-        "$dir/hfsplus" ramdisk.raw add iBoot iBoot
-        "$dir/xpwntool" ramdisk.raw $RamdiskName -t ramdisk.patched
-        log "Patch AppleLogo"
-        unzip -o -j temp.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
-        echo "0000010: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
-        echo "0000020: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
-        mv applelogo-640x960.s5l8930x.img3 Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
-        log "Add all to custom IPSW"
-        zip -r0 temp.ipsw Firmware/all_flash/all_flash.n90ap.production/* Firmware/dfu/iBSS.n90ap.RELEASE.dfu $RamdiskName
+    device_fw_key_check
+    log "Applying iOS 4 patches"
+    log "Patch iBoot"
+    IV=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
+    Key=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+    if [[ $device_target_vers != "4.3.5" ]]; then
+        ExtraArgs2+="--433 "
     fi
+    if [[ $ipsw_verbose == 1 ]]; then
+        ExtraArgs2+="-b -v"
+    fi
+    unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.n90ap.production/iBoot*
+    mv iBoot.n90ap.RELEASE.img3 ibot
+    "$dir/xpwntool" ibot ibot.dec -iv $IV -k $Key
+    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs2
+    "$dir/xpwntool" ibot.pwned iBoot -t ibot
+    rm ibot*
+    echo "0000010: 6365" | xxd -r - iBoot
+    echo "0000020: 6365" | xxd -r - iBoot
+    mkdir -p Firmware/all_flash/all_flash.n90ap.production Firmware/dfu
+    cp iBoot Firmware/all_flash/all_flash.n90ap.production/iBoot4.n90ap.RELEASE.img3
+    log "Patch iBSS"
+    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.n90ap.RELEASE.dfu
+    $bspatch iBSS.n90ap.RELEASE.dfu Firmware/dfu/iBSS.n90ap.RELEASE.dfu FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/iBSS.n90ap.RELEASE.patch
+    log "Patch Ramdisk"
+    local RamdiskName=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
+    unzip -o -j "$ipsw_path.ipsw" $RamdiskName
+    if [[ $device_target_vers == "4.3" ]]; then
+        "$dir/xpwntool" $RamdiskName ramdisk.orig -iv d11772b6a3bdd4f0b4cd8795b9f10ad9 -k 9873392c91743857cf5b35c9017c6683d5659c9358f35c742be27bfb03dee77c -decrypt
+    else
+        mv $RamdiskName ramdisk.orig
+    fi
+    $bspatch ramdisk.orig ramdisk.patched FirmwareBundles/${device_type}_${device_target_vers}_${device_target_build}.bundle/${RamdiskName%????}.patch
+    "$dir/xpwntool" ramdisk.patched ramdisk.raw
+    "$dir/hfsplus" ramdisk.raw rm iBoot
+    "$dir/hfsplus" ramdisk.raw add iBoot iBoot
+    "$dir/xpwntool" ramdisk.raw $RamdiskName -t ramdisk.patched
+    log "Patch AppleLogo"
+    unzip -o -j temp.ipsw Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
+    echo "0000010: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
+    echo "0000020: 3467" | xxd -r - applelogo-640x960.s5l8930x.img3
+    mv applelogo-640x960.s5l8930x.img3 Firmware/all_flash/all_flash.n90ap.production/applelogo-640x960.s5l8930x.img3
+    log "Add all to custom IPSW"
+    zip -r0 temp.ipsw Firmware/all_flash/all_flash.n90ap.production/* Firmware/dfu/iBSS.n90ap.RELEASE.dfu $RamdiskName
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_powder2() {
+ipsw_prepare_powder() {
     local ExtraArgs
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -2660,7 +2634,7 @@ restore_idevicerestore() {
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -2774,7 +2748,7 @@ restore_latest() {
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -2972,9 +2946,9 @@ ipsw_prepare() {
                 fi
             elif [[ $device_type == "iPhone3,1" && $device_target_vers == "4.3"* ]]; then
                 shsh_save version 7.1.2
-                ipsw_prepare_powder
+                ipsw_prepare_powder4
             elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
-                ipsw_prepare_powder2
+                ipsw_prepare_powder
             else
                 ipsw_prepare_custom
             fi
@@ -2983,7 +2957,7 @@ ipsw_prepare() {
         [56] )
             # 32-bit devices A5/A6
             if [[ $device_target_powder == 1 ]]; then
-                ipsw_prepare_powder2
+                ipsw_prepare_powder
             elif [[ $ipsw_jailbreak == 1 && $device_target_other != 1 ]]; then
                 ipsw_prepare_jailbreak
             else
@@ -3060,6 +3034,7 @@ device_ramdisk() {
     local url
     local decrypt
     local ramdisk_path
+    local build_id
 
     case $device_type in
         iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
@@ -3073,14 +3048,22 @@ device_ramdisk() {
     if [[ -n $device_ramdisk_build ]]; then
         device_target_build=$device_ramdisk_build
     fi
-    ramdisk_path="../saved/$device_type/ramdisk_$device_target_build"
+    build_id=$device_target_build
+    ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     device_fw_key_check
-    url=$(cat "$device_fw_dir/$device_target_build/url" 2>/dev/null)
+    url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
+    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+        rm "$device_fw_dir/$build_id/url"
+        url=
+    fi
     if [[ -z $url ]]; then
-        log "Getting URL for $device_type-$device_target_build"
-        url=$(curl https://api.ipsw.me/v2.1/$device_type/$device_target_build/url)
-        mkdir $device_fw_dir/$device_target_build 2>/dev/null
-        echo "$url" > $device_fw_dir/$device_target_build/url
+        log "Getting URL for $device_type-$build_id"
+        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
+        if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
+            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
+        fi
+        mkdir $device_fw_dir/$build_id 2>/dev/null
+        echo "$url" > $device_fw_dir/$build_id/url
     fi
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
@@ -3279,6 +3262,8 @@ device_ramdisk() {
                 return
             fi
             case $vers in
+                9.3.[1234] | 9.3 ) untether="untetherhomedepot.tar";;
+                9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
                 8* )         untether="daibutsu/untether.tar";;
                 7.1* )       untether="panguaxe.tar";;
                 7* )         untether="evasi0n7-untether.tar";;
@@ -3313,7 +3298,7 @@ device_ramdisk() {
             log "Mounting data partition"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
             case $vers in
-                8* ) device_ramdisktar fstab8.tar;;
+                9* | 8* ) device_ramdisktar fstab8.tar;;
                 7* ) device_ramdisktar fstab7.tar;;
                 6* ) device_ramdisktar fstab_rw.tar;;
                 5* ) untether="tar-${device_model}_$build.tar";;
@@ -3375,7 +3360,7 @@ device_ramdisk() {
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
-                5* | 4* | 3* ) warn "Do not update Cydia Substrate and Substrate Safe Mode in Cydia!";;
+                5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
             esac
             return
         ;;
@@ -3407,18 +3392,20 @@ device_ramdisk() {
 }
 
 shsh_save_onboard() {
+    if [[ $device_proc == 5 ]]; then
+        device_enter_mode kDFU
+    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+        device_buttons
+    fi
     if [[ $device_proc == 4 ]]; then
-        device_enter_mode pwnDFU
         patch_ibss
         log "Sending iBSS..."
-        $irecovery -f pwnediBSS
+        $irecovery -f pwnediBSS.dfu
         sleep 2
-    else
-        device_enter_mode kDFU
     fi
     patch_ibec
     log "Sending iBEC..."
-    $irecovery -f pwnediBEC
+    $irecovery -f pwnediBEC.dfu
     device_find_mode Recovery
     log "Dumping blobs now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
@@ -4208,6 +4195,22 @@ device_jailbreakrd() {
                 return
             ;;
         esac
+    : '
+    else
+        case $device_vers in
+            5* | 6.0* | 6.1 | 6.1.[12] )
+                print "* Your device on iOS $device_vers will be jailbroken using g1lbertJB."
+                print "* No data will be lost, but please back up your data just in case."
+                pause
+                pushd ../resources/jailbreak/g1lbertJB >/dev/null
+                cp ../freeze.tar payload/Cydia.tar
+                ../../$dir/gilbertjb
+                rm payload/Cydia.tar
+                popd >/dev/null
+                return
+            ;;
+        esac
+    '
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
