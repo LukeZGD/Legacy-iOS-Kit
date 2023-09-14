@@ -1450,6 +1450,7 @@ patch_ibss() {
     case $device_type in
         iPad1,1 | iPod3,1 ) build_id="9B206";;
         iPhone2,1 | iPod4,1 ) build_id="10B500";;
+        iPhone3,[123] ) build_id="11D257";;
         * ) build_id="12H321";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
@@ -1474,6 +1475,7 @@ patch_ibec() {
     case $device_type in
         iPad1,1 | iPod3,1 ) build_id="9B206";;
         iPhone2,1 | iPod4,1 ) build_id="10B500";;
+        iPhone3,[123] ) build_id="11D257";;
         * ) build_id="12H321";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
