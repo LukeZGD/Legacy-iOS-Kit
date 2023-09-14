@@ -3043,8 +3043,7 @@ device_ramdisk() {
         iPod2,1 ) device_target_build="8C148";;
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
-        iPhone5,3 ) device_target_build="11B511";;
-        iPhone5,4 ) device_target_build="11B651";;
+        iPhone5,[34] ) device_target_build="11D257";;
         * ) device_target_build="10B329";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
@@ -3394,10 +3393,10 @@ device_ramdisk() {
 }
 
 shsh_save_onboard() {
-    if [[ $device_proc == 5 ]]; then
-        device_enter_mode kDFU
-    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+    if [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
         device_buttons
+    else
+        device_enter_mode kDFU
     fi
     if [[ $device_proc == 4 ]]; then
         patch_ibss
