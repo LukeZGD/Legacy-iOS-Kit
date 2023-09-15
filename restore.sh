@@ -73,7 +73,6 @@ List of options:
     --no-version-check        Disable script version checking
 
 For 32-bit devices compatible with restores/downgrades (see README):
-    --activation-records      Enable dumping/stitching activation records
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
@@ -1013,18 +1012,19 @@ device_enter_mode() {
             sleep 2
 
             log "Please read the message below:"
-            print "1. Make sure to have OpenSSH installed on your iOS device."
+            print "* Follow these instructions to enter kDFU mode."
+            print "1. Install \"OpenSSH\" and \"Core Utilities\" in Cydia or Zebra."
             if [[ $device_det == 1 ]]; then
-                print " - Make sure to jailbreak with kok3shiX, and enable \"use legacy patches\""
-                print " - Make sure to also have Dropbear installed from my repo."
-                print " - Repo: https://lukezgd.github.io/repo"
+                print "  - Jailbreak with kok3shiX, and enable \"use legacy patches\""
+                print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
             fi
-            print "  - Only proceed if you have these requirements installed using Cydia/Zebra."
-            print "  - You will be prompted to enter the root password of your iOS device."
+            print "  - After installing these requirements, lock your device."
+            print "2. You will be prompted to enter the root password of your iOS device."
             print "  - The default root password is: alpine"
-            print "  - Do not worry that your input is not visible, it is still being entered."
-            print "2. Afterwards, the device will disconnect and its screen will stay black."
-            print "  - Proceed to either press the TOP/HOME button, or unplug and replug the device."
+            print "  - Your input will not be visible, but it is still being entered."
+            print "3. On entering kDFU mode, the device will disconnect."
+            print "  - Proceed to unplug and replug the device when prompted."
+            print "  - Alternatively, press the TOP or HOME button."
             pause
 
             echo "chmod +x /tmp/kloader*" > kloaders
@@ -1038,6 +1038,7 @@ device_enter_mode() {
                 else
                     opt="kloader_axi0mX"
                 fi
+                log "Using $opt for kloader iOS 5"
                 echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/$opt")
             elif (( device_det < 5 )); then
@@ -1053,7 +1054,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             if [[ $device_det == 1 ]]; then
-                print "* If the script seems to be stuck here, try to re-install the requirements and restart the device."
+                print "* If the script is stuck here, reboot and re-jailbreak the device, and try again."
                 print "* Follow the steps in the GitHub wiki under \"A6(X) devices, jailbroken on iOS 10\""
             fi
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
@@ -1103,7 +1104,7 @@ device_enter_mode() {
                     device_mode="DFU"
                     break
                 fi
-                print "* You may also try to unplug and replug your device"
+                print "* Unplug and replug your device now"
                 ((attempt++))
             done
             if (( attempt >= 6 )); then
@@ -1240,7 +1241,7 @@ device_enter_mode() {
 }
 
 device_pwnerror() {
-    local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for 15 seconds.'
+    local error_msg=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
     error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are low on Linux.'
@@ -2816,57 +2817,74 @@ restore_prepare() {
         ;;
 
         4 )
-            if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                if [[ $device_type == "iPhone3,1" ]]; then
-                    device_enter_mode pwnDFU
-                else
-                    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
-                    device_enter_mode DFU
-                fi
-                restore_idevicerestore
-                if [[ $device_type == "iPhone2,1" ]]; then
-                    log "Ignore the baseband error and do not disconnect your device yet"
-                    device_find_mode Recovery
-                    log "Attempting to exit recovery mode"
-                    $irecovery -n
-                    log "Done, your device should boot now"
-                fi
-            elif [[ $device_target_other == 1 ]]; then
-                device_buttons
-                restore_idevicerestore
-            elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
-                device_enter_mode DFU
-                restore_latest
-                if [[ $device_type == "iPhone2,1" ]]; then
-                    log "Ignore the baseband error and do not disconnect your device yet"
-                    device_find_mode Recovery
-                    log "Attempting to exit recovery mode"
-                    $irecovery -n
-                    log "Done, your device should boot now"
-                fi
-            elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 ]]; then
-                    shsh_save version $device_target_vers
+            if [[ $device_type == "iPhone3"* ]]; then
+                if [[ $device_target_other == 1 && $device_target_vers == "4"* ]]; then
                     device_enter_mode pwnDFU
                     restore_idevicerestore
-                else
-                    restore_latest
-                fi
-            elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
-                # powdersn0w 4.3.x-6.1.3
-                shsh_save version 7.1.2
-                if [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
-                    device_enter_mode pwnDFU
-                else
+                elif [[ $device_target_other == 1 ]]; then
                     device_buttons
+                    restore_idevicerestore
+                elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+                    shsh_save version 7.1.2
+                    if [[ $ipsw_jailbreak == 1 ]]; then
+                        device_buttons
+                        restore_idevicerestore
+                    else
+                        restore_latest
+                    fi
+                else
+                    shsh_save version 7.1.2
+                    if [[ $device_target_vers == "4"* ]]; then
+                        device_enter_mode pwnDFU
+                    else
+                        device_buttons
+                    fi
+                    restore_idevicerestore
                 fi
-                restore_idevicerestore
             else
-                device_enter_mode pwnDFU
-                restore_latest custom
-                if [[ $device_type == "iPhone2,1" ]]; then
-                    print "* If the restore succeeded but the device does not boot:"
-                    print " -> Go to: Other Utilities -> Install alloc8 Exploit"
+                if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+                    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
+                    device_enter_mode DFU
+                    restore_idevicerestore
+                    if [[ $device_type == "iPhone2,1" ]]; then
+                        log "Ignore the baseband error and do not disconnect your device yet"
+                        device_find_mode Recovery
+                        log "Attempting to exit recovery mode"
+                        $irecovery -n
+                        log "Done, your device should boot now"
+                    fi
+                elif [[ $device_target_other == 1 ]]; then
+                    device_buttons
+                    restore_idevicerestore
+                elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
+                    device_enter_mode DFU
+                    restore_latest
+                    if [[ $device_type == "iPhone2,1" ]]; then
+                        log "Ignore the baseband error and do not disconnect your device yet"
+                        device_find_mode Recovery
+                        log "Attempting to exit recovery mode"
+                        $irecovery -n
+                        log "Done, your device should boot now"
+                    fi
+                elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
+                    if [[ $ipsw_jailbreak == 1 ]]; then
+                        shsh_save version $device_target_vers
+                        if [[ $device_target_vers == "4.1" ]]; then
+                            device_target_mode pwnDFU
+                        else
+                            device_buttons
+                        fi
+                        restore_idevicerestore
+                    else
+                        restore_latest
+                    fi
+                else
+                    device_enter_mode pwnDFU
+                    restore_latest custom
+                    if [[ $device_type == "iPhone2,1" ]]; then
+                        print "* If the restore succeeded but the device does not boot:"
+                        print " -> Go to: Other Utilities -> Install alloc8 Exploit"
+                    fi
                 fi
             fi
         ;;
@@ -3202,15 +3220,16 @@ device_ramdisk() {
             log "Mounting root filesystem"
             $ssh -p 2222 root@127.0.0.1 "mount.sh root"
             sleep 2
-            log "Let's just dump both activation and baseband tars"
+            #log "Let's just dump both activation and baseband tars"
             log "Creating baseband.tar"
             $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone usr/local/standalone"
             log "Mounting data partition"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
-            log "Creating activation.tar"
-            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
+            #log "Creating activation.tar"
+            #$ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
             log "Copying tars"
-            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
+            #$scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
+            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar .
             print "* Reminder to backup dump tars if needed"
             if [[ -s $dump/baseband.tar ]]; then
                 read -p "Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n)" opt
@@ -3220,15 +3239,17 @@ device_ramdisk() {
             else
                 cp baseband.tar $dump
             fi
+            : '
             opt=
             if [[ -s $dump/activation.tar ]]; then
                 read -p "Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)" opt
-                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                if [[ $opt != "n" && $opt != "n" ]]; then
                     cp activation.tar $dump
                 fi
             else
                 cp activation.tar $dump
             fi
+            '
             $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
             log "Done, device should boot to recovery mode now"
             return
@@ -3410,22 +3431,23 @@ shsh_save_onboard() {
     device_find_mode Recovery
     log "Dumping blobs now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
-    $irecovery2 -g dump.shsh
+    $irecovery2 -g myblob.dump
     $irecovery -n
-    "$dir/ticket" dump.shsh dump.plist "$ipsw_path.ipsw" -z
-    "$dir/validate" dump.plist "$ipsw_path.ipsw" -z
+    "$dir/ticket" myblob.dump myblob.shsh "$ipsw_path.ipsw" -z
+    "$dir/validate" myblob.shsh "$ipsw_path.ipsw" -z
     if [[ $? != 0 ]]; then
         warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
     fi
-    if [[ ! -s dump.plist ]]; then
+    if [[ ! -s myblob.shsh ]]; then
         warn "Saving onboard SHSH blobs failed."
-        if [[ -s dump.shsh ]]; then
-            mv dump.shsh ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump
+        if [[ -s myblob.dump ]]; then
+            mv myblob.dump ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump
             log "Raw dump saved at: ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump"
+            warn "This raw dump is most likely not usable for restoring."
         fi
         return
     fi
-    mv dump.plist ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
+    mv myblob.shsh ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
     log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
 }
 
@@ -4113,7 +4135,8 @@ menu_other() {
                 if [[ $device_type == "iPhone"* ]]; then
                     menu_items+=("Dump Baseband")
                 fi
-                menu_items+=("Activation Records" "Clear NVRAM")
+                #menu_items+=("Activation Records" "Clear NVRAM")
+                menu_items+=("Clear NVRAM")
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
                 fi
@@ -4466,7 +4489,7 @@ for i in "$@"; do
         "--disable-bbupdate" ) device_disable_bbupdate=1;;
         "--disable-sudoloop" ) device_disable_sudoloop=1;;
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
-        "--activation-records" ) device_actrec=1;;
+        #"--activation-records" ) device_actrec=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
     esac
 done

@@ -30,7 +30,6 @@
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
 - The latest baseband will be flashed for A5(X)/A6(X) devices if applicable
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
-- Dumping and stitching activation records to IPSW (requires `--activation-records`)
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -70,8 +69,8 @@
     </tbody>
 </table>
 
-- Restoring with SHSH blobs and using SSH Ramdisks are supported on the following devices:
-    - Supports all 32-bit iOS devices (iOS 3 to 10)
+- Restoring with SHSH blobs, jailbreaking, and using SSH Ramdisks are supported on the following devices:
+    - Supports all 32-bit iOS devices
     - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 1, 2, 3, 4, 5
@@ -84,7 +83,7 @@
     - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
     - iPhone 4 CDMA - targets iOS 5.0 to 6.1.3
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - targets iOS 5.0 to 9.3.5 (not iOS 7)
-    - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x can also be used for iPhone 5)
+    - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x blobs can also be used for iPhone 5)
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.1
