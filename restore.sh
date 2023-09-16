@@ -1474,10 +1474,22 @@ patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
-        iPad1,1 | iPod3,1 ) build_id="9B206";;
-        iPhone2,1 | iPod4,1 ) build_id="10B500";;
-        iPhone3,[123] ) build_id="11D257";;
-        * ) build_id="12H321";;
+        iPad1,1 | iPod3,1 )
+            build_id="9B206";;
+        iPhone2,1 | iPod4,1 )
+            build_id="10B500";;
+        iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
+            build_id="10B329";;
+        iPad2,2 | iPhone3,[123] )
+            build_id="11D257";;
+        iPad2,[367] | iPad3,[25] )
+            build_id="12H321";;
+        iPad3,1 )
+            build_id="10B146";;
+        iPhone5,3 )
+            build_id="11B511";;
+        iPhone5,4 )
+            build_id="11B651";;
     esac
     if [[ -n $device_ramdisk_build ]]; then
         build_id="$device_ramdisk_build"
@@ -1494,8 +1506,11 @@ patch_ibec() {
     log "Decrypting iBEC..."
     mv iBEC $name.orig
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
-    log "Patching iBEC..."
-    "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+    if [[ $build_id == "9B206" || $build_id == "10B500" || -n $device_ramdisk_build ]]; then
+        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+    else
+        $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
+    fi
     "$dir/xpwntool" $name.patched pwnediBEC.dfu -t $name.orig
     rm $name.dec $name.orig $name.patched
     cp pwnediBEC.dfu ../saved/$device_type/
@@ -2155,15 +2170,17 @@ ipsw_prepare_32bit() {
         for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
-        case $device_target_vers in
-            5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
-            5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
-            5.0 )
-                if [[ $device_type == "iPhone4,1" ]]; then
-                    JBFiles+=("$jelbrek/corona.tar")
-                fi
-            ;;
-        esac
+        if [[ $device_proc == 5 ]]; then
+            case $device_target_vers in
+                5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
+                5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
+                5.0 )
+                    if [[ $device_type == "iPhone4,1" ]]; then
+                        JBFiles+=("$jelbrek/corona.tar")
+                    fi
+                ;;
+            esac
+        fi
         if [[ $device_target_vers == "5"* ]]; then
             JBFiles+=("$jelbrek/cydiasubstrate.tar")
         fi
@@ -2445,8 +2462,6 @@ ipsw_prepare_custom() {
             "4.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar;;
         esac
         case $device_target_vers in
-            "5.1.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/rockyracoon.tar;;
-            "5.0.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/corona.tar;;
             "4"* | "3.1.3" )
                 "$dir/hfsplus" out.dmg rm private/etc/fstab
                 "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
@@ -3326,14 +3341,18 @@ device_ramdisk() {
                 5* ) untether="tar-${device_model}_$build.tar";;
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
+            if [[ $device_proc == 5 ]]; then
+                case $vers in
+                    5.1.1 ) device_ramdisktar rockyracoon.tar;;
+                    5.0.1 ) device_ramdisktar corona.tar;;
+                    5.0 )
+                        if [[ $device_type == "iPhone4,1" ]]; then
+                            device_ramdisktar corona.tar
+                        fi
+                    ;;
+                esac
+            fi
             case $vers in
-                5.1.1 ) device_ramdisktar rockyracoon.tar;;
-                5.0.1 ) device_ramdisktar corona.tar;;
-                5.0 )
-                    if [[ $device_type == "iPhone4,1" ]]; then
-                        device_ramdisktar corona.tar
-                    fi
-                ;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
