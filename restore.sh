@@ -1305,7 +1305,7 @@ device_ipwndfu() {
 
     if [[ $1 == "send_ibss" ]]; then
         patch_ibss
-        cp pwnediBSS.dfu ../resources/ipwndfu/
+        cp pwnediBSS ../resources/ipwndfu/
     fi
 
     device_enter_mode DFU
@@ -1319,9 +1319,9 @@ device_ipwndfu() {
     case $1 in
         "send_ibss" )
             log "Sending iBSS..."
-            $python2 ipwndfu -l pwnediBSS.dfu
+            $python2 ipwndfu -l pwnediBSS
             tool_pwned=$?
-            rm pwnediBSS.dfu
+            rm pwnediBSS
             if [[ $tool_pwned != 0 ]]; then
                 popd >/dev/null
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
