@@ -1478,9 +1478,9 @@ patch_ibec() {
             build_id="9B206";;
         iPhone2,1 | iPod4,1 )
             build_id="10B500";;
-        iPad2,[145] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
+        iPad2,[1245] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
             build_id="10B329";;
-        iPad2,2 | iPhone3,[123] )
+        iPhone3,[123] )
             build_id="11D257";;
         iPad2,[367] | iPad3,[25] )
             build_id="12H321";;
