@@ -3061,7 +3061,7 @@ device_ramdisktar() {
 }
 
 device_ramdisk() {
-    local comps=("iBSS" "iBEC" "RestoreRamdisk" "DeviceTree" "AppleLogo" "Kernelcache")
+    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache")
     local name
     local iv
     local key
@@ -3071,6 +3071,9 @@ device_ramdisk() {
     local ramdisk_path
     local build_id
 
+    if [[ $1 != "justboot" ]]; then
+        comps+=("RestoreRamdisk")
+    fi
     case $device_type in
         iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
         iPod2,1 ) device_target_build="8C148";;
@@ -3131,9 +3134,11 @@ device_ramdisk() {
         fi
     done
 
-    log "Patch RestoreRamdisk"
-    "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
-    "$dir/hfsplus" Ramdisk.raw grow 30000000
+    if [[ $1 != "justboot" ]]; then
+        log "Patch RestoreRamdisk"
+        "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
+        "$dir/hfsplus" Ramdisk.raw grow 30000000
+    fi
 
     if [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh_old.tar
@@ -3152,20 +3157,27 @@ device_ramdisk() {
         rm DeviceTree.dec
         mv DeviceTree.orig DeviceTree.dec
     else
-        "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
-        "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
+        if [[ $1 != "justboot" ]]; then
+            "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
+            "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
+        fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+        case $build_id in
+            "7"* | "8"* ) "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v";;
+            * )
+                "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+                log "Patch iBEC"
+                "$dir/xpwntool" iBEC.dec iBEC.raw
+                if [[ $device_verbose_boot == 1 ]]; then
+                    "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
+                else
+                    "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+                fi
+                "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
+            ;;
+        esac
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        log "Patch iBEC"
-        "$dir/xpwntool" iBEC.dec iBEC.raw
-        if [[ $device_verbose_boot == 1 ]]; then
-            "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
-        else
-            "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-        fi
-        "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
     fi
 
     mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
@@ -4393,11 +4405,8 @@ restore_dfuipsw() {
 
 device_justboot() {
     print "* You are about to do a tethered verbose boot."
-    print "* Enter the build version of the iOS version to use. This supports iOS 5 and newer only."
+    print "* Enter the build version of the iOS version to use."
     read -p "$(input 'Enter build version (eg. 9B206): ')" device_ramdisk_build
-    case $device_ramdisk_build in
-        "7"* | "8"* ) error "Tethered verbose boot is supported for iOS 5 and newer only."
-    esac
     device_verbose_boot=1
     device_ramdisk justboot
 }
