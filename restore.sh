@@ -3163,20 +3163,19 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        case $build_id in
-            "7"* | "8"* ) "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v";;
-            * )
-                "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
-                log "Patch iBEC"
-                "$dir/xpwntool" iBEC.dec iBEC.raw
-                if [[ $device_verbose_boot == 1 ]]; then
-                    "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
-                else
-                    "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-                fi
-                "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
-            ;;
-        esac
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad2"* ]]; then
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+        else
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
+            log "Patch iBEC"
+            "$dir/xpwntool" iBEC.dec iBEC.raw
+            if [[ $1 == "justboot" ]]; then
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
+            else
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+            fi
+            "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
+        fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
     fi
 
@@ -3215,7 +3214,7 @@ device_ramdisk() {
     log "Booting, please wait..."
     $irecovery -f $ramdisk_path/DeviceTree.dec
     $irecovery -c devicetree
-    if [[ $device_verbose_boot != 1 ]]; then
+    if [[ $1 != "justboot" ]]; then
         $irecovery -f $ramdisk_path/Ramdisk.dmg
         $irecovery -c ramdisk
     fi
@@ -4407,7 +4406,6 @@ device_justboot() {
     print "* You are about to do a tethered verbose boot."
     print "* Enter the build version of the iOS version to use."
     read -p "$(input 'Enter build version (eg. 9B206): ')" device_ramdisk_build
-    device_verbose_boot=1
     device_ramdisk justboot
 }
 
