@@ -594,6 +594,7 @@ device_get_info() {
             fi
             device_model=$($ideviceinfo -s -k HardwareModel)
             device_vers=$($ideviceinfo -s -k ProductVersion)
+            device_build=$($ideviceinfo -s -k BuildVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
             [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
             if [[ $device_type == "iPod2,1" ]]; then
@@ -2158,7 +2159,7 @@ ipsw_prepare_32bit() {
             7* )         JBFiles+=("evasi0n7-untether.tar");;
             6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
             6* )         JBFiles+=("evasi0n6-untether.tar");;
-            5* )         JBFiles+=("pris0nbarake/tar-${device_model}_$device_target_build.tar")
+            5* )         JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar")
             ;;
         esac
         case $device_target_vers in
@@ -2170,19 +2171,8 @@ ipsw_prepare_32bit() {
         for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
-        if [[ $device_proc == 5 ]]; then
-            case $device_target_vers in
-                5.1.1 ) JBFiles+=("$jelbrek/rockyracoon.tar");;
-                5.0.1 ) JBFiles+=("$jelbrek/corona.tar");;
-                5.0 )
-                    if [[ $device_type == "iPhone4,1" ]]; then
-                        JBFiles+=("$jelbrek/corona.tar")
-                    fi
-                ;;
-            esac
-        fi
         if [[ $device_target_vers == "5"* ]]; then
-            JBFiles+=("$jelbrek/cydiasubstrate.tar")
+            JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
@@ -2313,7 +2303,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
         if [[ $device_target_vers == "5"* ]]; then
-            ExtraArgs+=" $jelbrek/cydiasubstrate.tar"
+            ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar"
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
@@ -2452,7 +2442,10 @@ ipsw_prepare_custom() {
         log "Extracting untether"
         case $device_target_vers in
             "6.1.6" ) "$dir/hfsplus" out.dmg untar $jelbrek/p0sixspwn.tar;;
-            "5"* | "4.3"* ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
+            "5"* )
+                "$dir/hfsplus" out.dmg untar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar
+                "$dir/hfsplus" out.dmg untar $jelbrek/g1lbertJB.tar
+            ;;
             "4.2.1" )
                 if [[ $device_proc != 1 ]]; then
                     "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
@@ -2460,6 +2453,7 @@ ipsw_prepare_custom() {
                 fi
             ;;
             "4.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar;;
+            "4.3"* | "4.2"* ) "$dir/hfsplus" out.dmg untar $jelbrek/unthredeh4il.tar;;
         esac
         case $device_target_vers in
             "4"* | "3.1.3" )
@@ -2652,7 +2646,7 @@ restore_idevicerestore() {
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -2766,7 +2760,7 @@ restore_latest() {
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -3259,7 +3253,7 @@ device_ramdisk() {
             print "* Reminder to backup dump tars if needed"
             if [[ -s $dump/baseband.tar ]]; then
                 read -p "Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n)" opt
-                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                if [[ $opt != "N" && $opt != "n" ]]; then
                     cp baseband.tar $dump
                 fi
             else
@@ -3269,7 +3263,7 @@ device_ramdisk() {
             opt=
             if [[ -s $dump/activation.tar ]]; then
                 read -p "Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)" opt
-                if [[ $opt != "n" && $opt != "n" ]]; then
+                if [[ $opt != "N" && $opt != "n" ]]; then
                     cp activation.tar $dump
                 fi
             else
@@ -3317,7 +3311,7 @@ device_ramdisk() {
                 7* )         untether="evasi0n7-untether.tar";;
                 6.1.[3456] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
-                5* )         untether="pris0nbarake/tar-${device_model}_$build.tar";;
+                5* )         untether="g1lbertJB/${device_type}_${build}.tar";;
                 4.2.1 | 4.1 | 4.0* | 3.2.2 | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
                 4.3* | 4.2* ) untether="unthredeh4il.tar";;
                 '' )
@@ -3349,21 +3343,11 @@ device_ramdisk() {
                 9* | 8* ) device_ramdisktar fstab8.tar;;
                 7* ) device_ramdisktar fstab7.tar;;
                 6* ) device_ramdisktar fstab_rw.tar;;
-                5* ) untether="tar-${device_model}_$build.tar";;
+                5* ) untether="${device_type}_${build}.tar";;
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
-            if [[ $device_proc == 5 ]]; then
-                case $vers in
-                    5.1.1 ) device_ramdisktar rockyracoon.tar;;
-                    5.0.1 ) device_ramdisktar corona.tar;;
-                    5.0 )
-                        if [[ $device_type == "iPhone4,1" ]]; then
-                            device_ramdisktar corona.tar
-                        fi
-                    ;;
-                esac
-            fi
             case $vers in
+                5* ) device_ramdisktar g1lbertJB.tar;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
@@ -3412,7 +3396,7 @@ device_ramdisk() {
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
-                5* | 4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+                4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
             esac
             return
         ;;
@@ -3536,7 +3520,11 @@ menu_print_info() {
     if [[ -n $device_disable_bbupdate || $device_actrec == 1 ]]; then
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
     fi
-    print "* iOS Version: $device_vers"
+    if [[ -n $device_build ]]; then
+        print "* iOS Version: $device_vers ($device_build)"
+    else
+        print "* iOS Version: $device_vers"
+    fi
     if [[ $device_vers == "Unknown" && $device_proc != 1 ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
@@ -4249,7 +4237,6 @@ device_jailbreakrd() {
                 return
             ;;
         esac
-    : '
     else
         case $device_vers in
             5* | 6.0* | 6.1 | 6.1.[12] )
@@ -4264,7 +4251,6 @@ device_jailbreakrd() {
                 return
             ;;
         esac
-    '
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
