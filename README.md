@@ -145,7 +145,7 @@
 - [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [pris0nbarake](https://github.com/LukeZGD/pris0nbarake) - LukeZGD fork
-- [g1lbertJB](https://github.com/eatingurtoes/g1lbertJB)
+- [g1lbertJB](https://github.com/g1lbertJB/g1lbertJB)
 - [UntetherHomeDepot](https://www.theiphonewiki.com/wiki/UntetherHomeDepot)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theiphonewiki.com/wiki/redsn0w)
