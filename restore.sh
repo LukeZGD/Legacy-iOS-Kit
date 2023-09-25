@@ -2303,7 +2303,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
         if [[ $device_target_vers == "5"* ]]; then
-            ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar"
+            ExtraArgs+=" freeze.tar $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar"
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
