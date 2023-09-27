@@ -2904,11 +2904,7 @@ restore_prepare() {
                 elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
                     if [[ $ipsw_jailbreak == 1 ]]; then
                         shsh_save version $device_target_vers
-                        if [[ $device_target_vers == "4.1" ]]; then
-                            device_target_mode pwnDFU
-                        else
-                            device_buttons
-                        fi
+                        device_target_mode pwnDFU
                         restore_idevicerestore
                     else
                         restore_latest
