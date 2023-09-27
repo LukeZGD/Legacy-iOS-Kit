@@ -1215,6 +1215,22 @@ device_enter_mode() {
                     esac
                 done
                 log "Placing device to pwnDFU mode using: $opt"
+                if [[ $device_proc == 7 ]]; then
+                    if [[ $platform == "macos" ]]; then
+                        if [[ $(uname -m) == "x86_64" ]]; then
+                            print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
+                        fi
+                        print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
+                    elif [[ $platform == "linux" ]]; then
+                        print "* Unfortunately, success rates for checkm8 are very low on Linux."
+                        print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
+                    fi
+                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+                    print "* Troubleshooting links:"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
+                    print "* If pwning gets stuck, you can press Ctrl+C to cancel."
+                fi
                 $opt
                 tool_pwned=$?
             fi
@@ -1245,7 +1261,7 @@ device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
     error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
-        error_msg+=$'\n* Unfortunately, success rates for checkm8 are low on Linux.'
+        error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
@@ -1803,13 +1819,23 @@ ipsw_prepare_jailbreak() {
         else
             JBFiles+=("fstab_rw.tar" "freeze.tar")
             case $device_target_vers in
-                "6.1.3" ) JBFiles+=("p0sixspwn.tar");;
-                "4.3"* )  JBFiles+=("unthredeh4il.tar");;
-                "4"* )    JBFiles=("fstab_new.tar" "freeze.tar" "greenpois0n/${device_type}_${device_target_build}.tar");;
+                "6.1.6" | "6.1.3" ) JBFiles+=("p0sixspwn.tar");;
+                "5"* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+                "4.2.1" | "4.1" | "4.0"* )
+                    JBFiles[0]="fstab_new.tar"
+                    JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
+                ;;
+                "4.3"* | "4.2"* ) JBFiles+=("unthredeh4il.tar");;
             esac
             for i in {0..2}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
+            if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
+                JBFiles+=("$jelbrek/cydiasubstrate.tar")
+            fi
+            if [[ $device_target_vers == "5"* ]]; then
+                JBFiles+=("$jelbrek/g1lbertJB.tar")
+            fi
             if [[ $ipsw_openssh == 1 ]]; then
                 JBFiles+=("$jelbrek/sshdeb.tar")
             fi
