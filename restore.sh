@@ -3241,7 +3241,11 @@ device_ramdisk() {
         log "Device should now boot."
         return
     elif [[ -n $1 ]]; then
-        device_find_mode Restore
+        if [[ $platform == "macos" ]]; then
+            sleep 20
+        else
+            device_find_mode Restore
+        fi
     fi
 
     case $1 in
