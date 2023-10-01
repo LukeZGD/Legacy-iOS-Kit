@@ -2148,7 +2148,7 @@ ipsw_prepare_32bit() {
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $device_type != "$device_disable_bbupdate" && $ipsw_jailbreak != 1 &&
-            $device_proc != 4 && $device_actrec != 1 ]]; then
+            $device_proc != 4 && $device_actrec != 1 && $device_target_build != "9A406" ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
@@ -3125,12 +3125,31 @@ device_ramdisk() {
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
-            "DeviceTree" | "AppleLogo" ) path="Firmware/all_flash/all_flash.${device_model}ap.production/";;
+            "DeviceTree" )
+                path="Firmware/all_flash/"
+                case $build_id in
+                    14[EFG]* ) :;;
+                    * ) path+="all_flash.${device_model}ap.production/";;
+                esac
+            ;;
             * ) path="";;
         esac
         if [[ -z $name ]]; then
+            local hwmodel="$device_model"
+            case $build_id in
+                14[EFG]* )
+                    case $device_type in
+                        iPhone5,[12] ) hwmodel="iphone5";;
+                        iPhone5,[34] ) hwmodel="iphone5b";;
+                        iPad3,[456] )  hwmodel="ipad3b";;
+                    esac
+                ;;
+                7* | 8* | 9* | 10* | 11* ) hwmodel+="ap";;
+            esac
             case $getcomp in
-                "iBSS" ) name="iBSS.${device_model}ap.RELEASE.dfu";;
+                "iBSS" | "iBEC" ) name="$getcomp.$hwmodel.RELEASE.dfu";;
+                "DeviceTree" )    name="$getcomp.${device_model}ap.img3";;
+                "Kernelcache" )   name="kernelcache.release.$hwmodel";;
             esac
         fi
 
@@ -3145,6 +3164,8 @@ device_ramdisk() {
         if [[ $getcomp == "Kernelcache" || $getcomp == "iBSS" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
             decrypt="-iv $iv -k $key"
             "$dir/xpwntool" $getcomp.orig $getcomp.dec $decrypt
+        elif [[ $build_id == "14"* ]]; then
+            cp $getcomp.orig $getcomp.dec
         else
             "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key -decrypt
         fi
@@ -3179,10 +3200,11 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
+        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad2"* ]]; then
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+            :
         else
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
             if [[ $1 == "justboot" ]]; then
@@ -3192,10 +3214,9 @@ device_ramdisk() {
             fi
             "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
         fi
-        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
     fi
 
-    mv iBSS iBEC AppleLogo.dec DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
+    mv iBSS iBEC DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
 
     if [[ $1 == "jailbreak" ]]; then
         device_enter_mode pwnDFU
@@ -4415,7 +4436,7 @@ restore_dfuipsw() {
 }
 
 device_justboot() {
-    print "* You are about to do a tethered verbose boot."
+    print "* You are about to do a tethered boot."
     print "* Enter the build version of the iOS version to use."
     read -p "$(input 'Enter build version (eg. 9B206): ')" device_ramdisk_build
     device_ramdisk justboot
@@ -4449,7 +4470,8 @@ main() {
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" || -z $zenity || $(cat "../resources/firstrun") != "$platform_ver" ]]; then
+    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" ||
+          -z $zenity || ! $(which curl) ]]; then
         install_depends
     fi
 
