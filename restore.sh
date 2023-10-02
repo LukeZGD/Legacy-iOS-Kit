@@ -22,6 +22,7 @@ warn() {
 
 error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
+    print "* Legacy iOS Kit $version_current ($git_hash)"
     exit 1
 }
 
@@ -1335,6 +1336,11 @@ device_ipwndfu() {
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
         echo "$ipwndfu_sha1" > ../resources/ipwndfu/sha1
+    fi
+    if [[ -d /opt/local/lib ]]; then
+        ln -sf /opt/local/lib ~/lib
+    elif [[ -d /opt/homebrew/lib ]]; then
+        ln -sf /opt/homebrew/lib ~/lib
     fi
 
     pushd ../resources/ipwndfu/ >/dev/null
@@ -4541,6 +4547,7 @@ main() {
 
     echo
     print "* Save the terminal output now if needed."
+    print "* Legacy iOS Kit $version_current ($git_hash)"
     echo
 }
 
