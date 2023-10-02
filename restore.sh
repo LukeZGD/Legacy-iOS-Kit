@@ -1326,10 +1326,13 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    if [[ ! -d ../resources/ipwndfu ]]; then
-        download_file https://github.com/LukeZGD/ipwndfu/archive/0883efd7de10e806e8d5e3d825950b04bb5a12b7.zip ipwndfu.zip 1f5dd30102b968ceb1f8ed361b265011e6daed98
+    local ipwndfu_sha1="4655789fc683b71cee1f08f4ecc53e7043eddddb"
+    if [[ ! -d ../resources/ipwndfu || $(cat ../resources/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
+        rm -rf ../resources/ipwndfu
+        download_file https://github.com/LukeZGD/ipwndfu/archive/84ec75c67c0df08fdfc95f98e5f3698602279ce7.zip ipwndfu.zip $ipwndfu_sha1
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
+        echo "$ipwndfu_sha1" > ../resources/ipwndfu/sha1
     fi
 
     pushd ../resources/ipwndfu/ >/dev/null
@@ -1341,8 +1344,12 @@ device_ipwndfu() {
             rm pwnediBSS
             if [[ $tool_pwned != 0 ]]; then
                 popd >/dev/null
-                error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
-                "* Please exit DFU and (re-)enter PWNED DFU mode before retrying."
+                local error_msg
+                if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew: brew install libusb\n'
+                fi
+                error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
+                error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
             fi
         ;;
 
