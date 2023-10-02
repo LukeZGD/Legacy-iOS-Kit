@@ -1263,6 +1263,8 @@ device_pwnerror() {
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
+    elif [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew: brew install libusb'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -1326,10 +1328,10 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_sha1="4655789fc683b71cee1f08f4ecc53e7043eddddb"
+    local ipwndfu_sha1="97d7ed8591692eb9565397c752ea765bfe6e4efe"
     if [[ ! -d ../resources/ipwndfu || $(cat ../resources/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
         rm -rf ../resources/ipwndfu
-        download_file https://github.com/LukeZGD/ipwndfu/archive/84ec75c67c0df08fdfc95f98e5f3698602279ce7.zip ipwndfu.zip $ipwndfu_sha1
+        download_file https://github.com/LukeZGD/ipwndfu/archive/89a7943f94e7938431b2100276a9099c7f6736e4.zip ipwndfu.zip $ipwndfu_sha1
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
         echo "$ipwndfu_sha1" > ../resources/ipwndfu/sha1
