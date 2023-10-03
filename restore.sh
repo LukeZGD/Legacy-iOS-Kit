@@ -1059,8 +1059,10 @@ device_enter_mode() {
                 print "* If the script is stuck here, reboot and re-jailbreak the device, and try again."
                 print "* Follow the steps in the GitHub wiki under \"A6(X) devices, jailbroken on iOS 10\""
             fi
+            log "Sending files to device: ${sendfiles[*]}"
             $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
+                log "Running kloader"
                 $ssh -p 2222 root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
@@ -1087,10 +1089,12 @@ device_enter_mode() {
                 until [[ -n $IPAddress ]]; do
                     read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
                 done
+                log "Sending files to device: ${sendfiles[*]}"
                 $scp ${sendfiles[@]} root@$IPAddress:/tmp
                 if [[ $? != 0 ]]; then
                     error "Failed to connect to device via SSH, cannot continue."
                 fi
+                log "Running kloader"
                 $ssh root@$IPAddress "bash /tmp/kloaders" &
             fi
 
@@ -1806,6 +1810,14 @@ ipsw_prepare_1033() {
     fi
 }
 
+ipsw_daibutsu_rebootsh() {
+    log "Generating reboot.sh"
+    echo '#!/bin/bash' | tee reboot.sh
+    echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
+    echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
+    echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
+}
+
 ipsw_prepare_jailbreak() {
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -1817,14 +1829,7 @@ ipsw_prepare_jailbreak() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
-            log "Generating reboot.sh"
-            echo '#!/bin/bash' | tee reboot.sh
-            echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
-            echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
-            echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
-            if [[ $ipsw_openssh == 1 ]]; then
-                JBFiles=("$jelbrek/sshdeb.tar")
-            fi
+            ipsw_daibutsu_rebootsh
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
             for i in {0..2}; do
                 cp $jelbrek/${JBFiles2[$i]} .
@@ -1851,11 +1856,11 @@ ipsw_prepare_jailbreak() {
             if [[ $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/g1lbertJB.tar")
             fi
-            if [[ $ipsw_openssh == 1 ]]; then
-                JBFiles+=("$jelbrek/sshdeb.tar")
-            fi
             cp -R ../resources/firmware/FirmwareBundles .
             ExtraArgs+="-S 30" # system partition add
+        fi
+        if [[ $ipsw_openssh == 1 ]]; then
+            JBFiles+=("$jelbrek/sshdeb.tar")
         fi
     else
         cp -R ../resources/firmware/FirmwareBundles .
@@ -2013,7 +2018,11 @@ ipsw_prepare_bundle() {
     local hw="$device_model"
     local base_build="11D257"
     local RootSize
+    local daibutsu
     FirmwareBundle="FirmwareBundles/"
+    if [[ $1 == "daibutsu" ]]; then
+        daibutsu=1
+    fi
 
     mkdir FirmwareBundles 2>/dev/null
     if [[ $1 == "base" ]]; then
@@ -2138,7 +2147,8 @@ ipsw_prepare_bundle() {
         ipsw_prepare_32bit_paths NewiBoot $1
         ipsw_prepare_32bit_paths manifest $1
         echo -e "</dict>" >> $NewPlist
-    elif [[ $1 == "daibutsu" ]]; then
+    fi
+    if [[ $daibutsu == 1 ]]; then
         echo -e "<key>RamdiskPackage2</key><string>./bin.tar</string><key>RamdiskReboot</key><string>./reboot.sh</string><key>UntetherPath</key><string>./untether.tar</string>" >> $NewPlist
         local hwmodel="$(tr '[:lower:]' '[:upper:]' <<< ${device_model:0:1})${device_model:1}"
         echo -e "<key>hwmodel</key><string>$hwmodel</string>" >> $NewPlist
@@ -2170,11 +2180,7 @@ ipsw_prepare_32bit() {
         daibutsu="daibutsu"
         ExtraArgs+=" -daibutsu"
         cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
-        log "Generating reboot.sh"
-        echo '#!/bin/bash' | tee reboot.sh
-        echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
-        echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
-        echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
+        ipsw_daibutsu_rebootsh
     fi
 
     ipsw_prepare_bundle $daibutsu
@@ -4334,8 +4340,8 @@ device_dump() {
         log "Found existing dumped $arg: $dump"
         print "* Select Y to overwrite, or N to use existing dump"
         print "* Make sure to keep a backup of the dump if needed"
-        read -p "$(input 'Overwrite this existing dump? (Y/n) ')" opt
-        if [[ $opt == 'N' || $opt == 'n' ]]; then
+        read -p "$(input 'Overwrite this existing dump? (y/N) ')" opt
+        if [[ $opt != 'Y' && $opt != 'y' ]]; then
             return
         fi
         log "Deleting existing dumped $arg"
