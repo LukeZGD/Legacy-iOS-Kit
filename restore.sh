@@ -3116,6 +3116,7 @@ device_ramdisk() {
     local decrypt
     local ramdisk_path
     local build_id
+    local reboot_bak="reboot_bak"
 
     if [[ $1 != "justboot" ]]; then
         comps+=("RestoreRamdisk")
@@ -3132,6 +3133,9 @@ device_ramdisk() {
         device_target_build=$device_ramdisk_build
     fi
     build_id=$device_target_build
+    if [[ $build_id == "11"* ]]; then
+        reboot_bak="reboot"
+    fi
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     device_fw_key_check
     url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
@@ -3226,6 +3230,9 @@ device_ramdisk() {
     else
         if [[ $1 != "justboot" ]]; then
             "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
+            if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
+                "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
+            fi
             "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
         fi
         log "Patch iBSS"
@@ -3347,7 +3354,7 @@ device_ramdisk() {
                 cp activation.tar $dump
             fi
             '
-            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; $reboot_bak"
             log "Done, device should boot to recovery mode now"
             return
         ;;
@@ -3373,11 +3380,11 @@ device_ramdisk() {
             fi
             if [[ $1 == "getversion" && -n $vers ]]; then
                 log "The current iOS version of this device is: $vers ($build)"
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
                 return
             elif [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
                 warn "iOS $vers on $device_type is not supported for jailbreaking with SSHRD."
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
                 return
             fi
             case $vers in
@@ -3394,12 +3401,12 @@ device_ramdisk() {
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
                     return
                 ;;
                 * )
                     warn "iOS $vers is not supported for jailbreaking with SSHRD."
-                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
                     return
                 ;;
             esac
@@ -3455,21 +3462,17 @@ device_ramdisk() {
             sleep 3
             if [[ $vers == "8"* ]]; then
                 log "Sending daibutsu/move.sh"
-                $scp -P 2222 $jelbrek/daibutsu/move.sh root@127.0.0.1:/
+                $scp -P 2222 $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
-                $ssh -p 2222 root@127.0.0.1 "bash /move.sh"
+                $ssh -p 2222 root@127.0.0.1 "bash /mnt1/move.sh; rm /mnt1/move.sh"
                 untether="untether.tar"
                 log "Extracting $untether"
                 $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-                log "Sending daibutsu/bin.tar"
-                $scp -P 2222 $jelbrek/daibutsu/bin.tar root@127.0.0.1:/mnt1
-                log "Extracting bin.tar"
-                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/bin.tar -C /; rm /mnt1/bin.tar"
-                log "Running haxx_overwrite"
-                $ssh -p 2222 root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}"
+                log "Running haxx_overwrite --${device_type}_${build}"
+                $ssh -p 2222 root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
             else
                 log "Rebooting"
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
@@ -3480,7 +3483,7 @@ device_ramdisk() {
 
         "nvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "nvram -c; $reboot_bak"
             log "Done! Your device should reboot now."
             print "* If the device did not connect, SSH to the device manually."
         ;;
@@ -3501,7 +3504,7 @@ device_ramdisk() {
     print "* Erase All Content and Settings with this command (iOS 9+ only):"
     print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
-    print "    reboot_bak"
+    print "    $reboot_bak"
 }
 
 shsh_save_onboard() {
