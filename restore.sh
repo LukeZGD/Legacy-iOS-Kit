@@ -367,7 +367,7 @@ install_depends() {
     exit
 }
 
-version_get() {
+version_update_check() {
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
     pushd "$(dirname "$0")/tmp" >/dev/null
@@ -412,14 +412,14 @@ version_update() {
     exit
 }
 
-version_check() {
+version_get() {
     pushd .. >/dev/null
     if [[ -d .git ]]; then
         git_hash=$(git rev-parse HEAD | cut -c -7)
         local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
         version_current=v${dm//-/.}.
         dm="20$dm"
-        if [[ $platform == "macos" ]]; then
+        if [[ $(uname) == "Darwin" ]]; then
             dm="$(date -j -f "%Y-%m-%d %H:%M:%S" "${dm}-01 00:00:00" +%s)"
         else
             dm="$(date --date="${dm}-01" +%s)"
@@ -433,30 +433,37 @@ version_check() {
         log ".git directory and git_hash file not found, cannot determine version."
         if [[ $no_version_check != 1 ]]; then
             warn "Your copy of Legacy iOS Kit is downloaded incorrectly. Do not use the \"Code\" button in GitHub."
-            print "Please download Legacy iOS Kit using git clone or from GitHub releases: https://github.com/LukeZGD/Legacy-iOS-Kit/releases"
-            version_get
-            version_update
+            print "* Please download Legacy iOS Kit using git clone or from GitHub releases: https://github.com/LukeZGD/Legacy-iOS-Kit/releases"
         fi
     fi
-
     if [[ -n $version_current ]]; then
         print "* Version: $version_current ($git_hash)"
     fi
+    popd >/dev/null
+}
 
-    if [[ $no_version_check != 1 ]]; then
-        version_get
-        if [[ -z $version_latest ]]; then
-            warn "Failed to check for updates. GitHub may be down or blocked by your network."
-        elif [[ $git_hash_latest != "$git_hash" ]]; then
-            if (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
-                warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
-            else
-                print "* A newer version of Legacy iOS Kit is available."
-                print "* Current version: $version_current ($git_hash)"
-                print "* Latest version:  $version_latest ($git_hash_latest)"
-                print "* Please download/pull the latest version before proceeding."
-                version_update
-            fi
+version_check() {
+    if [[ $no_version_check == 1 ]]; then
+        warn "No version check flag detected, update check is disabled and no support will be provided."
+        return
+    fi
+    pushd .. >/dev/null
+    version_update_check
+    if [[ -z $version_latest ]]; then
+        warn "Failed to check for updates. GitHub may be down or blocked by your network."
+    elif [[ $git_hash_latest != "$git_hash" ]]; then
+        if [[ -z $version_current ]]; then
+            print "* Latest version:  $version_latest ($git_hash_latest)"
+            print "* Please download/pull the latest version before proceeding."
+            version_update
+        elif (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
+            warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
+        else
+            print "* A newer version of Legacy iOS Kit is available."
+            print "* Current version: $version_current ($git_hash)"
+            print "* Latest version:  $version_latest ($git_hash_latest)"
+            print "* Please download/pull the latest version before proceeding."
+            version_update
         fi
     fi
     popd >/dev/null
@@ -4472,6 +4479,7 @@ main() {
     print " *** Legacy iOS Kit ***"
     print " - Script by LukeZGD -"
     echo
+    version_get
 
     if [[ $EUID == 0 ]]; then
         error "Running the script as root is not allowed."
