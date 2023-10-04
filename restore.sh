@@ -1494,11 +1494,12 @@ patch_ibss() {
         build_id="$device_ramdisk_build"
     fi
     download_comp $build_id iBSS
-    log "Patching iBSS..."
     device_fw_key_check temp $build_id
     local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
     local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+    log "Decrypting iBSS..."
     "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key
+    log "Patching iBSS..."
     "$dir/iBoot32Patcher" iBSS.dec pwnediBSS --rsa
     "$dir/xpwntool" pwnediBSS pwnediBSS.dfu -t iBSS
     cp pwnediBSS pwnediBSS.dfu ../saved/$device_type/
@@ -1539,9 +1540,10 @@ patch_ibec() {
     if [[ $device_proc == 4 ]]; then
         address="0x40000000"
     fi
-    log "Decrypting iBEC..."
     mv iBEC $name.orig
+    log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
+    log "Patching iBEC..."
     if [[ $build_id == "9B206" || $build_id == "10B500" || -n $device_ramdisk_build ]]; then
         "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
@@ -1810,7 +1812,7 @@ ipsw_prepare_1033() {
     fi
 }
 
-ipsw_daibutsu_rebootsh() {
+ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
     echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
@@ -1829,7 +1831,7 @@ ipsw_prepare_jailbreak() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
-            ipsw_daibutsu_rebootsh
+            ipsw_prepare_rebootsh
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
             for i in {0..2}; do
                 cp $jelbrek/${JBFiles2[$i]} .
@@ -1889,7 +1891,7 @@ ipsw_prepare_jailbreak() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_32bit_keys() {
+ipsw_prepare_keys() {
     local comp="$1"
     local getcomp="$1"
     case $comp in
@@ -1934,7 +1936,7 @@ ipsw_prepare_32bit_keys() {
     echo -e "<key>Decrypt</key><true/></dict>" >> $NewPlist
 }
 
-ipsw_prepare_32bit_paths() {
+ipsw_prepare_paths() {
     local comp="$1"
     local getcomp="$1"
     case $comp in
@@ -2104,48 +2106,48 @@ ipsw_prepare_bundle() {
         echo -e "<key>Firmware</key><dict/>" >> $NewPlist
     else
         echo -e "<key>Firmware</key><dict>" >> $NewPlist
-        ipsw_prepare_32bit_keys iBSS $1
-        ipsw_prepare_32bit_keys iBEC $1
-        ipsw_prepare_32bit_keys RestoreRamdisk $1
-        ipsw_prepare_32bit_keys RestoreDeviceTree $1
-        ipsw_prepare_32bit_keys RestoreLogo $1
+        ipsw_prepare_keys iBSS $1
+        ipsw_prepare_keys iBEC $1
+        ipsw_prepare_keys RestoreRamdisk $1
+        ipsw_prepare_keys RestoreDeviceTree $1
+        ipsw_prepare_keys RestoreLogo $1
         if [[ $1 != "target" || $vers == "5"* ]]; then
-            ipsw_prepare_32bit_keys RestoreKernelCache $1
+            ipsw_prepare_keys RestoreKernelCache $1
         else
-            ipsw_prepare_32bit_keys KernelCache $1
+            ipsw_prepare_keys KernelCache $1
         fi
         echo -e "</dict>" >> $NewPlist
     fi
 
     if [[ $1 == "base" ]]; then
         echo -e "<key>FirmwarePath</key><dict>" >> $NewPlist
-        ipsw_prepare_32bit_paths AppleLogo $1
-        ipsw_prepare_32bit_paths BatteryCharging0 $1
-        ipsw_prepare_32bit_paths BatteryCharging1 $1
-        ipsw_prepare_32bit_paths BatteryFull $1
-        ipsw_prepare_32bit_paths BatteryLow0 $1
-        ipsw_prepare_32bit_paths BatteryLow1 $1
-        ipsw_prepare_32bit_paths BatteryPlugin $1
-        ipsw_prepare_32bit_paths RecoveryMode $1
-        ipsw_prepare_32bit_paths LLB $1
-        ipsw_prepare_32bit_paths iBoot $1
+        ipsw_prepare_paths AppleLogo $1
+        ipsw_prepare_paths BatteryCharging0 $1
+        ipsw_prepare_paths BatteryCharging1 $1
+        ipsw_prepare_paths BatteryFull $1
+        ipsw_prepare_paths BatteryLow0 $1
+        ipsw_prepare_paths BatteryLow1 $1
+        ipsw_prepare_paths BatteryPlugin $1
+        ipsw_prepare_paths RecoveryMode $1
+        ipsw_prepare_paths LLB $1
+        ipsw_prepare_paths iBoot $1
         echo -e "</dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
         echo -e "<key>FirmwareReplace</key><dict>" >> $NewPlist
-        ipsw_prepare_32bit_paths AppleLogo $1
-        ipsw_prepare_32bit_paths NewAppleLogo $1
-        ipsw_prepare_32bit_paths BatteryCharging0 $1
-        ipsw_prepare_32bit_paths BatteryCharging1 $1
-        ipsw_prepare_32bit_paths BatteryFull $1
-        ipsw_prepare_32bit_paths BatteryLow0 $1
-        ipsw_prepare_32bit_paths BatteryLow1 $1
-        ipsw_prepare_32bit_paths BatteryPlugin $1
-        ipsw_prepare_32bit_paths RecoveryMode $1
-        ipsw_prepare_32bit_paths NewRecoveryMode $1
-        ipsw_prepare_32bit_paths LLB $1
-        ipsw_prepare_32bit_paths iBoot $1
-        ipsw_prepare_32bit_paths NewiBoot $1
-        ipsw_prepare_32bit_paths manifest $1
+        ipsw_prepare_paths AppleLogo $1
+        ipsw_prepare_paths NewAppleLogo $1
+        ipsw_prepare_paths BatteryCharging0 $1
+        ipsw_prepare_paths BatteryCharging1 $1
+        ipsw_prepare_paths BatteryFull $1
+        ipsw_prepare_paths BatteryLow0 $1
+        ipsw_prepare_paths BatteryLow1 $1
+        ipsw_prepare_paths BatteryPlugin $1
+        ipsw_prepare_paths RecoveryMode $1
+        ipsw_prepare_paths NewRecoveryMode $1
+        ipsw_prepare_paths LLB $1
+        ipsw_prepare_paths iBoot $1
+        ipsw_prepare_paths NewiBoot $1
+        ipsw_prepare_paths manifest $1
         echo -e "</dict>" >> $NewPlist
     fi
     if [[ $daibutsu == 1 ]]; then
@@ -2180,7 +2182,7 @@ ipsw_prepare_32bit() {
         daibutsu="daibutsu"
         ExtraArgs+=" -daibutsu"
         cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
-        ipsw_daibutsu_rebootsh
+        ipsw_prepare_rebootsh
     fi
 
     ipsw_prepare_bundle $daibutsu
@@ -2209,15 +2211,15 @@ ipsw_prepare_32bit() {
             5* )         JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar")
             ;;
         esac
+        if [[ -n ${JBFiles[0]} ]]; then
+            JBFiles[0]=$jelbrek/${JBFiles[0]}
+        fi
         case $device_target_vers in
-            9* | 8* ) JBFiles+=("fstab8.tar");;
-            7* ) JBFiles+=("fstab7.tar");;
-            * )  JBFiles+=("fstab_rw.tar");;
+            9* | 8* ) JBFiles+=("$jelbrek/fstab8.tar");;
+            7* ) JBFiles+=("$jelbrek/fstab7.tar");;
+            * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
-        JBFiles+=("freeze.tar")
-        for i in {0..2}; do
-            JBFiles[i]=$jelbrek/${JBFiles[$i]}
-        done
+        JBFiles+=("$jelbrek/freeze.tar")
         if [[ $device_target_vers == "5"* ]]; then
             JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
         fi
@@ -2235,7 +2237,7 @@ ipsw_prepare_32bit() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_powder4() {
+ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
     local ExtraArgs2="--logo4 "
     local IV
@@ -3018,7 +3020,7 @@ ipsw_prepare() {
                 fi
             elif [[ $device_type == "iPhone3,1" && $device_target_vers == "4.3"* ]]; then
                 shsh_save version 7.1.2
-                ipsw_prepare_powder4
+                ipsw_prepare_ios4powder
             elif [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 ipsw_prepare_powder
             else
@@ -3505,8 +3507,8 @@ shsh_save_onboard() {
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
-        sleep 2
     fi
+    sleep 2
     patch_ibec
     log "Sending iBEC..."
     $irecovery -f pwnediBEC.dfu
@@ -4372,6 +4374,8 @@ device_dump() {
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         device_ramdisk $arg
+        device_find_mode Recovery
+        device_enter_mode DFU
         device_enter_mode pwnDFU
     fi
     kill $iproxy_pid
