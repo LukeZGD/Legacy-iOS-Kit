@@ -3326,7 +3326,7 @@ device_ramdisk() {
             sleep 2
             #log "Let's just dump both activation and baseband tars"
             log "Creating baseband.tar"
-            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/standalone usr/local/standalone"
+            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/local/standalone"
             log "Mounting data partition"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
             #log "Creating activation.tar"
@@ -4344,7 +4344,7 @@ device_dump() {
     local dump="../saved/$device_type/$arg.tar"
     local dmps
     case $arg in
-        "baseband" ) dmps="/usr/standalone /usr/local/standalone";;
+        "baseband" ) dmps="/usr/local/standalone";;
         "activation" ) dmps="/private/var/root/Library/Lockdown";;
     esac
     log "Dumping files for $arg: $dmps"
