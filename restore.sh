@@ -1743,6 +1743,9 @@ ipsw_verify() {
     if (( device_proc > 7 )); then
         return
     fi
+    case $build_id in
+        *[bcdefgkpquv] ) return;;
+    esac
     if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
         IPSWSHA1=
@@ -1932,12 +1935,12 @@ ipsw_prepare_keys() {
         ;;
 
         "KernelCache" )
-            if [[ $vers != "5"* ]]; then
+            if [[ $vers != "5"* && $vers != "7"* ]]; then
                 echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string><key>Patch</key><true/>" >> $NewPlist
             fi
         ;;
     esac
-    if [[ $comp == "KernelCache" && $vers == "5"* ]]; then
+    if [[ $comp == "KernelCache" ]] && [[ $vers == "5"* || $vers == "7"* ]]; then
         return
     fi
     echo -e "<key>Decrypt</key><true/></dict>" >> $NewPlist
@@ -2041,7 +2044,7 @@ ipsw_prepare_bundle() {
         build="$device_base_build"
         FirmwareBundle+="BASE_"
     elif [[ $1 == "target" ]]; then
-        if [[ $ipsw_jailbreak == 1 && $vers != "5"* ]]; then
+        if [[ $ipsw_jailbreak == 1 && $vers != "5"* && $vers != "7"* ]]; then
             ipsw_prepare_config true true
         else
             ipsw_prepare_config false true
@@ -2092,19 +2095,20 @@ ipsw_prepare_bundle() {
         echo -e "<key>RamdiskExploit</key><dict>" >> $NewPlist
         echo -e "<key>exploit</key><string>src/target/$hw/$base_build/exploit</string>" >> $NewPlist
         echo -e "<key>inject</key><string>src/target/$hw/$base_build/partition</string></dict>" >> $NewPlist
-    elif [[ $1 == "target" && $vers == "5"* ]]; then
-        echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios5</string></dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
         echo -e "<key>FilesystemPackage</key><dict><key>bootstrap</key><string>freeze.tar</string>" >> $NewPlist
         case $vers in
-            6* ) echo -e "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios6</string></dict>" >> $NewPlist;;
-            7* ) error "iOS 7 targets are not supported.";;
-            8* | 9* ) printf "<key>package</key><string>src/ios9.tar</string></dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist;;
+            8* | 9* ) echo -e "<key>package</key><string>src/ios9.tar</string>" >> $NewPlist;;
         esac
+        printf "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist
         case $vers in
-            8* ) echo -e "8</string></dict>" >> $NewPlist;;
-            9* ) echo -e "9</string></dict>" >> $NewPlist;;
+            5* ) printf "5" >> $NewPlist;;
+            6* ) printf "6" >> $NewPlist;;
+            7* ) printf "7" >> $NewPlist;;
+            8* ) printf "8" >> $NewPlist;;
+            9* ) printf "9" >> $NewPlist;;
         esac
+        echo -e "</string></dict>" >> $NewPlist
     else
         echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
     fi
@@ -2118,7 +2122,7 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys RestoreRamdisk $1
         ipsw_prepare_keys RestoreDeviceTree $1
         ipsw_prepare_keys RestoreLogo $1
-        if [[ $1 != "target" || $vers == "5"* ]]; then
+        if [[ $1 != "target" || $vers == "5"* || $vers == "7"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
         else
             ipsw_prepare_keys KernelCache $1
@@ -2358,9 +2362,11 @@ ipsw_prepare_powder() {
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
-        if [[ $device_target_vers == "5"* ]]; then
-            ExtraArgs+=" freeze.tar $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar"
-        fi
+        case $device_target_vers in
+            "5"* ) ExtraArgs+=" freeze.tar $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
+            "7.0"* ) ExtraArgs+=" freeze.tar $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
+            "7.1"* ) ExtraArgs+=" freeze.tar $jelbrek/panguaxe.tar $jelbrek/fstab7.tar";;
+        esac
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
@@ -3922,12 +3928,12 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
                 case $device_type in
-                    iPhone3,1 ) print "* Any iOS version from 4.3 to 6.1.3 is supported";;
-                    iPhone3,3 ) print "* Any iOS version from 5.0 to 6.1.3 is supported";;
-                    iPhone4,1 | iPad2,[123] ) print "* Any iOS version from 5.0 to 9.3.5 is supported (not iOS 7)";;
-                    iPad2,4 | iPad3,[123] ) print "* Any iOS version from 5.1 to 9.3.5 is supported (not iOS 7)";;
-                    iPhone5,[12] | iPad3,[456] ) print "* Any iOS version from 6.0 to 9.3.5 is supported (not iOS 7)";;
-                    iPhone5,[34] ) print "* Any iOS version from 8.0 to 9.3.5 is supported";;
+                    iPhone3,1 ) print "* Any iOS version from 4.3 to 7.1.1 is supported";;
+                    iPhone3,3 ) print "* Any iOS version from 5.0 to 7.1.1 is supported";;
+                    iPhone4,1 | iPad2,[123] ) print "* Any iOS version from 5.0 to 9.3.5 is supported";;
+                    iPad2,4 | iPad3,[123] ) print "* Any iOS version from 5.1 to 9.3.5 is supported";;
+                    iPhone5,[12] | iPad3,[456] ) print "* Any iOS version from 6.0 to 9.3.5 is supported";;
+                    iPhone5,[34] ) print "* Any iOS version from 7.0 to 9.3.5 is supported";;
                 esac
             fi
             echo
@@ -4161,7 +4167,7 @@ menu_ipsw_browse() {
         ;;
         *"powdersn0w"* )
             case $device_target_build in
-                "8A"* | "8B"* | "8C"* | "8G4" | "8H7" | "8K2" | "11"* | "14"* )
+                "8A"* | "8B"* | "8C"* | "8G4" | "8H7" | "8K2" | "14"* )
                     log "Selected IPSW ($device_target_vers) is not supported as target version."
                     if [[ $device_target_build == "8"* ]]; then
                         print "* Supported iOS 4.3.x versions: 4.3, 4.3.3, 4.3.5"
@@ -4384,9 +4390,11 @@ device_dump() {
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         device_ramdisk $arg
-        device_find_mode Recovery
-        device_enter_mode DFU
-        device_enter_mode pwnDFU
+        if [[ $mode != "baseband" ]]; then
+            device_find_mode Recovery
+            device_enter_mode DFU
+            device_enter_mode pwnDFU
+        fi
     fi
     kill $iproxy_pid
     if [[ ! -e $dump ]]; then

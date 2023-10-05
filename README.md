@@ -80,9 +80,9 @@
     - iPad Air 1, mini 2, mini 3
     - iPod touch 6
 - Restoring with powdersn0w is supported on the following devices:
-    - iPhone 4 GSM - targets iOS 4.3 to 6.1.3
-    - iPhone 4 CDMA - targets iOS 5.0 to 6.1.3
-    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - targets iOS 5.0 to 9.3.5 (not iOS 7)
+    - iPhone 4 GSM - targets iOS 4.3 to 7.1.1
+    - iPhone 4 CDMA - targets iOS 5.0 to 7.1.1
+    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - targets iOS 5.0 to 9.3.5
     - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x blobs can also be used for iPhone 5)
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
