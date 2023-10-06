@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
-device_ramdisk_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
+device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 jelbrek="../resources/jailbreak"
 
 print() {
@@ -1497,8 +1497,8 @@ patch_ibss() {
         iPhone3,[123] ) build_id="11D257";;
         * ) build_id="12H321";;
     esac
-    if [[ -n $device_ramdisk_build ]]; then
-        build_id="$device_ramdisk_build"
+    if [[ -n $device_rd_build ]]; then
+        build_id="$device_rd_build"
     fi
     download_comp $build_id iBSS
     device_fw_key_check temp $build_id
@@ -1535,8 +1535,8 @@ patch_ibec() {
         iPhone5,4 )
             build_id="11B651";;
     esac
-    if [[ -n $device_ramdisk_build ]]; then
-        build_id="$device_ramdisk_build"
+    if [[ -n $device_rd_build ]]; then
+        build_id="$device_rd_build"
     fi
     download_comp $build_id iBEC
     device_fw_key_check temp $build_id
@@ -1551,7 +1551,7 @@ patch_ibec() {
     log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" || -n $device_ramdisk_build ]]; then
+    if [[ $build_id == "9B206" || $build_id == "10B500" || -n $device_rd_build ]]; then
         "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
@@ -1935,14 +1935,12 @@ ipsw_prepare_keys() {
         ;;
 
         "KernelCache" )
-            if [[ $vers != "5"* && $vers != "7"* ]]; then
-                echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string><key>Patch</key><true/>" >> $NewPlist
+            if [[ $vers == "5"* || $vers == "7"* ]]; then
+                return
             fi
+            echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string><key>Patch</key><true/>" >> $NewPlist
         ;;
     esac
-    if [[ $comp == "KernelCache" ]] && [[ $vers == "5"* || $vers == "7"* ]]; then
-        return
-    fi
     echo -e "<key>Decrypt</key><true/></dict>" >> $NewPlist
 }
 
@@ -3101,7 +3099,7 @@ device_remove4() {
     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#clearing-nvram"
 }
 
-device_ramdisktar() {
+device_send_rdtar() {
     local target="/mnt1"
     if [[ $2 == "data" ]]; then
         target+="/private/var"
@@ -3122,7 +3120,6 @@ device_ramdisk() {
     local decrypt
     local ramdisk_path
     local build_id
-    local reboot_bak="reboot_bak"
 
     if [[ $1 != "justboot" ]]; then
         comps+=("RestoreRamdisk")
@@ -3131,17 +3128,13 @@ device_ramdisk() {
         iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
         iPod2,1 ) device_target_build="8C148";;
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
-        iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,[34] ) device_target_build="11D257";;
         * ) device_target_build="10B329";;
     esac
-    if [[ -n $device_ramdisk_build ]]; then
-        device_target_build=$device_ramdisk_build
+    if [[ -n $device_rd_build ]]; then
+        device_target_build=$device_rd_build
     fi
     build_id=$device_target_build
-    if [[ $build_id == "11"* ]]; then
-        reboot_bak="reboot"
-    fi
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     device_fw_key_check
     url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
@@ -3239,6 +3232,17 @@ device_ramdisk() {
             if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
                 "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
             fi
+            "$dir/hfsplus" Ramdisk.raw mv sbin/reboot sbin/reboot_bak
+            "$dir/hfsplus" Ramdisk.raw mv sbin/halt sbin/halt_bak
+            case $build_id in
+                 "12"* | "13"* | "14"* )
+                    echo '#!/bin/bash' > restored_external
+                    echo "/sbin/sshd; exec /usr/local/bin/restored_external_o" >> restored_external
+                    "$dir/hfsplus" Ramdisk.raw mv usr/local/bin/restored_external usr/local/bin/restored_external_o
+                    "$dir/hfsplus" Ramdisk.raw add restored_external usr/local/bin/restored_external
+                    "$dir/hfsplus" Ramdisk.raw chmod 100755 usr/local/bin/restored_external
+                ;;
+            esac
             "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
         fi
         log "Patch iBSS"
@@ -3306,7 +3310,7 @@ device_ramdisk() {
         return
     elif [[ -n $1 ]]; then
         if [[ $platform == "macos" ]]; then
-            sleep 20
+            sleep 25
         else
             device_find_mode Restore
         fi
@@ -3360,7 +3364,7 @@ device_ramdisk() {
                 cp activation.tar $dump
             fi
             '
-            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; $reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
             log "Done, device should boot to recovery mode now"
             return
         ;;
@@ -3386,11 +3390,11 @@ device_ramdisk() {
             fi
             if [[ $1 == "getversion" && -n $vers ]]; then
                 log "The current iOS version of this device is: $vers ($build)"
-                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                 return
             elif [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
                 warn "iOS $vers on $device_type is not supported for jailbreaking with SSHRD."
-                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                 return
             fi
             case $vers in
@@ -3407,12 +3411,12 @@ device_ramdisk() {
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-                    $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
+                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                     return
                 ;;
                 * )
                     warn "iOS $vers is not supported for jailbreaking with SSHRD."
-                    $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
+                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                     return
                 ;;
             esac
@@ -3430,14 +3434,14 @@ device_ramdisk() {
             log "Mounting data partition"
             $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
             case $vers in
-                9* | 8* ) device_ramdisktar fstab8.tar;;
-                7* ) device_ramdisktar fstab7.tar;;
-                6* ) device_ramdisktar fstab_rw.tar;;
+                9* | 8* ) device_send_rdtar fstab8.tar;;
+                7* ) device_send_rdtar fstab7.tar;;
+                6* ) device_send_rdtar fstab_rw.tar;;
                 5* ) untether="${device_type}_${build}.tar";;
                 4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
             esac
             case $vers in
-                5* ) device_ramdisktar g1lbertJB.tar;;
+                5* ) device_send_rdtar g1lbertJB.tar;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_type == "iPod2,1" ]]; then
@@ -3456,14 +3460,14 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                5* | 4* | 3* ) device_ramdisktar cydiasubstrate.tar;;
+                5* | 4* | 3* ) device_send_rdtar cydiasubstrate.tar;;
             esac
             case $vers in
-                3* ) device_ramdisktar cydiahttpatch.tar;;
+                3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
-            device_ramdisktar freeze.tar data
+            device_send_rdtar freeze.tar data
             if [[ $ipsw_openssh == 1 ]]; then
-                device_ramdisktar sshdeb.tar
+                device_send_rdtar sshdeb.tar
             fi
             sleep 3
             if [[ $vers == "8"* ]]; then
@@ -3478,7 +3482,7 @@ device_ramdisk() {
                 $ssh -p 2222 root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
             else
                 log "Rebooting"
-                $ssh -p 2222 root@127.0.0.1 "$reboot_bak"
+                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
@@ -3489,7 +3493,7 @@ device_ramdisk() {
 
         "nvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p 2222 root@127.0.0.1 "nvram -c; $reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done! Your device should reboot now."
             print "* If the device did not connect, SSH to the device manually."
         ;;
@@ -3510,7 +3514,7 @@ device_ramdisk() {
     print "* Erase All Content and Settings with this command (iOS 9+ only):"
     print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
-    print "    $reboot_bak"
+    print "    reboot_bak"
 }
 
 shsh_save_onboard() {
@@ -4480,9 +4484,17 @@ restore_dfuipsw() {
 
 device_justboot() {
     print "* You are about to do a tethered boot."
-    print "* Enter the build version of the iOS version to use."
-    read -p "$(input 'Enter build version (eg. 9B206): ')" device_ramdisk_build
+    read -p "$(input 'Enter build version (eg. 9B206): ')" device_rd_build
     device_ramdisk justboot
+}
+
+device_enter_ramdisk() {
+    if (( device_proc >= 5 )); then
+        print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
+        print "* If not sure, just press Enter/Return. This will select the default build version."
+        read -p "$(input 'Enter build version (eg. 9B206): ')" device_rd_build
+    fi
+    device_ramdisk
 }
 
 main() {
@@ -4553,7 +4565,7 @@ main() {
         "save-ota-blobs" ) shsh_save;;
         "kdfu" ) device_enter_mode kDFU;;
         "remove4" ) device_remove4;;
-        "ramdisk4" ) device_ramdisk;;
+        "ramdisk4" ) device_enter_ramdisk;;
         "ramdisknvram" ) device_ramdisk nvram;;
         "pwned-ibss" ) device_enter_mode pwnDFU;;
         "save-onboard-blobs" ) shsh_save_onboard;;
