@@ -3128,6 +3128,7 @@ device_ramdisk() {
         iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
         iPod2,1 ) device_target_build="8C148";;
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
+        iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,[34] ) device_target_build="11D257";;
         * ) device_target_build="10B329";;
     esac
