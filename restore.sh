@@ -1275,7 +1275,7 @@ device_pwnerror() {
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
-    elif [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+    elif [[ $platform == "macos" ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew: brew install libusb'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
@@ -1364,7 +1364,7 @@ device_ipwndfu() {
             if [[ $tool_pwned != 0 ]]; then
                 popd >/dev/null
                 local error_msg
-                if [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+                if [[ $platform == "macos" ]]; then
                     error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew: brew install libusb\n'
                 fi
                 error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
