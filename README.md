@@ -12,8 +12,7 @@
 - Restore iPhone 4 GSM and CDMA (iPhone3,1 and 3,3) to lower iOS versions **(powdersn0w)**
 - Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
 - Restore 32-bit devices to lower iOS versions **with SHSH blobs**
-- Restore 32-bit devices to lower iOS versions **with iOS 7.1.x blobs (powdersn0w)**
-    - For iPhone 5 (not 5C), 7.0.x blobs can also be used
+- Restore 32-bit devices to lower iOS versions **with iOS 7 blobs (powdersn0w)**
     - Device support is limited, see below
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 - Option to **jailbreak** all 32-bit iOS devices
@@ -82,8 +81,10 @@
 - Restoring with powdersn0w is supported on the following devices:
     - iPhone 4 GSM - targets iOS 4.3 to 7.1.1
     - iPhone 4 CDMA - targets iOS 5.0 to 7.1.1
-    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - targets iOS 5.0 to 9.3.5
-    - Using powdersn0w requires iOS 7.1.x blobs for your device (7.0.x blobs can also be used for iPhone 5)
+    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPad 4, iPod touch 5 - targets iOS 5.0 to 9.3.5
+    - Using powdersn0w requires iOS 7.1.x blobs for your device
+        - For iPhone 5 and 5C, 7.0.x blobs can also be used
+        - For iPad 4, only 7.0.x blobs can be used
 - Restoring with 24Kpwn/alloc8 is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.1
@@ -111,6 +112,7 @@
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
     - [Exploits used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
+    - [5C 7.0.x exploit is from Ralph0045's repo](https://github.com/Ralph0045/iloader)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)

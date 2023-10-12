@@ -2056,7 +2056,7 @@ ipsw_prepare_bundle() {
     local NewPlist=$FirmwareBundle/Info.plist
     mkdir -p $FirmwareBundle
 
-    log "Generating firmware bundle..."
+    log "Generating firmware bundle for $device_type-$vers ($build) $1..."
     local IPSWSHA256=$($sha256sum "${ipsw_p//\\//}.ipsw" | awk '{print $1}')
     log "IPSWSHA256: $IPSWSHA256"
     unzip -o -j "$ipsw_p.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/manifest
@@ -2086,6 +2086,7 @@ ipsw_prepare_bundle() {
         case $device_type in
             iPhone5,[12] ) hw="iphone5";;
             iPhone5,[34] ) hw="iphone5b";;
+            iPad3,[456] )  hw="ipad3b";;
         esac
         case $device_base_build in
             "11A"* | "11B"* ) base_build="11B554a";;
@@ -2368,6 +2369,32 @@ ipsw_prepare_powder() {
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
+    fi
+    if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_base_vers == "7.0"* ]]; then
+        # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
+        device_fw_key_check
+        local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
+        local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
+        local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+        local ExtraArgs2="--boot-partition"
+        if [[ $device_target_vers == "9"* ]]; then
+            ExtraArgs2+="9"
+        fi
+        ExtraArgs2+=" --boot-ramdisk "
+        if [[ $ipsw_verbose == 1 ]]; then
+            ExtraArgs2+="-b -v"
+        fi
+        log "Patch iBoot"
+        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
+        mv $iboot_name ibot
+        "$dir/xpwntool" ibot ibot.dec -iv $iboot_iv -k $iboot_key
+        "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa $ExtraArgs2
+        "$dir/xpwntool" ibot.pwned iBoot -t ibot
+        rm ibot*
+        echo "0000010: 6365" | xxd -r - iBoot
+        echo "0000020: 6365" | xxd -r - iBoot
+        tar -cvf iBoot.tar iBoot
+        ExtraArgs+=" iBoot.tar"
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
@@ -2938,7 +2965,7 @@ restore_prepare() {
                 elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
                     if [[ $ipsw_jailbreak == 1 ]]; then
                         shsh_save version $device_target_vers
-                        device_target_mode pwnDFU
+                        device_enter_mode pwnDFU
                         restore_idevicerestore
                     else
                         restore_latest
@@ -3777,7 +3804,7 @@ menu_restore() {
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
-            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
+            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone3,[13] )
                 menu_items+=("powdersn0w (any iOS)");;
@@ -3945,7 +3972,8 @@ menu_ipsw() {
             local text2="(iOS 7.1.x)"
             case $device_type in
                 iPhone3,[13] ) text2="(iOS 7.1.2)";;
-                iPhone5,[12] ) text2="(iOS 7.x)";;
+                iPhone5,[1234] ) text2="(iOS 7.x)";;
+                iPad3,[456] ) text2="(iOS 7.0.x)";;
             esac
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
@@ -4153,10 +4181,17 @@ menu_ipsw_browse() {
         "3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
-            if [[ $device_type == "iPhone5,1" || $device_type == "iPhone5,2" ]]; then
+            if [[ $device_type == "iPhone5"* ]]; then
                 if [[ $device_base_vers != "7"* ]]; then
                     log "Selected IPSW is not for iOS 7.x."
                     print "* You need iOS 7.x IPSW and SHSH blobs for this device to use powdersn0w."
+                    pause
+                    return
+                fi
+            elif [[ $device_type == "iPad3"* ]]; then
+                if [[ $device_base_vers != "7.0"* ]]; then
+                    log "Selected IPSW is not for iOS 7.0.x."
+                    print "* You need iOS 7.0.x IPSW and SHSH blobs for this device to use powdersn0w."
                     pause
                     return
                 fi
@@ -4451,7 +4486,13 @@ restore_dfuipsw() {
     pause
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
-    local ipsw_p="../${device_type}_${device_target_vers}_${device_target_build}"
+    local ipsw_p="../"
+    case $device_type in
+        iPhone5,[1234] ) ipsw_p+="iPhone_4.0_32bit";;
+        iPad3,[456] ) ipsw_p+="iPad_32bit";;
+        * ) ipsw_p+="${device_type}";;
+    esac
+    ipsw_p+="_${device_target_vers}_${device_target_build}"
     local ipsw_dfuipsw="${ipsw_p}_DFUIPSW"
     ipsw_path="${ipsw_p}_Restore"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
@@ -4465,8 +4506,21 @@ restore_dfuipsw() {
         cp $ipsw_path.ipsw temp.ipsw
         device_fw_key_check
         local applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
-        local llb=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("LLB")) | .filename')
-        local all="Firmware/all_flash/all_flash.${device_model}ap.production"
+        local llb="LLB.${device_model}ap.RELEASE.img3"
+        local all="Firmware/all_flash"
+        if [[ $device_latest_vers == "10"* ]]; then
+            case $device_type in
+                iPhone5,[1234] ) applelogo="applelogo@2x~iphone.s5l8950x.img3";;
+                iPad3,[456] ) applelogo="applelogo@2x~ipad.s5l8955x.img3";;
+            esac
+            case $device_type in
+                iPhone5,[12] ) llb="LLB.iphone5.RELEASE.img3";;
+                iPhone5,[34] ) llb="LLB.iphone5b.RELEASE.img3";;
+                iPad3,[456] ) llb="LLB.ipad3b.RELEASE.img3";;
+            esac
+        else
+            all+="/all_flash.${device_model}ap.production"
+        fi
         mkdir -p $all
         unzip -o -j temp.ipsw $all/$applelogo -d .
         mv $applelogo $all/$llb
