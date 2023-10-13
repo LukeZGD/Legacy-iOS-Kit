@@ -1177,15 +1177,18 @@ device_enter_mode() {
                 $gaster pwn
                 tool_pwned=$?
                 $gaster reset
+            elif [[ $device_type == "iPod2,1" ]]; then
+                # ipod touch 2g uses ipwndfu
+                device_ipwndfu pwn
             elif [[ $platform == "linux" ]]; then
-                if [[ $device_proc == 6 || $device_type == "iPod2,1" ]]; then
-                    # ipod touch 2g and A6 linux use ipwndfu
-                    device_ipwndfu pwn
-                elif [[ $device_proc == 4 ]]; then
+                if [[ $device_proc == 4 ]]; then
                     # A4 linux uses ipwnder
                     log "Placing device to pwnDFU mode using ipwnder"
                     $ipwnder -p
                     tool_pwned=$?
+                elif [[ $device_proc == 6 ]]; then
+                    # A6 linux uses ipwndfu
+                    device_ipwndfu pwn
                 else
                     # A7 linux uses gaster
                     log "Placing device to pwnDFU mode using gaster"
@@ -1206,12 +1209,8 @@ device_enter_mode() {
                 $opt
                 tool_pwned=$?
             else
-                # A4 mac/A6 intel mac uses ipwnder_lite/ipwnder32
-                # A7 intel mac uses ipwnder_lite/ipwnder32/gaster
+                # A4/A6/A7 mac uses ipwnder32/ipwnder_lite
                 local selection=("ipwnder32" "ipwnder_lite")
-                if [[ $device_proc == 7 ]]; then
-                    selection+=("gaster")
-                fi
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
                 print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
@@ -1219,7 +1218,6 @@ device_enter_mode() {
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
-                        "gaster" ) opt="$gaster pwn"; break;;
                         "ipwnder32" ) opt="$ipwnder32 -p"; break;;
                         * )
                             opt="$ipwnder"
@@ -1231,10 +1229,8 @@ device_enter_mode() {
                     esac
                 done
                 log "Placing device to pwnDFU mode using: $opt"
-                if [[ $device_proc == 7 ]]; then
-                    if [[ $(uname -m) == "x86_64" ]]; then
-                        print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
-                    fi
+                if (( device_proc > 5 )); then
+                    print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
                     print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
                     print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
                     print "* Troubleshooting links:"
