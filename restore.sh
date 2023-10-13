@@ -1177,41 +1177,45 @@ device_enter_mode() {
                 $gaster pwn
                 tool_pwned=$?
                 $gaster reset
-            elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $device_type == "iPod2,1" ]]; then
-                # A6 linux uses ipwndfu
-                # ipod touch 2g uses ipwndfu
-                device_ipwndfu pwn
-            elif [[ $device_proc == 4 && $platform != "macos" ]]; then
-                # A4 linux uses ipwnder
-                log "Placing device to pwnDFU mode using ipwnder"
-                $ipwnder -p
-                tool_pwned=$?
-            elif (( device_proc > 5 )) && [[ $platform == "macos" && $(uname -m) != "x86_64" ]]; then
+            elif [[ $platform == "linux" ]]; then
+                if [[ $device_proc == 6 || $device_type == "iPod2,1" ]]; then
+                    # ipod touch 2g and A6 linux use ipwndfu
+                    device_ipwndfu pwn
+                elif [[ $device_proc == 4 ]]; then
+                    # A4 linux uses ipwnder
+                    log "Placing device to pwnDFU mode using ipwnder"
+                    $ipwnder -p
+                    tool_pwned=$?
+                else
+                    # A7 linux uses gaster
+                    log "Placing device to pwnDFU mode using gaster"
+                    print "* Unfortunately, success rates for checkm8 are very low on Linux."
+                    print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
+                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+                    print "* Troubleshooting links:"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
+                    print "* If pwning gets stuck, you can press Ctrl+C to cancel."
+                    $gaster pwn
+                    tool_pwned=$?
+                fi
+            elif (( device_proc > 5 )) && [[ $(uname -m) != "x86_64" ]]; then
                 # A6/A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
                 opt="${ipwnder}2 -p"
                 $opt
                 tool_pwned=$?
             else
-                # A4/A6 mac uses ipwnder_lite/ipwnder32
+                # A4 mac/A6 intel mac uses ipwnder_lite/ipwnder32
                 # A7 intel mac uses ipwnder_lite/ipwnder32/gaster
-                # A7 linux uses ipwnder/gaster
-                input "PwnDFU Tool Option"
-                print "* Select tool to be used for entering pwned DFU mode."
-                local selection=()
-                if [[ $platform == "macos" ]]; then
-                    print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
-                    selection+=("ipwnder32" "ipwnder_lite")
-                elif [[ $device_proc == 7 ]]; then
-                    print "* This option is set to gaster by default (1). Select this option if unsure."
-                fi
-                print "* If the first option does not work, try many times and/or try the other option(s)."
+                local selection=("ipwnder32" "ipwnder_lite")
                 if [[ $device_proc == 7 ]]; then
                     selection+=("gaster")
                 fi
-                if [[ $platform != "macos" ]]; then
-                    selection+=("ipwnder")
-                fi
+                input "PwnDFU Tool Option"
+                print "* Select tool to be used for entering pwned DFU mode."
+                print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
+                print "* If the first option does not work, try many times and/or try the other option(s)."
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
@@ -1220,7 +1224,7 @@ device_enter_mode() {
                         * )
                             opt="$ipwnder"
                             if (( device_proc > 5 )); then
-                                opt="${ipwnder}2 -p"
+                                opt+="2 -p"
                             fi
                             break
                         ;;
@@ -1228,15 +1232,10 @@ device_enter_mode() {
                 done
                 log "Placing device to pwnDFU mode using: $opt"
                 if [[ $device_proc == 7 ]]; then
-                    if [[ $platform == "macos" ]]; then
-                        if [[ $(uname -m) == "x86_64" ]]; then
-                            print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
-                        fi
-                        print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
-                    elif [[ $platform == "linux" ]]; then
-                        print "* Unfortunately, success rates for checkm8 are very low on Linux."
-                        print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
+                    if [[ $(uname -m) == "x86_64" ]]; then
+                        print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
                     fi
+                    print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
                     print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
                     print "* Troubleshooting links:"
                     print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
