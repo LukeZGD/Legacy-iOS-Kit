@@ -3973,6 +3973,10 @@ menu_ipsw() {
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
+                if [[ $device_base_build == "11A"* ]]; then
+                    warn "There might be an issue when selecting iOS 7.0-7.0.2 base."
+                    print "* The device might get stuck at recovery mode after the restore."
+                fi
                 if [[ $device_type != "iPhone3,1" && $device_type != "iPhone3,3" ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
@@ -3982,10 +3986,11 @@ menu_ipsw() {
             if [[ $device_type == "iPhone3,1" || $device_type == "iPhone3,3" ]]; then
                 shsh_path=1
             else
-                echo
                 if [[ -n $shsh_path ]]; then
+                    echo
                     print "* Selected Base $text2 SHSH: $shsh_path"
                 elif [[ $2 != "ipsw" ]]; then
+                    echo
                     print "* Select Base $text2 SHSH to continue"
                 fi
             fi
@@ -4000,7 +4005,7 @@ menu_ipsw() {
                 print "* Target Version: $device_target_vers-$device_target_build"
                 menu_items+=("Select Target SHSH")
                 if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
-                    warn "There currently seems to be an issue with 4.2.1 restores for iPhone 4."
+                    warn "There might be an issue with 4.2.1 restores for iPhone 4."
                     print "* The device might get stuck at the Apple logo after the restore."
                 fi
             else
@@ -4108,6 +4113,9 @@ ipsw_custom_set() {
     fi
     if [[ $device_target_powder == 1 ]]; then
         ipsw_custom+="P"
+        if [[ $device_base_vers == "7.0"* ]]; then
+            ipsw_custom+="0"
+        fi
     fi
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
