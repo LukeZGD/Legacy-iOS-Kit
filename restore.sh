@@ -4371,6 +4371,7 @@ device_jailbreakrd() {
             5* | 6.0* | 6.1 | 6.1.[12] )
                 print "* Your device on iOS $device_vers will be jailbroken using g1lbertJB."
                 print "* No data will be lost, but please back up your data just in case."
+                print "* Ignore the \"Error Code 1\" and \"Error Code 102\" errors, this is normal and part of the jailbreaking process."
                 pause
                 pushd ../resources/jailbreak/g1lbertJB >/dev/null
                 cp ../freeze.tar payload/Cydia.tar
