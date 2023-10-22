@@ -321,18 +321,18 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y ca-certificates curl libimobiledevice6 libirecovery-common libssl3 openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
+        sudo apt install -y ca-certificates curl libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
         if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
             sudo apt install -y python2
         fi
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates libimobiledevice openssl python3 systemd udev usbmuxd vim-common zenity zip
+        sudo dnf install -y ca-certificates libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
