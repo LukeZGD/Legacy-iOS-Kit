@@ -1,33 +1,29 @@
 # Legacy iOS Kit
 
 - (formerly iOS-OTA-Downgrader)
-- **A multi-purpose script to downgrade/restore, save SHSH blobs, and jailbreak legacy iOS devices**
+- **An all-in-one tool to downgrade/restore, save SHSH blobs, and jailbreak legacy iOS devices**
 - Supported on **Linux and macOS**
 - **Read the ["How to Use" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use) for instructions**
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some A7/A8 64-bit devices
-- Restore to iOS 8.4.1 or 6.1.3 on supported 32-bit devices **(OTA signed)**
-- Restore iPhone 4 GSM and CDMA (iPhone3,1 and 3,3) to lower iOS versions **(powdersn0w)**
-- Restore iPhone 3GS and iPod touch 2 to lower iOS versions **(24Kpwn/alloc8)**
-- Restore 32-bit devices to lower iOS versions **with SHSH blobs**
-- Restore 32-bit devices to lower iOS versions **with iOS 7 blobs (powdersn0w)**
-    - Device support is limited, see below
+- Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
+- Restore some 32-bit devices to other iOS versions without blobs
+    - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2
+- Restore with SHSH blobs on supported devices
+- Restore to other iOS versions with iOS 7 blobs (powdersn0w)
+- Jailbreak all 32-bit iOS devices on (almost) any iOS version
+    - Available on iOS versions 3.1.3 to 9.3.4
+    - Only unsupported versions are iOS 9.0.x and iPad 2 on 4.3.x
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
-- Option to **jailbreak** all 32-bit iOS devices
-    - Available on iOS versions 3.1.3, 3.2.2, 4.x, 5.x, 6.x, 7.x, 8.x, 9.1-9.3.4
-    - Only unsupported version is jailbreaking iPad 2 on 4.3.x
-    - There are three methods of jailbreaking: Backup Restore (g1lbertJB, 5.0-6.1.2 only), Custom IPSW, and SSH Ramdisk
-- Restore to iOS 10.3.3 on supported A7 devices **(OTA signed)**
-- Restore A7/A8 devices to lower iOS versions **with SHSH blobs**
-    - Limited compatibility due to SEP/BB, see below
+- Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Save onboard and Cydia SHSH blobs for 32-bit devices
-- Place device to pwned iBSS/kDFU mode for supported devices
-- Boot SSH Ramdisk on supported 32-bit devices
-- Clear NVRAM for devices that support powdersn0w
+- Enter pwned iBSS/kDFU mode for supported 32-bit devices
+- Boot SSH Ramdisk for 32-bit devices
+- Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
-- The latest baseband will be flashed for A5(X)/A6(X) devices if applicable
+- The latest baseband will be flashed for A5/A6 devices with baseband
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 
 ## Supported devices
@@ -74,7 +70,7 @@
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 1, 2, 3, 4, 5
 - Restoring with SHSH blobs is also supported on most A7/A8 devices:
-    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions
+    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
     - iPhone 5S, 6, 6 Plus
     - iPad Air 1, mini 2, mini 3
     - iPod touch 6
@@ -83,17 +79,11 @@
     - iPhone 4 CDMA - targets iOS 5.0 to 7.1.1
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPad 4, iPod touch 5 - targets iOS 5.0 to 9.3.5
     - Using powdersn0w requires iOS 7.1.x blobs for your device
-        - For iPhone 5 and 5C, 7.0.x blobs can also be used
+        - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
         - For iPad 4, only 7.0.x blobs can be used
-- Restoring with 24Kpwn/alloc8 is supported on the following devices:
+- Restoring to other unsigned versions without blobs is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.1
-- Restoring to latest iOS version with jailbreak for the following devices:
-    - iPhone 4 - iOS 7.1.2
-    - iPhone 3GS, iPod touch 4 - iOS 6.1.6
-    - iPad 1, iPod touch 3 - iOS 5.1.1
-    - iPhone 3G, iPod touch 2 - iOS 4.2.1
-    - iPhone 2G, iPod touch 1 - iOS 3.1.3
 
 ## Supported OS versions/distros
 

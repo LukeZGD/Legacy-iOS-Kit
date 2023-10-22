@@ -855,7 +855,7 @@ device_find_mode() {
 
     if [[ -n $2 ]]; then
         timeout=$2
-    elif [[ $platform == "linux" || $mode == "Restore" ]]; then
+    elif [[ $platform == "linux" ]]; then
         timeout=24
     fi
 
@@ -882,7 +882,7 @@ device_find_mode() {
     done
 
     if [[ $device_in != 1 ]]; then
-        if [[ $timeout != 1 ]]; then
+        if [[ $timeout != 1 && $timeout != 25 ]]; then
             error "Failed to find device in $mode mode (Timed out). Please run the script again."
         fi
         return 1
@@ -3332,11 +3332,7 @@ device_ramdisk() {
         log "Device should now boot."
         return
     elif [[ -n $1 ]]; then
-        if [[ $platform == "macos" ]]; then
-            sleep 25
-        else
-            device_find_mode Restore
-        fi
+        device_find_mode Restore 25
     fi
 
     case $1 in
@@ -3623,6 +3619,9 @@ menu_print_info() {
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     device_manufacturing
+    if [[ $device_proc == 1 ]]; then
+        warn "This device is only partially supported by Legacy iOS Kit. Some features may not work properly."
+    fi
     if [[ -n $device_disable_bbupdate ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
