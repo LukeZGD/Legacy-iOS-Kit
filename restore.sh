@@ -1178,16 +1178,16 @@ device_enter_mode() {
                 tool_pwned=$?
                 $gaster reset
             elif [[ $device_type == "iPod2,1" ]]; then
-                # ipod touch 2g uses ipwndfu
+                # touch 2 uses ipwndfu
                 device_ipwndfu pwn
             elif [[ $platform == "linux" ]]; then
-                if [[ $device_proc == 4 ]]; then
-                    # A4 linux uses ipwnder
+                if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+                    # 3gs/touch 3 linux uses ipwnder
                     log "Placing device to pwnDFU mode using ipwnder"
                     $ipwnder -p
                     tool_pwned=$?
-                elif [[ $device_proc == 6 ]]; then
-                    # A6 linux uses ipwndfu
+                elif [[ $device_proc == 4 || $device_proc == 6 ]]; then
+                    # A4/A6 linux uses ipwndfu
                     device_ipwndfu pwn
                 else
                     # A7 linux uses gaster
