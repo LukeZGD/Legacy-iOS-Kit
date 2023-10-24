@@ -1130,7 +1130,7 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
-            if [[ $device_mode != "Normal" ]]; then
+            if [[ $device_mode == "DFU" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
             if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc != 4 ]] && (( device_proc < 7 )); then
@@ -1147,7 +1147,7 @@ device_enter_mode() {
                 fi
             elif [[ $irec_pwned == 1 && $device_proc == 7 ]]; then
                 if [[ $platform == "macos" ]]; then
-                    $ipwnder
+                    ${ipwnder}2 -p
                 else
                     device_ipwndfu rmsigchks
                 fi
@@ -1250,12 +1250,9 @@ device_enter_mode() {
             if [[ $opt == "${ipwnder}2 -p" && $device_proc == 6 ]]; then
                 ${ipwnder}2 --upload-iboot
             fi
-
-            if [[ $platform == "macos" && $opt != "$gaster pwn" ]] || (( device_proc > 7 )); then
+            if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
                 return
-            fi
-
-            if [[ $device_proc == 7 ]]; then
+            elif [[ $device_proc == 7 ]]; then
                 device_ipwndfu rmsigchks
             elif [[ $device_proc != 4 ]]; then
                 device_ipwndfu send_ibss
@@ -3988,6 +3985,11 @@ menu_ipsw() {
                 if [[ -n $shsh_path ]]; then
                     echo
                     print "* Selected Base $text2 SHSH: $shsh_path"
+                    if [[ $shsh_validate == 0 ]]; then
+                        print "* Selected SHSH file is validated"
+                    else
+                        warn "Selected SHSH file failed validation"
+                    fi
                 elif [[ $2 != "ipsw" ]]; then
                     echo
                     print "* Select Base $text2 SHSH to continue"
@@ -4019,6 +4021,10 @@ menu_ipsw() {
                 if (( device_proc > 6 )); then
                     shsh_generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
                     print "* Generator: $shsh_generator"
+                elif [[ $shsh_validate == 0 ]]; then
+                    print "* Selected SHSH file is validated"
+                else
+                    warn "Selected SHSH file failed validation"
                 fi
 
             elif [[ $2 != "ipsw" ]]; then
@@ -4251,7 +4257,8 @@ menu_shsh_browse() {
             val="$ipsw_base_path.ipsw"
         fi
         "$dir/validate" "$newpath" "$val" -z
-        if [[ $? != 0 ]]; then
+        shsh_validate=$?
+        if [[ $shsh_validate != 0 ]]; then
             warn "Validation failed. Did you select the correct IPSW/SHSH?"
             pause
         fi
