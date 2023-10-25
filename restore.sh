@@ -1180,6 +1180,7 @@ device_enter_mode() {
             elif [[ $device_type == "iPod2,1" ]]; then
                 # touch 2 uses ipwndfu
                 device_ipwndfu pwn
+                tool_pwned=$?
             elif [[ $platform == "linux" ]]; then
                 if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                     # 3gs/touch 3 linux uses ipwnder
@@ -1189,6 +1190,7 @@ device_enter_mode() {
                 elif [[ $device_proc == 4 || $device_proc == 6 ]]; then
                     # A4/A6 linux uses ipwndfu
                     device_ipwndfu pwn
+                    tool_pwned=$?
                 else
                     # A7 linux uses gaster
                     log "Placing device to pwnDFU mode using gaster"
@@ -1332,10 +1334,11 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_sha1="97d7ed8591692eb9565397c752ea765bfe6e4efe"
+    local ipwndfu_comm="c2ba7abe6b1b8dee962ce8ae7a02fc64d3242d28"
+    local ipwndfu_sha1="e385cdf51c8f4faaba43140a468ecbf00c4387ab"
     if [[ ! -d ../resources/ipwndfu || $(cat ../resources/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
         rm -rf ../resources/ipwndfu
-        download_file https://github.com/LukeZGD/ipwndfu/archive/89a7943f94e7938431b2100276a9099c7f6736e4.zip ipwndfu.zip $ipwndfu_sha1
+        download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
         unzip -q ipwndfu.zip -d ../resources
         mv ../resources/ipwndfu*/ ../resources/ipwndfu/
         echo "$ipwndfu_sha1" > ../resources/ipwndfu/sha1
@@ -1388,6 +1391,7 @@ device_ipwndfu() {
         ;;
     esac
     popd >/dev/null
+    return $tool_pwned
 }
 
 download_file() {
@@ -1514,10 +1518,6 @@ patch_ibec() {
             build_id="9B206";;
         iPhone2,1 | iPod4,1 )
             build_id="10B500";;
-        iPad2,[1245] | iPad3,[346] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
-            build_id="10B329";;
-        iPhone3,[123] )
-            build_id="11D257";;
         iPad2,[367] | iPad3,[25] )
             build_id="12H321";;
         iPad3,1 )
@@ -1526,6 +1526,8 @@ patch_ibec() {
             build_id="11B511";;
         iPhone5,4 )
             build_id="11B651";;
+        * )
+            build_id="10B329";;
     esac
     if [[ -n $device_rd_build ]]; then
         build_id="$device_rd_build"
@@ -1543,7 +1545,7 @@ patch_ibec() {
     log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $build_id == "9B206" || $build_id == "10B500" || -n $device_rd_build ]]; then
+    if [[ $device_proc == 4 || -n $device_rd_build ]]; then
         "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
@@ -2239,9 +2241,26 @@ ipsw_prepare_32bit() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
+patch_iboot() {
+    device_fw_key_check
+    local ExtraArgs2="$1"
+    local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
+    local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
+    local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+    log "Patch iBoot"
+    unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
+    mv $iboot_name ibot
+    "$dir/xpwntool" ibot ibot.dec -iv $iboot_iv -k $iboot_key
+    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa $ExtraArgs2
+    "$dir/xpwntool" ibot.pwned iBoot -t ibot
+    rm ibot*
+    echo "0000010: 6365" | xxd -r - iBoot
+    echo "0000020: 6365" | xxd -r - iBoot
+}
+
 ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
-    local ExtraArgs2="--logo4 "
+    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 "
     local IV
     local JBFiles=()
     local Key
@@ -2280,25 +2299,14 @@ ipsw_prepare_ios4powder() {
         "* You may try selecting N for memory option"
     fi
 
-    device_fw_key_check
     log "Applying iOS 4 patches"
-    log "Patch iBoot"
-    IV=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
-    Key=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
     if [[ $device_target_vers != "4.3.5" ]]; then
         ExtraArgs2+="--433 "
     fi
     if [[ $ipsw_verbose == 1 ]]; then
         ExtraArgs2+="-b -v"
     fi
-    unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.n90ap.production/iBoot*
-    mv iBoot.n90ap.RELEASE.img3 ibot
-    "$dir/xpwntool" ibot ibot.dec -iv $IV -k $Key
-    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa --boot-partition --boot-ramdisk $ExtraArgs2
-    "$dir/xpwntool" ibot.pwned iBoot -t ibot
-    rm ibot*
-    echo "0000010: 6365" | xxd -r - iBoot
-    echo "0000020: 6365" | xxd -r - iBoot
+    patch_iboot "$ExtraArgs2"
     mkdir -p Firmware/all_flash/all_flash.n90ap.production Firmware/dfu
     cp iBoot Firmware/all_flash/all_flash.n90ap.production/iBoot4.n90ap.RELEASE.img3
     log "Patch iBSS"
@@ -2362,13 +2370,9 @@ ipsw_prepare_powder() {
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
     fi
+    local ExtraArgs2="--boot-partition"
     if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_base_vers == "7.0"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
-        device_fw_key_check
-        local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
-        local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
-        local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
-        local ExtraArgs2="--boot-partition"
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArgs2+="9"
         fi
@@ -2376,15 +2380,7 @@ ipsw_prepare_powder() {
         if [[ $ipsw_verbose == 1 ]]; then
             ExtraArgs2+="-b -v"
         fi
-        log "Patch iBoot"
-        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
-        mv $iboot_name ibot
-        "$dir/xpwntool" ibot ibot.dec -iv $iboot_iv -k $iboot_key
-        "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa $ExtraArgs2
-        "$dir/xpwntool" ibot.pwned iBoot -t ibot
-        rm ibot*
-        echo "0000010: 6365" | xxd -r - iBoot
-        echo "0000020: 6365" | xxd -r - iBoot
+        patch_iboot "$ExtraArgs2"
         tar -cvf iBoot.tar iBoot
         ExtraArgs+=" iBoot.tar"
     fi
@@ -3696,13 +3692,17 @@ menu_shsh() {
                 menu_items+=("iOS 6.1.3");;
         esac
         if (( device_proc < 7 )); then
-            if [[ $device_mode != "none" ]]; then
+            if [[ $device_mode != "none" && $device_proc != 4 ]]; then
                 menu_items+=("Onboard Blobs")
             fi
             menu_items+=("Cydia Blobs")
         fi
         menu_items+=("Go Back")
         menu_print_info
+        if [[ $device_mode != "none" && $device_proc == 4 ]]; then
+            print "* Legacy iOS Kit currently does not support dumping onboard blobs for your device"
+        fi
+        echo
         print " > Main Menu > Save SHSH Blobs"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do

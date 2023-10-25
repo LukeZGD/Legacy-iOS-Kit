@@ -27,14 +27,14 @@ jobs:
       - name: Download some files
         run: |
           pushd resources
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/89a7943f94e7938431b2100276a9099c7f6736e4.zip -o ipwndfu.zip
+          curl -L https://github.com/LukeZGD/ipwndfu/archive/c2ba7abe6b1b8dee962ce8ae7a02fc64d3242d28.zip -o ipwndfu.zip
           curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
           unzip keys.zip -d .
           unzip ipwndfu.zip -d .
           cp -r Legacy-iOS-Kit-Keys-master/* firmware
           mv ipwndfu*/ ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
-          echo "97d7ed8591692eb9565397c752ea765bfe6e4efe" > ipwndfu/sha1
+          echo "e385cdf51c8f4faaba43140a468ecbf00c4387ab" > ipwndfu/sha1
           popd
 
       - name: Move linux binaries
