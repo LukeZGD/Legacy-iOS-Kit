@@ -1293,7 +1293,9 @@ device_ipwndfu() {
         mac_ver=$(echo "$platform_ver" | cut -c -2)
     fi
     if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
-        python2=/usr/bin/python
+        python2="/usr/bin/python"
+    elif [[ -n $python2 && $device_sudoloop == 1 ]]; then
+        python2="sudo $python2"
     elif [[ -z $python2 && ! -e $pyenv2 ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* You may install python2 from pyenv by running: pyenv install 2.7.18"
@@ -1313,9 +1315,9 @@ device_ipwndfu() {
         $pyenv install 2.7.18
         if [[ ! -e $pyenv2 ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
-            print "* Try installing pyenv and python2 manually:"
-            print "    > curl https://pyenv.run | bash"
-            print "    > ~/.pyenv/bin/pyenv install 2.7.18"
+            print "* Try installing pyenv and/or python2 manually:"
+            print "    pyenv:   > curl https://pyenv.run | bash"
+            print "    python2: > $pyenv install 2.7.18"
             error "Cannot detect python2 for ipwndfu, cannot continue."
         fi
     fi
@@ -1352,7 +1354,7 @@ device_ipwndfu() {
     pushd ../resources/ipwndfu/ >/dev/null
     case $1 in
         "send_ibss" )
-            log "Sending iBSS..."
+            log "Sending iBSS using ipwndfu..."
             $python2 ipwndfu -l pwnediBSS
             tool_pwned=$?
             rm pwnediBSS
@@ -1365,6 +1367,7 @@ device_ipwndfu() {
                 error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
             fi
+            print "* ipwndfu should have \"done!\" as output."
         ;;
 
         "pwn" )
@@ -3701,8 +3704,8 @@ menu_shsh() {
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
             print "* Legacy iOS Kit currently does not support dumping onboard blobs for your device"
+            echo
         fi
-        echo
         print " > Main Menu > Save SHSH Blobs"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -4549,7 +4552,7 @@ restore_dfuipsw() {
 
 device_justboot() {
     print "* You are about to do a tethered boot."
-    read -p "$(input 'Enter build version (eg. 9B206): ')" device_rd_build
+    read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
     device_ramdisk justboot
 }
 
@@ -4557,7 +4560,7 @@ device_enter_ramdisk() {
     if (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
         print "* If not sure, just press Enter/Return. This will select the default build version."
-        read -p "$(input 'Enter build version (eg. 9B206): ')" device_rd_build
+        read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
     fi
     device_ramdisk
 }
