@@ -4584,7 +4584,7 @@ main() {
     set_tool_paths
 
     log "Checking Internet connection..."
-    $ping google.com >/dev/null
+    $ping www.apple.com >/dev/null
     if [[ $? != 0 ]]; then
         $ping 208.67.222.222 >/dev/null
         if [[ $? != 0 ]]; then
