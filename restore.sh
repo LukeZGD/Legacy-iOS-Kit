@@ -1866,8 +1866,8 @@ ipsw_prepare_jailbreak() {
                 JBFiles+=("$jelbrek/g1lbertJB.tar")
             fi
             cp -R ../resources/firmware/FirmwareBundles .
-            ExtraArgs+="-S 30" # system partition add
         fi
+        ExtraArgs+=" -S 30" # system partition add
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
