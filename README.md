@@ -10,7 +10,7 @@
 - Legacy iOS Kit supports all 32-bit iOS devices, and some A7/A8 64-bit devices
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore some 32-bit devices to other iOS versions without blobs
-    - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2
+    - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
 - Restore with SHSH blobs on supported devices
 - Restore to other iOS versions with iOS 7 blobs (powdersn0w)
 - Jailbreak all 32-bit iOS devices on (almost) any iOS version
@@ -78,9 +78,12 @@
     - iPhone 4 GSM - targets iOS 4.3 to 7.1.1
     - iPhone 4 CDMA - targets iOS 5.0 to 7.1.1
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPad 4, iPod touch 5 - targets iOS 5.0 to 9.3.5
+    - iPad 1 - targets iOS 4.3.1 to 5.1
+    - iPod touch 3 - targets iOS 4.3 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
         - For iPad 4, only 7.0.x blobs can be used
+        - For iPad 1 and iPod touch 3, 5.1.1 blobs are used instead
 - Restoring to other unsigned versions without blobs is supported on the following devices:
     - iPhone 3GS - targets iOS 3.1.3 to 5.1.1
     - iPod touch 2 - targets iOS 3.1.3 to 4.1
@@ -101,8 +104,9 @@
 - curl
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
-    - [Exploits used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
-    - [5C 7.0.x exploit is from Ralph0045's repo](https://github.com/Ralph0045/iloader)
+    - [Most of the exploit ramdisks used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
+    - [5C 7.0.x exploit ramdisk is from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
+    - [iPad 1 exploit ramdisk is from Ralph0045's iBoot-5-Stuff repo](https://github.com/Ralph0045/iBoot-5-Stuff)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
@@ -134,7 +138,6 @@
 - [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
 - [Pangu](https://www.theiphonewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theiphonewiki.com/wiki/p0sixspwn)
-- [unthredeh4il](https://www.theiphonewiki.com/wiki/Unthredera1n#unthredeh4il)
 - [evasi0n](https://www.theiphonewiki.com/wiki/Evasi0n)
 - [g1lbertJB](https://github.com/g1lbertJB/g1lbertJB)
 - [UntetherHomeDepot](https://www.theiphonewiki.com/wiki/UntetherHomeDepot)
