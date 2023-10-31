@@ -3014,10 +3014,10 @@ restore_prepare() {
                         device_buttons
                     fi
                     restore_idevicerestore
-                    if [[ $device_target_vers != "5"* && $device_type == "iPad1,1" ]]; then
+                    if [[ $device_target_vers != "5"* ]] && [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
                         log "Do not disconnect your device yet"
                         device_find_mode Recovery 50
-                        device_ramdisk setnvram
+                        $irecovery -n
                         log "Done, your device should boot now"
                     fi
                 elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
@@ -4042,6 +4042,9 @@ menu_ipsw() {
                     iPad1,1 ) print "* Any iOS version from 4.3.1 to 5.1 is supported";;
                     iPod3,1 ) print "* Any iOS version from 4.3 to 5.1 is supported";;
                 esac
+            fi
+            if [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
+                print "* For downgrading to 4.3.x, make sure to downgrade to 5.0 first."
             fi
             echo
             local text2="(iOS 7.1.x)"
