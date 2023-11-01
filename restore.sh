@@ -2086,7 +2086,7 @@ ipsw_prepare_bundle() {
     echo -e "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
     printf "<key>RamdiskOptionsPath</key><string>/usr/local/share/restore/options" >> $NewPlist
     if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]]; then
-        printf ".$device_model" >> $NewPlist
+        printf ".%s" "$device_model" >> $NewPlist
     fi
     echo -e ".plist</string>" >> $NewPlist
     echo -e "<key>SHA256</key><string>$IPSWSHA256</string>" >> $NewPlist
@@ -2287,9 +2287,7 @@ patch_iboot() {
 ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
     local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 "
-    local IV
     local JBFiles=()
-    local Key
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -4731,7 +4729,7 @@ main() {
                "208.67.222.222")
     local check
     for i in "${try[@]}"; do
-        ping -c1 $try >/dev/null
+        ping -c1 $i >/dev/null
         check=$?
         if [[ $check == 0 ]]; then
             break
