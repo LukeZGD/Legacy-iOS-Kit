@@ -4019,11 +4019,6 @@ menu_ipsw() {
         menu_items=("Select Target IPSW")
         menu_print_info
         if [[ $1 == *"powdersn0w"* ]]; then
-            if [[ $device_type == "iPod3,1" ]]; then
-                warn "There might be an issue with powdersn0w downgrade for iPod touch 3."
-                print "* This is untested, let me know of any issues"
-                echo
-            fi
             menu_items+=("Select Base IPSW")
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
