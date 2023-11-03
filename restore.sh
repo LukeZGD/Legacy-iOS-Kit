@@ -1734,15 +1734,45 @@ ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
     local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    local cutver
+    local device
     if (( device_proc > 7 )); then
         return
     fi
     case $build_id in
         *[bcdefgkpquv] ) return;;
     esac
+    case $build_id in
+        7*  ) cutver=3;;
+        8*  ) cutver=4;;
+        9*  ) cutver=5;;
+        10* ) cutver=6;;
+        11* ) cutver=7;;
+        12* ) cutver=8;;
+        13* ) cutver=9;;
+        14* ) cutver=10;;
+        15* ) cutver=11;;
+        16* ) cutver=12;;
+        17* ) cutver=13;;
+        18* ) cutver=14;;
+        19* ) cutver=15;;
+    esac
+    case $device_type in
+        iPad4,[123] | iPad5,[34] ) device="iPad_Air";;
+        iPad2,[567] | iPad4,[456789] | iPad5,[12] ) device="iPad_mini";;
+        iPad* ) device="iPad";;
+        iPho* ) device="iPhone";;
+        iPod* ) device="iPod_touch";;
+    esac
     if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
         IPSWSHA1=
+    fi
+    if [[ -z $IPSWSHA1 ]]; then
+        log "Getting SHA1 hash from The Apple Wiki..."
+        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A2 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+        mkdir $device_fw_dir/$build_id 2>/dev/null
+        echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from ipsw.me..."
