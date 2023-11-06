@@ -2350,9 +2350,10 @@ ipsw_prepare_ios4powder() {
         device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
-    if [[ $device_target_vers != "4.3.5" ]]; then
-        ExtraArgs2+="--433 "
-    fi
+    case $device_target_vers in
+        4.2.9 | 4.2.10 | 4.3.[45] ) :;;
+        * ) ExtraArgs2+="--433 ";;
+    esac
     if [[ $ipsw_verbose == 1 ]]; then
         ExtraArgs2+="-b -v"
     fi
