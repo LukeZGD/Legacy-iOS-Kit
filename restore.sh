@@ -3604,7 +3604,11 @@ device_ramdisk() {
 
         "setnvram" )
             log "Sending commands for NVRAM..."
-            $ssh -p 2222 root@127.0.0.1 "nvram -c; nvram boot-partition=$rec; reboot_bak"
+            $ssh -p 2222 root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
+            if [[ $device_type == "iPhone3,3" && $rec == 2 ]]; then
+                $ssh -p 2222 root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg"
+            fi
+            $ssh -p 2222 root@127.0.0.1 "reboot_bak"
             log "Done, your device should boot now"
             return
         ;;
@@ -4053,11 +4057,20 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
+                case $device_target_build in
+                    "8E"* )
+                        warn "iOS 4.2.x for iPhone3,3 is untested, proceed at your own risk.";;
+                    "7"* | "8A"* | "8B"* | "8C"* )
+                        warn "Selected target version is not supported and will most likely fail.";;
+                esac
+                if [[ $device_type == "iPad1,1" && $device_target_vers == "4.3" ]]; then
+                    warn "Selected target version is not supported and will most likely fail."
+                fi
             else
                 print "* Select Target IPSW to continue"
                 case $device_type in
                     iPhone3,1 ) print "* Any iOS version from 4.3 to 7.1.1 is supported";;
-                    iPhone3,3 ) print "* Any iOS version from 5.0 to 7.1.1 is supported";;
+                    iPhone3,3 ) print "* Any iOS version from 4.2.6 to 7.1.1 is supported";;
                     iPhone4,1 | iPad2,[123] ) print "* Any iOS version from 5.0 to 9.3.5 is supported";;
                     iPad2,4 | iPad3,[123] ) print "* Any iOS version from 5.1 to 9.3.5 is supported";;
                     iPhone5,[12] | iPad3,[456] ) print "* Any iOS version from 6.0 to 9.3.5 is supported";;
@@ -4355,6 +4368,10 @@ menu_ipsw_browse() {
                 print "* You need iOS $base_vers IPSW and SHSH blobs for this device to use powdersn0w."
                 pause
                 return
+            elif [[ $device_target_build == "$device_base_build" ]]; then
+                log "The base version and the target version must not be the same."
+                pause
+                return
             fi
             ipsw_verify "$newpath" "$device_base_build"
             ipsw_base_path="$newpath"
@@ -4379,18 +4396,15 @@ menu_ipsw_browse() {
             return
         ;;
         *"powdersn0w"* )
-            if [[ $device_type == "iPad1,1" && $device_target_vers == "4.3" ]]; then
+            if [[ $device_target_build == "14"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 pause
                 return
+            elif [[ $device_target_build == "$device_base_build" ]]; then
+                log "The base version and the target version must not be the same."
+                pause
+                return
             fi
-            case $device_target_build in
-                "7"* | "8A"* | "8B"* | "8C"* | "14"* )
-                    log "Selected IPSW ($device_target_vers) is not supported as target version."
-                    pause
-                    return
-                ;;
-            esac
         ;;
     esac
     if [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
@@ -4464,7 +4478,7 @@ menu_other() {
                 menu_items+=("Enter pwnDFU Mode")
             fi
             case $device_type in
-                iPhone3,1 | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
+                iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
         fi
@@ -4528,14 +4542,14 @@ device_jailbreakrd() {
         read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
         if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
             warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-            print "* Supported versions for iPad 2 are: 5.0 to 8.4.1"
+            print "* Supported versions for iPad 2 are: 5.0 to 9.3.4 (excluding 9.0.x)"
             return
         fi
         case $device_vers in
-            8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
+            9* | 8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
             * )
                 warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-                print "* Supported versions are: 3.1.3 to 8.4.1"
+                print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
                 return
             ;;
         esac

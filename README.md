@@ -76,7 +76,7 @@
     - iPod touch 6
 - Restoring with powdersn0w is supported on the following devices:
     - iPhone 4 GSM - targets iOS 4.3 to 7.1.1
-    - iPhone 4 CDMA - targets iOS 5.0 to 7.1.1
+    - iPhone 4 CDMA - targets iOS 4.2.6 to 7.1.1 (4.2.x is untested)
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPad 4, iPod touch 5 - targets iOS 5.0 to 9.3.5
     - iPad 1 - targets iOS 4.3.1 to 5.1
     - iPod touch 3 - targets iOS 4.3 to 5.1
