@@ -1570,11 +1570,14 @@ ipsw_preference_set() {
     fi
     # target version check
     case $device_target_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* ) ipsw_canjailbreak=1;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4.1 ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_target_powder == 1 ]] ||
+       [[ $device_type == "iPhone2,1" && $device_target_vers == "4"* && $device_target_other != 1 ]] ||
        [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* && $device_target_vers != "4.2.1" ]]; then
         ipsw_canjailbreak=1
+    elif [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
+        :
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
     fi
@@ -1582,7 +1585,7 @@ ipsw_preference_set() {
     if [[ $device_target_vers == "3.1.3" && $device_proc != 1 ]]; then
         #log "Jailbreak Option is always enabled for $device_target_vers"
         ipsw_jailbreak=1
-    elif [[ -z $ipsw_jailbreak ]]; then
+    elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
@@ -2115,7 +2118,8 @@ ipsw_prepare_bundle() {
     echo -e "<key>RootFilesystemKey</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')</string>" >> $NewPlist
     echo -e "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
     printf "<key>RamdiskOptionsPath</key><string>/usr/local/share/restore/options" >> $NewPlist
-    if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]]; then
+    if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]] ||
+       [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
         printf ".%s" "$device_model" >> $NewPlist
     fi
     echo -e ".plist</string>" >> $NewPlist
@@ -4059,25 +4063,19 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
-                    "8E"* )
-                        warn "iOS 4.2.x for iPhone3,3 is untested, proceed at your own risk.";;
-                    "7"* | "8A"* | "8B"* | "8C"* )
+                    "7"* | "8A"* | "8B"* | "8C"* | "8E"* )
                         warn "Selected target version is not supported and will most likely fail.";;
                 esac
-                if [[ $device_type == "iPad1,1" && $device_target_vers == "4.3" ]]; then
-                    warn "Selected target version is not supported and will most likely fail."
-                fi
             else
                 print "* Select Target IPSW to continue"
                 case $device_type in
                     iPhone3,1 ) print "* Any iOS version from 4.3 to 7.1.1 is supported";;
-                    iPhone3,3 ) print "* Any iOS version from 4.2.6 to 7.1.1 is supported";;
+                    iPhone3,3 ) print "* Any iOS version from 5.0 to 7.1.1 is supported";;
                     iPhone4,1 | iPad2,[123] ) print "* Any iOS version from 5.0 to 9.3.5 is supported";;
                     iPad2,4 | iPad3,[123] ) print "* Any iOS version from 5.1 to 9.3.5 is supported";;
                     iPhone5,[12] | iPad3,[456] ) print "* Any iOS version from 6.0 to 9.3.5 is supported";;
                     iPhone5,[34] ) print "* Any iOS version from 7.0 to 9.3.5 is supported";;
-                    iPad1,1 ) print "* Any iOS version from 4.3.1 to 5.1 is supported";;
-                    iPod3,1 ) print "* Any iOS version from 4.3 to 5.1 is supported";;
+                    iPad1,1 | iPod3,1 ) print "* Any iOS version from 4.3 to 5.1 is supported";;
                 esac
             fi
             if [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
@@ -4547,7 +4545,7 @@ device_jailbreakrd() {
             return
         fi
         case $device_vers in
-            9* | 8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
+            9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4* | 3.2.2 | 3.1.3 ) :;;
             * )
                 warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
                 print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
