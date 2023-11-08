@@ -1546,7 +1546,7 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
     if [[ $device_proc == 4 || -n $device_rd_build ]]; then
-        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" # -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
     fi
@@ -2239,7 +2239,8 @@ ipsw_prepare_32bit() {
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $device_type != "$device_disable_bbupdate" && $ipsw_jailbreak != 1 &&
-            $device_proc != 4 && $device_actrec != 1 && $device_target_build != "9A406" ]]; then
+            $device_target_build != "9A406" && # the 4s-exclusive 9a406 has unencrypted ramdisks, needs custom ipsw since futurerestore breaks (it expects encrypted ramdisks)
+            $device_proc != 4 && $device_actrec != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
@@ -2808,8 +2809,6 @@ restore_idevicerestore() {
         3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
     esac
     if [[ $opt != 0 ]]; then
-        print "* If you are getting the error \"could not retrieve device serial number\":"
-        print " -> This means that your device is likely not compatible with $device_target_vers"
         print "* If the restore failed on updating baseband:"
         print " -> Try disabling baseband update: ./restore.sh --disable-bbupdate"
         echo
@@ -2897,7 +2896,7 @@ restore_futurerestore() {
     log "Restoring done! Read the message below if any error has occurred:"
     if [[ $opt != 0 ]]; then
         print "* If you are getting the error: \"could not retrieve device serial number\","
-        print " -> This means that your device is not compatible with $device_target_vers"
+        print " -> Try restoring with the jailbreak option enabled"
     fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
@@ -3574,7 +3573,12 @@ device_ramdisk() {
             case $vers in
                 3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
-            device_send_rdtar freeze.tar data
+            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
+                # 4.3.x 3gs'es have little free space in rootfs. workaround: extract an older strap that takes less space
+                device_send_rdtar freeze5.tar data
+            else
+                device_send_rdtar freeze.tar data
+            fi
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
             fi
