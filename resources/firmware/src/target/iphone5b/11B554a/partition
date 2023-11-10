@@ -27,7 +27,6 @@ if [ -e "/ios8" ]; then
   sleep 1s
 fi
 
-
 if [ -e "/ios9" ]; then
   # step1
   mv -v /mnt1/System/Library/LaunchDaemons/* /mnt1/Library/LaunchDaemons/

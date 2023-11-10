@@ -2449,7 +2449,7 @@ ipsw_prepare_powder() {
         fi
     fi
     local ExtraArgs2="--boot-partition"
-    if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_base_vers == "7.0"* ]]; then
+    if [[ $device_type == "iPhone5"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArgs2+="9"
@@ -3735,7 +3735,7 @@ menu_print_info() {
         warn "Activation records flag detected. Proceed with caution"
     fi
     if [[ -n $device_disable_bbupdate || $device_actrec == 1 ]]; then
-        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH (iOS 5+), powdersn0w"
+        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"

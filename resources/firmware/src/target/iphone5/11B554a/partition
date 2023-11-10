@@ -39,7 +39,7 @@ if [ -e "/ios9" ]; then
   mv -v /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
   sleep 3s
 
-   # step3
+  # step3
   mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping_
   mv -v /mnt1/reloader /mnt1/usr/libexec/CrashHousekeeping
   sleep 1s
@@ -53,33 +53,38 @@ System_LastSector="$((echo -e "i\n1\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | 
 Data_LastSector="$((echo -e "i\n2\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*Last sector: //p' | sed 's/ .*//')"
 Data_Attributeflags="$((echo -e "i\n2\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*flags: //p')"
 Exploit_LastSector="$((524288/$LogicalSector))"
-New_Data_LastSector="$(($Data_LastSector-$Exploit_LastSector))"
+BOOTLOADER="$((8388608/$LogicalSector))"
+NOTSD="$(($Exploit_LastSector+$BOOTLOADER))"
+Data_LastSectorSD="$(($Data_LastSector-$BOOTLOADER))"
+New_Data_LastSector="$(($Data_LastSector-$NOTSD))"
 New_Data_SectorSize="$(($New_Data_LastSector-$System_LastSector))"
 New_Data_Size="$(($New_Data_SectorSize*$LogicalSector))"
 
 hfs_resize /mnt1/private/var $New_Data_Size
 sleep 1s
 
-if [ "$Data_Attributeflags" = "0001000000000000" ]; then
-echo -e "d\n2\nn\n\n$New_Data_LastSector\n\nc\n2\nData\nx\na\n2\n48\n\nc\n2\n$Data_GUID\ns\n4\nm\nn\n3\n\n$Data_LastSector\n\nw\nY\n" | gptfdisk /dev/rdisk0s1
-else
-echo -e "d\n2\nn\n\n$New_Data_LastSector\n\nc\n2\nData\nx\na\n2\n48\n49\n\nc\n2\n$Data_GUID\ns\n4\nm\nn\n3\n\n$Data_LastSector\n\nw\nY\n" | gptfdisk /dev/rdisk0s1
-fi
-
+echo -e "d\n2\nn\n\n$New_Data_LastSector\n\nc\n2\nData\nx\na\n2\n48\n49\n\nc\n2\n$Data_GUID\ns\n4\nm\nn\n3\n\n$Data_LastSectorSD\n\nn\n4\n\n$Data_LastSector\n\nw\nY\n" | gptfdisk /dev/rdisk0s1
 sleep 1s
 
+sleep 1s
 newfs_hfs -s -v exploit /dev/rdisk0s1s3
+newfs_hfs -s -v bootloader /dev/rdisk0s1s4
 sleep 1s
 fsck_hfs -f /dev/rdisk0s1s3
+fsck_hfs -f /dev/rdisk0s1s4
 sleep 2s
 
 dd of=/dev/rdisk0s1s3 if=/exploit bs=512k count=1
 sleep 1s
+mount_hfs /dev/disk0s1s4 /mnt2
 
 nvram -c
 nvram boot-partition=2
 nvram boot-ramdisk="/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
+sleep 1s
 
+dd of=/mnt2/iBEC if=/mnt1/iBoot bs=512k
+rm /mnt1/iBoot
 sleep 1s
 
 reboot_
