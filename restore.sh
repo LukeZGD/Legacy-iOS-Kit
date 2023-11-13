@@ -2304,15 +2304,14 @@ ipsw_prepare_32bit() {
 
 patch_iboot() {
     device_fw_key_check
-    local ExtraArgs2="$1"
     local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
     local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
-    log "Patch iBoot"
+    log "Patch iBoot: $*"
     unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
     mv $iboot_name ibot
     "$dir/xpwntool" ibot ibot.dec -iv $iboot_iv -k $iboot_key
-    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa $ExtraArgs2
+    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa "$@"
     "$dir/xpwntool" ibot.pwned iBoot -t ibot
     rm ibot*
     echo "0000010: 6365" | xxd -r - iBoot
@@ -2362,7 +2361,7 @@ ipsw_prepare_ios4powder() {
     if [[ $ipsw_verbose == 1 ]]; then
         ExtraArgs2+="-b -v"
     fi
-    patch_iboot "$ExtraArgs2"
+    patch_iboot $ExtraArgs2
     tar -rvf src/bin.tar iBoot
     if [[ $device_type == "iPad1,1" ]]; then
         cp iBoot iBEC
@@ -2448,25 +2447,27 @@ ipsw_prepare_powder() {
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
     fi
-    local ExtraArgs2="--boot-partition"
+    local ExtraArr=("--boot-partition" "--boot-ramdisk")
     if [[ $device_type == "iPhone5"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
         if [[ $device_target_vers == "9"* ]]; then
-            ExtraArgs2+="9"
+            ExtraArr[0]+="9"
         fi
-        ExtraArgs2+=" --boot-ramdisk "
-        if [[ $ipsw_verbose == 1 ]]; then
-            ExtraArgs2+="-b -v"
+        if [[ $ipsw_jailbreak == 1 && $ipsw_verbose == 1 ]]; then
+            ExtraArr+=("-b" "-v cs_enforcement_disable=1 amfi_get_out_of_my_way=1")
+        elif [[ $ipsw_jailbreak == 1 ]]; then
+            ExtraArr+=("-b" "cs_enforcement_disable=1 amfi_get_out_of_my_way=1")
+        elif [[ $ipsw_verbose == 1 ]]; then
+            ExtraArr+=("-b" "-v")
         fi
-        patch_iboot "$ExtraArgs2"
+        patch_iboot "${ExtraArr[@]}"
         tar -cvf iBoot.tar iBoot
         ExtraArgs+=" iBoot.tar"
     elif [[ $device_type == "iPad1,1" ]]; then
-        ExtraArgs2+=" --boot-ramdisk "
         if [[ $ipsw_verbose == 1 ]]; then
-            ExtraArgs2+="-b -v"
+            ExtraArr+=("-b" "-v")
         fi
-        patch_iboot "$ExtraArgs2"
+        patch_iboot "${ExtraArr[@]}"
         mv iBoot iBEC
         tar -cvf iBoot.tar iBEC
         ExtraArgs+=" iBoot.tar"
