@@ -1005,6 +1005,7 @@ device_enter_mode() {
         "kDFU" )
             local sendfiles=()
             local device_det=$(echo "$device_vers" | cut -c 1)
+            local IPAddress="127.0.0.1"
 
             if [[ $device_mode != "Normal" ]]; then
                 device_enter_mode pwnDFU
@@ -1048,6 +1049,7 @@ device_enter_mode() {
                 echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/$opt")
             elif (( device_det < 5 )); then
+                opt="kloader_axi0mX"
                 echo "/tmp/kloader_axi0mX /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader_axi0mX")
             else
@@ -1089,7 +1091,7 @@ device_enter_mode() {
                 log "Trying again with Wi-Fi SSH..."
                 print "* Make sure that your iOS device and PC/Mac are on the same network."
                 print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' or '>' next to your network name"
-                local IPAddress
+                IPAddress=
                 until [[ -n $IPAddress ]]; do
                     read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
                 done
@@ -1114,7 +1116,11 @@ device_enter_mode() {
                     device_mode="DFU"
                     break
                 fi
-                print "* Unplug and replug your device now"
+                if [[ $opt == "kloader_axi0mX" ]]; then
+                    $ssh -p 2222 root@$IPAddress "bash /tmp/kloaders" &
+                else
+                    print "* Unplug and replug your device now"
+                fi
                 ((attempt++))
             done
             if (( attempt >= 6 )); then
@@ -1516,8 +1522,8 @@ patch_ibec() {
     case $device_type in
         iPad1,1 | iPod3,1 )
             build_id="9B206";;
-        iPhone2,1 | iPod4,1 )
-            build_id="10B500";;
+        iPhone2,1 | iPhone3,[123] | iPod4,1 )
+            build_id="10A403";;
         iPad2,[367] | iPad3,[25] )
             build_id="12H321";;
         iPad3,1 )
@@ -1546,7 +1552,7 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
     if [[ $device_proc == 4 || -n $device_rd_build ]]; then
-        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" # -c "go" $address
+        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
     fi
@@ -3668,13 +3674,7 @@ shsh_save_onboard() {
         warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
     fi
     if [[ ! -s myblob.shsh ]]; then
-        warn "Saving onboard SHSH blobs failed."
-        if [[ -s myblob.dump ]]; then
-            mv myblob.dump ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump
-            log "Raw dump saved at: ../saved/myblob-rawdump_$device_ecid-$device_type-$device_target_vers.dump"
-            warn "This raw dump is most likely not usable for restoring."
-        fi
-        return
+        error "Saving onboard SHSH blobs failed."
     fi
     mv myblob.shsh ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
     log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
@@ -3805,7 +3805,7 @@ menu_shsh() {
                 menu_items+=("iOS 6.1.3");;
         esac
         if (( device_proc < 7 )); then
-            if [[ $device_mode != "none" && $device_proc != 4 ]]; then
+            if [[ $device_mode != "none" ]]; then
                 menu_items+=("Onboard Blobs")
             fi
             menu_items+=("Cydia Blobs")
@@ -3813,7 +3813,8 @@ menu_shsh() {
         menu_items+=("Go Back")
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
-            print "* Legacy iOS Kit currently does not support dumping onboard blobs for your device"
+            print "* Dumping onboard blobs might not work for this device, proceed with caution"
+            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices"
             echo
         fi
         print " > Main Menu > Save SHSH Blobs"
@@ -3854,6 +3855,11 @@ menu_shsh_onboard() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Select IPSW")
         menu_print_info
+        if [[ $device_mode != "none" && $device_proc == 4 ]]; then
+            print "* Dumping onboard blobs might not work for this device, proceed with caution"
+            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices"
+            echo
+        fi
         if [[ -n $ipsw_path ]]; then
             print "* Selected IPSW: $ipsw_path.ipsw"
             print "* IPSW Version: $device_target_vers-$device_target_build"
