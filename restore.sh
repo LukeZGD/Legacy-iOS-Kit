@@ -1588,7 +1588,7 @@ ipsw_preference_set() {
         esac
     elif [[ $device_proc == 4 || $device_type == "iPad2"* ]]; then
         case $device_type in
-            iPhone3* | iPad1,1 | iPod3,1 )
+            iPhone3* | iPad1,1 | iPod[34],1 )
                 if [[ $device_target_vers != "4.2.1" ]]; then
                     ipsw_canjailbreak=1
                 fi
@@ -1647,6 +1647,8 @@ ipsw_preference_set() {
             $device_target_powder == 1 || $device_target_tethered == 1 ]] ||
          [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]] ||
          [[ $device_type == "iPad1,1" && $device_target_vers != "5"* ]] ||
+         [[ $device_type == "iPod3,1" && $device_target_vers != "5"* ]] ||
+         [[ $device_type == "iPod4,1" && $device_target_vers == "4"* ]] ||
          [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* ]]; then
         input "Memory Option for creating custom IPSW"
         print "* When this option is enabled, system RAM will be used for the IPSW creation process."
@@ -2314,11 +2316,14 @@ ipsw_prepare_32bit() {
     local daibutsu
     local JBFiles=()
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-        if [[ $device_type == "iPad"* || $device_type == "iPhone3"* ]]; then
-            ipsw_prepare_jailbreak
-        elif [[ $ipsw_jailbreak == 1 ]]; then
-            ipsw_prepare_custom
-        fi
+        case $device_type in
+            iPad* | iPhone3* | iPod[34],1 ) ipsw_prepare_jailbreak;;
+            * )
+                if [[ $ipsw_jailbreak == 1 ]]; then
+                    ipsw_prepare_custom
+                fi
+            ;;
+        esac
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
