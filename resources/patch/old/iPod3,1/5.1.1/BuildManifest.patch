@@ -1,0 +1,24 @@
+322c322
+< 						<string>Firmware/all_flash/all_flash.n18ap.production/DeviceTree.n18ap.img3</string>
+---
+> 						<string>Downgrade/RestoreDeviceTree</string>
+341c341
+< 						<string>kernelcache.release.n18</string>
+---
+> 						<string>Downgrade/RestoreKernelCache</string>
+360c360
+< 						<string>Firmware/all_flash/all_flash.n18ap.production/applelogo.s5l8922x.img3</string>
+---
+> 						<string>Downgrade/RestoreLogo</string>
+773c773
+< 						<string>Firmware/all_flash/all_flash.n18ap.production/DeviceTree.n18ap.img3</string>
+---
+> 						<string>Downgrade/RestoreDeviceTree</string>
+792c792
+< 						<string>kernelcache.release.n18</string>
+---
+> 						<string>Downgrade/RestoreKernelCache</string>
+811c811
+< 						<string>Firmware/all_flash/all_flash.n18ap.production/applelogo.s5l8922x.img3</string>
+---
+> 						<string>Downgrade/RestoreLogo</string>

@@ -1,0 +1,24 @@
+1146c1146
+< 						<string>Firmware/all_flash/all_flash.n90ap.production/DeviceTree.n90ap.img3</string>
+---
+> 						<string>Downgrade/RestoreDeviceTree</string>
+1237c1237
+< 						<string>kernelcache.release.n90</string>
+---
+> 						<string>Downgrade/RestoreKernelCache</string>
+1328c1328
+< 						<string>Firmware/all_flash/all_flash.n90ap.production/applelogo@2x~iphone.s5l8930x.img3</string>
+---
+> 						<string>Downgrade/RestoreLogo</string>
+2947c2947
+< 						<string>Firmware/all_flash/all_flash.n90ap.production/DeviceTree.n90ap.img3</string>
+---
+> 						<string>Downgrade/RestoreDeviceTree</string>
+3038c3038
+< 						<string>kernelcache.release.n90</string>
+---
+> 						<string>Downgrade/RestoreKernelCache</string>
+3129c3129
+< 						<string>Firmware/all_flash/all_flash.n90ap.production/applelogo@2x~iphone.s5l8930x.img3</string>
+---
+> 						<string>Downgrade/RestoreLogo</string>
