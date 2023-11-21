@@ -93,7 +93,7 @@ set_tool_paths() {
     also set distro, debian_ver, ubuntu_ver, fedora_ver variables for linux
 
     list of tools set here:
-    bspatch, jq, ping, scp, ssh, sha1sum (for macos: shasum -a 1), sha256sum (for macos: shasum -a 256), zenity
+    bspatch, jq, scp, ssh, sha1sum (for macos: shasum -a 1), zenity
 
     these ones "need" sudo for linux arm, not for others:
     futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
@@ -161,8 +161,6 @@ set_tool_paths() {
         else
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
-
-        ping="ping -c1"
         zenity="$(which zenity)"
 
         # live cd/usb check
@@ -237,12 +235,9 @@ set_tool_paths() {
                 "* You need to be on macOS 10.13 or newer to continue."
             fi
         fi
-
         bspatch="$(which bspatch)"
         ipwnder32="$dir/ipwnder32"
-        ping="ping -c1"
         sha1sum="$(which shasum) -a 1"
-        sha256sum="$(which shasum) -a 256"
 
         # kill macos daemons
         killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -281,7 +276,6 @@ set_tool_paths() {
     else
         bspatch="$dir/bspatch"
         sha1sum="$(which sha1sum)"
-        sha256sum="$(which sha256sum)"
     fi
     ideviceactivation="$(which ideviceactivation 2>/dev/null)"
     if [[ -z $ideviceactivation ]]; then
@@ -2077,19 +2071,19 @@ ipsw_prepare_config() {
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
 <plist version=\"1.0\">
 <dict>
-	<key>FilesystemJailbreak</key>
-	<$1/>
-	<key>needPref</key>
-	<$2/>
-	<key>iBootPatches</key>
-	<dict>
-		<key>debugEnabled</key>
-		<false/>
-		<key>bootArgsInjection</key>
-		<$verbose/>
-		<key>bootArgsString</key>
-		<string>-v</string>
-	</dict>
+    <key>FilesystemJailbreak</key>
+    <$1/>
+    <key>needPref</key>
+    <$2/>
+    <key>iBootPatches</key>
+    <dict>
+        <key>debugEnabled</key>
+        <false/>
+        <key>bootArgsInjection</key>
+        <$verbose/>
+        <key>bootArgsString</key>
+        <string>-v</string>
+    </dict>
 </dict>
 </plist>" | tee FirmwareBundles/config.plist
 }
@@ -2232,7 +2226,7 @@ ipsw_prepare_bundle() {
 
     if [[ $1 == "base" ]]; then
         echo -e "<key>Firmware</key><dict/>" >> $NewPlist
-    elif [[ $1 == "target" ]] && [[ $vers == "3" || $vers == "4"* ]]; then
+    elif [[ $1 == "target" && $vers == "4"* ]]; then
         echo -e "<key>Firmware</key><dict>" >> $NewPlist
         ipsw_prepare_keys iBSS $1
         ipsw_prepare_keys RestoreRamdisk $1
@@ -2508,12 +2502,12 @@ ipsw_prepare_ios4multipart() {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CreateFilesystemPartitions</key>
-	<false/>
-	<key>UpdateBaseband</key>
-	<false/>
-	<key>SystemImage</key>
-	<false/>
+    <key>CreateFilesystemPartitions</key>
+    <false/>
+    <key>UpdateBaseband</key>
+    <false/>
+    <key>SystemImage</key>
+    <false/>
 </dict>
 </plist>' | tee $options_plist
     "$dir/hfsplus" ramdisk.dec rm usr/local/share/restore/$options_plist
@@ -4349,9 +4343,9 @@ menu_restore() {
                 menu_items+=("powdersn0w (any iOS)");;
         esac
         case $device_type in
-            iPhone1,[12] | iPhone2,1 | iPhone3,2 | iPad1,1 | iPod[1234],1 )
+            iPhone1,[12] | iPhone2,1 | iPod[12],1 )
                 if [[ -z $1 ]]; then
-                    : #menu_items+=("Other (Custom IPSW)")
+                    menu_items+=("Other (Custom IPSW)")
                 fi
             ;;
         esac
