@@ -1892,6 +1892,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
             ipsw_prepare_rebootsh
+            JBFiles+=("$jelbrek/fstab8.tar")
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
             for i in {0..2}; do
                 cp $jelbrek/${JBFiles2[$i]} .
@@ -1997,9 +1998,6 @@ ipsw_prepare_keys() {
         ;;
 
         "KernelCache" )
-            if [[ $vers == "3"* || $vers == "4"* || $vers == "5"* || $vers == "7"* ]]; then
-                return
-            fi
             echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string><key>Patch</key><true/>" >> $NewPlist
         ;;
     esac
@@ -2111,8 +2109,11 @@ ipsw_prepare_bundle() {
         build="$device_base_build"
         FirmwareBundle+="BASE_"
     elif [[ $1 == "target" ]]; then
-        if [[ $ipsw_jailbreak == 1 && $vers != "3"* && $vers != "4"* && $vers != "5"* && $vers != "7"* ]]; then
-            ipsw_prepare_config true true
+        if [[ $ipsw_jailbreak == 1 ]]; then
+            case $vers in
+                [457]* ) ipsw_prepare_config false true;;
+                * ) ipsw_prepare_config true true;;
+            esac
         else
             ipsw_prepare_config false true
         fi
@@ -2246,10 +2247,13 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys RestoreRamdisk $1
         ipsw_prepare_keys RestoreDeviceTree $1
         ipsw_prepare_keys RestoreLogo $1
-        if [[ $1 != "target" || $vers == "3"* || $vers == "4"* || $vers == "5"* || $vers == "7"* ]]; then
-            ipsw_prepare_keys RestoreKernelCache $1
+        if [[ $1 == "target" ]]; then
+            case $vers in
+                [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
+                * ) ipsw_prepare_keys KernelCache $1;;
+            esac
         else
-            ipsw_prepare_keys KernelCache $1
+            ipsw_prepare_keys RestoreKernelCache $1
         fi
         echo -e "</dict>" >> $NewPlist
     fi
