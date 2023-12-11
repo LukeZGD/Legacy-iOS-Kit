@@ -1386,6 +1386,9 @@ device_ipwndfu() {
             fi
             log "Installing alloc8 to device"
             $python2 ipwndfu -x
+            if [[ $platform == "macos" ]]; then
+                log "* If you get the error \"No backend available,\" install libusb in Homebrew: brew install libusb"
+            fi
         ;;
     esac
     popd >/dev/null
@@ -3797,7 +3800,7 @@ device_ramdisk() {
         "$dir/xpwntool" iBSS.dec iBSS.raw
         "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad2"* ]]; then
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
             :
         else
             log "Patch iBEC"
@@ -3835,7 +3838,13 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
     log "Sending iBSS..."
-    $irecovery -f $ramdisk_path/iBSS
+    if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type == "iPad"* ]]; then
+        device_rd_build=
+        patch_ibss
+        $irecovery -f pwnediBSS.dfu
+    else
+        $irecovery -f $ramdisk_path/iBSS
+    fi
     if [[ $device_type != "iPod2,1" && $device_proc != 1 ]]; then
         sleep 1
         log "Sending iBEC..."
