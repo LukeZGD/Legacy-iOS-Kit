@@ -1387,7 +1387,7 @@ device_ipwndfu() {
             log "Installing alloc8 to device"
             $python2 ipwndfu -x
             if [[ $platform == "macos" ]]; then
-                log "* If you get the error \"No backend available,\" install libusb in Homebrew: brew install libusb"
+                print "* If you get the error \"No backend available,\" install libusb in Homebrew: brew install libusb"
             fi
         ;;
     esac
@@ -4164,14 +4164,15 @@ menu_print_info() {
     if [[ $device_proc == 1 ]]; then
         warn "This device is only partially supported by Legacy iOS Kit. Some features may not work properly."
     fi
-    if [[ -n $device_disable_bbupdate ]]; then
+    if [[ -n $device_disable_bbupdate && $device_type == "iPad"* ]]; then
+        print "* Disable bbupdate flag detected, baseband update is disabled."
+    elif [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
+        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
     fi
     if [[ $device_actrec == 1 ]]; then
         warn "Activation records flag detected. Proceed with caution"
-    fi
-    if [[ -n $device_disable_bbupdate || $device_actrec == 1 ]]; then
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
     fi
     if [[ -n $device_build ]]; then
