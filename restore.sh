@@ -510,6 +510,30 @@ device_manufacturing() {
     fi
 }
 
+device_s5l8900xall() {
+    local wtf_sha="cb96954185a91712c47f20adb519db45a318c30f"
+    local wtf_saved="../saved/WTF.s5l8900xall.RELEASE.dfu"
+    local wtf_patched="$wtf_saved.patched"
+    local wtf_patch="../resources/patch/old/iPhone1,1/3.1.3/WTF.s5l8900xall.RELEASE.dfu.patch"
+    local wtf_s5l8900xall="$($sha1sum "$wtf_saved" 2>/dev/null | awk '{print $1}')"
+    if [[ $wtf_s5l8900xall != "$wtf_sha" ]]; then
+        log "Downloading WTF.s5l8900xall"
+        "$dir/pzb" -g "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu" -o WTF.s5l8900xall.RELEASE.dfu "http://appldnld.apple.com/iPhone/061-7481.20100202.4orot/iPhone1,1_3.1.3_7E18_Restore.ipsw"
+        mv WTF.s5l8900xall.RELEASE.dfu $wtf_saved
+    fi
+    wtf_s5l8900xall="$($sha1sum "$wtf_saved" | awk '{print $1}')"
+    if [[ $wtf_s5l8900xall != "$wtf_sha" ]]; then
+        error "SHA1sum mismatch. Expected $wtf_sha, got $wtf_s5l8900xall. Please run the script again"
+    fi
+    rm "$wtf_patched"
+    log "Patching WTF.s5l8900xall"
+    $bspatch $wtf_saved $wtf_patched $wtf_patch
+    log "Sending patched WTF.s5l8900xall (pwnage)"
+    $irecovery -f "$wtf_patched"
+    device_find_mode DFUreal
+    sleep 1
+}
+
 device_get_info() {
     : '
     usage: device_get_info (no arguments)
@@ -550,8 +574,11 @@ device_get_info() {
     fi
 
     log "Getting device info..."
+    if [[ $device_mode == "WTF" ]]; then
+        device_s5l8900xall
+    fi
     case $device_mode in
-        "WTF" | "DFU" | "Recovery" )
+        "DFU" | "Recovery" )
             #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
             local ProdCut=7 # cut 7 for ipod/ipad
             device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
@@ -703,11 +730,10 @@ device_get_info() {
         error "This device is not supported by Legacy iOS Kit."
     fi
 
-    if [[ $device_mode == "DFU" && $device_proc == 1 ]]; then
-        log "Your device $device_type seems to be on an incorrect mode for restoring."
+    if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
+        log "Found an S5L8900 device in DFU mode. Please re-enter WTF mode for good measure."
         print "* Force restart your device and place it in normal or recovery mode, then run the script again."
-        print "* Or proceed to do the DFU mode procedure below."
-        device_dfuhelper norec
+        exit
     fi
 
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
@@ -838,7 +864,10 @@ device_find_mode() {
         usb=1281
     elif [[ $device_proc == 1 ]]; then
         usb=1222
-        if [[ $mode == "DFU" ]]; then
+        if [[ $mode == "DFUreal" ]]; then
+            mode="DFU"
+            usb=1227
+        elif [[ $mode == "DFU" ]]; then
             mode="WTF"
         fi
     else
@@ -878,6 +907,8 @@ device_find_mode() {
             error "Failed to find device in $mode mode (Timed out). Please run the script again."
         fi
         return 1
+    elif [[ $mode == "WTF" ]]; then
+        device_s5l8900xall
     fi
 }
 
@@ -898,6 +929,9 @@ device_sshpass() {
 device_find_all() {
     # find device stuff from palera1n legacy
     local opt
+    if [[ $1 == "norec" ]]; then
+        return
+    fi
     if [[ $platform == "macos" ]]; then
         opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
     elif [[ $platform == "linux" ]]; then
@@ -927,7 +961,7 @@ device_dfuhelper() {
         fi
         exit
     fi
-    device_find_all
+    device_find_all $1
     opt=$?
     if [[ $opt == 1 ]]; then
         log "Found device in DFU mode."
@@ -942,7 +976,7 @@ device_dfuhelper() {
     echo -e "\n$(print '* Hold TOP and HOME buttons.')"
     for i in {10..01}; do
         echo -n "$i "
-        device_find_all
+        device_find_all $1
         opt=$?
         if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
@@ -954,7 +988,7 @@ device_dfuhelper() {
     echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
     for i in {08..01}; do
         echo -n "$i "
-        device_find_all
+        device_find_all $1
         opt=$?
         if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
@@ -988,7 +1022,10 @@ device_enter_mode() {
         "DFU" )
             if [[ $device_mode == "Normal" ]]; then
                 device_enter_mode Recovery
-            elif [[ $device_mode == "DFU" || $device_mode == "WTF" ]]; then
+            elif [[ $device_mode == "WTF" ]]; then
+                device_s5l8900xall
+                return
+            elif [[ $device_mode == "DFU" ]]; then
                 return
             fi
             device_dfuhelper
@@ -1326,6 +1363,7 @@ device_ipwndfu() {
     fi
 
     if [[ $1 == "send_ibss" ]]; then
+        device_rd_build=
         patch_ibss
         cp pwnediBSS ../resources/ipwndfu/
     fi
@@ -3821,19 +3859,7 @@ device_ramdisk() {
     elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
         device_buttons
     elif [[ $device_proc == 1 ]]; then
-        local ipswj="../${device_type}_3.1.3_7E18_Custom"
-        if [[ -e "${ipswj}J.ipsw" ]]; then
-            ipswj="${ipswj}J"
-        elif [[ -e "${ipswj}HJ.ipsw" ]]; then
-            ipswj="${ipswj}HJ"
-        else
-            warn "Cannot detect 3.1.3 custom IPSW for $device_type."
-            print "* To proceed, you need to create a 3.1.3 custom IPSW with the jailbreak option enabled."
-            print "* Go to: Other Utilities -> Create Custom IPSW -> 3.1.3"
-            return
-        fi
         device_enter_mode DFU
-        $idevicerestore -p "$ipswj.ipsw"
     else
         device_enter_mode kDFU
     fi
@@ -4161,9 +4187,6 @@ menu_print_info() {
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     device_manufacturing
-    if [[ $device_proc == 1 ]]; then
-        warn "This device is only partially supported by Legacy iOS Kit. Some features may not work properly."
-    fi
     if [[ -n $device_disable_bbupdate && $device_type == "iPad"* ]]; then
         print "* Disable bbupdate flag detected, baseband update is disabled."
     elif [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
