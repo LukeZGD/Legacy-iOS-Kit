@@ -76,8 +76,9 @@
     - iPod touch 1, 2, 3, 4, 5
 - Restoring with SHSH blobs is also supported on some 64-bit devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
-    - iPhone 5S, 6, 6 Plus, 6S, 6S Plus, SE 2016, 7
-    - iPad Air 1, Air 2, mini 2, mini 3, mini 4
+    - iPhone 5S, 6, 6S, SE 2016, 7 (including Plus variants)
+    - iPad Air 1, 2
+    - iPad mini 2, 3, 4
     - iPod touch 6, 7
 - Restoring with powdersn0w is supported on the following devices and target version range:
     - iPhone 4 GSM - iOS 4.0 to 7.1.1 (4.2.1 is not functional)

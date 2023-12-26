@@ -4298,7 +4298,7 @@ menu_ipa() {
         if [[ $1 == "Install"* ]]; then
             print "* Make sure that AppSync Unified is installed on your device."
         else
-            print "* Sideload IPA is for iOS 9 and newer. (may or may not work on 8)"
+            print "* Sideload IPA is for iOS 9 and newer. (doesn't seem to work on 8)"
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
         fi
@@ -5360,6 +5360,8 @@ device_altserver_linux() {
     done
     export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
     altserver_linux="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
+    log "Attempting idevicepair"
+    "$dir/idevicepair" pair
     log "Enter Apple ID details to continue."
     print "* Your Apple ID and password will only be sent to Apple servers."
     local apple_id
@@ -5370,6 +5372,9 @@ device_altserver_linux() {
     while [[ -z $apple_pass ]]; do
         read -s -p "$(input 'Password: ')" apple_pass
     done
+    echo
+    log "Attempting idevicepair"
+    "$dir/idevicepair" pair
     log "Running AltServer-Linux with given Apple ID details..."
     pushd ../saved >/dev/null
     $altserver_linux -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
