@@ -19,6 +19,9 @@
     - Only unsupported versions are iOS 9.0.x and iPad 2 on 4.3.x
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
+- Install IPA files for supported devices with AppSync installed
+- Sideload IPA files for supported devices on Linux
+- Save SHSH blobs for signed OTA versions for supported devices
 - Save onboard and Cydia SHSH blobs for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Boot SSH Ramdisk for 32-bit devices
@@ -71,11 +74,11 @@
     - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 1, 2, 3, 4, 5
-- Restoring with SHSH blobs is also supported on most A7/A8 devices:
+- Restoring with SHSH blobs is also supported on some 64-bit devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
-    - iPhone 5S, 6, 6 Plus
-    - iPad Air 1, mini 2, mini 3
-    - iPod touch 6
+    - iPhone 5S, 6, 6 Plus, 6S, 6S Plus, SE 2016, 7
+    - iPad Air 1, Air 2, mini 2, mini 3, mini 4
+    - iPod touch 6, 7
 - Restoring with powdersn0w is supported on the following devices and target version range:
     - iPhone 4 GSM - iOS 4.0 to 7.1.1 (4.2.1 is not functional)
     - iPhone 4 CDMA - iOS 5.0 to 7.1.1 (4.2.x is not functional)
@@ -118,10 +121,14 @@
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
 - [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
+- [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
+- [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
+- [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux for restoring A7/A8 devices
+    - [new futurerestore](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15(.8)
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)

@@ -32,7 +32,7 @@ pause() {
 }
 
 clean() {
-    kill $httpserver_pid $iproxy_pid 2>/dev/null
+    kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
     popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" 2>/dev/null
     if [[ $platform == "macos" ]]; then
@@ -719,8 +719,12 @@ device_get_info() {
             device_proc=6;; # A6
         iPad4,[123456789] | iPhone6,[12] )
             device_proc=7;; # A7
-        iPhone7,[12] | iPod7,1 )
+        iPhone7,[12] | iPad5,[1234] | iPod7,1 )
             device_proc=8;; # A8
+        iPhone8,[124] )
+            device_proc=9;; # A9
+        iPhone9,[1234] | iPod9,1 )
+            device_proc=10;; # A10
     esac
     if [[ -z $device_proc ]]; then
         print "* Device: $device_type (${device_model}ap) in $device_mode mode"
@@ -782,8 +786,8 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
-            device_latest_vers="15.7.9"
-            device_latest_build="19H365"
+            device_latest_vers="15.8"
+            device_latest_build="19H370"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -3139,7 +3143,9 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
-    if [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
+    if [[ $device_latest_vers == "15"* ]]; then
+        return
+    elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
         restore_baseband="$device_use_bb"
         baseband_sha1="$device_use_bb_sha1"
@@ -3322,19 +3328,45 @@ restore_futurerestore() {
         # sep args for 64bit
         ExtraArr+=("-s" "$restore_sep" "-m" "$restore_manifest")
     fi
+    if (( device_proc < 7 )); then
+        futurerestore2+="_old"
+    elif [[ $device_latest_vers == "15"* ]]; then
+        futurerestore2="../saved/futurerestore_$platform"
+        ExtraArr=("--latest-sep")
+        if [[ $restore_baseband == 0 ]]; then
+            ExtraArr+=("--no-baseband")
+        else
+            ExtraArr+=("--latest-baseband")
+        fi
+        log "New futurerestore will be used for this restore: https://github.com/futurerestore/futurerestore"
+        if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
+            log "New futurerestore is not supported on this arch. x86_64 only."
+            return
+        fi
+        if [[ ! -e $futurerestore2 ]]; then
+            local url="https://nightly.link/futurerestore/futurerestore/workflows/ci/main/"
+            local file="futurerestore-"
+            case $platform in
+                "macos" ) file+="macOS-RELEASE.zip";;
+                "linux" ) file+="Linux-x86_64-RELEASE.zip";;
+            esac
+            url+="$file"
+            log "Downloading futurerestore: $url"
+            curl -LO "$url"
+            unzip -q "$file" -d .
+            tar -xJvf futurerestore*.xz
+            mv futurerestore $futurerestore2
+            chmod +x $futurerestore2
+        fi
+    else
+        futurerestore2+="_new"
+    fi
     if [[ -n "$1" ]]; then
         # custom arg, either --use-pwndfu or --skip-blob
         ExtraArr+=("$1")
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArr+=("-d")
-    fi
-    if (( device_proc < 7 )); then
-        futurerestore2+="_old"
-    elif [[ $device_latest_vers == "15"* ]]; then
-        :
-    else
-        futurerestore2+="_new"
     fi
     if [[ $platform == "macos" && $device_target_other != 1 &&
           $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
@@ -4230,6 +4262,14 @@ menu_main() {
         if (( device_proc < 8 )) && [[ $device_proc != 1 ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
+        if [[ $device_mode == "Normal" ]]; then
+            if [[ $platform == "linux" ]]; then
+                case $device_vers in
+                    8* | 9* | 1* ) menu_items+=("Sideload IPA");;
+                esac
+            fi
+            menu_items+=("Install IPA (AppSync)")
+        fi
         menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -4239,10 +4279,66 @@ menu_main() {
             "Restore/Downgrade" ) menu_restore;;
             "Jailbreak Device" ) mode="jailbreak";;
             "Save SHSH Blobs" ) menu_shsh;;
+            "Install IPA (AppSync)" | "Sideload IPA" ) menu_ipa "$selected";;
             "Other Utilities" ) menu_other;;
             "Exit" ) mode="exit";;
         esac
     done
+}
+
+menu_ipa() {
+    local menu_items
+    local selected
+    local back
+
+    ipa_path=
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Select IPA")
+        menu_print_info
+        if [[ $1 == "Install"* ]]; then
+            print "* Make sure that AppSync Unified is installed on your device."
+        else
+            print "* Sideload IPA is for iOS 9 and newer. (may or may not work on 8)"
+            print "* Sideloading will require an Apple ID."
+            print "* Your Apple ID and password will only be sent to Apple servers."
+        fi
+        echo
+        if [[ -n $ipa_path ]]; then
+            print "* Selected IPA: $ipa_path"
+            menu_items+=("Install IPA")
+        else
+            print "* Select IPA to install"
+        fi
+        menu_items+=("Go Back")
+        echo
+        print " > Main Menu > $1"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Select IPA" ) menu_ipa_browse;;
+            "Install IPA" )
+                if [[ $1 == "Install"* ]]; then
+                    mode="ideviceinstaller"
+                else
+                    mode="altserver_linux"
+                fi
+            ;;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_ipa_browse() {
+    local newpath
+    input "Select your IPA file in the file selection window."
+    newpath="$($zenity --file-selection --file-filter='IPA | *.ipa' --title="Select IPA file")"
+    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
+    [[ ! -s "$newpath" ]] && return
+    log "Selected IPA file: $newpath"
+    ipa_path="$newpath"
 }
 
 menu_shsh() {
@@ -5015,6 +5111,24 @@ device_jailbreakrd() {
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+        ;;
+    esac
+    case $device_vers in
+        9.0* )
+            print "* For this version, use Pangu9, or download openpwnage and sideload it to your device."
+            print "* https://ios.cfw.guide/installing-pangu9/"
+            print "* https://github.com/0xilis/openpwnage"
+            return
+        ;;
+        9.3.[56] )
+            print "* For this version, download kok3shi9 and sideload it to your device."
+            print "* https://kok3shidoll.web.app/kok3shi9.html"
+            return
+        ;;
+        10* )
+            print "* For this version, download kok3shiX or socket and sideload it to your device."
+            print "* https://kok3shidoll.github.io/download/kokeshi/kokeshiX_v1.0_alpha_2.ipa"
+            print "* https://github.com/staturnzz/socket"
             return
         ;;
     esac
@@ -5207,6 +5321,61 @@ device_enter_ramdisk() {
     device_ramdisk
 }
 
+device_ideviceinstaller() {
+    log "Installing selected IPA to device using ideviceinstaller..."
+    "$dir/ideviceinstaller" install "$ipa_path"
+}
+
+device_altserver_linux() {
+    local altserver="../saved/anisette-server-$platform"
+    local anisette="../saved/AltServer-$platform"
+    local arch="$platform_arch"
+    case $arch in
+        "armhf" ) arch="armv7";;
+        "arm64" ) arch="aarch64";;
+    esac
+    if [[ $platform == "linux" ]]; then
+        altserver+="_$arch"
+        anisette+="_$arch"
+    fi
+    if [[ ! -e $altserver ]]; then
+        log "Downloading AltServer-Linux..."
+        curl -LO https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch
+        mv AltServer-$arch $altserver
+    fi
+    if [[ ! -e $anisette ]]; then
+        log "Downloading Anisette server..."
+        curl -LO https://github.com/Dadoum/Provision/releases/download/2.2.0/anisette-server-$arch
+        mv anisette-server-$arch $anisette
+    fi
+    chmod +x $altserver $anisette
+    log "Running Anisette"
+    $anisette &
+    anisette_pid=$!
+    local ready=0
+    log "Waiting for Anisette"
+    while [[ $ready != 1 ]]; do
+        [[ $(curl 127.0.0.1:6969 2>/dev/null) ]] && ready=1
+        sleep 1
+    done
+    export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
+    altserver_linux="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
+    log "Enter Apple ID details to continue."
+    print "* Your Apple ID and password will only be sent to Apple servers."
+    local apple_id
+    local apple_pass
+    while [[ -z $apple_id ]]; do
+        read -p "$(input 'Apple ID: ')" apple_id
+    done
+    while [[ -z $apple_pass ]]; do
+        read -s -p "$(input 'Password: ')" apple_pass
+    done
+    log "Running AltServer-Linux with given Apple ID details..."
+    pushd ../saved >/dev/null
+    $altserver_linux -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
+    popd >/dev/null
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -5300,6 +5469,8 @@ main() {
         "getversion" ) device_ramdisk getversion;;
         "shutdown" ) "$dir/idevicediagnostics" shutdown;;
         "restart" ) "$dir/idevicediagnostics" restart;;
+        "ideviceinstaller" ) device_ideviceinstaller;;
+        "altserver_linux" ) device_altserver_linux;;
         * ) :;;
     esac
 
