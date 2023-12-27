@@ -576,6 +576,7 @@ device_get_info() {
     log "Getting device info..."
     if [[ $device_mode == "WTF" ]]; then
         device_s5l8900xall
+        device_wtfexit=1
     fi
     case $device_mode in
         "DFU" | "Recovery" )
