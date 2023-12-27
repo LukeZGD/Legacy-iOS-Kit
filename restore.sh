@@ -1628,6 +1628,11 @@ ipsw_preference_set() {
     case $device_target_vers in
         9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 3.1.3 ) ipsw_canjailbreak=1;;
     esac
+    if [[ $device_proc == 5 ]]; then
+        case $device_target_vers in
+            8.2 | 8.1* | 8.0* ) ipsw_canjailbreak=;;
+        esac
+    fi
 
     if [[ $device_target_powder == 1 ]]; then
         ipsw_canjailbreak=
@@ -5123,6 +5128,17 @@ device_jailbreakrd() {
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
         ;;
     esac
+    if [[ $device_proc == 5 ]]; then
+        case $device_vers in
+            8.2 | 8.1* | 8.0* )
+                warn "This version ($device_vers) is broken for daibutsu A5(X)."
+                print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
+                print "* For this version, use Home Depot patched with ohd."
+                print "* https://ios.cfw.guide/installing-homedepot/"
+                return
+            ;;
+        esac
+    fi
     case $device_vers in
         9.0* )
             print "* For this version, use Pangu9, or download openpwnage and sideload it to your device."
