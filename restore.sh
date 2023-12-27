@@ -515,15 +515,15 @@ device_s5l8900xall() {
     local wtf_saved="../saved/WTF.s5l8900xall.RELEASE.dfu"
     local wtf_patched="$wtf_saved.patched"
     local wtf_patch="../resources/patch/old/iPhone1,1/3.1.3/WTF.s5l8900xall.RELEASE.dfu.patch"
-    local wtf_s5l8900xall="$($sha1sum "$wtf_saved" 2>/dev/null | awk '{print $1}')"
-    if [[ $wtf_s5l8900xall != "$wtf_sha" ]]; then
+    local wtf_sha_local="$($sha1sum "$wtf_saved" 2>/dev/null | awk '{print $1}')"
+    if [[ $wtf_sha_local != "$wtf_sha" ]]; then
         log "Downloading WTF.s5l8900xall"
         "$dir/pzb" -g "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu" -o WTF.s5l8900xall.RELEASE.dfu "http://appldnld.apple.com/iPhone/061-7481.20100202.4orot/iPhone1,1_3.1.3_7E18_Restore.ipsw"
         mv WTF.s5l8900xall.RELEASE.dfu $wtf_saved
     fi
-    wtf_s5l8900xall="$($sha1sum "$wtf_saved" | awk '{print $1}')"
-    if [[ $wtf_s5l8900xall != "$wtf_sha" ]]; then
-        error "SHA1sum mismatch. Expected $wtf_sha, got $wtf_s5l8900xall. Please run the script again"
+    wtf_sha_local="$($sha1sum "$wtf_saved" | awk '{print $1}')"
+    if [[ $wtf_sha_local != "$wtf_sha" ]]; then
+        error "SHA1sum mismatch. Expected $wtf_sha, got $wtf_sha_local. Please run the script again"
     fi
     rm "$wtf_patched"
     log "Patching WTF.s5l8900xall"
@@ -684,10 +684,10 @@ device_get_info() {
             n56  ) device_type="iPhone7,1";;
             n61  ) device_type="iPhone7,2";;
             n71  ) device_type="iPhone8,1";;
-            n66  ) device_type="iPhone8,2";;
-            n69  ) device_type="iPhone8,4";;
             n71m ) device_type="iPhone8,1";;
+            n66  ) device_type="iPhone8,2";;
             n66m ) device_type="iPhone8,2";;
+            n69  ) device_type="iPhone8,4";;
             n69u ) device_type="iPhone8,4";;
             d10  ) device_type="iPhone9,1";;
             d11  ) device_type="iPhone9,2";;
@@ -699,6 +699,7 @@ device_get_info() {
             n81  ) device_type="iPod4,1";;
             n78  ) device_type="iPod5,1";;
             n102 ) device_type="iPod7,1";;
+            n112 ) device_type="iPod9,1";;
         esac
     fi
 
@@ -713,7 +714,7 @@ device_get_info() {
         iPhone1,[12] | iPod1,1 )
             device_proc=1;; # S5L8900
         iPhone3,[123] | iPhone2,1 | iPad1,1 | iPod[234],1 )
-            device_proc=4;; # A4/S5L8920/22/8720
+            device_proc=4;; # A4/S5L8920/8922/8720
         iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
             device_proc=5;; # A5
         iPad3,[456] | iPhone5,[1234] )
@@ -3349,7 +3350,7 @@ restore_futurerestore() {
         fi
         log "New futurerestore will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
-            log "New futurerestore is not supported on this arch. x86_64 only."
+            warn "New futurerestore is not supported on this arch, cannot continue. x86_64 only."
             return
         fi
         if [[ ! -e $futurerestore2 ]]; then
