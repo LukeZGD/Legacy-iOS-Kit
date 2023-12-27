@@ -977,7 +977,15 @@ device_dfuhelper() {
         echo -n "$i "
         sleep 1
     done
-    echo -e "\n$(print '* Hold TOP and HOME buttons.')"
+    local top="TOP"
+    local home="HOME"
+    case $device_type in
+        iPhone7* | iPhone8,[12] | iPhone9* ) top="SIDE";;
+    esac
+    if [[ $device_type == "iPhone9"* ]]; then
+        home="VOL DOWN"
+    fi
+    echo -e "\n$(print "* Hold $top and $home buttons.")"
     for i in {10..01}; do
         echo -n "$i "
         device_find_all $1
@@ -989,7 +997,7 @@ device_dfuhelper() {
         fi
         sleep 1
     done
-    echo -e "\n$(print '* Release TOP button and keep holding HOME button.')"
+    echo -e "\n$(print "* Release $top button and keep holding $home button.")"
     for i in {08..01}; do
         echo -n "$i "
         device_find_all $1
