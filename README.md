@@ -92,7 +92,9 @@
         - For iPad 4, only 7.0.x blobs can be used
 - Restoring to other unsigned versions without blobs is supported on the following devices and target versions:
     - iPhone 3GS - iOS 3.1.3, 4.1, 4.3.3, 5.0.1, 5.1.1
-    - iPod touch 2 - iOS 3.1.3, 4.1
+    - iPod touch 2 - iOS 2.1.1 to 3.0, 3.1.3, 4.1
+    - iPhone 2G, 3G, iPod touch 1 - all versions
+        - iOS 1 doesn't seem to work and may require usage of [ZiPhone](https://github.com/Zibri/ZiPhone), [more info here](https://nitter.net/tihmstar/status/1734620913071542435)
 
 ## Supported OS versions/distros
 

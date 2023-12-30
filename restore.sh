@@ -575,8 +575,9 @@ device_get_info() {
 
     log "Getting device info..."
     if [[ $device_mode == "WTF" ]]; then
-        device_s5l8900xall
+        device_proc=1
         device_wtfexit=1
+        device_s5l8900xall
     fi
     case $device_mode in
         "DFU" | "Recovery" )
@@ -863,6 +864,7 @@ device_find_mode() {
     local i=0
     local device_in
     local mode="$1"
+    local wtfreal
 
     if [[ $mode == "Restore" ]]; then
         :
@@ -873,6 +875,9 @@ device_find_mode() {
         if [[ $mode == "DFUreal" ]]; then
             mode="DFU"
             usb=1227
+        elif [[ $mode == "WTFreal" ]]; then
+            mode="WTF"
+            wtfreal=1
         elif [[ $mode == "DFU" ]]; then
             mode="WTF"
         fi
@@ -913,7 +918,7 @@ device_find_mode() {
             error "Failed to find device in $mode mode (Timed out). Please run the script again."
         fi
         return 1
-    elif [[ $mode == "WTF" ]]; then
+    elif [[ $mode == "WTF" && $wtfreal != 1 ]]; then
         device_s5l8900xall
     fi
 }
@@ -1012,7 +1017,11 @@ device_dfuhelper() {
         sleep 1
     done
     echo
-    device_find_mode DFU
+    if [[ $2 == "WTFreal" ]]; then
+        device_find_mode WTFreal
+    else
+        device_find_mode DFU
+    fi
 }
 
 device_enter_mode() {
@@ -1020,6 +1029,22 @@ device_enter_mode() {
     # attempt to enter given mode, and device_find_mode function will then set device_mode variable
     local opt
     case $1 in
+        "WTFreal" )
+            if [[ $device_mode == "WTF" ]]; then
+                return
+            elif [[ $device_mode == "Normal" ]]; then
+                device_enter_mode Recovery
+            fi
+            if [[ $device_mode == "Recovery" ]]; then
+                device_dfuhelper norec WTFreal
+                return
+            fi
+            log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
+            print "* iOS 1 restores require WTF mode."
+            print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
+            device_find_mode WTFreal 100
+        ;;
+
         "Recovery" )
             if [[ $device_mode == "Normal" ]]; then
                 print "* The device needs to be in recovery/DFU mode before proceeding."
@@ -1176,6 +1201,10 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
+            if [[ $device_proc == 1 ]]; then
+                device_enter_mode DFU
+                return
+            fi
             if [[ $device_mode == "DFU" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
@@ -3050,7 +3079,12 @@ ipsw_prepare_custom() {
         mv options.plist options.$device_model.plist
     fi
     if [[ $device_target_vers == "3"* ]]; then
-        RootSize=520
+        case $device_type in
+            iPhone1,[12] ) RootSize=420;;
+            iPhone2,1 )    RootSize=530;;
+            iPod1,1 )      RootSize=413;;
+            iPod2,1 )      RootSize=450;;
+        esac
     elif [[ $platform == "macos" ]]; then
         plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
         RootSize=$(cat size | sed -ne '/<integer>/,/<\/integer>/p' | sed -e "s/<integer>//" | sed "s/<\/integer>//" | sed '2d')
@@ -3280,7 +3314,7 @@ restore_idevicerestore() {
     echo
     log "Restoring done! Read the message below if any error has occurred:"
     case $device_target_vers in
-        3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
     esac
     if [[ $opt != 0 ]]; then
         print "* If the restore failed on updating baseband:"
@@ -3415,25 +3449,24 @@ restore_latest() {
         device_enter_mode Recovery
         ipsw_extract
     fi
+    if [[ $debug_mode == 1 ]]; then
+        ExtraArgs+="d"
+    fi
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
     opt=$?
     if [[ $1 == "custom" ]]; then
         log "Restoring done! Read the message below if any error has occurred:"
-        if [[ $opt != 0 ]]; then
-            print "* If you are getting the error \"unable to find AppleNANDFTL\":"
-            print " -> This means that your device is not compatible with $device_target_vers"
-        fi
         print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
         print "* Your problem may have already been addressed within the wiki page."
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
     case $device_target_vers in
-        3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            3* | 4* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -3491,11 +3524,10 @@ restore_prepare() {
     case $device_proc in
         1 )
             device_enter_mode DFU
-            if [[ $ipsw_jailbreak == 1 ]]; then
-                restore_latest custom
-            else
-                restore_latest
+            if [[ $ipsw_jailbreak != 1 ]]; then
+                ipsw_custom="$ipsw_path"
             fi
+            restore_latest custom
         ;;
 
         4 )
@@ -4481,16 +4513,16 @@ menu_restore() {
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3");;
         esac
+        case $device_type in
+            iPhone3,[13] | iPad1,1 | iPod3,1 )
+                menu_items+=("powdersn0w (any iOS)");;
+        esac
         if (( device_proc < 7 )); then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
-            iPhone3,[13] | iPad1,1 | iPod3,1 )
-                menu_items+=("powdersn0w (any iOS)");;
-        esac
-        case $device_type in
             iPhone1,[12] | iPhone2,1 | iPod[12],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
@@ -4505,7 +4537,8 @@ menu_restore() {
                 menu_items+=("Other (Tethered)")
             fi
             case $device_type in
-                iPhone3,2 | iPod4,1 ) menu_items+=("Other (Tethered)");;
+                iPhone3,2 | iPod4,1 )
+                    menu_items+=("Other (Tethered)");;
             esac
             if (( device_proc < 7 )); then
                 menu_items+=("DFU IPSW")
@@ -4517,6 +4550,17 @@ menu_restore() {
             print " > Main Menu > Other Utilities > Create Custom IPSW"
         else
             print " > Main Menu > Restore/Downgrade"
+        fi
+        if [[ -z $1 ]]; then
+            if [[ $device_proc == 1 ]]; then
+                print "* Select \"Other (Custom IPSW)\" to restore to any iOS version"
+                print "* iOS 1 may require the usage of ZiPhone: https://nitter.net/tihmstar/status/1734620913071542435"
+                echo
+            fi
+            if [[ $device_type == "iPod2,1" ]]; then
+                print "* Select \"Other (Custom IPSW)\" to restore to any iOS version (2.1.1 to 3.0)"
+                echo
+            fi
         fi
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -5128,18 +5172,16 @@ device_jailbreakrd() {
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
         ;;
     esac
-    if [[ $device_proc == 5 ]]; then
-        case $device_vers in
-            8.2 | 8.1* | 8.0* )
+    case $device_vers in
+        8.2 | 8.1* | 8.0* )
+            if [[ $device_proc == 5 ]]; then
                 warn "This version ($device_vers) is broken for daibutsu A5(X)."
                 print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
                 print "* For this version, use Home Depot patched with ohd."
                 print "* https://ios.cfw.guide/installing-homedepot/"
                 return
-            ;;
-        esac
-    fi
-    case $device_vers in
+            fi
+        ;;
         9.0* )
             print "* For this version, use Pangu9, or download openpwnage and sideload it to your device."
             print "* https://ios.cfw.guide/installing-pangu9/"
@@ -5261,14 +5303,13 @@ restore_customipsw() {
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
     fi
-    device_enter_mode pwnDFU
-    ipsw_extract
-    log "Running idevicerestore with command: $idevicerestore -ce \"$ipsw_path.ipsw\""
-    $idevicerestore -ce "$ipsw_path.ipsw"
-    log "Restoring done!"
-    case $device_target_vers in
-        3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
-    esac
+    if [[ $device_target_vers == "1"* ]]; then
+        device_enter_mode WTFreal
+    else
+        device_enter_mode pwnDFU
+    fi
+    ipsw_custom="$ipsw_path"
+    restore_latest custom
 }
 
 restore_dfuipsw() {
