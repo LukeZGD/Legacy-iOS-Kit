@@ -1706,8 +1706,7 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate ]] &&
-       [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $device_canhacktivate == 1 ]]; then
         input "Hacktivate Option"
         print "* When this option is enabled, your device will be activated on restore."
         print "* Enable this option if you have no valid SIM card to activate the phone."
@@ -1720,6 +1719,10 @@ ipsw_preference_set() {
             log "Hacktivate option disabled."
             ipsw_hacktivate=
         fi
+        echo
+    elif [[ $ipsw_jailbreak != 1 ]] &&
+         [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
+        log "Hacktivate option is not available. Jailbreak option must be enabled"
         echo
     fi
 
@@ -2108,13 +2111,6 @@ ipsw_prepare_keys() {
             fi
         ;;
 
-        "LLB" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>Patch</key><string>LLB.${device_model}ap.RELEASE.img3</string>" >> $NewPlist
-            if [[ $device_proc != 1 ]]; then
-                echo -e "<key>IsPlain</key><true/>" >> $NewPlist
-            fi
-        ;;
-
         "WTF2" )
             echo -e "<key>WTF 2</key><dict><key>File</key><string>Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu</string><key>Patch</key><string>WTF.s5l8900xall.RELEASE.patch</string>" >> $NewPlist
         ;;
@@ -2360,35 +2356,6 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys iBSS $1
         ipsw_prepare_keys RestoreRamdisk $1
         echo -e "</dict>" >> $NewPlist
-    elif [[ $2 == "old" ]]; then
-        echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
-        ipsw_prepare_keys iBSS $1
-        if [[ $vers != "3"* && $vers != "4"* ]]; then
-            ipsw_prepare_keys iBEC $1
-        fi
-        ipsw_prepare_keys RestoreRamdisk $1
-        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
-            :
-        elif [[ $device_proc == 1 ]]; then
-            ipsw_prepare_keys iBoot $1
-            ipsw_prepare_keys KernelCache $1
-            #ipsw_prepare_keys LLB $1
-            ipsw_prepare_keys WTF2 $1
-        else
-            case $device_target_vers in
-                6.1.6 | 4.2.1 | 4.1 ) :;;
-                3.0* )
-                    ipsw_prepare_keys iBoot $1
-                    #ipsw_prepare_keys LLB $1
-                ;;
-                * )
-                    ipsw_prepare_keys iBoot $1
-                    ipsw_prepare_keys KernelCache $1
-                    #ipsw_prepare_keys LLB $1
-                ;;
-            esac
-        fi
-        echo -e "</dict>" >> $NewPlist
     else
         if [[ -d $FirmwareBundle2 ]]; then
             echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
@@ -2417,19 +2384,14 @@ ipsw_prepare_bundle() {
             elif [[ $device_proc == 1 ]]; then
                 ipsw_prepare_keys iBoot $1
                 ipsw_prepare_keys KernelCache $1
-                #ipsw_prepare_keys LLB $1
                 ipsw_prepare_keys WTF2 $1
             else
                 case $device_target_vers in
                     6.1.6 | 4.2.1 | 4.1 ) :;;
-                    3.0* )
-                        ipsw_prepare_keys iBoot $1
-                        #ipsw_prepare_keys LLB $1
-                    ;;
+                    3.0* ) ipsw_prepare_keys iBoot $1;;
                     * )
                         ipsw_prepare_keys iBoot $1
                         ipsw_prepare_keys KernelCache $1
-                        #ipsw_prepare_keys LLB $1
                     ;;
                 esac
             fi
@@ -4538,8 +4500,9 @@ menu_restore_more() {
         menu_items=()
         case $device_type in
             iPhone2,1 )
-                menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0" "4.3.2" "4.3.1" "4.3")
-                menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
+                menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+                #menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3")
+                menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0")
             ;;
             iPod2,1 ) menu_items+=("4.0.2" "4.0");;
         esac
@@ -4615,12 +4578,19 @@ menu_ipsw() {
                     "6.1.6" | "4.2.1" | "3.1.3" ) device_canhacktivate=1;;
                 esac
             ;;
-            5* | 4* | 3* )
+            6* | 5* | 4* | 3* )
                 device_target_vers="$1"
-                device_canhacktivate=1
+                if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
+                    device_canhacktivate=1
+                fi
             ;;
         esac
         case $1 in
+            "6.1.3" ) device_target_build="10B329";;
+            "6.1.2" ) device_target_build="10B146";;
+            "6.1"   ) device_target_build="10B141";;
+            "6.0.1" ) device_target_build="10A523";;
+            "6.0"   ) device_target_build="10A403";;
             "5.1.1" ) device_target_build="9B206";;
             "5.1"   ) device_target_build="9B176";;
             "5.0.1" ) device_target_build="9A405";;
@@ -4676,6 +4646,9 @@ menu_ipsw() {
         fi
         if [[ $1 == "Other (Use SHSH Blobs)" ]]; then
             device_target_other=1
+            if [[ $device_type == "iPhone2,1" ]]; then
+                device_canhacktivate=1
+            fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
         elif [[ $1 == *"Tethered"* ]]; then
