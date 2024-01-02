@@ -128,6 +128,7 @@ set_tool_paths() {
             case $UBUNTU_CODENAME in
                 "jammy" | "kinetic" ) ubuntu_ver=22;;
                 "lunar" | "mantic" ) ubuntu_ver=23;;
+                "noble" ) ubuntu_ver=24;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 . /etc/upstream-release/lsb-release 2>/dev/null
@@ -514,7 +515,7 @@ device_s5l8900xall() {
     local wtf_sha="cb96954185a91712c47f20adb519db45a318c30f"
     local wtf_saved="../saved/WTF.s5l8900xall.RELEASE.dfu"
     local wtf_patched="$wtf_saved.patched"
-    local wtf_patch="../resources/patch/old/iPhone1,1/3.1.3/WTF.s5l8900xall.RELEASE.dfu.patch"
+    local wtf_patch="../resources/patch/WTF.s5l8900xall.RELEASE.patch"
     local wtf_sha_local="$($sha1sum "$wtf_saved" 2>/dev/null | awk '{print $1}')"
     if [[ $wtf_sha_local != "$wtf_sha" ]]; then
         log "Downloading WTF.s5l8900xall"
@@ -1040,8 +1041,8 @@ device_enter_mode() {
                 return
             fi
             log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
-            print "* iOS 1 restores require WTF mode."
             print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
+            print "* You can enter WTF mode by doing the DFU mode procedure."
             device_find_mode WTFreal 100
         ;;
 
@@ -1686,8 +1687,8 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1.3" && $device_proc != 1 && $device_target_powder != 1 ]]; then
-        #log "Jailbreak Option is always enabled for $device_target_vers"
+    if [[ $device_target_vers == "3.1"* && $device_proc != 1 && $device_target_powder != 1 ]]; then
+        log "Jailbreak Option is always enabled for 3.1.x ($device_target_vers)"
         ipsw_jailbreak=1
     elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
@@ -1724,10 +1725,9 @@ ipsw_preference_set() {
 
     if [[ -n $ipsw_memory ]]; then
         :
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" || $device_proc == 1 ]] && [[ $device_target_other != 1 ]]; then
-        :
     elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
-            $device_target_powder == 1 || $device_target_tethered == 1 ]] ||
+            $device_target_powder == 1 || $device_target_tethered == 1 ||
+            $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] ||
          [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]] ||
          [[ $device_type == "iPad1,1" && $device_target_vers != "5"* ]] ||
          [[ $device_type == "iPod3,1" && $device_target_vers != "5"* ]] ||
@@ -1978,6 +1978,9 @@ ipsw_prepare_jailbreak() {
     local JBFiles2=()
     local daibutsu
 
+    if [[ $1 == "old" ]]; then
+        daibutsu="old"
+    fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
             ipsw_prepare_rebootsh
@@ -1991,24 +1994,29 @@ ipsw_prepare_jailbreak() {
         else
             JBFiles+=("fstab_rw.tar" "freeze.tar")
             case $device_target_vers in
-                6.1.[36] ) JBFiles+=("p0sixspwn.tar");;
-                4.2.1 | 4.1 | 4.0* | 3* )
-                    JBFiles[0]="fstab_new.tar"
+                6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
+                6* ) JBFiles+=("evasi0n6-untether.tar");;
+                4.2.1 | 4.1 | 4.0* | 3.1.3 )
+                    JBFiles[0]="fstab_old.tar"
                     JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
                 ;;
                 5* | 4.3* | 4.2* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
-            for i in {0..2}; do
+            for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
+            case $device_target_vers in
+                3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
+                * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
+            esac
             if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/cydiasubstrate.tar")
             fi
+            if [[ $device_target_vers == "3"* ]]; then
+                JBFiles+=("$jelbrek/cydiahttpatch.tar")
+            fi
             if [[ $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/g1lbertJB.tar")
-            fi
-            if [[ $ipsw_hacktivate == 1 ]]; then
-                :
             fi
         fi
         ExtraArgs+=" -S 30" # system partition add
@@ -2074,6 +2082,11 @@ ipsw_prepare_keys() {
             fi
         ;;
 
+        "iBoot" )
+            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo -e "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
+        ;;
+
         "RestoreRamdisk" )
             echo -e "<key>Restore Ramdisk</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
         ;;
@@ -2087,10 +2100,29 @@ ipsw_prepare_keys() {
         ;;
 
         "KernelCache" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string><key>Patch</key><true/>" >> $NewPlist
+            echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            if [[ -e $FirmwareBundle/kernelcache.release.patch ]]; then
+                echo -e "<key>Patch</key><string>kernelcache.release.patch</string>" >> $NewPlist
+            else
+                echo -e "<key>Patch</key><true/>" >> $NewPlist
+            fi
+        ;;
+
+        "LLB" )
+            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>Patch</key><string>LLB.${device_model}ap.RELEASE.img3</string>" >> $NewPlist
+            if [[ $device_proc != 1 ]]; then
+                echo -e "<key>IsPlain</key><true/>" >> $NewPlist
+            fi
+        ;;
+
+        "WTF2" )
+            echo -e "<key>WTF 2</key><dict><key>File</key><string>Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu</string><key>Patch</key><string>WTF.s5l8900xall.RELEASE.patch</string>" >> $NewPlist
         ;;
     esac
-    echo -e "<key>Decrypt</key><true/></dict>" >> $NewPlist
+    if [[ $2 != "old" ]]; then
+        echo -e "<key>Decrypt</key><true/>" >> $NewPlist
+    fi
+    echo -e "</dict>" >> $NewPlist
 }
 
 ipsw_prepare_paths() {
@@ -2240,7 +2272,12 @@ ipsw_prepare_bundle() {
     if [[ $device_target_vers == "3.2"* ]]; then
         RootSize=1000
     elif [[ $device_target_vers == "3"* ]]; then
-        RootSize=520
+        case $device_type in
+            iPod1,1      ) RootSize=413;;
+            iPhone1,[12] ) RootSize=420;;
+            iPod2,1      ) RootSize=450;;
+            *            ) RootSize=750;;
+        esac
     elif [[ $platform == "macos" ]]; then
         plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
         RootSize=$(cat size | sed -ne '/<integer>/,/<\/integer>/p' | sed -e "s/<integer>//" | sed "s/<\/integer>//" | sed '2d')
@@ -2309,6 +2346,8 @@ ipsw_prepare_bundle() {
             echo -e "<key>Hacktivation</key><array><dict>" >> $NewPlist
             echo -e "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
             echo -e "<key>Patch</key><string>lockdownd.patch</string></dict></array></dict>" >> $NewPlist
+        else
+            echo -e "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
         fi
     else
         echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
@@ -2321,9 +2360,37 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys iBSS $1
         ipsw_prepare_keys RestoreRamdisk $1
         echo -e "</dict>" >> $NewPlist
+    elif [[ $2 == "old" ]]; then
+        echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
+        ipsw_prepare_keys iBSS $1
+        if [[ $vers != "3"* && $vers != "4"* ]]; then
+            ipsw_prepare_keys iBEC $1
+        fi
+        ipsw_prepare_keys RestoreRamdisk $1
+        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+            :
+        elif [[ $device_proc == 1 ]]; then
+            ipsw_prepare_keys iBoot $1
+            ipsw_prepare_keys KernelCache $1
+            #ipsw_prepare_keys LLB $1
+            ipsw_prepare_keys WTF2 $1
+        else
+            case $device_target_vers in
+                6.1.6 | 4.2.1 | 4.1 ) :;;
+                3.0* )
+                    ipsw_prepare_keys iBoot $1
+                    #ipsw_prepare_keys LLB $1
+                ;;
+                * )
+                    ipsw_prepare_keys iBoot $1
+                    ipsw_prepare_keys KernelCache $1
+                    #ipsw_prepare_keys LLB $1
+                ;;
+            esac
+        fi
+        echo -e "</dict>" >> $NewPlist
     else
         if [[ -d $FirmwareBundle2 ]]; then
-            echo -e "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
             echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
         else
             echo -e "<key>Firmware</key><dict>" >> $NewPlist
@@ -2343,6 +2410,29 @@ ipsw_prepare_bundle() {
             esac
         else
             ipsw_prepare_keys RestoreKernelCache $1
+        fi
+        if [[ $1 == "old" ]]; then
+            if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+                :
+            elif [[ $device_proc == 1 ]]; then
+                ipsw_prepare_keys iBoot $1
+                ipsw_prepare_keys KernelCache $1
+                #ipsw_prepare_keys LLB $1
+                ipsw_prepare_keys WTF2 $1
+            else
+                case $device_target_vers in
+                    6.1.6 | 4.2.1 | 4.1 ) :;;
+                    3.0* )
+                        ipsw_prepare_keys iBoot $1
+                        #ipsw_prepare_keys LLB $1
+                    ;;
+                    * )
+                        ipsw_prepare_keys iBoot $1
+                        ipsw_prepare_keys KernelCache $1
+                        #ipsw_prepare_keys LLB $1
+                    ;;
+                esac
+            fi
         fi
         echo -e "</dict>" >> $NewPlist
     fi
@@ -2495,6 +2585,16 @@ patch_iboot() {
     echo "0000020: 6365" | xxd -r - iBoot
 }
 
+ipsw_patch_file() {
+    # usage: ipsw_patch_file <ramdisk/fs> <location> <filename> <patchfile>
+    "$dir/hfsplus" "$1" extract "$2"/"$3"
+    "$dir/hfsplus" "$1" rm "$2"/"$3"
+    $bspatch "$3" "$3".patched "$4"
+    "$dir/hfsplus" "$1" add "$3".patched "$2"/"$3"
+    "$dir/hfsplus" "$1" chmod 755 "$2"/"$3"
+    "$dir/hfsplus" "$1" chown 0:0 "$2"/"$3"
+}
+
 ipsw_prepare_ios4multipart() {
     local JBFiles=()
     ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
@@ -2607,12 +2707,7 @@ ipsw_prepare_ios4multipart() {
     "$dir/hfsplus" ramdisk.dec add $options_plist usr/local/share/restore/$options_plist
 
     log "Patch ASR"
-    "$dir/hfsplus" ramdisk.dec extract usr/sbin/asr
-    "$dir/hfsplus" ramdisk.dec rm usr/sbin/asr
-    $bspatch asr asr.patched asr.patch
-    "$dir/hfsplus" ramdisk.dec add asr.patched usr/sbin/asr
-    "$dir/hfsplus" ramdisk.dec chmod 755 usr/sbin/asr
-    "$dir/hfsplus" ramdisk.dec chown 0:0 usr/sbin/asr
+    ipsw_patch_file ramdisk.dec usr/sbin asr asr.patch
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
@@ -2739,12 +2834,7 @@ ipsw_prepare_ios4multipart() {
 
     log "Patch ASR"
     cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
-    "$dir/hfsplus" RestoreRamdisk.dec extract usr/sbin/asr
-    "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
-    $bspatch asr asr.patched asr.patch
-    "$dir/hfsplus" RestoreRamdisk.dec add asr.patched usr/sbin/asr
-    "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
-    "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 usr/sbin/asr
+    ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
 
     log "Extract options.plist from $device_target_vers IPSW"
     unzip -o -j temp.ipsw $ramdisk_name
@@ -2987,17 +3077,18 @@ ipsw_prepare_powder() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_custom() {
-    local comps=("iBSS" "RestoreRamdisk")
-    local name
-    local iv
-    local key
-    local path
-    local url
-    local decrypt
-    local patch="../resources/patch/old/$device_type/$device_target_vers"
-    local RootSize
+ipsw_prepare_patchllb() {
+    local path="Firmware/all_flash/all_flash.${device_model}ap.production"
+    local name="LLB.${device_model}ap.RELEASE"
+    local patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle"
+    unzip -o -j "$ipsw_custom.ipsw" $path/$name.img3
+    $bspatch $name.img3 $name.patched $patch/$name.patch
+    mkdir -p $path
+    mv $name.patched $path/$name.img3
+    zip -r0 "$ipsw_custom.ipsw" $path/$name.img3
+}
 
+ipsw_prepare_custom() {
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -3006,169 +3097,17 @@ ipsw_prepare_custom() {
         return
     fi
 
-    if [[ $device_target_vers == "5"* || $device_target_vers == "6"* ]]; then
-        comps+=("iBEC")
-    fi
+    ipsw_prepare_jailbreak old
     if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
         :
     elif [[ $device_proc == 1 ]]; then
-        comps+=("iBoot" "Kernelcache" "LLB")
+        ipsw_prepare_patchllb
     else
         case $device_target_vers in
             6.1.6 | 4.2.1 | 4.1 ) :;;
-            * ) comps+=("iBoot" "Kernelcache" "LLB");;
+            * ) ipsw_prepare_patchllb;;
         esac
     fi
-
-    ipsw_extract
-    device_fw_key_check
-    url=$(cat "$device_fw_dir/$device_target_build/url" 2>/dev/null)
-    for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
-        case $getcomp in
-            "iBSS" | "iBEC" ) path="Firmware/dfu/";;
-            "iBoot" | "LLB" ) path="Firmware/all_flash/all_flash.${device_model}ap.production/";;
-            * ) path="";;
-        esac
-        if [[ -n $iv && -n $key ]]; then
-            decrypt="-iv $iv -k $key"
-        fi
-        if [[ -z $name ]]; then
-            case $getcomp in
-                "iBSS" ) name="iBSS.${device_model}ap.RELEASE.dfu";;
-                "LLB" )  name="LLB.${device_model}ap.RELEASE.img3";;
-            esac
-        fi
-
-        log "Patching $getcomp: $name"
-        cp "$ipsw_path/${path}$name" .
-        mv $name $name.orig
-        if [[ $getcomp == "iBoot" || $getcomp == "LLB" ]]; then
-            $bspatch $name.orig $name $patch/$name.patch
-        else
-            "$dir/xpwntool" $name.orig $name.dec $decrypt
-            if [[ $getcomp == "RestoreRamdisk" ]]; then
-                cp $name.dec Ramdisk.raw
-            fi
-            $bspatch $name.dec $name.patched $patch/$name.patch
-            if [[ $getcomp == "Kernelcache" ]]; then
-                "$dir/xpwntool" $name.patched $name -t $name.orig $decrypt
-            else
-                "$dir/xpwntool" $name.patched $name -t $name.orig
-            fi
-        fi
-        cp $name "$ipsw_path/$path"
-    done
-    if [[ $device_proc == 1 ]]; then
-        local path="Firmware/dfu/"
-        local name="WTF.s5l8900xall.RELEASE.dfu"
-        log "Patching WTF: $name"
-        cp "$ipsw_path/${path}$name" .
-        mv $name $name.orig
-        $bspatch $name.orig $name $patch/$name.patch
-        cp $name "$ipsw_path/$path"
-    fi
-
-    log "Getting RootFS information"
-    "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist >/dev/null
-    if [[ ! -s options.$device_model.plist ]]; then
-        rm options.$device_model.plist
-        "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.plist
-        mv options.plist options.$device_model.plist
-    fi
-    if [[ $device_target_vers == "3"* ]]; then
-        case $device_type in
-            iPhone1,[12] ) RootSize=420;;
-            iPhone2,1 )    RootSize=530;;
-            iPod1,1 )      RootSize=413;;
-            iPod2,1 )      RootSize=450;;
-        esac
-    elif [[ $platform == "macos" ]]; then
-        plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
-        RootSize=$(cat size | sed -ne '/<integer>/,/<\/integer>/p' | sed -e "s/<integer>//" | sed "s/<\/integer>//" | sed '2d')
-    else
-        RootSize=$(cat options.$device_model.plist | grep -i SystemPartitionSize -A 1 | grep -oPm1 "(?<=<integer>)[^<]+")
-    fi
-    RootSize=$((RootSize+30))
-    RootSize=$((RootSize*1024*1024))
-    local RootName=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
-    local RootKey=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')
-    log "RootFS Name: $RootName"
-    log "RootFS Key: $RootKey"
-    log "RootFS Size: $RootSize"
-    log "Copying RootFS"
-    cp "$ipsw_path/$RootName" .
-    log "Decrypting RootFS"
-    "$dir/dmg" extract $RootName out.dmg -k $RootKey
-    "$dir/hfsplus" out.dmg grow $RootSize
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        log "Extracting Cydia"
-        "$dir/hfsplus" out.dmg untar $jelbrek/freeze.tar
-        log "Extracting untether"
-        case $device_target_vers in
-            "6.1.6" ) "$dir/hfsplus" out.dmg untar $jelbrek/p0sixspwn.tar;;
-            "5"* )
-                "$dir/hfsplus" out.dmg untar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar
-                "$dir/hfsplus" out.dmg untar $jelbrek/g1lbertJB.tar
-            ;;
-            "4.2.1" )
-                if [[ $device_proc != 1 ]]; then
-                    "$dir/hfsplus" out.dmg mv sbin/launchd sbin/punchd
-                    "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
-                fi
-            ;;
-            "4.1" ) "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar;;
-            "4.3"* | "4.2"* ) "$dir/hfsplus" out.dmg untar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar;;
-        esac
-        case $device_target_vers in
-            "4"* | "3.1.3" )
-                "$dir/hfsplus" out.dmg rm private/etc/fstab
-                "$dir/hfsplus" out.dmg add $jelbrek/fstab_old private/etc/fstab
-            ;;
-        esac
-        if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
-            "$dir/hfsplus" out.dmg untar $jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
-        fi
-        if [[ $device_target_vers != "6"* ]]; then
-            "$dir/hfsplus" out.dmg untar $jelbrek/cydiasubstrate.tar
-        fi
-        if [[ $device_target_vers == "3.1.3" ]]; then
-            "$dir/hfsplus" out.dmg untar $jelbrek/cydiahttpatch.tar
-        fi
-        if [[ $ipsw_openssh == 1 ]]; then
-            "$dir/hfsplus" out.dmg untar $jelbrek/sshdeb.tar
-        fi
-        if [[ $ipsw_hacktivate == 1 ]]; then
-            log "Patching lockdownd for hacktivation"
-            "$dir/hfsplus" out.dmg extract usr/libexec/lockdownd
-            "$dir/hfsplus" out.dmg mv usr/libexec/lockdownd usr/libexec/lockdownd.orig
-            $bspatch lockdownd lockdownd.patched $patch/lockdownd.patch
-            "$dir/hfsplus" out.dmg add lockdownd.patched usr/libexec/lockdownd
-            "$dir/hfsplus" out.dmg chmod 755 usr/libexec/lockdownd
-        fi
-    fi
-    rm $RootName
-    log "Building RootFS"
-    "$dir/dmg" build out.dmg $RootName
-    cp $RootName "$ipsw_path"
-
-    log "Building IPSW"
-    mv "$ipsw_path" "$ipsw_custom"
-    pushd "$ipsw_custom" >/dev/null
-    case $device_target_vers in
-        6.1.6 | 4.2.1 | 4.1 ) :;;
-        * ) rm BuildManifest.plist;;
-    esac
-    zip -r0 ../tmp/temp.ipsw *
-    popd >/dev/null
-
-    if [[ ! -e temp.ipsw ]]; then
-        error "Failed to find custom IPSW. Please run the script again"
-    fi
-
-    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_extract() {
@@ -3441,6 +3380,10 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
+    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* ]]; then
+        idevicerestore2+="2"
+        ExtraArgs+="y"
+    fi
     if [[ $1 == "custom" ]]; then
         ExtraArgs+="c"
         ipsw_path="$ipsw_custom"
@@ -3681,6 +3624,10 @@ restore_prepare() {
         ;;
     esac
     if [[ $device_latest_vers == "15"* ]]; then
+        if [[ $device_target_vers == "$device_latest_vers" ]]; then
+            restore_latest
+            return
+        fi
         device_enter_mode pwnDFU
         if [[ ! -s ../resources/firmware.json ]]; then
             log "Downloading firmwares.json from ipsw.me"
@@ -4082,7 +4029,7 @@ device_ramdisk() {
             $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.1 | 4.0* | 3* )
+                4.1 | 4.0* | 3.1* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -4380,11 +4327,9 @@ menu_ipa() {
 
 menu_ipa_browse() {
     local newpath
-    input "Select your IPA file in the file selection window."
-    newpath="$($zenity --file-selection --file-filter='IPA | *.ipa' --title="Select IPA file")"
-    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
-    [[ ! -s "$newpath" ]] && return
-    log "Selected IPA file: $newpath"
+    input "Select your IPA file(s) in the file selection window."
+    newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
+    [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
     ipa_path="$newpath"
 }
 
@@ -4489,7 +4434,6 @@ menu_shsh_onboard() {
     done
 }
 
-
 menu_restore() {
     local menu_items
     local selected
@@ -4507,17 +4451,21 @@ menu_restore() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
             iPhone2,1 )
-                menu_items+=("5.1.1" "5.0.1" "4.3.3" "4.1" "3.1.3");;
+                menu_items+=("5.1.1" "4.3.3" "4.1" "3.1.3" "More versions");;
             iPod3,1 )
                 menu_items+=("4.1");;
-            iPhone1,2 | iPod2,1 )
+            iPhone1,2 )
                 menu_items+=("4.1" "3.1.3");;
+            iPod2,1 )
+                menu_items+=("4.1" "3.1.3" "More versions");;
         esac
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
         if (( device_proc < 7 )); then
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        elif [[ $platform == "linux" ]]; then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
@@ -4557,7 +4505,10 @@ menu_restore() {
                 print "* iOS 1 may require the usage of ZiPhone: https://nitter.net/tihmstar/status/1734620913071542435"
                 echo
             fi
-            if [[ $device_type == "iPod2,1" ]]; then
+            if [[ $device_newbr != 0 ]]; then
+                print "* New bootrom devices might be incompatible with some older iOS versions"
+                echo
+            elif [[ $device_type == "iPod2,1" ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to any iOS version (2.1.1 to 3.0)"
                 echo
             fi
@@ -4572,6 +4523,45 @@ menu_restore() {
             "Go Back" ) back=1;;
             "Other (Custom IPSW)" ) mode="customipsw";;
             "DFU IPSW" ) mode="dfuipsw${1}";;
+            "More versions" ) menu_restore_more "$1";;
+            * ) menu_ipsw "$selected" "$1";;
+        esac
+    done
+}
+
+menu_restore_more() {
+    local menu_items
+    local selected
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=()
+        case $device_type in
+            iPhone2,1 )
+                menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0" "4.3.2" "4.3.1" "4.3")
+                menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
+            ;;
+            iPod2,1 ) menu_items+=("4.0.2" "4.0");;
+        esac
+        menu_items+=("Go Back")
+        menu_print_info
+        if [[ $1 == "ipsw" ]]; then
+            print " > Main Menu > Other Utilities > Create Custom IPSW"
+        else
+            print " > Main Menu > Restore/Downgrade"
+        fi
+        if [[ -z $1 && $device_type == "iPod2,1" && $device_newbr != 0 ]]; then
+            warn "These versions are for old bootrom devices only. They will not work on your device"
+            echo
+        fi
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "" ) :;;
+            "Go Back" ) back=1;;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -4618,31 +4608,6 @@ menu_ipsw() {
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
             ;;
-            "5.1.1" )
-                device_target_vers="5.1.1"
-                device_target_build="9B206"
-                device_canhacktivate=1
-            ;;
-            "5.0.1" )
-                device_target_vers="5.0.1"
-                device_target_build="9A405"
-                device_canhacktivate=1
-            ;;
-            "4.3.3" )
-                device_target_vers="4.3.3"
-                device_target_build="8J2"
-                device_canhacktivate=1
-            ;;
-            "4.1" )
-                device_target_vers="4.1"
-                device_target_build="8B117"
-                device_canhacktivate=1
-            ;;
-            "3.1.3" )
-                device_target_vers="3.1.3"
-                device_target_build="7E18"
-                device_canhacktivate=1
-            ;;
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
@@ -4650,17 +4615,51 @@ menu_ipsw() {
                     "6.1.6" | "4.2.1" | "3.1.3" ) device_canhacktivate=1;;
                 esac
             ;;
+            5* | 4* | 3* )
+                device_target_vers="$1"
+                device_canhacktivate=1
+            ;;
+        esac
+        case $1 in
+            "5.1.1" ) device_target_build="9B206";;
+            "5.1"   ) device_target_build="9B176";;
+            "5.0.1" ) device_target_build="9A405";;
+            "5.0"   ) device_target_build="9A334";;
+            "4.3.5" ) device_target_build="8L1";;
+            "4.3.4" ) device_target_build="8K2";;
+            "4.3.3" ) device_target_build="8J2";;
+            "4.3.2" ) device_target_build="8H7";;
+            "4.3.1" ) device_target_build="8G4";;
+            "4.3"   ) device_target_build="8F190";;
+            "4.2.1" )
+                device_target_build="8C148"
+                if [[ $device_type == "iPhone2,1" ]]; then
+                    device_target_build+="a"
+                fi
+            ;;
+            "4.1"   ) device_target_build="8B117";;
+            "4.0.2" ) device_target_build="8A400";;
+            "4.0.1" ) device_target_build="8A306";;
+            "4.0"   ) device_target_build="8A293";;
+            "3.1.3" ) device_target_build="7E18";;
+            "3.1.2" ) device_target_build="7D11";;
+            "3.1.1" ) device_target_build="7C145";;
+            "3.1"   ) device_target_build="7C144";;
+            "3.0.1" ) device_target_build="7A400";;
+            "3.0"   ) device_target_build="7A341";;
         esac
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
             case $device_type in
                 iPad3,[456]    ) newpath="iPad_32bit";;
                 iPad4,[123456] ) newpath="iPad_64bit";;
-                iPad4,[789]    ) newpath="iPad_64bit_TouchID";;
                 iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
-                iPhone6,[12]   ) newpath="iPhone_4.0_64bit";;
-                iPhone7,1      ) newpath="iPhone_5.5";;
-                iPhone7,2      ) newpath="iPhone_4.7";;
-                iPod7,1        ) newpath="iPodtouch";;
+                iPod[79],1     ) newpath="iPodtouch";;
+                iPhone9,[13]   ) newpath="iPhone_4.7_P3";;
+                iPhone9,[24]   ) newpath="iPhone_5.5_P3";;
+                iPad4,[789] | iPad5*     ) newpath="iPad_64bit_TouchID";;
+                iPhone6,[12] | iPhone8,4 ) newpath="iPhone_4.0_64bit";;
+                iPhone7,1 | iPhone8,2    ) newpath="iPhone_5.5";;
+                iPhone7,2 | iPhone8,1    ) newpath="iPhone_4.7";;
                 * ) newpath="${device_type}";;
             esac
             newpath+="_${device_target_vers}_${device_target_build}_Restore"
@@ -5303,7 +5302,7 @@ restore_customipsw() {
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
     fi
-    if [[ $device_target_vers == "1"* ]]; then
+    if [[ $device_proc == 1 ]]; then
         device_enter_mode WTFreal
     else
         device_enter_mode pwnDFU
@@ -5389,8 +5388,12 @@ device_enter_ramdisk() {
 }
 
 device_ideviceinstaller() {
-    log "Installing selected IPA to device using ideviceinstaller..."
-    "$dir/ideviceinstaller" install "$ipa_path"
+    log "Installing selected IPA(s) to device using ideviceinstaller..."
+    IFS='|' read -r -a ipa_files <<< "$ipa_path"
+    for i in "${ipa_files[@]}"; do
+        log "Installing: $i"
+        "$dir/ideviceinstaller" install "$i"
+    done
 }
 
 device_altserver_linux() {
