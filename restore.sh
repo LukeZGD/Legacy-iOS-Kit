@@ -3043,7 +3043,8 @@ ipsw_prepare_patchllb() {
     local path="Firmware/all_flash/all_flash.${device_model}ap.production"
     local name="LLB.${device_model}ap.RELEASE"
     local patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle"
-    unzip -o -j "$ipsw_custom.ipsw" $path/$name.img3
+    log "Patch LLB"
+    unzip -o -j "$ipsw_path.ipsw" $path/$name.img3
     $bspatch $name.img3 $name.patched $patch/$name.patch
     mkdir -p $path
     mv $name.patched $path/$name.img3
