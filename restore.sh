@@ -1683,6 +1683,8 @@ ipsw_preference_set() {
                 fi
             ;;
         esac
+    elif [[ $device_proc == 1 ]]; then
+        ipsw_canjailbreak=1
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
     fi
@@ -2001,17 +2003,25 @@ ipsw_prepare_jailbreak() {
                 6* ) JBFiles+=("evasi0n6-untether.tar");;
                 4.2.1 | 4.1 | 4.0* | 3.1.3 )
                     JBFiles[0]="fstab_old.tar"
-                    JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
+                    if [[ $device_proc != 1 ]]; then
+                        JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
+                    fi
                 ;;
                 5* | 4.3* | 4.2* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
             for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
-            case $device_target_vers in
-                3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
-                * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
-            esac
+            if [[ $device_proc != 1 ]]; then
+                case $device_target_vers in
+                    4.2.1 )
+                        ExtraArgs+="-punchd"
+                        JBFiles[2]=$jelbrek/${JBFiles[2]}
+                    ;;
+                    3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
+                    * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
+                esac
+            fi
             if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/cydiasubstrate.tar")
             fi
@@ -2047,7 +2057,7 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+=" iBoot.tar"
     fi
 
-    log "Preparing custom IPSW: $ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
+    log "Preparing custom IPSW: $dir/ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
@@ -2379,15 +2389,21 @@ ipsw_prepare_bundle() {
             ipsw_prepare_keys RestoreKernelCache $1
         fi
         if [[ $1 == "old" ]]; then
-            if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
-                :
+            if [[ $device_type == "iPod2,1" ]]; then
+                case $device_target_vers in
+                    4.2.1 | 4.1 | 3.1.3 ) :;;
+                    * )
+                        ipsw_prepare_keys iBoot $1
+                        ipsw_prepare_keys KernelCache $1
+                    ;;
+                esac
             elif [[ $device_proc == 1 ]]; then
                 ipsw_prepare_keys iBoot $1
                 ipsw_prepare_keys KernelCache $1
                 ipsw_prepare_keys WTF2 $1
             else
                 case $device_target_vers in
-                    6.1.6 | 4.2.1 | 4.1 ) :;;
+                    6.1.6 | 4.1 ) :;;
                     3.0* ) ipsw_prepare_keys iBoot $1;;
                     * )
                         ipsw_prepare_keys iBoot $1
@@ -3039,16 +3055,22 @@ ipsw_prepare_powder() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
-ipsw_prepare_patchllb() {
+ipsw_prepare_patchcomp() {
     local path="Firmware/all_flash/all_flash.${device_model}ap.production"
     local name="LLB.${device_model}ap.RELEASE"
     local patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle"
-    log "Patch LLB"
-    unzip -o -j "$ipsw_path.ipsw" $path/$name.img3
-    $bspatch $name.img3 $name.patched $patch/$name.patch
+    local ext="img3"
+    if [[ $1 == "WTF2" ]]; then
+        path="Firmware/dfu"
+        name="WTF.s5l8900xall.RELEASE"
+        ext="dfu"
+    fi
+    log "Patch $1"
+    unzip -o -j "$ipsw_path.ipsw" $path/$name.$ext
+    $bspatch $name.$ext $name.patched $patch/$name.patch
     mkdir -p $path
-    mv $name.patched $path/$name.img3
-    zip -r0 "$ipsw_custom.ipsw" $path/$name.img3
+    mv $name.patched $path/$name.$ext
+    zip -r0 "$ipsw_custom.ipsw" $path/$name.$ext
 }
 
 ipsw_prepare_custom() {
@@ -3061,14 +3083,20 @@ ipsw_prepare_custom() {
     fi
 
     ipsw_prepare_jailbreak old
-    if [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
-        :
+    if [[ $device_type == "iPod2,1" ]]; then
+        case $device_target_vers in
+            4.2.1 | 4.1 | 3.1.3 ) :;;
+            * ) ipsw_prepare_patchcomp LLB;;
+        esac
     elif [[ $device_proc == 1 ]]; then
-        ipsw_prepare_patchllb
+        ipsw_prepare_patchcomp LLB
+        if [[ $device_target_vers == "4"* ]]; then
+            ipsw_prepare_patchcomp WTF2 # just to make sure
+        fi
     else
         case $device_target_vers in
-            6.1.6 | 4.2.1 | 4.1 ) :;;
-            * ) ipsw_prepare_patchllb;;
+            6.1.6 | 4.1 ) :;;
+            * ) ipsw_prepare_patchcomp LLB;;
         esac
     fi
 }
@@ -3429,7 +3457,11 @@ device_buttons() {
 restore_prepare() {
     case $device_proc in
         1 )
-            device_enter_mode DFU
+            if [[ $device_target_vers == "3.1.3" ]]; then
+                device_enter_mode DFU
+            else
+                device_enter_mode WTFreal
+            fi
             if [[ $ipsw_jailbreak != 1 ]]; then
                 ipsw_custom="$ipsw_path"
             fi
