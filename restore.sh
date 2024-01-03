@@ -2085,6 +2085,9 @@ ipsw_prepare_keys() {
 
     case $comp in
         "iBSS" | "iBEC" )
+            if [[ -z $name ]]; then
+                name="$getcomp.${device_model}ap.RELEASE.dfu"
+            fi
             echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
             if [[ -s $FirmwareBundle/$comp.${device_model}ap.RELEASE.patch ]]; then
                 echo -e "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
@@ -4613,11 +4616,12 @@ menu_ipsw() {
             ;;
             6* | 5* | 4* | 3* )
                 device_target_vers="$1"
-                if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
-                    device_canhacktivate=1
-                fi
+                device_canhacktivate=1
             ;;
         esac
+        if [[ $device_type != "iPhone"* ]]; then
+            device_canhacktivate=
+        fi
         case $1 in
             "6.1.3" ) device_target_build="10B329";;
             "6.1.2" ) device_target_build="10B146";;
