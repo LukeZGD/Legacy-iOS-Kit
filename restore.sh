@@ -1852,9 +1852,6 @@ ipsw_verify() {
     local cutver
     local device
     local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
-    if (( device_proc > 7 )); then
-        return
-    fi
     case $build_id in
         *[bcdefgkpquv] ) return;;
     esac
