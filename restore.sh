@@ -2536,6 +2536,12 @@ ipsw_prepare_32bit() {
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
+        if [[ $device_target_tethered == 1 ]]; then
+            case $device_target_vers in
+                4.2.1 ) :;;
+                5* | 4.3* | 4.2* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
+            esac
+        fi
     fi
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
