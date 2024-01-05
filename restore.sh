@@ -4480,7 +4480,7 @@ menu_restore() {
                 menu_items+=("Other (Tethered)")
             fi
             case $device_type in
-                iPhone3,2 | iPod4,1 )
+                iPhone3,[23] | iPad1,1 | iPod[34],1 )
                     menu_items+=("Other (Tethered)");;
             esac
             if (( device_proc < 7 )); then
