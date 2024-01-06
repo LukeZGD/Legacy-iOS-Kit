@@ -16,7 +16,7 @@
 - Tethered restores to other iOS versions for A5/A6 and other devices
 - Jailbreak all 32-bit iOS devices on (almost) any iOS version
     - Available on iOS versions 3.1.3 to 9.3.4
-    - Only unsupported versions are iOS 9.0.x and iPad 2 on 4.3.x
+    - Only unsupported versions are iOS 9.0.x
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Install IPA files for supported devices with AppSync installed
@@ -145,6 +145,7 @@
 - 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
 - A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
+- [datautils0](https://github.com/comex/datautils0) - comex (used for iPad 2 4.3.x kernel diffs)
 - [sshpass](https://sourceforge.net/project/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
 - [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks

@@ -1656,7 +1656,7 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 3.1.3 ) ipsw_canjailbreak=1;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4* | 3.1.3 ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_proc == 5 ]]; then
         case $device_target_vers in
@@ -1670,21 +1670,6 @@ ipsw_preference_set() {
             4.2.1 | 4.1 | 4.0* | 3* ) :;;
             * ) ipsw_canjailbreak=1;;
         esac
-    elif [[ $device_proc == 4 || $device_type == "iPad2"* ]]; then
-        case $device_type in
-            iPhone3* | iPad1,1 | iPod[34],1 )
-                if [[ $device_target_vers != "4.2.1" ]]; then
-                    ipsw_canjailbreak=1
-                fi
-            ;;
-            iPhone2,1 | iPod2,1 )
-                if [[ $device_target_vers == "4"* && $device_target_other != 1 ]]; then
-                    ipsw_canjailbreak=1
-                fi
-            ;;
-        esac
-    elif [[ $device_proc == 1 ]]; then
-        ipsw_canjailbreak=1
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
     fi
@@ -1697,6 +1682,10 @@ ipsw_preference_set() {
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
         print "* This option is enabled by default (Y). Select this option if unsure."
+        if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
+            warn "This will be a semi-tethered jailbreak. Arduino is required to boot to a jailbroken state."
+            print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+        fi
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
         if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
             ipsw_jailbreak=
@@ -2011,6 +2000,12 @@ ipsw_prepare_jailbreak() {
             done
             if [[ $device_proc != 1 ]]; then
                 case $device_target_vers in
+                    4.3* )
+                        JBFiles[2]=$jelbrek/${JBFiles[2]}
+                        if [[ $device_type == "iPad2"* ]]; then
+                            JBFiles[2]=
+                        fi
+                    ;;
                     4.2.1 )
                         ExtraArgs+="-punchd"
                         JBFiles[2]=$jelbrek/${JBFiles[2]}
@@ -3870,7 +3865,9 @@ device_ramdisk() {
         else
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
-            if [[ $1 == "justboot" ]]; then
+            if [[ $1 == "justboot" && $device_type == "iPad2"* && $device_target_build == "8"* ]]; then
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v cs_enforcement_disable=1"
+            elif [[ $1 == "justboot" ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
@@ -3879,9 +3876,17 @@ device_ramdisk() {
         fi
     fi
 
+    if [[ $device_type == "iPad2"* && $device_target_build == "8"* ]]; then
+        log "Patch Kernelcache"
+        mv Kernelcache.dec Kernelcache0.dec
+        "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
+        $bspatch Kernelcache.raw Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.${device_target_build}.patch
+        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache0.dec
+    fi
+
     mv iBSS iBEC DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
 
-    if [[ $1 == "jailbreak" ]]; then
+    if [[ $1 == "jailbreak" || $1 == "justboot" ]]; then
         device_enter_mode pwnDFU
     elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
         device_buttons
@@ -3996,10 +4001,6 @@ device_ramdisk() {
             fi
             if [[ $1 == "getversion" && -n $vers ]]; then
                 log "The current iOS version of this device is: $vers ($build)"
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
-                return
-            elif [[ $device_type == "iPad2"* && $vers == "4"* ]]; then
-                warn "iOS $vers on $device_type is not supported for jailbreaking with SSHRD."
                 $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                 return
             fi
@@ -5173,9 +5174,9 @@ device_jailbreakrd() {
         esac
     fi
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
-        warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-        print "* Supported versions for iPad 2 are: 5.0 to 9.3.4 (excluding 9.0.x)"
-        return
+        warn "This will be a semi-tethered jailbreak. Arduino is required to boot to a jailbroken state."
+        print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+        pause
     fi
     case $device_vers in
         9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4* | 3.2* | 3.1.3 ) :;;
@@ -5295,7 +5296,7 @@ device_activate() {
     log "Attempting to activate device with ideviceactivation"
     if (( device_proc <= 4 )) && [[ $device_type == "iPhone"* ]]; then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        if [[ $device_proc == 1 || $device_type == "iPhone2,1" ]]; then
+        if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
             print "* For hacktivation, go to Restore/Downgrade instead."
         fi
     fi
