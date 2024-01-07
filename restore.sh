@@ -5228,7 +5228,7 @@ device_dump() {
     case $arg in
         "baseband" ) dmps="/usr/local/standalone";;
         "activation" )
-            dmp2="private/var/root/Library/Lockdown"
+            dmp2="private/var/root/Library/Lockdown/activation_records"
             case $device_vers in
                 [34567]* ) dmps="/$dmp2";;
                 8* ) dmps="/private/var/mobile/Library/mad";;
