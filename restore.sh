@@ -4261,7 +4261,7 @@ menu_main() {
         if [[ $device_mode == "Normal" ]]; then
             if [[ $platform == "linux" ]]; then
                 case $device_vers in
-                    8* | 9* | 1* ) menu_items+=("Sideload IPA");;
+                    9* | 1* ) menu_items+=("Sideload IPA");;
                 esac
             fi
             menu_items+=("Install IPA (AppSync)")
@@ -4294,7 +4294,7 @@ menu_ipa() {
         if [[ $1 == "Install"* ]]; then
             print "* Make sure that AppSync Unified is installed on your device."
         else
-            print "* Sideload IPA is for iOS 9 and newer. (doesn't seem to work on 8)"
+            print "* Sideload IPA is for iOS 9 and newer."
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
         fi
@@ -4507,7 +4507,7 @@ menu_restore() {
                 print "* iOS 1 may require the usage of ZiPhone: https://nitter.net/tihmstar/status/1734620913071542435"
                 echo
             fi
-            if [[ $device_newbr != 0 ]]; then
+            if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
                 print "* New bootrom devices might be incompatible with some older iOS versions"
                 echo
             elif [[ $device_type == "iPod2,1" ]]; then
@@ -5228,11 +5228,14 @@ device_dump() {
     case $arg in
         "baseband" ) dmps="/usr/local/standalone";;
         "activation" )
-            dmp2="private/var/root/Library/Lockdown/activation_records"
+            dmp2="private/var/root/Library/Lockdown"
             case $device_vers in
                 [34567]* ) dmps="/$dmp2";;
                 8* ) dmps="/private/var/mobile/Library/mad";;
-                * ) dmps="/private/var/containers/Data/System/*/Library/activation_records";;
+                * )
+                    dmps="/private/var/containers/Data/System/*/Library/activation_records"
+                    dmp2+="/activation_records"
+                ;;
             esac
         ;;
     esac
