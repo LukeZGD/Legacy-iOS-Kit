@@ -3501,6 +3501,7 @@ restore_prepare() {
                 if [[ $device_target_vers == "4.3"* ]] &&
                    [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
                     log "Do not disconnect your device yet"
+                    print "* If the device already boots, no need to continue and press Ctrl+C to cancel"
                     device_find_mode Recovery 50
                     $irecovery -n
                     log "Done, your device should boot now"
