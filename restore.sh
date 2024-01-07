@@ -292,6 +292,12 @@ set_tool_paths() {
     idevicererestore+="$dir/idevicererestore"
     ipwnder+="$dir/ipwnder"
     irecovery2+="$dir/irecovery2"
+
+    cp ../resources/ssh_config .
+    if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
+          $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_10.) == 1 ]]; then
+        echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
+    fi
     scp2="scp -F ../resources/ssh_config"
     ssh2="ssh -F ../resources/ssh_config"
 }

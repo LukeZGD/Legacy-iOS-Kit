@@ -4,4 +4,3 @@ Host *
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
     HostKeyAlgorithms +ssh-rsa
-    PubkeyAcceptedAlgorithms +ssh-rsa
