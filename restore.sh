@@ -2085,50 +2085,50 @@ ipsw_prepare_keys() {
             if [[ -z $name ]]; then
                 name="$getcomp.${device_model}ap.RELEASE.dfu"
             fi
-            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
             if [[ $ipsw_prepare_usepowder == 1 ]]; then
-                echo -e "<key>Patch</key><true/>" >> $NewPlist
+                echo "<key>Patch</key><true/>" >> $NewPlist
             elif [[ -s $FirmwareBundle/$comp.${device_model}ap.RELEASE.patch ]]; then
-                echo -e "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
+                echo "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
             elif [[ -s $FirmwareBundle/$comp.${device_model}.RELEASE.patch ]]; then
-                echo -e "<key>Patch</key><string>$comp.${device_model}.RELEASE.patch</string>" >> $NewPlist
+                echo "<key>Patch</key><string>$comp.${device_model}.RELEASE.patch</string>" >> $NewPlist
             fi
         ;;
 
         "iBoot" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
-            echo -e "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
         ;;
 
         "RestoreRamdisk" )
-            echo -e "<key>Restore Ramdisk</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo "<key>Restore Ramdisk</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
         ;;
 
         "RestoreDeviceTree" | "RestoreLogo" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
         ;;
 
         "RestoreKernelCache" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
         ;;
 
         "KernelCache" )
-            echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
             if [[ $ipsw_prepare_usepowder == 1 ]]; then
-                echo -e "<key>Patch</key><true/>" >> $NewPlist
+                echo "<key>Patch</key><true/>" >> $NewPlist
             elif [[ -e $FirmwareBundle/kernelcache.release.patch ]]; then
-                echo -e "<key>Patch</key><string>kernelcache.release.patch</string>" >> $NewPlist
+                echo "<key>Patch</key><string>kernelcache.release.patch</string>" >> $NewPlist
             fi
         ;;
 
         "WTF2" )
-            echo -e "<key>WTF 2</key><dict><key>File</key><string>Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu</string><key>Patch</key><string>WTF.s5l8900xall.RELEASE.patch</string>" >> $NewPlist
+            echo "<key>WTF 2</key><dict><key>File</key><string>Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu</string><key>Patch</key><string>WTF.s5l8900xall.RELEASE.patch</string>" >> $NewPlist
         ;;
     esac
     if [[ $2 != "old" ]]; then
-        echo -e "<key>Decrypt</key><true/>" >> $NewPlist
+        echo "<key>Decrypt</key><true/>" >> $NewPlist
     fi
-    echo -e "</dict>" >> $NewPlist
+    echo "</dict>" >> $NewPlist
 }
 
 ipsw_prepare_paths() {
@@ -2181,7 +2181,7 @@ ipsw_prepare_paths() {
         str+="<key>manifest</key><string>manifest</string>"
     fi
 
-    echo -e "$str</dict>" >> $NewPlist
+    echo "$str</dict>" >> $NewPlist
 }
 
 ipsw_prepare_config() {
@@ -2291,21 +2291,21 @@ ipsw_prepare_bundle() {
         RootSize=$(cat options.$device_model.plist | grep -i SystemPartitionSize -A 1 | grep -oPm1 "(?<=<integer>)[^<]+")
     fi
     RootSize=$((RootSize+30))
-    echo -e $'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>' > $NewPlist
-    echo -e "<key>Filename</key><string>$ipsw_p.ipsw</string>" >> $NewPlist
-    echo -e "<key>RootFilesystem</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')</string>" >> $NewPlist
-    echo -e "<key>RootFilesystemKey</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')</string>" >> $NewPlist
-    echo -e "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
+    echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' > $NewPlist
+    echo "<key>Filename</key><string>$ipsw_p.ipsw</string>" >> $NewPlist
+    echo "<key>RootFilesystem</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')</string>" >> $NewPlist
+    echo "<key>RootFilesystemKey</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')</string>" >> $NewPlist
+    echo "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
     printf "<key>RamdiskOptionsPath</key><string>/usr/local/share/restore/options" >> $NewPlist
     if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]] ||
        [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
         printf ".%s" "$device_model" >> $NewPlist
     fi
-    echo -e ".plist</string>" >> $NewPlist
+    echo ".plist</string>" >> $NewPlist
     if [[ $1 == "base" ]]; then
-        echo -e "<key>SHA1</key><string>$device_base_sha1</string>" >> $NewPlist
+        echo "<key>SHA1</key><string>$device_base_sha1</string>" >> $NewPlist
     else
-        echo -e "<key>SHA1</key><string>$device_target_sha1</string>" >> $NewPlist
+        echo "<key>SHA1</key><string>$device_target_sha1</string>" >> $NewPlist
     fi
 
     if [[ $1 == "base" ]]; then
@@ -2318,13 +2318,13 @@ ipsw_prepare_bundle() {
             "11A"* | "11B"* ) base_build="11B554a";;
             "9"* ) base_build="9B206";;
         esac
-        echo -e "<key>RamdiskExploit</key><dict>" >> $NewPlist
-        echo -e "<key>exploit</key><string>src/target/$hw/$base_build/exploit</string>" >> $NewPlist
-        echo -e "<key>inject</key><string>src/target/$hw/$base_build/partition</string></dict>" >> $NewPlist
+        echo "<key>RamdiskExploit</key><dict>" >> $NewPlist
+        echo "<key>exploit</key><string>src/target/$hw/$base_build/exploit</string>" >> $NewPlist
+        echo "<key>inject</key><string>src/target/$hw/$base_build/partition</string></dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
-        echo -e "<key>FilesystemPackage</key><dict><key>bootstrap</key><string>freeze.tar</string>" >> $NewPlist
+        echo "<key>FilesystemPackage</key><dict><key>bootstrap</key><string>freeze.tar</string>" >> $NewPlist
         case $vers in
-            8* | 9* ) echo -e "<key>package</key><string>src/ios9.tar</string>" >> $NewPlist;;
+            8* | 9* ) echo "<key>package</key><string>src/ios9.tar</string>" >> $NewPlist;;
         esac
         printf "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist
         case $vers in
@@ -2336,41 +2336,41 @@ ipsw_prepare_bundle() {
             8* ) printf "8" >> $NewPlist;;
             9* ) printf "9" >> $NewPlist;;
         esac
-        echo -e "</string></dict>" >> $NewPlist
+        echo "</string></dict>" >> $NewPlist
     elif [[ $ipsw_prepare_usepowder == 1 ]]; then
-        echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
+        echo "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
     elif [[ -d $FirmwareBundle2 ]]; then
         cp $FirmwareBundle2/* $FirmwareBundle
-        echo -e "<key>RamdiskPatches</key><dict>" >> $NewPlist
-        echo -e "<key>asr</key><dict>" >> $NewPlist
-        echo -e "<key>File</key><string>usr/sbin/asr</string><key>Patch</key><string>asr.patch</string></dict>" >> $NewPlist
+        echo "<key>RamdiskPatches</key><dict>" >> $NewPlist
+        echo "<key>asr</key><dict>" >> $NewPlist
+        echo "<key>File</key><string>usr/sbin/asr</string><key>Patch</key><string>asr.patch</string></dict>" >> $NewPlist
         if [[ -s $FirmwareBundle/restoredexternal.patch ]]; then
-            echo -e "<key>restoredexternal</key><dict>" >> $NewPlist
-            echo -e "<key>File</key><string>usr/local/bin/restored_external</string><key>Patch</key><string>restoredexternal.patch</string></dict>" >> $NewPlist
+            echo "<key>restoredexternal</key><dict>" >> $NewPlist
+            echo "<key>File</key><string>usr/local/bin/restored_external</string><key>Patch</key><string>restoredexternal.patch</string></dict>" >> $NewPlist
         fi
-        echo -e "</dict>" >> $NewPlist
+        echo "</dict>" >> $NewPlist
         if [[ $ipsw_hacktivate == 1 ]]; then
-            echo -e "<key>FilesystemPatches</key><dict>" >> $NewPlist
-            echo -e "<key>Hacktivation</key><array><dict>" >> $NewPlist
-            echo -e "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
-            echo -e "<key>Patch</key><string>lockdownd.patch</string></dict></array></dict>" >> $NewPlist
+            echo "<key>FilesystemPatches</key><dict>" >> $NewPlist
+            echo "<key>Hacktivation</key><array><dict>" >> $NewPlist
+            echo "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
+            echo "<key>Patch</key><string>lockdownd.patch</string></dict></array></dict>" >> $NewPlist
         else
-            echo -e "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
+            echo "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
         fi
     fi
 
     if [[ $1 == "base" ]]; then
-        echo -e "<key>Firmware</key><dict/>" >> $NewPlist
+        echo "<key>Firmware</key><dict/>" >> $NewPlist
     elif [[ $1 == "target" && $vers == "4"* ]]; then
-        echo -e "<key>Firmware</key><dict>" >> $NewPlist
+        echo "<key>Firmware</key><dict>" >> $NewPlist
         ipsw_prepare_keys iBSS $1
         ipsw_prepare_keys RestoreRamdisk $1
-        echo -e "</dict>" >> $NewPlist
+        echo "</dict>" >> $NewPlist
     else
         if [[ $ipsw_prepare_usepowder == 1 ]]; then
-            echo -e "<key>Firmware</key><dict>" >> $NewPlist
+            echo "<key>Firmware</key><dict>" >> $NewPlist
         else
-            echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
+            echo "<key>FirmwarePatches</key><dict>" >> $NewPlist
         fi
         ipsw_prepare_keys iBSS $1
         # ios 4 and lower do not need ibec patches. the exception is the ipad lineup
@@ -2412,11 +2412,11 @@ ipsw_prepare_bundle() {
                 esac
             fi
         fi
-        echo -e "</dict>" >> $NewPlist
+        echo "</dict>" >> $NewPlist
     fi
 
     if [[ $1 == "base" ]]; then
-        echo -e "<key>FirmwarePath</key><dict>" >> $NewPlist
+        echo "<key>FirmwarePath</key><dict>" >> $NewPlist
         ipsw_prepare_paths AppleLogo $1
         ipsw_prepare_paths BatteryCharging0 $1
         ipsw_prepare_paths BatteryCharging1 $1
@@ -2427,9 +2427,9 @@ ipsw_prepare_bundle() {
         ipsw_prepare_paths RecoveryMode $1
         ipsw_prepare_paths LLB $1
         ipsw_prepare_paths iBoot $1
-        echo -e "</dict>" >> $NewPlist
+        echo "</dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
-        echo -e "<key>FirmwareReplace</key><dict>" >> $NewPlist
+        echo "<key>FirmwareReplace</key><dict>" >> $NewPlist
         if [[ $vers == "4"* ]]; then
             ipsw_prepare_paths APTicket $1
         fi
@@ -2447,22 +2447,22 @@ ipsw_prepare_bundle() {
         ipsw_prepare_paths iBoot $1
         ipsw_prepare_paths NewiBoot $1
         ipsw_prepare_paths manifest $1
-        echo -e "</dict>" >> $NewPlist
+        echo "</dict>" >> $NewPlist
     fi
 
     if [[ $daibutsu == 1 ]]; then
         if [[ -d $FirmwareBundle2 ]]; then
-            echo -e "<key>PackagePath</key><string>./freeze.tar</string>" >> $NewPlist
-            echo -e "<key>RamdiskPackage</key>" >> $NewPlist
+            echo "<key>PackagePath</key><string>./freeze.tar</string>" >> $NewPlist
+            echo "<key>RamdiskPackage</key>" >> $NewPlist
         else
-            echo -e "<key>RamdiskPackage2</key>" >> $NewPlist
+            echo "<key>RamdiskPackage2</key>" >> $NewPlist
         fi
-        echo -e "<string>./bin.tar</string><key>RamdiskReboot</key><string>./reboot.sh</string><key>UntetherPath</key><string>./untether.tar</string>" >> $NewPlist
+        echo "<string>./bin.tar</string><key>RamdiskReboot</key><string>./reboot.sh</string><key>UntetherPath</key><string>./untether.tar</string>" >> $NewPlist
         local hwmodel="$(tr '[:lower:]' '[:upper:]' <<< ${device_model:0:1})${device_model:1}"
-        echo -e "<key>hwmodel</key><string>$hwmodel</string>" >> $NewPlist
+        echo "<key>hwmodel</key><string>$hwmodel</string>" >> $NewPlist
     fi
 
-    echo -e "</dict></plist>" >> $NewPlist
+    echo "</dict></plist>" >> $NewPlist
     cat $NewPlist
 }
 
