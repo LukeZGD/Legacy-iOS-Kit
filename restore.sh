@@ -1993,33 +1993,32 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
                 6* ) JBFiles+=("evasi0n6-untether.tar");;
-                4.2.1 | 4.1 | 4.0* | 3.1.3 )
+                4.2.1 ) JBFiles[0]="fstab_old.tar";;
+                4.1 | 4.0* | 3.1.3 )
                     JBFiles[0]="fstab_old.tar"
-                    if [[ $device_proc != 1 ]]; then
-                        JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
-                    fi
+                    JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
                 ;;
                 5* | 4.3* | 4.2* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
             for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
-            if [[ $device_proc != 1 ]]; then
-                case $device_target_vers in
-                    4.3* )
-                        JBFiles[2]=$jelbrek/${JBFiles[2]}
-                        if [[ $device_type == "iPad2"* ]]; then
-                            JBFiles[2]=
-                        fi
-                    ;;
-                    4.2.1 )
+            case $device_target_vers in
+                4.3* )
+                    JBFiles[2]=$jelbrek/${JBFiles[2]}
+                    if [[ $device_type == "iPad2"* ]]; then
+                        JBFiles[2]=
+                    fi
+                ;;
+                4.2.1 )
+                    if [[ $device_type != "iPhone1,2" ]]; then
                         ExtraArgs+="-punchd"
-                        JBFiles[2]=$jelbrek/${JBFiles[2]}
-                    ;;
-                    3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
-                    * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
-                esac
-            fi
+                        JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+                    fi
+                ;;
+                3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
+                * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
+            esac
             if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/cydiasubstrate.tar")
             fi
@@ -2087,12 +2086,12 @@ ipsw_prepare_keys() {
                 name="$getcomp.${device_model}ap.RELEASE.dfu"
             fi
             echo -e "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
-            if [[ -s $FirmwareBundle/$comp.${device_model}ap.RELEASE.patch ]]; then
+            if [[ $ipsw_prepare_usepowder == 1 ]]; then
+                echo -e "<key>Patch</key><true/>" >> $NewPlist
+            elif [[ -s $FirmwareBundle/$comp.${device_model}ap.RELEASE.patch ]]; then
                 echo -e "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
             elif [[ -s $FirmwareBundle/$comp.${device_model}.RELEASE.patch ]]; then
                 echo -e "<key>Patch</key><string>$comp.${device_model}.RELEASE.patch</string>" >> $NewPlist
-            else
-                echo -e "<key>Patch</key><true/>" >> $NewPlist
             fi
         ;;
 
@@ -2115,10 +2114,10 @@ ipsw_prepare_keys() {
 
         "KernelCache" )
             echo -e "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
-            if [[ -e $FirmwareBundle/kernelcache.release.patch ]]; then
-                echo -e "<key>Patch</key><string>kernelcache.release.patch</string>" >> $NewPlist
-            else
+            if [[ $ipsw_prepare_usepowder == 1 ]]; then
                 echo -e "<key>Patch</key><true/>" >> $NewPlist
+            elif [[ -e $FirmwareBundle/kernelcache.release.patch ]]; then
+                echo -e "<key>Patch</key><string>kernelcache.release.patch</string>" >> $NewPlist
             fi
         ;;
 
@@ -2338,6 +2337,8 @@ ipsw_prepare_bundle() {
             9* ) printf "9" >> $NewPlist;;
         esac
         echo -e "</string></dict>" >> $NewPlist
+    elif [[ $ipsw_prepare_usepowder == 1 ]]; then
+        echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
     elif [[ -d $FirmwareBundle2 ]]; then
         cp $FirmwareBundle2/* $FirmwareBundle
         echo -e "<key>RamdiskPatches</key><dict>" >> $NewPlist
@@ -2356,8 +2357,6 @@ ipsw_prepare_bundle() {
         else
             echo -e "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
         fi
-    else
-        echo -e "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
     fi
 
     if [[ $1 == "base" ]]; then
@@ -2368,10 +2367,10 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys RestoreRamdisk $1
         echo -e "</dict>" >> $NewPlist
     else
-        if [[ -d $FirmwareBundle2 ]]; then
-            echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
-        else
+        if [[ $ipsw_prepare_usepowder == 1 ]]; then
             echo -e "<key>Firmware</key><dict>" >> $NewPlist
+        else
+            echo -e "<key>FirmwarePatches</key><dict>" >> $NewPlist
         fi
         ipsw_prepare_keys iBSS $1
         # ios 4 and lower do not need ibec patches. the exception is the ipad lineup
@@ -2495,6 +2494,7 @@ ipsw_prepare_32bit() {
         cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
         ipsw_prepare_rebootsh
     fi
+    ipsw_prepare_usepowder=1
 
     ipsw_prepare_bundle $daibutsu
 
@@ -2901,6 +2901,7 @@ ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
     local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 "
     local JBFiles=()
+    ipsw_prepare_usepowder=1
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -2998,6 +2999,7 @@ ipsw_prepare_powder() {
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
+    ipsw_prepare_usepowder=1
 
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
@@ -4050,14 +4052,18 @@ device_ramdisk() {
                 9* | 8* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;;
                 6* ) device_send_rdtar fstab_rw.tar;;
-                4.2.1 ) $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
+                4.2.1 )
+                    if [[ $device_type != "iPhone1,2" ]]; then
+                        $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
+                    fi
+                ;;
                 5* | 4.3* | 4.2* ) untether="${device_type}_${build}.tar";;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
-                    if [[ $device_type == "iPod2,1" ]]; then
+                    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
                         $scp -P 2222 $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
                     else
                         $scp -P 2222 $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
@@ -4258,7 +4264,7 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
                 :
-            elif (( device_proc < 7 )) && [[ $device_proc != 1 ]]; then
+            elif (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
             fi
         fi
@@ -4480,7 +4486,7 @@ menu_restore() {
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
-            iPhone1,[12] | iPhone2,1 | iPod[12],1 )
+            iPhone1,[12] | iPhone2,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
                 fi
