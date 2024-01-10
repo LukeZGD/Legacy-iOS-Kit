@@ -2471,14 +2471,7 @@ ipsw_prepare_32bit() {
     local daibutsu
     local JBFiles=()
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-        case $device_type in
-            iPad* | iPhone3* | iPod[34],1 ) ipsw_prepare_jailbreak;;
-            * )
-                if [[ $ipsw_jailbreak == 1 ]]; then
-                    ipsw_prepare_custom
-                fi
-            ;;
-        esac
+        ipsw_prepare_jailbreak
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -3226,7 +3219,7 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad1,1" ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    elif [[ $device_type == "iPad1,1" && $device_target_vers == "4.3"* ]]; then
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
@@ -3253,7 +3246,7 @@ restore_idevicerestore() {
     echo
     log "Restoring done! Read the message below if any error has occurred:"
     case $device_target_vers in
-        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        [1234]* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
     esac
     if [[ $opt != 0 ]]; then
         print "* If the restore failed on updating baseband:"
@@ -3405,11 +3398,11 @@ restore_latest() {
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
     case $device_target_vers in
-        1* | 2* | 3* | 4* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        [1234]* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            3* | 4* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            [34]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -3482,13 +3475,16 @@ restore_prepare() {
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
                 restore_idevicerestore
+            elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
+                shsh_save version 4.1
+                device_enter_mode pwnDFU
+                restore_idevicerestore
             elif [[ $device_target_powder == 1 ]]; then
                 shsh_save version $device_latest_vers
-                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                    device_enter_mode pwnDFU
-                else
-                    device_buttons
-                fi
+                case $device_target_vers in
+                    [34]* ) device_enter_mode pwnDFU;;
+                    * ) device_buttons;;
+                esac
                 case $device_target_vers in
                     "3"* | "4.0"* | "4.1" | "4.2"* )
                         restore_idevicerestore first
@@ -3514,56 +3510,37 @@ restore_prepare() {
                     $irecovery -n
                     log "Done, your device should boot now"
                 fi
-            elif [[ $device_type == "iPhone3"* || $device_type == "iPad1,1" ]]; then
-                if [[ $device_target_vers == "$device_latest_vers" ]]; then
-                    shsh_save version $device_latest_vers
-                fi
-                if [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak != 1 ]]; then
-                    device_enter_mode Recovery
-                    restore_latest
-                    return
-                fi
-                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                    device_enter_mode pwnDFU
-                else
-                    device_buttons
-                fi
+            elif [[ $device_target_other == 1 ]]; then
+                case $device_target_vers in
+                    [34]* ) device_enter_mode pwnDFU;;
+                    * ) device_buttons;;
+                esac
                 restore_idevicerestore
-            else
-                if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                    device_enter_mode pwnDFU
-                    restore_idevicerestore
-                elif [[ $device_target_other == 1 ]]; then
+            elif [[ $device_target_vers == "4.1" ]]; then
+                shsh_save version 4.1
+                device_enter_mode DFU
+                restore_latest
+                if [[ $device_type == "iPhone2,1" ]]; then
+                    log "Ignore the baseband error and do not disconnect your device yet"
+                    device_find_mode Recovery 50
+                    log "Attempting to exit recovery mode"
+                    $irecovery -n
+                    log "Done, your device should boot now"
+                fi
+            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+                if [[ $ipsw_jailbreak == 1 ]]; then
+                    shsh_save version $device_latest_vers
                     device_buttons
                     restore_idevicerestore
-                elif [[ $device_target_tethered == 1 ]]; then
-                    device_enter_mode pwnDFU
-                    restore_idevicerestore
-                elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
-                    device_enter_mode DFU
-                    restore_latest
-                    if [[ $device_type == "iPhone2,1" ]]; then
-                        log "Ignore the baseband error and do not disconnect your device yet"
-                        device_find_mode Recovery 50
-                        log "Attempting to exit recovery mode"
-                        $irecovery -n
-                        log "Done, your device should boot now"
-                    fi
-                elif [[ $device_target_vers == "4.1" || $device_target_vers == "$device_latest_vers" ]]; then
-                    if [[ $ipsw_jailbreak == 1 ]]; then
-                        shsh_save version $device_target_vers
-                        device_enter_mode pwnDFU
-                        restore_idevicerestore
-                    else
-                        restore_latest
-                    fi
                 else
-                    device_enter_mode pwnDFU
-                    restore_latest custom
-                    if [[ $device_type == "iPhone2,1" ]]; then
-                        print "* If the restore succeeded but the device does not boot:"
-                        print " -> Go to: Other Utilities -> Install alloc8 Exploit"
-                    fi
+                    restore_latest
+                fi
+            else
+                device_enter_mode pwnDFU
+                restore_latest custom
+                if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
+                    print "* Proceed to install the alloc8 exploit for the device to boot:"
+                    print " -> Go to: Other Utilities -> Install alloc8 Exploit"
                 fi
             fi
         ;;
@@ -3646,8 +3623,12 @@ ipsw_prepare() {
         4 )
             if [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
-            elif [[ $device_target_other == 1 ]]; then
-                ipsw_prepare_32bit
+            elif [[ $device_target_other == 1 ]] || [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
+                if [[ $device_type == "iPhone2,1" ]]; then
+                    ipsw_prepare_jailbreak
+                else
+                    ipsw_prepare_32bit
+                fi
             elif [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                 shsh_save version $device_latest_vers
                 case $device_target_vers in
@@ -3656,12 +3637,6 @@ ipsw_prepare() {
                 esac
             elif [[ $device_target_powder == 1 ]]; then
                 ipsw_prepare_powder
-            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 && $device_type == "iPhone2,1" ]]; then
-                    ipsw_prepare_custom
-                elif [[ $ipsw_jailbreak == 1 ]]; then
-                    ipsw_prepare_32bit
-                fi
             else
                 ipsw_prepare_custom
             fi
