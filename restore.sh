@@ -4486,7 +4486,7 @@ menu_restore() {
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
-            iPhone1,[12] | iPhone2,1 | iPod[1234],1 )
+            iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPad1,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
                 fi
