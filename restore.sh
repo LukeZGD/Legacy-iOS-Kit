@@ -3531,16 +3531,8 @@ restore_prepare() {
                 restore_idevicerestore
             else
                 if [[ $device_target_other == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Restore"
-                    device_enter_mode DFU
+                    device_enter_mode pwnDFU
                     restore_idevicerestore
-                    if [[ $device_type == "iPhone2,1" ]]; then
-                        log "Ignore the baseband error and do not disconnect your device yet"
-                        device_find_mode Recovery 50
-                        log "Attempting to exit recovery mode"
-                        $irecovery -n
-                        log "Done, your device should boot now"
-                    fi
                 elif [[ $device_target_other == 1 ]]; then
                     device_buttons
                     restore_idevicerestore
@@ -3753,6 +3745,9 @@ device_ramdisk() {
     esac
     if [[ -n $device_rd_build ]]; then
         device_target_build=$device_rd_build
+        if [[ $device_type == "iPad1,1" && $device_target_build == "7"* ]]; then
+            device_target_build="7B500"
+        fi
     fi
     build_id=$device_target_build
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
@@ -3867,14 +3862,18 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad1"* ]]; then
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v cs_enforcement_disable=1"
+        else
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+        fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad2"* ]]; then
             :
         else
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
-            if [[ $1 == "justboot" && $device_type == "iPad2"* && $device_target_build == "8"* ]]; then
+            if [[ $1 == "justboot" && $device_type == "iPad2"* && $build_id == "8"* ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v cs_enforcement_disable=1"
             elif [[ $1 == "justboot" ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
@@ -3885,11 +3884,12 @@ device_ramdisk() {
         fi
     fi
 
-    if [[ $device_type == "iPad2"* && $device_target_build == "8"* ]]; then
+    if [[ $device_type == "iPad2"* && $build_id == "8"* ]] ||
+       [[ $device_type == "iPad1"* && $build_id == "7"* ]]; then
         log "Patch Kernelcache"
         mv Kernelcache.dec Kernelcache0.dec
         "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
-        $bspatch Kernelcache.raw Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.${device_target_build}.patch
+        $bspatch Kernelcache.raw Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.${build_id}.patch
         "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache0.dec
     fi
 
@@ -3905,7 +3905,7 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
     log "Sending iBSS..."
-    if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type == "iPad"* ]]; then
+    if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type == "iPad2"* ]]; then
         device_rd_build=
         patch_ibss
         $irecovery -f pwnediBSS.dfu
