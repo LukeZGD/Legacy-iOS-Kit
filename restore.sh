@@ -1269,13 +1269,14 @@ device_enter_mode() {
                     log "Placing device to pwnDFU mode using ipwnder"
                     $ipwnder -p
                     tool_pwned=$?
-                elif [[ $device_proc == 4 || $device_proc == 6 ]]; then
-                    # A4/A6 linux uses ipwndfu
+                elif [[ $device_proc == 4 ]]; then
+                    # A4 linux uses ipwndfu
                     device_ipwndfu pwn
                     tool_pwned=$?
                 else
-                    # A7 linux uses gaster
-                    log "Placing device to pwnDFU mode using gaster"
+                    # the linux checkm8 section. success rates are absolute garbage here
+                    # A6 linux uses ipwndfu, A7 linux uses gaster
+                    log "Please read the message below:"
                     print "* Unfortunately, success rates for checkm8 are very low on Linux."
                     print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
                     print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
@@ -1283,8 +1284,14 @@ device_enter_mode() {
                     print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
                     print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
                     print "* If pwning gets stuck, you can press Ctrl+C to cancel."
-                    $gaster pwn
-                    tool_pwned=$?
+                    if [[ $device_proc == 7 ]]; then
+                        log "Placing device to pwnDFU mode using gaster"
+                        $gaster pwn
+                        tool_pwned=$?
+                    else
+                        device_ipwndfu pwn
+                        tool_pwned=$?
+                    fi
                 fi
             elif (( device_proc > 5 )) && [[ $(uname -m) != "x86_64" ]]; then
                 # A6/A7 asi mac uses ipwnder_lite
@@ -1312,8 +1319,8 @@ device_enter_mode() {
                         ;;
                     esac
                 done
-                log "Placing device to pwnDFU mode using: $opt"
                 if (( device_proc > 5 )); then
+                    log "Please read the message below:"
                     print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
                     print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
                     print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
@@ -1322,6 +1329,7 @@ device_enter_mode() {
                     print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
                     print "* If pwning gets stuck, you can press Ctrl+C to cancel."
                 fi
+                log "Placing device to pwnDFU mode using $opt"
                 $opt
                 tool_pwned=$?
             fi
@@ -1346,8 +1354,7 @@ device_enter_mode() {
 }
 
 device_pwnerror() {
-    local error_msg=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
-    error_msg+=$'\n* If you have an AMD CPU, you may have to try again on a machine with an Intel CPU.'
+    local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
@@ -3837,7 +3844,7 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad1"* ]]; then
+        if [[ $build_id == "8"* && $device_type == "iPad2"* ]]; then
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v cs_enforcement_disable=1"
         else
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
@@ -3879,15 +3886,12 @@ device_ramdisk() {
     else
         device_enter_mode kDFU
     fi
-    log "Sending iBSS..."
-    if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type == "iPad2"* ]]; then
-        device_rd_build=
-        patch_ibss
-        $irecovery -f pwnediBSS.dfu
-    else
+    if (( device_proc < 5 )); then
+        log "Sending iBSS..."
         $irecovery -f $ramdisk_path/iBSS
     fi
-    if [[ $device_type != "iPod2,1" && $device_proc != 1 ]]; then
+    if [[ $device_type != "iPod2,1" && $device_proc != 1 && $build_id != "7"* && $build_id != "8"* ]] ||
+       [[ $device_type == "iPad2"* ]]; then
         sleep 1
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
