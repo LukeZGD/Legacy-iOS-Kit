@@ -4457,11 +4457,7 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        if (( device_proc < 7 )); then
-            menu_items+=("Latest iOS ($device_latest_vers)")
-        elif [[ $platform == "linux" ]]; then
-            menu_items+=("Latest iOS ($device_latest_vers)")
-        fi
+        menu_items+=("Latest iOS ($device_latest_vers)")
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
