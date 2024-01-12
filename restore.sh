@@ -265,8 +265,8 @@ set_tool_paths() {
     iproxy="$dir/iproxy"
     irecovery+="$dir/irecovery"
     if [[ $platform == "macos" ]]; then
-        local ideviceinfot="$(which ideviceinfo 2>/dev/null)"
-        local irecoveryt="$(which irecovery 2>/dev/null)"
+        #local ideviceinfot="$(which ideviceinfo 2>/dev/null)"
+        #local irecoveryt="$(which irecovery 2>/dev/null)"
         if [[ -n $ideviceinfot && -n $irecoveryt ]]; then
             log "Detected libimobiledevice and libirecovery from Homebrew/MacPorts"
             ideviceenterrecovery="$(which ideviceenterrecovery)"
@@ -5306,6 +5306,12 @@ restore_customipsw() {
     menu_ipsw_browse custom
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
+    fi
+    if [[ $device_proc == 1 ]]; then
+        print "* Note that you might need to restore twice, due to NOR flash."
+        print "* For iPhone 2G/3G, the second restore may fail due to baseband."
+        print "* You can exit recovery mode after by going to: Other Utilities -> Exit Recovery Mode"
+        pause
     fi
     if [[ $device_proc == 1 ]]; then
         device_enter_mode WTFreal
