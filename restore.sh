@@ -1953,22 +1953,6 @@ ipsw_prepare_1033() {
         cp $iBSS.im4p $iBEC.im4p ../saved/$device_type
     fi
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
-
-    # this will not be needed if i get my fork(s) of futurerestore compiled on macos
-    if [[ $platform == "macos" && ! -e "$ipsw_custom.ipsw" ]]; then
-        log "Preparing custom IPSW..."
-        mkdir -p Firmware/dfu
-        cp "$ipsw_path.ipsw" temp.ipsw
-        zip -d temp.ipsw Firmware/dfu/$iBEC.im4p
-        cp $iBEC.im4p Firmware/dfu
-        zip -r0 temp.ipsw Firmware/dfu/$iBEC.im4p
-        if [[ $device_type == "iPad4"* ]]; then
-            zip -d temp.ipsw Firmware/dfu/$iBECb.im4p
-            cp $iBECb.im4p Firmware/dfu
-            zip -r0 temp.ipsw Firmware/dfu/$iBECb.im4p
-        fi
-        mv temp.ipsw "$ipsw_custom.ipsw"
-    fi
 }
 
 ipsw_prepare_rebootsh() {
@@ -3363,10 +3347,6 @@ restore_futurerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArr+=("-d")
     fi
-    if [[ $platform == "macos" && $device_target_other != 1 &&
-          $device_target_vers == "10.3.3" && $device_proc == 7 ]]; then
-        ipsw_path="$ipsw_custom"
-    fi
     ExtraArr+=("-t" "$shsh_path" "$ipsw_path.ipsw")
     ipsw_extract
 
@@ -3590,12 +3570,8 @@ restore_prepare() {
                 :
             elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 # A7 devices 10.3.3
-                local opt="--skip-blob"
-                if [[ $platform == "macos" ]]; then
-                    opt=
-                fi
                 restore_prepare_1033
-                restore_futurerestore $opt
+                restore_futurerestore --skip-blob
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
             else
