@@ -1854,8 +1854,18 @@ ipsw_verify() {
     local cutver
     local device
     local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    log "Getting SHA1 hash for $ipsw_dl.ipsw..."
+    local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
-        *[bcdefgkpquv] ) return;;
+        *[bcdefgkpquv] )
+            # beta ipsw, skip verification
+            if [[ $build_id == "$device_base_build" ]]; then
+                device_base_sha1="$IPSWSHA1L"
+            else
+                device_target_sha1="$IPSWSHA1L"
+            fi
+            return
+        ;;
     esac
     case $build_id in
         7*  ) cutver=3;;
@@ -1888,17 +1898,14 @@ ipsw_verify() {
         IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A2 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
+    else
+        log "Using saved SHA1 hash for this IPSW: $IPSWSHA1"
     fi
     if [[ -z $IPSWSHA1 ]]; then
-        log "Getting SHA1 hash from ipsw.me..."
-        IPSWSHA1="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".sha1sum")"
-        if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
-            IPSWSHA1="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .sha1sum")"
-        fi
+        IPSWSHA1L="no SHA1 hash from The Apple Wiki (check if the site is currently down)"
     fi
-    log "Verifying $ipsw_dl.ipsw..."
-    local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
+        rm "$device_fw_dir/$build_id/sha1sum"
         if [[ -z $3 ]]; then
             log "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
             warn "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Make sure to download and select the correct IPSW."
