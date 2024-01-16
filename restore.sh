@@ -491,7 +491,7 @@ device_manufacturing() {
         else
             device_newbr=0
         fi
-    elif [[ $device_type == "iPod2,1" && -z $device_newbr ]]; then
+    elif [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
         device_newbr=2
         return
     fi
@@ -499,7 +499,7 @@ device_manufacturing() {
         print "* This $device_type is a new bootrom model"
     elif [[ $device_newbr == 2 ]]; then
         print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model"
-    else
+    elif [[ $device_newbr == 0 ]]; then
         print "* This $device_type is an old bootrom model"
     fi
     if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
@@ -605,15 +605,7 @@ device_get_info() {
             [[ -z $device_vers ]] && device_vers="Unknown"
             device_serial="$($irecovery -q | grep "SRNM" | cut -c 7- | cut -c 3- | cut -c -3)"
             device_manufacturing
-            if [[ $device_mode == "Recovery" && $device_newbr == 2 ]]; then
-                print "* Device: $device_type (${device_model}) in $device_mode mode"
-                print "* iOS Version: $device_vers"
-                print "* ECID: $device_ecid"
-                echo
-                log "Your device is in recovery mode. Enter DFU mode to continue."
-                device_enter_mode DFU
-            fi
-            if [[ $device_type == "iPod2,1" ]]; then
+            if [[ $device_type == "iPod2,1" && $device_newbr != 2 ]]; then
                 device_newbr="$($irecovery -q | grep -c '240.5.1')"
             elif [[ $device_type == "iPhone2,1" ]]; then
                 device_newbr="$($irecovery -q | grep -c '359.3.2')"
@@ -4478,11 +4470,12 @@ menu_restore() {
                 print "* iOS 1 may require the usage of ZiPhone: https://nitter.net/tihmstar/status/1734620913071542435"
                 echo
             fi
-            if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
-                print "* New bootrom devices might be incompatible with some older iOS versions"
-                echo
-            elif [[ $device_type == "iPod2,1" ]]; then
+            if [[ $device_type == "iPod2,1" ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to any iOS version (2.1.1 to 3.0)"
+                echo
+            fi
+            if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
+                print "* New bootrom devices might be incompatible with older iOS versions"
                 echo
             fi
         fi
@@ -4525,7 +4518,7 @@ menu_restore_more() {
             print " > Main Menu > Restore/Downgrade"
         fi
         if [[ -z $1 && $device_type == "iPod2,1" && $device_newbr != 0 ]]; then
-            warn "These versions are for old bootrom devices only. They will not work on your device"
+            warn "These versions are for old bootrom devices only. They may not work on your device"
             echo
         fi
         input "Select an option:"
