@@ -2030,6 +2030,9 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
+    if [[ $device_target_vers == "3"* ]]; then
+        ExtraArgs+=" -ramdiskgrow 10"
+    fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
@@ -3619,7 +3622,7 @@ ipsw_prepare() {
                 esac
             elif [[ $device_target_powder == 1 ]]; then
                 ipsw_prepare_powder
-            else
+            elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_custom
             fi
         ;;
@@ -4426,7 +4429,7 @@ menu_restore() {
             iPhone1,2 )
                 menu_items+=("4.1" "3.1.3");;
             iPod2,1 )
-                menu_items+=("4.1" "3.1.3" "More versions");;
+                menu_items+=("4.1" "3.1.3");; # "More versions");;
         esac
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 )
@@ -5068,7 +5071,17 @@ menu_other() {
                 menu_items+=("SSH Ramdisk")
             fi
             case $device_mode in
-                "Normal" ) menu_items+=("Attempt Activation" "Shutdown Device" "Restart Device" "Enter Recovery Mode");;
+                "Normal" )
+                    menu_items+=("Attempt Activation")
+                    case $device_vers in
+                        [3456]* )
+                            case $device_type in
+                                iPhone1* | iPhone[23],1 ) menu_items+=("Hacktivate Device");;
+                            esac
+                        ;;
+                    esac
+                    menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode")
+                ;;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
             if [[ $device_mode != "DFU" ]]; then
@@ -5087,6 +5100,7 @@ menu_other() {
             break
         done
         case $selected in
+            "Hacktivate Device" ) mode="hacktivate";;
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Enter kDFU Mode" ) mode="kdfu";;
             "Disable/Enable Exploit" ) mode="remove4";;
@@ -5269,6 +5283,45 @@ device_activate() {
     fi
     $ideviceactivation activate
     print "* If it returns an error, just try again."
+}
+
+device_hacktivate() {
+    local type="$device_type"
+    local build="$device_build"
+    if [[ $device_type == "iPhone3,1" ]]; then
+        type="iPhone2,1"
+        case $device_vers in
+            4.2.1 ) build="8C148a";;
+            5.1.1 ) build="9B206";;
+            6.1   ) build="10B141";;
+        esac
+    fi
+    local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
+    log "Checking ideviceactivation status..."
+    local check=$($ideviceactivation activate 2>&1 | grep -c 'SIM Required')
+    if [[ $check != 1 ]]; then
+        warn "The SIM Required message did not show up at ideviceactivation, cannot continue."
+        return
+    fi
+    print "* Make sure that your device is restored with the jailbreak option enabled."
+    print "* This will use SSH to patch lockdownd on your device for hacktivation."
+    print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
+    pause
+    log "Running iproxy for SSH..."
+    $iproxy 2222 22 >/dev/null &
+    iproxy_pid=$!
+    sleep 1
+    device_sshpass
+    log "Getting lockdownd"
+    $scp -P 2222 root@127.0.0.1:/usr/libexec/lockdownd .
+    log "Patching lockdownd"
+    $bspatch lockdownd lockdownd.patched "$patch"
+    log "Renaming original lockdownd"
+    $ssh -p 2222 root@127.0.0.1 "mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
+    log "Copying patched lockdownd to device"
+    $scp -P 2222 lockdownd.patched root@127.0.0.1:/usr/libexec/lockdownd
+    $ssh -p 2222 root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
+    log "Done. Your device will reboot now"
 }
 
 restore_customipsw() {
@@ -5533,6 +5586,7 @@ main() {
         "restart" ) "$dir/idevicediagnostics" restart;;
         "ideviceinstaller" ) device_ideviceinstaller;;
         "altserver_linux" ) device_altserver_linux;;
+        "hacktivate" ) device_hacktivate;;
         * ) :;;
     esac
 
