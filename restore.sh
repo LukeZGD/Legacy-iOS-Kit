@@ -610,6 +610,7 @@ device_get_info() {
             elif [[ $device_type == "iPhone2,1" ]]; then
                 device_newbr="$($irecovery -q | grep -c '359.3.2')"
             fi
+            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
         ;;
 
         "Normal" )
@@ -3400,11 +3401,6 @@ restore_prepare_1033() {
     device_enter_mode pwnDFU
     local attempt=1
 
-    shsh_save
-    if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
-        iBSS=$iBSSb
-        iBEC=$iBECb
-    fi
     $irecovery -f $iBSS.im4p
     sleep 1
     while (( attempt < 5 )); do
@@ -3426,7 +3422,6 @@ restore_prepare_1033() {
     if (( attempt >= 5 )); then
         error "Failed to enter pwnREC mode. You might have to force restart your device and start over entering pwnDFU mode again"
     fi
-    shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
 }
 
 device_buttons() {
@@ -3565,7 +3560,13 @@ restore_prepare() {
                 :
             elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 # A7 devices 10.3.3
+                shsh_save
+                if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
+                    iBSS=$iBSSb
+                    iBEC=$iBECb
+                fi
                 restore_prepare_1033
+                shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
                 restore_futurerestore --skip-blob
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
@@ -3674,6 +3675,132 @@ device_send_rdtar() {
     $scp -P 2222 $jelbrek/$1 root@127.0.0.1:$target
     log "Extracting $1"
     $ssh -p 2222 root@127.0.0.1 "tar -xvf $target/$1 -C /mnt1; rm $target/$1"
+}
+
+device_ramdisk64() {
+    local sshtar="../saved/ssh-64.tar"
+    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "Trustcache" "RestoreRamdisk")
+    local name
+    local iv
+    local key
+    local path
+    local url
+    local decrypt
+    local build_id="16A366"
+    local ramdisk_path="../saved/$device_type/ramdisk_$build_id"
+    device_target_build="$build_id"
+
+    if [[ ! -e $sshtar ]]; then
+        log "Downloading ssh.tar from SSHRD_Script..."
+        curl -LO https://github.com/verygenericname/sshtars/raw/a6a93db54cc30a72f577744e50fb66ae57b24990/ssh.tar.gz
+        mv ssh.tar.gz $sshtar.gz
+        gzip -d $sshtar.gz
+    fi
+
+    device_fw_key_check
+    url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
+    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+        rm "$device_fw_dir/$build_id/url"
+        url=
+    fi
+    if [[ -z $url ]]; then
+        log "Getting URL for $device_type-$build_id"
+        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
+        if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
+        fi
+        mkdir $device_fw_dir/$build_id 2>/dev/null
+        echo "$url" > $device_fw_dir/$build_id/url
+    fi
+
+    mkdir $ramdisk_path 2>/dev/null
+    for getcomp in "${comps[@]}"; do
+        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        case $getcomp in
+            "iBSS" | "iBEC" ) path="Firmware/dfu/";;
+            "DeviceTree" ) path="Firmware/all_flash/";;
+            "Trustcache" ) path="Firmware/";;
+            * ) path="";;
+        esac
+        if [[ -z $name ]]; then
+            local hwmodel
+            case $device_type in
+                iPhone6*    ) hwmodel="iphone6";;
+                iPad4,[123] ) hwmodel="ipad4";;
+                iPad4,[456] ) hwmodel="ipad4b";;
+                iPad4,[789] ) hwmodel="ipad4bm";;
+            esac
+            case $getcomp in
+                "iBSS" | "iBEC"  ) name="$getcomp.$hwmodel.RELEASE.im4p";;
+                "DeviceTree"     ) name="$getcomp.${device_model}ap.im4p";;
+                "Kernelcache"    ) name="kernelcache.release.$hwmodel";;
+                "Trustcache"     ) name="048-08497-242.dmg.trustcache";;
+                "RestoreRamdisk" ) name="048-08497-242.dmg";;
+            esac
+        fi
+
+        log "$getcomp"
+        if [[ -e $ramdisk_path/$name ]]; then
+            cp $ramdisk_path/$name .
+        else
+            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            cp $name $ramdisk_path/
+        fi
+        mv $name $getcomp.orig
+        local reco="-i $getcomp.orig -o $getcomp.img4 -M ../resources/sshrd/IM4M -T "
+        case $getcomp in
+            "iBSS" | "iBEC" )
+                "$dir/img4" -i $getcomp.orig -o $getcomp.dec -k ${iv}${key}
+                mv $getcomp.orig $getcomp.orig0
+                $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
+                reco+="$(echo $getcomp | tr '[:upper:]' '[:lower:]') -A"
+            ;;
+            "Kernelcache" ) reco+="rkrn -P ../resources/sshrd/$name.bpatch";;
+            "DeviceTree" ) reco+="rdtr";;
+            "Trustcache" ) reco+="rtsc";;
+            "RestoreRamdisk" )
+                mv $getcomp.orig $getcomp.orig0
+                "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
+                "$dir/hfsplus" $getcomp.orig grow 210000000
+                "$dir/hfsplus" $getcomp.orig untar $sshtar
+                reco+="rdsk -A"
+            ;;
+        esac
+        "$dir/img4" $reco
+        cp $getcomp.img4 $ramdisk_path
+    done
+
+    mv $ramdisk_path/iBSS.img4 $ramdisk_path/iBSS.im4p
+    mv $ramdisk_path/iBEC.img4 $ramdisk_path/iBEC.im4p
+    iBSS="$ramdisk_path/iBSS"
+    iBEC="$ramdisk_path/iBEC"
+    restore_prepare_1033
+
+    log "Booting, please wait..."
+    $irecovery -f $ramdisk_path/RestoreRamdisk.img4
+    $irecovery -c ramdisk
+    $irecovery -f $ramdisk_path/DeviceTree.img4
+    $irecovery -c devicetree
+    $irecovery -f $ramdisk_path/Trustcache.img4
+    $irecovery -c firmware
+    $irecovery -f $ramdisk_path/Kernelcache.img4
+    $irecovery -c bootx
+
+    log "Running iproxy for SSH..."
+    $iproxy 2222 22 >/dev/null &
+    iproxy_pid=$!
+    sleep 1
+    device_sshpass alpine
+
+    print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
+    print "* Mount filesystems with this command (for newer iOS versions only!):"
+    print "    mount_filesystems"
+    print "* Mount root filesystem with this command (tested for iOS 10.3.x):"
+    print "    mount_apfs /dev/disk0s1s1 /mnt1"
+
+    menu_ramdisk
 }
 
 device_ramdisk() {
@@ -3786,7 +3913,7 @@ device_ramdisk() {
     fi
 
     if [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
-        "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh_old.tar
+        "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
         log "Patch iBSS"
         $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
@@ -3803,7 +3930,7 @@ device_ramdisk() {
         mv DeviceTree.orig DeviceTree.dec
     else
         if [[ $1 != "justboot" ]]; then
-            "$dir/hfsplus" Ramdisk.raw untar ../resources/ssh.tar
+            "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh.tar
             if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
                 "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
             fi
@@ -3893,15 +4020,11 @@ device_ramdisk() {
         device_find_mode Restore 25
     fi
 
-    case $mode in
-        "clearnvram" | "jailbreak" | "activation" | "baseband" | "getversion" | "setnvram" )
-            log "Running iproxy for SSH..."
-            $iproxy 2222 22 >/dev/null &
-            iproxy_pid=$!
-            sleep 1
-            device_sshpass alpine
-        ;;
-    esac
+    log "Running iproxy for SSH..."
+    $iproxy 2222 22 >/dev/null &
+    iproxy_pid=$!
+    sleep 1
+    device_sshpass alpine
 
     case $mode in
         "activation" | "baseband" )
@@ -3942,7 +4065,7 @@ device_ramdisk() {
             fi
             '
             $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
-            log "Done, device should boot to recovery mode now"
+            log "Done, device should reboot to recovery mode now"
             return
         ;;
 
@@ -3966,7 +4089,8 @@ device_ramdisk() {
                 build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
             fi
             if [[ $1 == "getversion" && -n $vers ]]; then
-                log "The current iOS version of this device is: $vers ($build)"
+                log "Retrieved the current iOS version, rebooting device"
+                print "* iOS Version: $vers ($build)"
                 $ssh -p 2222 root@127.0.0.1 "reboot_bak"
                 return
             fi
@@ -4074,8 +4198,8 @@ device_ramdisk() {
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
             $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
-            log "Done! Your device should reboot now."
-            print "* If the device did not connect, SSH to the device manually."
+            log "Done, your device should reboot now"
+            return
         ;;
 
         "setnvram" )
@@ -4085,27 +4209,65 @@ device_ramdisk() {
                 $ssh -p 2222 root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg"
             fi
             $ssh -p 2222 root@127.0.0.1 "reboot_bak"
-            log "Done, your device should boot now"
+            log "Done, your device should reboot now"
             return
         ;;
 
-        * ) log "Device should now be in SSH ramdisk mode.";;
+        * ) log "Device should now boot to SSH ramdisk mode.";;
     esac
     echo
-    print "* To access SSH ramdisk, run iproxy first:"
-    print "    iproxy 2222 22"
-    print "* Then SSH to 127.0.0.1 port 2222:"
-    print "    ssh -p 2222 -oHostKeyAlgorithms=+ssh-rsa root@127.0.0.1"
-    print "* Enter root password:"
-    print "   alpine"
     print "* Mount filesystems with this command:"
     print "    mount.sh"
+    menu_ramdisk
+}
+
+menu_ramdisk() {
+    local loop
+    local mode
+    local menu_items=("Connect to SSH")
+    local reboot="reboot_bak"
+    if [[ $device_proc == 7 ]]; then
+        menu_items+=("Dump Blobs")
+        reboot="/sbin/reboot"
+    fi
+    menu_items+=("Reboot Device" "Exit")
+
     print "* Clear NVRAM with this command:"
     print "    nvram -c"
     print "* Erase All Content and Settings with this command (iOS 9+ only):"
     print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
-    print "    reboot_bak"
+    print "    $reboot"
+
+    while [[ $loop != 1 ]]; do
+        print "* SSH Ramdisk Menu"
+        while [[ -z $mode ]]; do
+            input "Select an option:"
+            select opt in "${menu_items[@]}"; do
+                selected="$opt"
+                break
+            done
+            case $selected in
+                "Connect to SSH" ) mode="ssh";;
+                "Reboot Device" ) mode="reboot";;
+                "Dump Blobs" ) mode="dump-blobs";;
+                "Exit" ) mode="exit";;
+            esac
+        done
+        case $mode in
+            "ssh" ) $ssh -p 2222 root@127.0.0.1;;
+            "reboot" ) $ssh -p 2222 root@127.0.0.1 "$reboot"; loop=1;;
+            "exit" ) loop=1;;
+            "dump-blobs" )
+                shsh="../saved/shsh/$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
+                $ssh -p 2222 root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+                "$dir/img4tool" --convert -s $shsh dump.raw
+                log "Onboard blobs should be dumped to $shsh"
+                pause
+            ;;
+        esac
+        mode=
+    done
 }
 
 shsh_save_onboard() {
@@ -4205,6 +4367,9 @@ menu_print_info() {
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
     print "* ECID: $device_ecid"
+    if [[ -n $device_pwnd ]]; then
+        print "* Pwned: $device_pwnd"
+    fi
     echo
 }
 
@@ -5067,7 +5232,7 @@ menu_other() {
             esac
         fi
         if [[ $device_mode != "none" ]]; then
-            if (( device_proc < 7 )); then
+            if (( device_proc < 8 )); then
                 menu_items+=("SSH Ramdisk")
             fi
             case $device_mode in
@@ -5088,7 +5253,7 @@ menu_other() {
                 menu_items+=("Enter DFU Mode")
             fi
         fi
-        if (( device_proc < 8 )); then
+        if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
@@ -5419,7 +5584,10 @@ device_justboot() {
 }
 
 device_enter_ramdisk() {
-    if (( device_proc >= 5 )); then
+    if [[ $device_proc == 7 ]]; then
+        device_ramdisk64
+        return
+    elif (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
         print "* If not sure, just press Enter/Return. This will select the default build version."
         read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
