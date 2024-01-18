@@ -1888,7 +1888,7 @@ ipsw_verify() {
     fi
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from The Apple Wiki..."
-        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A2 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A8 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     else
@@ -4939,7 +4939,8 @@ menu_ipsw() {
                 if (( device_proc > 6 )); then
                     shsh_generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
                     print "* Generator: $shsh_generator"
-                elif [[ $shsh_validate == 0 ]]; then
+                fi
+                if [[ $shsh_validate == 0 ]]; then
                     print "* Selected SHSH file is validated"
                 else
                     warn "Selected SHSH file failed validation"
@@ -5181,17 +5182,20 @@ menu_shsh_browse() {
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected SHSH file: $newpath"
-    if (( device_proc < 7 )); then
-        log "Validating..."
+    log "Validating..."
+    if (( device_proc >= 7 )); then
+        unzip -o -j "$val" BuildManifest.plist
+        shsh_validate=$("$dir/img4tool" -s "$newpath" --verify BuildManifest.plist | tee /dev/tty | grep -c "APTicket is BAD!")
+    else
         if [[ $1 == "base" ]]; then
             val="$ipsw_base_path.ipsw"
         fi
         "$dir/validate" "$newpath" "$val" -z
         shsh_validate=$?
-        if [[ $shsh_validate != 0 ]]; then
-            warn "Validation failed. Did you select the correct IPSW/SHSH?"
-            pause
-        fi
+    fi
+    if [[ $shsh_validate != 0 ]]; then
+        warn "Validation failed. Did you select the correct IPSW/SHSH?"
+        pause
     fi
     shsh_path="$newpath"
 }
@@ -5463,7 +5467,7 @@ device_hacktivate() {
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
     log "Checking ideviceactivation status..."
-    local check=$($ideviceactivation activate 2>&1 | grep -c 'SIM Required')
+    local check=$($ideviceactivation activate 2>&1 | grep -c "SIM Required")
     if [[ $check != 1 ]]; then
         warn "The SIM Required message did not show up at ideviceactivation, cannot continue."
         return
