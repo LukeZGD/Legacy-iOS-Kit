@@ -937,6 +937,13 @@ device_sshpass() {
     ssh="$dir/sshpass -p $pass $ssh2"
 }
 
+device_iproxy() {
+    log "Running iproxy for SSH..."
+    $iproxy 2222 22 >/dev/null &
+    iproxy_pid=$!
+    sleep 1
+}
+
 device_find_all() {
     # find device stuff from palera1n legacy
     local opt
@@ -1081,10 +1088,7 @@ device_enter_mode() {
             fi
 
             patch_ibss
-            log "Running iproxy for SSH..."
-            $iproxy 2222 22 >/dev/null &
-            iproxy_pid=$!
-            sleep 1
+            device_iproxy
 
             log "Please read the message below:"
             print "* Follow these instructions to enter kDFU mode."
@@ -3788,10 +3792,7 @@ device_ramdisk64() {
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
 
-    log "Running iproxy for SSH..."
-    $iproxy 2222 22 >/dev/null &
-    iproxy_pid=$!
-    sleep 1
+    device_iproxy
     device_sshpass alpine
 
     print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
@@ -4020,10 +4021,7 @@ device_ramdisk() {
         device_find_mode Restore 25
     fi
 
-    log "Running iproxy for SSH..."
-    $iproxy 2222 22 >/dev/null &
-    iproxy_pid=$!
-    sleep 1
+    device_iproxy
     device_sshpass alpine
 
     case $mode in
@@ -4259,7 +4257,7 @@ menu_ramdisk() {
             "reboot" ) $ssh -p 2222 root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
-                shsh="../saved/shsh/$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
+                local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
                 $ssh -p 2222 root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
@@ -4270,8 +4268,35 @@ menu_ramdisk() {
     done
 }
 
+shsh_save_onboard64() {
+    log "Proceeding to dump onboard blobs on normal mode"
+    print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
+    print "* For A7 devices, you can use SSH Ramdisk to dump onboard blobs: Other Utilities -> SSH Ramdisk"
+    print "* For A8 devices and newer, use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+    if [[ $device_mode != "Normal" ]]; then
+        warn "Device must be in normal mode and jailbroken, cannot continue."
+        return
+    fi
+    print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
+    print "* Only proceed if you have these requirements installed using Cydia/Zebra/Sileo."
+    print "* You will be prompted to enter the root password of your iOS device."
+    print "* The default root password is: alpine"
+    device_iproxy
+    device_sshpass
+    local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
+    $ssh -p 2222 root@127.0.0.1 "cat /dev/disk1" | dd of=dump.raw bs=256 count=$((0x4000))
+    "$dir/img4tool" --convert -s $shsh dump.raw
+    if [[ ! -s $shsh ]]; then
+        error "Saving onboard SHSH blobs failed."
+    fi
+    log "Successfully saved $device_vers blobs: $shsh"
+}
+
 shsh_save_onboard() {
-    if [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+    if (( device_proc >= 7 )); then
+        shsh_save_onboard64
+        return
+    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
         device_buttons
     else
         device_enter_mode kDFU
@@ -4298,8 +4323,9 @@ shsh_save_onboard() {
     if [[ ! -s myblob.shsh ]]; then
         error "Saving onboard SHSH blobs failed."
     fi
-    mv myblob.shsh ../saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh
-    log "Successfully saved $device_target_vers blobs: saved/shsh/$device_ecid-$device_type-$device_target_vers.shsh"
+    local shsh="../saved/shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh"
+    mv myblob.shsh $shsh
+    log "Successfully saved $device_target_vers blobs: $shsh"
 }
 
 shsh_save_cydia() {
@@ -4390,7 +4416,7 @@ menu_main() {
                 menu_items+=("Jailbreak Device")
             fi
         fi
-        if (( device_proc < 8 )) && [[ $device_proc != 1 ]]; then
+        if [[ $device_proc != 1 ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -4489,10 +4515,10 @@ menu_shsh() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
         esac
+        if [[ $device_mode != "none" ]]; then
+            menu_items+=("Onboard Blobs")
+        fi
         if (( device_proc < 7 )); then
-            if [[ $device_mode != "none" ]]; then
-                menu_items+=("Onboard Blobs")
-            fi
             menu_items+=("Cydia Blobs")
         fi
         menu_items+=("Go Back")
@@ -4537,6 +4563,9 @@ menu_shsh_onboard() {
     local back
 
     ipsw_path=
+    if (( device_proc >= 7 )); then
+        mode="save-onboard-blobs"
+    fi
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Select IPSW")
         menu_print_info
@@ -5219,17 +5248,19 @@ menu_other() {
                     esac
                     menu_items+=("Get iOS Version")
                 fi
-                if [[ $device_type == "iPhone"* ]]; then
+                if [[ $device_type == "iPhone"* && $device_mode == "Normal" ]]; then
                     menu_items+=("Dump Baseband")
                 fi
-                menu_items+=("Clear NVRAM")
+                menu_items+=("Clear NVRAM" "Activation Records")
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
                 fi
             else
                 menu_items+=("Enter pwnDFU Mode")
             fi
-            menu_items+=("Activation Records")
+            if [[ $device_mode == "Normal" ]]; then
+                menu_items+=("Activation Records")
+            fi
             case $device_type in
                 iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
@@ -5412,10 +5443,7 @@ device_dump() {
         print "* Only proceed if you have these requirements installed using Cydia/Zebra."
         print "* You will be prompted to enter the root password of your iOS device."
         print "* The default root password is: alpine"
-        log "Running iproxy for SSH..."
-        $iproxy 2222 22 >/dev/null &
-        iproxy_pid=$!
-        sleep 1
+        device_iproxy
         device_sshpass
         log "Creating $arg.tar"
         if [[ $arg == "activation" ]]; then
@@ -5476,10 +5504,7 @@ device_hacktivate() {
     print "* This will use SSH to patch lockdownd on your device for hacktivation."
     print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
     pause
-    log "Running iproxy for SSH..."
-    $iproxy 2222 22 >/dev/null &
-    iproxy_pid=$!
-    sleep 1
+    device_iproxy
     device_sshpass
     log "Getting lockdownd"
     $scp -P 2222 root@127.0.0.1:/usr/libexec/lockdownd .
@@ -5732,8 +5757,10 @@ main() {
         "actrec" )
             device_dump activation
             log "Activation records dumping is done"
-            print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
-            print "    > ./restore.sh --activation-records"
+            if (( device_proc < 7 )); then
+                print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
+                print "    > ./restore.sh --activation-records"
+            fi
         ;;
         "save-ota-blobs" ) shsh_save;;
         "kdfu" ) device_enter_mode kDFU;;
