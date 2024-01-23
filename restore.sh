@@ -1544,11 +1544,10 @@ device_fw_key_check() {
     fi
 }
 
-download_comp() {
-    # usage: download_comp [build_id] [comp]
+ipsw_get_url() {
     local build_id="$1"
-    local comp="$2"
-    local url="$(cat "$device_fw_dir/$build_id/url")"
+    local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
+    ipsw_url=
     if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/url"
         url=
@@ -1562,6 +1561,14 @@ download_comp() {
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
     fi
+    ipsw_url="$url"
+}
+
+download_comp() {
+    # usage: download_comp [build_id] [comp]
+    local build_id="$1"
+    local comp="$2"
+    ipsw_get_url $build_id
     download_targetfile="$comp.$device_model"
     if [[ $build_id != "12"* ]]; then
         download_targetfile+="ap"
@@ -1572,7 +1579,7 @@ download_comp() {
         cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
     else
         log "Downloading ${comp}..."
-        "$dir/pzb" -g "Firmware/dfu/$download_targetfile.dfu" -o ${comp} "$url"
+        "$dir/pzb" -g "Firmware/dfu/$download_targetfile.dfu" -o ${comp} "$ipsw_url"
         cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
     fi
 }
@@ -1835,11 +1842,12 @@ ipsw_download() {
     local version="$device_target_vers"
     local build_id="$device_target_build"
     local ipsw_dl="$1"
+    ipsw_get_url $build_id
     if [[ ! -e "$ipsw_dl.ipsw" ]]; then
         print "* The script will now proceed to download iOS $version IPSW."
-        print "* If you want to download it yourself, here is the link: $(cat $device_fw_dir/$build_id/url)"
+        print "* If you want to download it yourself, here is the link: $ipsw_url"
         log "Downloading IPSW... (Press Ctrl+C to cancel)"
-        curl -L "$(cat $device_fw_dir/$build_id/url)" -o temp.ipsw
+        curl -L "$ipsw_url" -o temp.ipsw
         mv temp.ipsw "$ipsw_dl.ipsw"
     fi
     ipsw_verify "$ipsw_dl" "$build_id"
@@ -2383,7 +2391,10 @@ ipsw_prepare_bundle() {
                 [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
                 * ) ipsw_prepare_keys KernelCache $1;;
             esac
-        elif [[ $1 == "old" ]]; then
+        else
+            ipsw_prepare_keys RestoreKernelCache $1
+        fi
+        if [[ $1 == "old" ]]; then
             if [[ $device_type == "iPod2,1" ]]; then
                 case $device_target_vers in
                     4.2.1 | 4.1 | 3.1.3 ) :;;
@@ -2406,8 +2417,6 @@ ipsw_prepare_bundle() {
                     ;;
                 esac
             fi
-        else
-            ipsw_prepare_keys RestoreKernelCache $1
         fi
         echo "</dict>" >> $NewPlist
     fi
@@ -3701,20 +3710,7 @@ device_ramdisk64() {
     fi
 
     device_fw_key_check
-    url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
-    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
-        rm "$device_fw_dir/$build_id/url"
-        url=
-    fi
-    if [[ -z $url ]]; then
-        log "Getting URL for $device_type-$build_id"
-        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
-        if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
-            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
-        fi
-        mkdir $device_fw_dir/$build_id 2>/dev/null
-        echo "$url" > $device_fw_dir/$build_id/url
-    fi
+    ipsw_get_url $build_id
 
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
@@ -3748,7 +3744,7 @@ device_ramdisk64() {
         if [[ -e $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
@@ -3839,20 +3835,7 @@ device_ramdisk() {
     build_id=$device_target_build
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     device_fw_key_check
-    url=$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)
-    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
-        rm "$device_fw_dir/$build_id/url"
-        url=
-    fi
-    if [[ -z $url ]]; then
-        log "Getting URL for $device_type-$build_id"
-        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
-        if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
-            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
-        fi
-        mkdir $device_fw_dir/$build_id 2>/dev/null
-        echo "$url" > $device_fw_dir/$build_id/url
-    fi
+    ipsw_get_url $build_id
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
@@ -3892,7 +3875,7 @@ device_ramdisk() {
         if [[ -e $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
@@ -4701,7 +4684,7 @@ menu_restore_more() {
         case $device_type in
             iPhone2,1 )
                 menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-                #menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3")
+                menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3")
                 menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0")
             ;;
             iPod2,1 ) menu_items+=("4.0.2" "4.0");;
@@ -5474,7 +5457,7 @@ device_activate() {
     if (( device_proc <= 4 )) && [[ $device_type == "iPhone"* ]]; then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
         if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
-            print "* For hacktivation, go to Restore/Downgrade instead."
+            print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
         fi
     fi
     $ideviceactivation activate
