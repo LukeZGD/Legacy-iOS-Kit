@@ -789,8 +789,8 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
-            device_latest_vers="15.8"
-            device_latest_build="19H370"
+            device_latest_vers="15.8.1"
+            device_latest_build="19H380"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -818,23 +818,23 @@ device_get_info() {
         ;;
     esac
     case $device_type in
-        iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.5.7
+        iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.4-latest
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
         ;;
-        iPhone7,[12] ) # MDM9625
+        iPhone7,[12] ) # MDM9625 15.6-latest
             device_latest_bb="Mav10-7.80.04.Release.bbfw"
             device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
         ;;
-        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.7.9
+        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.6-latest
             device_latest_bb="Mav10-11.61.01.Release.bbfw"
             device_latest_bb_sha1="212cbb1e5bfd60912c01adda7dca66a569ddf758"
         ;;
-        iPhone9,[12] ) # MDM9645
+        iPhone9,[12] ) # MDM9645 15.6-latest
             device_latest_bb="Mav16-9.61.00.Release.bbfw"
             device_latest_bb_sha1="7c742e0fc4857e7c07df1e4c48ccafbb60ae38bb"
         ;;
-        iPhone9,[34] ) # PMB9943
+        iPhone9,[34] ) # PMB9943 15.6-latest
             device_latest_bb="ICE16-6.03.01.Release.bbfw"
             device_latest_bb_sha1="0e62ac6a7c8299f69f9410bdda27f6a3f9601a8f"
         ;;
@@ -2111,7 +2111,7 @@ ipsw_prepare_keys() {
         ;;
 
         "KernelCache" )
-            echo "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
             if [[ $ipsw_prepare_usepowder == 1 ]]; then
                 echo "<key>Patch</key><true/>" >> $NewPlist
             elif [[ -e $FirmwareBundle/kernelcache.release.patch ]]; then
@@ -2383,10 +2383,7 @@ ipsw_prepare_bundle() {
                 [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
                 * ) ipsw_prepare_keys KernelCache $1;;
             esac
-        else
-            ipsw_prepare_keys RestoreKernelCache $1
-        fi
-        if [[ $1 == "old" ]]; then
+        elif [[ $1 == "old" ]]; then
             if [[ $device_type == "iPod2,1" ]]; then
                 case $device_target_vers in
                     4.2.1 | 4.1 | 3.1.3 ) :;;
@@ -2409,6 +2406,8 @@ ipsw_prepare_bundle() {
                     ;;
                 esac
             fi
+        else
+            ipsw_prepare_keys RestoreKernelCache $1
         fi
         echo "</dict>" >> $NewPlist
     fi
