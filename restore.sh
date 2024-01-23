@@ -5247,10 +5247,10 @@ menu_other() {
                     esac
                     menu_items+=("Get iOS Version")
                 fi
+                menu_items+=("Clear NVRAM")
                 if [[ $device_type == "iPhone"* && $device_mode == "Normal" ]]; then
                     menu_items+=("Dump Baseband")
                 fi
-                menu_items+=("Clear NVRAM" "Activation Records")
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
                 fi
