@@ -235,6 +235,10 @@ set_tool_paths() {
                 error "Your macOS version ($platform_ver) is not supported." \
                 "* You need to be on macOS 10.13 or newer to continue."
             fi
+            if [[ $(which curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
+                error "Outdated curl detected, cannot continue." \
+                "* Please read the wiki and install the requirements needed in Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
+            fi
         fi
         bspatch="$(which bspatch)"
         ipwnder32="$dir/ipwnder32"
@@ -1219,6 +1223,7 @@ device_enter_mode() {
                 else
                     print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
                 fi
+                print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
                     log "Pwned iBSS/kDFU mode specified by user."
@@ -1356,7 +1361,7 @@ device_pwnerror() {
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
     elif [[ $platform == "macos" ]]; then
-        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew: brew install libusb'
+        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts: brew install libusb'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -1449,7 +1454,7 @@ device_ipwndfu() {
                 popd >/dev/null
                 local error_msg
                 if [[ $platform == "macos" ]]; then
-                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew: brew install libusb\n'
+                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew/MacPorts: brew install libusb\n'
                 fi
                 error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
@@ -1479,7 +1484,7 @@ device_ipwndfu() {
             log "Installing alloc8 to device"
             $python2 ipwndfu -x
             if [[ $platform == "macos" ]]; then
-                print "* If you get the error \"No backend available,\" install libusb in Homebrew: brew install libusb"
+                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts: brew install libusb"
             fi
         ;;
     esac
