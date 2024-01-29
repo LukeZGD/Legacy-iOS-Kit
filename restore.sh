@@ -734,13 +734,19 @@ device_get_info() {
             device_proc=9;; # A9
         iPhone9,[1234] | iPod9,1 )
             device_proc=10;; # A10
+        iPhone* | iPad* )
+            device_proc=11;; # Newer devices
     esac
-    if [[ -z $device_proc ]]; then
+    if (( device_proc > 10 )); then
         print "* Device: $device_type (${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
         echo
-        error "This device is not supported by Legacy iOS Kit."
+        warn "This device is not supported by Legacy iOS Kit."
+        print "* You may still continue but features will be very limited."
+        pause
+    elif [[ -z $device_proc ]]; then
+        error "Unrecognized device $device_type. Enter the device type properly."
     fi
 
     if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
@@ -4453,7 +4459,7 @@ menu_ipa() {
             print "* Selected IPA: $ipa_path"
             menu_items+=("Install IPA")
         else
-            print "* Select IPA to install"
+            print "* Select IPA files to install (multiple selection)"
         fi
         menu_items+=("Go Back")
         echo
@@ -4618,7 +4624,11 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        menu_items+=("Latest iOS ($device_latest_vers)")
+        if (( device_proc > 10 )); then
+            menu_items+=("Latest iOS")
+        else
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        fi
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
@@ -4629,7 +4639,7 @@ menu_restore() {
             ;;
         esac
         if [[ $device_proc != 1 ]]; then
-            if [[ $device_type != "iPod2,1" ]]; then
+            if [[ $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
                 menu_items+=("Other (Use SHSH Blobs)")
             fi
             if [[ $device_proc == 5 || $device_proc == 6 ]]; then
@@ -4676,6 +4686,7 @@ menu_restore() {
             "Other (Custom IPSW)" ) mode="customipsw";;
             "DFU IPSW" ) mode="dfuipsw${1}";;
             "More versions" ) menu_restore_more "$1";;
+            "Latest iOS" ) mode="restore-latest";;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -5677,6 +5688,21 @@ device_altserver_linux() {
     popd >/dev/null
 }
 
+restore_latest64() {
+    local idevicerestore2="${idevicerestore}2"
+    local opt="-l"
+    local opt2
+    print "* Restore/Update Selection"
+    print "* Restore will do factory reset and update the device, all data will be cleared"
+    print "* Update will only update the device to the latest version"
+    read -p "$(input "Select Y to Restore, select N to Update (Y/n) ")" opt2
+    if [[ $opt2 != 'n' && $opt2 != 'N' ]]; then
+        opt+="e"
+    fi
+    $idevicerestore2 $opt
+    mv *.ipsw ..
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -5775,6 +5801,7 @@ main() {
         "ideviceinstaller" ) device_ideviceinstaller;;
         "altserver_linux" ) device_altserver_linux;;
         "hacktivate" ) device_hacktivate;;
+        "restore-latest" ) restore_latest64;;
         * ) :;;
     esac
 
