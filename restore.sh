@@ -236,8 +236,10 @@ set_tool_paths() {
                 "* You need to be on macOS 10.13 or newer to continue."
             fi
             if [[ $(which curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
-                error "Outdated curl detected, cannot continue." \
-                "* Please read the wiki and install the requirements needed in Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
+                local error_msg="* You need to install curl from Homebrew or MacPorts."
+                error_msg+=$'\n* Make sure that /usr/local/bin (or /opt/local/bin) is in your $PATH.'
+                error_msg+=$'\n* Please read the wiki and install the requirements needed in Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+                error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
         bspatch="$(which bspatch)"
