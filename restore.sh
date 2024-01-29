@@ -1680,11 +1680,11 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4* | 3.1.3 ) ipsw_canjailbreak=1;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.1.3 ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_proc == 5 ]]; then
         case $device_target_vers in
-            8.2 | 8.1* | 8.0* ) ipsw_canjailbreak=;;
+            8.2 | 8.[10]* ) ipsw_canjailbreak=;;
         esac
     fi
 
@@ -2008,7 +2008,7 @@ ipsw_prepare_jailbreak() {
                     JBFiles[0]="fstab_old.tar"
                     JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
                 ;;
-                5* | 4.3* | 4.2* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+                5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
             for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
@@ -2029,9 +2029,9 @@ ipsw_prepare_jailbreak() {
                 3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
                 * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
             esac
-            if [[ $device_target_vers == "4"* || $device_target_vers == "5"* ]]; then
-                JBFiles+=("$jelbrek/cydiasubstrate.tar")
-            fi
+            case $device_target_vers in
+                [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
+            esac
             if [[ $device_target_vers == "3"* ]]; then
                 JBFiles+=("$jelbrek/cydiahttpatch.tar")
             fi
@@ -2546,7 +2546,7 @@ ipsw_prepare_32bit() {
         if [[ $device_target_tethered == 1 ]]; then
             case $device_target_vers in
                 4.2.1 ) :;;
-                5* | 4.3* | 4.2* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
+                5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
         fi
     fi
@@ -4090,7 +4090,7 @@ device_ramdisk() {
                 6.1.[3456] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
                 4.2.1 | 4.1 | 4.0* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
-                5* | 4.3* | 4.2* ) untether="g1lbertJB/${device_type}_${build}.tar";;
+                5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
@@ -4125,7 +4125,7 @@ device_ramdisk() {
                         $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
                     fi
                 ;;
-                5* | 4.3* | 4.2* ) untether="${device_type}_${build}.tar";;
+                5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
@@ -4147,7 +4147,7 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                5* | 4* | 3* ) device_send_rdtar cydiasubstrate.tar;;
+                [543]* ) device_send_rdtar cydiasubstrate.tar;;
             esac
             case $vers in
                 3* ) device_send_rdtar cydiahttpatch.tar;;
@@ -4768,7 +4768,7 @@ menu_ipsw() {
                     "6.1.6" | "4.2.1" | "3.1.3" ) device_canhacktivate=1;;
                 esac
             ;;
-            6* | 5* | 4* | 3* )
+            [6543]* )
                 device_target_vers="$1"
                 device_canhacktivate=1
             ;;
@@ -5346,14 +5346,14 @@ device_jailbreakrd() {
         pause
     fi
     case $device_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | 8* | 7* | 6* | 5* | 4* | 3.2* | 3.1.3 ) :;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
         ;;
     esac
     case $device_vers in
-        8.2 | 8.1* | 8.0* )
+        8.2 | 8.[10]* )
             if [[ $device_proc == 5 ]]; then
                 warn "This version ($device_vers) is broken for daibutsu A5(X)."
                 print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
