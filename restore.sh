@@ -326,18 +326,18 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y ca-certificates curl libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client python3 unzip usbmuxd usbutils xxd zenity zip
+        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
-            sudo apt install -y python2
+            : sudo apt install -y python2
         fi
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip
+        sudo dnf install -y ca-certificates libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
@@ -1686,7 +1686,7 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.1.3 ) ipsw_canjailbreak=1;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_proc == 5 ]]; then
         case $device_target_vers in
@@ -1704,8 +1704,9 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1"* && $device_proc != 1 && $device_target_powder != 1 ]]; then
-        log "Jailbreak Option is always enabled for 3.1.x ($device_target_vers)"
+    if [[ $device_target_vers == "3.1"* && $device_proc != 1 &&
+          $device_target_powder != 1 && $device_type != "iPod2,1" ]]; then
+        #log "Jailbreak Option is always enabled for 3.1.x ($device_target_vers)"
         ipsw_jailbreak=1
     elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
@@ -1727,7 +1728,7 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $device_canhacktivate == 1 ]]; then
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $ipsw_canhacktivate == 1 ]]; then
         input "Hacktivate Option"
         print "* When this option is enabled, your device will be activated on restore."
         print "* Enable this option if you have no valid SIM card to activate the phone."
@@ -1747,20 +1748,21 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ -n $ipsw_memory ]]; then
-        :
-    elif [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
-            $device_target_powder == 1 || $device_target_tethered == 1 ||
-            $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]] ||
-         [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]] ||
-         [[ $device_type == "iPad1,1" && $device_target_vers != "5"* ]] ||
-         [[ $device_type == "iPod3,1" && $device_target_vers != "5"* ]] ||
-         [[ $device_type == "iPod4,1" && $device_target_vers == "4"* ]] ||
-         [[ $device_type == "iPhone3,1" && $device_target_vers == "4"* ]]; then
+    case $device_type in
+        iPhone2,1 | iPod2,1 ) ipsw_canmemory=1;;
+        iPhone3,1 | iPad1,1 | iPad2* | iPod[34],1 )
+            case $device_target_vers in
+                [34]* ) ipsw_canmemory=1;;
+            esac
+        ;;
+    esac
+    if [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
+          $device_target_powder == 1 || $device_target_tethered == 1 ||
+          $ipsw_canmemory == 1 ]] && [[ -z $ipsw_memory ]]; then
         input "Memory Option for creating custom IPSW"
         print "* When this option is enabled, system RAM will be used for the IPSW creation process."
         print "* I recommend to enable this option to speed up creating the custom IPSW."
-        print "* However, if you have less than 8 GB of RAM, disable this option."
+        print "* However, if your PC/Mac has less than 8 GB of RAM, disable this option."
         print "* This option is enabled by default (Y). Select this option if unsure."
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_memory
         if [[ $ipsw_memory == 'N' || $ipsw_memory == 'n' ]]; then
@@ -4776,16 +4778,16 @@ menu_ipsw() {
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
                 case $device_latest_vers in
-                    "6.1.6" | "4.2.1" | "3.1.3" ) device_canhacktivate=1;;
+                    "6.1.6" | "4.2.1" | "3.1.3" ) ipsw_canhacktivate=1;;
                 esac
             ;;
             [6543]* )
                 device_target_vers="$1"
-                device_canhacktivate=1
+                ipsw_canhacktivate=1
             ;;
         esac
         if [[ $device_type != "iPhone"* ]]; then
-            device_canhacktivate=
+            ipsw_canhacktivate=
         fi
         case $1 in
             "6.1.3" ) device_target_build="10B329";;
@@ -4849,7 +4851,7 @@ menu_ipsw() {
         if [[ $1 == "Other (Use SHSH Blobs)" ]]; then
             device_target_other=1
             if [[ $device_type == "iPhone2,1" ]]; then
-                device_canhacktivate=1
+                ipsw_canhacktivate=1
             fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
@@ -4992,7 +4994,7 @@ menu_ipsw() {
             else
                 print "* Select $1 IPSW to continue"
             fi
-            if [[ $device_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
+            if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
         fi
@@ -5808,6 +5810,7 @@ main() {
     echo
     print "* Save the terminal output now if needed."
     print "* Legacy iOS Kit $version_current ($git_hash)"
+    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     echo
 }
 
