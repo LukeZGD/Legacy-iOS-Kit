@@ -333,11 +333,11 @@ install_depends() {
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
+        sudo dnf install -y ca-certificates git libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in ca-certificates curl libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
+        sudo zypper -n in ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
@@ -410,7 +410,11 @@ version_update() {
     popd >/dev/null
     log "Updating..."
     cp resources/firstrun tmp 2>/dev/null
-    rm -r bin/ resources/ LICENSE README.md restore.sh
+    rm -r bin/ LICENSE README.md restore.sh
+    if [[ $device_sudoloop == 1 ]]; then
+        sudo rm -rf resources/
+    fi
+    rm -r resources/
     unzip -q tmp/latest.zip -d .
     cp tmp/firstrun resources 2>/dev/null
     log "Done! Please run the script again"
@@ -1429,21 +1433,23 @@ device_ipwndfu() {
         python2+="$pyenv2"
     fi
 
+    mkdir ../saved/ipwndfu 2>/dev/null
     if [[ $1 == "send_ibss" ]]; then
         device_rd_build=
         patch_ibss
-        cp pwnediBSS ../resources/ipwndfu/
+        cp pwnediBSS ../saved/ipwndfu/
     fi
 
     device_enter_mode DFU
     local ipwndfu_comm="c2ba7abe6b1b8dee962ce8ae7a02fc64d3242d28"
     local ipwndfu_sha1="e385cdf51c8f4faaba43140a468ecbf00c4387ab"
-    if [[ ! -d ../resources/ipwndfu || $(cat ../resources/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
-        rm -rf ../resources/ipwndfu
+    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
+        rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
-        unzip -q ipwndfu.zip -d ../resources
-        mv ../resources/ipwndfu*/ ../resources/ipwndfu/
-        echo "$ipwndfu_sha1" > ../resources/ipwndfu/sha1
+        unzip -q ipwndfu.zip -d ../saved
+        mv ../saved/ipwndfu-*/* ../saved/ipwndfu
+        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1
+        rm -rf ../saved/ipwndfu-*
     fi
     if [[ -d /opt/local/lib ]]; then
         ln -sf /opt/local/lib ~/lib
@@ -1451,7 +1457,7 @@ device_ipwndfu() {
         ln -sf /opt/homebrew/lib ~/lib
     fi
 
-    pushd ../resources/ipwndfu/ >/dev/null
+    pushd ../saved/ipwndfu/ >/dev/null
     case $1 in
         "send_ibss" )
             log "Sending iBSS using ipwndfu..."
@@ -1496,6 +1502,9 @@ device_ipwndfu() {
             fi
         ;;
     esac
+    if [[ $device_sudoloop == 1 ]]; then
+        sudo rm *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
+    fi
     popd >/dev/null
     return $tool_pwned
 }
