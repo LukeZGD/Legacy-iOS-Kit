@@ -414,7 +414,7 @@ version_update() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf resources/
     fi
-    rm -r resources/
+    rm -r resources/ 2>/dev/null
     unzip -q tmp/latest.zip -d .
     cp tmp/firstrun resources 2>/dev/null
     log "Done! Please run the script again"
@@ -1886,11 +1886,17 @@ ipsw_verify() {
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
-        *[bcdefgkpquv] )
+        *[bcdefgkmpquv] )
+            if [[ $build_id == "7"* || $build_id == "8"* ]]; then
+                warn "Beta iOS versions lower than 5.0 are not supported."
+                pause
+                return 1
+            fi
             # beta ipsw, skip verification
             if [[ $build_id == "$device_base_build" ]]; then
                 device_base_sha1="$IPSWSHA1L"
             else
+                ipsw_isbeta=1
                 device_target_sha1="$IPSWSHA1L"
             fi
             return
@@ -1946,6 +1952,7 @@ ipsw_verify() {
     if [[ $build_id == "$device_base_build" ]]; then
         device_base_sha1="$IPSWSHA1"
     else
+        ipsw_isbeta=
         device_target_sha1="$IPSWSHA1"
     fi
 }
@@ -2001,6 +2008,9 @@ ipsw_prepare_jailbreak() {
     local JBFiles=()
     local JBFiles2=()
     local daibutsu
+    local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
+    local iv
+    local key
 
     if [[ $1 == "old" ]]; then
         daibutsu="old"
@@ -2064,13 +2074,40 @@ ipsw_prepare_jailbreak() {
 
     ipsw_prepare_bundle $daibutsu
 
+    if [[ -n $ipsw_customlogo ]]; then
+        log "Converting custom logo"
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/applelogo.s5l8920x.img3
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .key')
+        "$dir/xpwntool" applelogo.s5l8920x.img3 logo-orig.img3 -iv $iv -k $key -decrypt
+        "$dir/imagetool" inject "$ipsw_customlogo" logo.img3 logo-orig.img3
+        if [[ ! -s logo.img3 ]]; then
+            error "Converting custom logo failed. Check your image"
+        fi
+        mkdir -p $all_flash 2>/dev/null
+        mv logo.img3 $all_flash/applelogo.s5l8920x.img3
+    fi
+    if [[ -n $ipsw_customrecovery ]]; then
+        log "Converting custom recovery"
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/recoverymode.s5l8920x.img3
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .key')
+        "$dir/xpwntool" recoverymode.s5l8920x.img3 recovery-orig.img3 -iv $iv -k $key -decrypt
+        "$dir/imagetool" inject "$ipsw_customrecovery" recovery.img3 recovery-orig.img3
+        if [[ ! -s recovery.img3 ]]; then
+            error "Converting custom recovery failed. Check your image"
+        fi
+        mkdir -p $all_flash 2>/dev/null
+        mv recovery.img3 $all_flash/recoverymode.s5l8920x.img3
+    fi
+
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
     if [[ $device_target_vers == "3"* ]]; then
         ExtraArgs+=" -ramdiskgrow 10"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -2091,6 +2128,16 @@ ipsw_prepare_jailbreak() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+
+    if [[ -n $ipsw_customlogo ]]; then
+        log "Adding custom logo to IPSW"
+        zip -r0 temp.ipsw $all_flash/applelogo.s5l8920x.img3
+    fi
+    if [[ -n $ipsw_customrecovery ]]; then
+        log "Adding custom recovery to IPSW"
+        zip -r0 temp.ipsw $all_flash/recoverymode.s5l8920x.img3
+    fi
+
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -2241,6 +2288,32 @@ ipsw_prepare_config() {
     </dict>
 </dict>
 </plist>" | tee FirmwareBundles/config.plist
+}
+
+ipsw_prepare_systemversion() {
+    local sysplist="SystemVersion.plist"
+    log "Beta iOS detected, preparing modified $sysplist"
+    echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' > $sysplist
+    echo "<key>ProductBuildVersion</key><string>$device_target_build</string>" >> $sysplist
+    local copyright="<key>ProductCopyright</key><string>1983-201"
+    case $device_target_vers in
+        3* ) copyright+="0";;
+        4* ) copyright+="1";;
+        5* ) copyright+="2";;
+        6* ) copyright+="3";;
+        7* ) copyright+="4";;
+        8* ) copyright+="5";;
+        9* ) copyright+="6";;
+    esac
+    copyright+=" Apple Inc.</string>"
+    echo "$copyright" >> $sysplist # idk if the copyright key is actually needed but whatever
+    echo "<key>ProductName</key><string>iPhone OS</string>" >> $sysplist
+    echo "<key>ProductVersion</key><string>$device_target_vers</string>" >> $sysplist
+    echo "</dict></plist>" >> $sysplist
+    cat $sysplist
+    mkdir -p System/Library/CoreServices
+    mv SystemVersion.plist System/Library/CoreServices
+    tar -cvf systemversion.tar System
 }
 
 ipsw_prepare_bundle() {
@@ -2524,7 +2597,7 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -2534,6 +2607,7 @@ ipsw_prepare_32bit() {
         device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
+
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
@@ -2567,6 +2641,12 @@ ipsw_prepare_32bit() {
             esac
         fi
     fi
+
+    if [[ $ipsw_isbeta == 1 ]]; then
+        ipsw_prepare_systemversion
+        ExtraArgs+=" systemversion.tar"
+    fi
+
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
@@ -3030,7 +3110,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" && $device_proc != 4 ]]; then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -3040,6 +3120,7 @@ ipsw_prepare_powder() {
         device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation.tar"
     fi
+
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
         case $device_target_vers in
@@ -3051,6 +3132,7 @@ ipsw_prepare_powder() {
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
     fi
+
     local ExtraArr=("--boot-partition" "--boot-ramdisk")
     if [[ $device_type == "iPhone5"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
@@ -3076,6 +3158,12 @@ ipsw_prepare_powder() {
         tar -cvf iBoot.tar iBEC
         ExtraArgs+=" iBoot.tar"
     fi
+
+    if [[ $ipsw_isbeta == 1 ]]; then
+        ipsw_prepare_systemversion
+        ExtraArgs+=" systemversion.tar"
+    fi
+
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
 
@@ -4758,6 +4846,9 @@ menu_ipsw() {
         start="Start Restore"
     fi
 
+    ipsw_cancustomlogo=
+    ipsw_customlogo=
+    ipsw_customrecovery=
     ipsw_path=
     ipsw_base_path=
     shsh_path=
@@ -4793,6 +4884,9 @@ menu_ipsw() {
             [6543]* )
                 device_target_vers="$1"
                 ipsw_canhacktivate=1
+                if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
+                    ipsw_cancustomlogo=1
+                fi
             ;;
         esac
         if [[ $device_type != "iPhone"* ]]; then
@@ -4920,14 +5014,15 @@ menu_ipsw() {
                 if [[ $device_proc != 4 ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
+                echo
             else
                 print "* Select Base $text2 IPSW to continue"
+                echo
             fi
             if [[ $device_proc == 4 ]]; then
                 shsh_path=1
             else
                 if [[ -n $shsh_path ]]; then
-                    echo
                     print "* Selected Base $text2 SHSH: $shsh_path"
                     if [[ $shsh_validate == 0 ]]; then
                         print "* Selected SHSH file is validated"
@@ -4935,13 +5030,13 @@ menu_ipsw() {
                         warn "Selected SHSH file failed validation"
                     fi
                 elif [[ $2 != "ipsw" ]]; then
-                    echo
                     print "* Select Base $text2 SHSH to continue"
                 fi
             fi
             if [[ -n $ipsw_path && -n $ipsw_base_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
+            echo
 
         elif [[ $1 == *"Tethered"* ]]; then
             if [[ -n $ipsw_path ]]; then
@@ -4956,6 +5051,7 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 menu_items+=("$start")
             fi
+            echo
 
         elif [[ $1 == "Other"* ]]; then
             # menu for other (shsh) restores
@@ -4973,8 +5069,8 @@ menu_ipsw() {
             if (( device_proc > 6 )); then
                 print "* Check the SEP/BB compatibility chart: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
             fi
+            echo
             if [[ -n $shsh_path ]]; then
-                echo
                 print "* Selected Target SHSH: $shsh_path"
                 if (( device_proc > 6 )); then
                     shsh_generator=$(cat "$shsh_path" | grep "<string>0x" | cut -c10-27)
@@ -4985,10 +5081,11 @@ menu_ipsw() {
                 else
                     warn "Selected SHSH file failed validation"
                 fi
+                echo
 
             elif [[ $2 != "ipsw" ]]; then
-                echo
                 print "* Select Target SHSH to continue"
+                echo
             fi
             if [[ -n $ipsw_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
@@ -5006,9 +5103,33 @@ menu_ipsw() {
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
+            echo
         fi
-        echo
+
+        if [[ $ipsw_cancustomlogo == 1 ]]; then
+            if [[ -n $ipsw_customlogo ]]; then
+                print "* Custom boot logo: $ipsw_customlogo"
+            else
+                print "* No custom boot logo selected"
+            fi
+            if [[ -n $ipsw_customrecovery ]]; then
+                print "* Custom recovery logo: $ipsw_customrecovery"
+            else
+                print "* No custom recovery logo selected"
+            fi
+            print "* Note that the images must be in PNG format, and up to 320x480 resolution"
+            menu_items+=("Select Boot Logo" "Select Recovery Logo")
+            echo
+        fi
         menu_items+=("Go Back")
+
+        if (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
+            print "* This restore will use $device_use_vers baseband"
+            echo
+        elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+            print "* This restore will use $device_use_vers baseband if the jailbreak option is disabled"
+            echo
+        fi
 
         print "$nav"
         input "Select an option:"
@@ -5024,6 +5145,8 @@ menu_ipsw() {
             "Select Target SHSH" ) menu_shsh_browse "$1";;
             "Select Base SHSH" ) menu_shsh_browse "base";;
             "Download Target IPSW" ) ipsw_download "../$newpath";;
+            "Select Boot Logo" ) menu_logo_browse "boot";;
+            "Select Recovery Logo" ) menu_logo_browse "recovery";;
             "Go Back" ) back=1;;
         esac
     done
@@ -5065,6 +5188,9 @@ ipsw_custom_set() {
     #if [[ $device_type == "iPhone5"* ]] && [[ $device_target_other == 1 || $device_target_powder == 1 ]]; then
     #    device_disable_bbupdate="$device_type"
     #fi
+    if [[ $device_actrec == 1 ]]; then
+        ipsw_custom+="A"
+    fi
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         device_use_bb=0
         ipsw_custom+="B"
@@ -5074,6 +5200,9 @@ ipsw_custom_set() {
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
         ipsw_custom+="J"
+    fi
+    if [[ -n $ipsw_customlogo || -n $ipsw_customrecovery ]]; then
+        ipsw_custom+="L"
     fi
     if [[ $device_target_powder == 1 ]]; then
         ipsw_custom+="P"
@@ -5090,6 +5219,19 @@ ipsw_custom_set() {
     if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "4.3"* ]]; then
         ipsw_custom+="-$device_ecid"
     fi
+}
+
+menu_logo_browse() {
+    local newpath
+    input "Select your $1 image file in the file selection window."
+    newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
+    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Ctrl+C to cancel): ")" newpath
+    [[ ! -s "$newpath" ]] && return
+    log "Selected $1 image file: $newpath"
+    case $1 in
+        "boot" ) ipsw_customlogo="$newpath";;
+        "recovery" ) ipsw_customrecovery="$newpath";;
+    esac
 }
 
 menu_ipsw_browse() {
@@ -5733,9 +5875,7 @@ main() {
     set_tool_paths
 
     log "Checking Internet connection..."
-    local try=("google.com"
-               "www.apple.com"
-               "208.67.222.222")
+    local try=("google.com" "www.apple.com" "208.67.222.222")
     local check
     for i in "${try[@]}"; do
         ping -c1 $i >/dev/null
