@@ -23,6 +23,7 @@ warn() {
 error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
     print "* Legacy iOS Kit $version_current ($git_hash)"
+    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     exit 1
 }
 
@@ -1668,7 +1669,7 @@ patch_ibec() {
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
     if [[ $device_proc == 4 || -n $device_rd_build ]]; then
-        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
+        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
     fi
@@ -1887,11 +1888,6 @@ ipsw_verify() {
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
         *[bcdefgkmpquv] )
-            if [[ $build_id == "7"* || $build_id == "8"* ]]; then
-                warn "Beta iOS versions lower than 5.0 are not supported."
-                pause
-                return 1
-            fi
             # beta ipsw, skip verification
             if [[ $build_id == "$device_base_build" ]]; then
                 device_base_sha1="$IPSWSHA1L"
@@ -3612,11 +3608,8 @@ restore_prepare() {
                 esac
                 if [[ $device_target_vers == "4.3"* ]] &&
                    [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-                    log "Do not disconnect your device yet"
-                    print "* If the device already boots, no need to continue and press Ctrl+C to cancel"
-                    device_find_mode Recovery 50
-                    $irecovery -n
-                    log "Done, your device should boot now"
+                    log "The device may enter recovery mode after the restore"
+                    print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
@@ -3753,6 +3746,10 @@ ipsw_prepare() {
         ;;
 
         [56] )
+            if [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
+                device_disable_bbupdate="$device_type"
+                ipsw_custom_set
+            fi
             # 32-bit devices A5/A6
             if [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
@@ -3778,13 +3775,13 @@ device_remove4() {
     local rec
     local selected
     input "Select option:"
-    select opt in "Disable exploit" "Enable exploit" "Go Back"; do
+    select opt in "Disable Exploit" "Enable Exploit" "Go Back"; do
         selected="$opt"
         break
     done
     case $selected in
-        "Disable exploit" ) rec=0;;
-        "Enable exploit" ) rec=2;;
+        "Disable Exploit" ) rec=0;;
+        "Enable Exploit" ) rec=2;;
         * ) return;;
     esac
     device_ramdisk setnvram $rec
@@ -3974,7 +3971,7 @@ device_ramdisk() {
                         iPad3,[456] )  hwmodel="ipad3b";;
                     esac
                 ;;
-                7* | 8* | 9* | 10* | 11* ) hwmodel+="ap";;
+                [789]* | 10* | 11* ) hwmodel+="ap";;
             esac
             case $getcomp in
                 "iBSS" | "iBEC" ) name="$getcomp.$hwmodel.RELEASE.dfu";;
@@ -4510,7 +4507,7 @@ menu_main() {
                 menu_items+=("Jailbreak Device")
             fi
         fi
-        if [[ $device_proc != 1 ]]; then
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -4547,7 +4544,7 @@ menu_ipa() {
         menu_items=("Select IPA")
         menu_print_info
         if [[ $1 == "Install"* ]]; then
-            print "* Make sure that AppSync Unified is installed on your device."
+            print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
         else
             print "* Sideload IPA is for iOS 9 and newer."
             print "* Sideloading will require an Apple ID."
@@ -4993,9 +4990,6 @@ menu_ipsw() {
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
             fi
-            if [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-                print "* For downgrading to 4.3.x or lower, make sure to downgrade to 5.0 first."
-            fi
             echo
             local text2="(iOS 7.1.x)"
             case $device_type in
@@ -5032,11 +5026,11 @@ menu_ipsw() {
                 elif [[ $2 != "ipsw" ]]; then
                     print "* Select Base $text2 SHSH to continue"
                 fi
+                echo
             fi
             if [[ -n $ipsw_path && -n $ipsw_base_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
-            echo
 
         elif [[ $1 == *"Tethered"* ]]; then
             if [[ -n $ipsw_path ]]; then
@@ -5123,7 +5117,10 @@ menu_ipsw() {
         fi
         menu_items+=("Go Back")
 
-        if (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
+        if [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
+            print "* This restore will have baseband update disabled because of issues with iPhone4,1 5.0"
+            echo
+        elif (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
             print "* This restore will use $device_use_vers baseband"
             echo
         elif [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -5254,7 +5251,7 @@ menu_ipsw_browse() {
     elif [[ $device_proc == 8 && $device_latest_vers == "12"* ]] || [[ $device_type == "iPad4,6" ]]; then
         # SEP/BB check for iPhone 6/6+, iPad mini 2 China, iPod touch 6
         case $device_target_build in
-            "11"* | "12"* | "13"* | "14"* | "15A"* | "15B"* | "15C"* | "15D"* )
+            1[1234]* | 15[ABCD]* )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
                 pause
@@ -5264,7 +5261,7 @@ menu_ipsw_browse() {
     elif [[ $device_proc == 7 ]]; then
         # SEP/BB check for iPhone 5S, iPad Air 1/mini 2
         case $device_target_build in
-            "11"* | "12"* | "13"* | "14A"* | "15A"* | "15B"* | "15C"* | "15D"* )
+            1[123]* | 1[45]A* | 15[BCD]* )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
                 pause
@@ -5274,7 +5271,7 @@ menu_ipsw_browse() {
     elif [[ $device_latest_vers == "15"* ]]; then
         # SEP/BB check for iPhone 6S/6S+/SE 2016/7/7+, iPad Air 2/mini 4, iPod touch 7
         case $device_target_build in
-            "12"* | "13"* | "14"* | "15"* | "16"* | "17"* )
+            1[234567]* )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
                 pause
