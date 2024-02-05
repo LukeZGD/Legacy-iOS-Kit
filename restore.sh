@@ -1926,7 +1926,7 @@ ipsw_verify() {
     fi
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from The Apple Wiki..."
-        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A8 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
         mkdir $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     else
@@ -2353,7 +2353,7 @@ ipsw_prepare_bundle() {
         FirmwareBundle2=
     elif [[ $device_target_powder == 1 || $device_target_other == 1 ]] && [[ $device_proc != 4 ]]; then
         FirmwareBundle2=
-    elif [[ -d $FirmwareBundle2 ]]; then
+    elif [[ -d $FirmwareBundle2 && $ipsw_prepare_usepowder != 1 ]]; then
         FirmwareBundle+="Down_"
     fi
     FirmwareBundle+="${device_type}_${vers}_${build}.bundle"
@@ -2476,7 +2476,6 @@ ipsw_prepare_bundle() {
         if [[ $vers != "3"* && $vers != "4"* ]] || [[ $device_type == "iPad1,1" || $device_type == "iPad2"* ]]; then
             ipsw_prepare_keys iBEC $1
         fi
-        ipsw_prepare_keys RestoreRamdisk $1
         ipsw_prepare_keys RestoreDeviceTree $1
         ipsw_prepare_keys RestoreLogo $1
         if [[ $1 == "target" ]]; then
@@ -2487,6 +2486,7 @@ ipsw_prepare_bundle() {
         else
             ipsw_prepare_keys RestoreKernelCache $1
         fi
+        ipsw_prepare_keys RestoreRamdisk $1
         if [[ $1 == "old" ]]; then
             if [[ $device_type == "iPod2,1" ]]; then
                 case $device_target_vers in
@@ -2550,11 +2550,11 @@ ipsw_prepare_bundle() {
     fi
 
     if [[ $daibutsu == 1 ]]; then
-        if [[ -d $FirmwareBundle2 ]]; then
+        if [[ $ipsw_prepare_usepowder == 1 ]]; then
+            echo "<key>RamdiskPackage2</key>" >> $NewPlist
+        else
             echo "<key>PackagePath</key><string>./freeze.tar</string>" >> $NewPlist
             echo "<key>RamdiskPackage</key>" >> $NewPlist
-        else
-            echo "<key>RamdiskPackage2</key>" >> $NewPlist
         fi
         echo "<string>./bin.tar</string><key>RamdiskReboot</key><string>./reboot.sh</string><key>UntetherPath</key><string>./untether.tar</string>" >> $NewPlist
         local hwmodel="$(tr '[:lower:]' '[:upper:]' <<< ${device_model:0:1})${device_model:1}"
@@ -3448,6 +3448,9 @@ restore_futurerestore() {
             url+="$file"
             log "Downloading futurerestore: $url"
             curl -LO "$url"
+            if [[ ! -s "$file" ]]; then
+                error "Downloading futurerestore failed. Please run the script again"
+            fi
             unzip -q "$file" -d .
             tar -xJvf futurerestore*.xz
             mv futurerestore $futurerestore2
@@ -3706,10 +3709,15 @@ restore_prepare() {
             return
         fi
         device_enter_mode pwnDFU
-        if [[ ! -s ../resources/firmware.json ]]; then
+        if [[ -s ../saved/firmwares.json ]]; then
+            cp ../saved/firmwares.json /tmp
+        else
             log "Downloading firmwares.json from ipsw.me"
             curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmware.json
-            cp firmware.json ../resources/firmware.json
+            if [[ ! -s firmware.json ]]; then
+                error "Downloading firmwares.json failed. Please run the script again"
+            fi
+            cp firmware.json ../saved/firmwares.json /tmp
         fi
         restore_futurerestore --use-pwndfu
     fi
@@ -5117,7 +5125,9 @@ menu_ipsw() {
         fi
         menu_items+=("Go Back")
 
-        if [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
+        if (( device_proc > 6 )); then
+            :
+        elif [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
             print "* This restore will have baseband update disabled because of issues with iPhone4,1 5.0"
             echo
         elif (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
@@ -5261,7 +5271,7 @@ menu_ipsw_browse() {
     elif [[ $device_proc == 7 ]]; then
         # SEP/BB check for iPhone 5S, iPad Air 1/mini 2
         case $device_target_build in
-            1[123]* | 1[45]A* | 15[BCD]* )
+            1[123]* | 14A* | 15[ABCD]* )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
                 pause
