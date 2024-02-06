@@ -128,10 +128,10 @@
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
-- [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar;
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used on Linux for restoring 32-bit devices
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used on Linux for restoring A7/A8 devices
-    - [new futurerestore](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15(.8)
+- [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
+    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
+    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7/A8 devices that support iOS 12.5.7
+    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15.8.1
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [idevicererestore](https://github.com/LukeZGD/daibutsuCFW/tree/main/src/idevicererestore) from daibutsuCFW (used on custom IPSW restores for A5/A6 devices)

@@ -3433,10 +3433,17 @@ restore_futurerestore() {
         else
             ExtraArr+=("--latest-baseband")
         fi
-        log "New futurerestore will be used for this restore: https://github.com/futurerestore/futurerestore"
+        log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
-            warn "New futurerestore is not supported on this arch, cannot continue. x86_64 only."
+            warn "futurerestore nightly is not supported on $platform_arch, cannot continue. x86_64 only."
             return
+        fi
+        log "Checking for futurerestore updates..."
+        local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
+        local fr_current="$(cat ${futurerestore2}_version 2>/dev/null)"
+        if [[ $fr_latest != "$fr_current" ]]; then
+            log "futurerestore nightly update detected, downloading."
+            rm $futurerestore2
         fi
         if [[ ! -e $futurerestore2 ]]; then
             local url="https://nightly.link/futurerestore/futurerestore/workflows/ci/main/"
@@ -3455,6 +3462,7 @@ restore_futurerestore() {
             tar -xJvf futurerestore*.xz
             mv futurerestore $futurerestore2
             chmod +x $futurerestore2
+            echo "$fr_latest" > ${futurerestore2}_version
         fi
     else
         futurerestore2+="_new"
@@ -3713,11 +3721,11 @@ restore_prepare() {
             cp ../saved/firmwares.json /tmp
         else
             log "Downloading firmwares.json from ipsw.me"
-            curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmware.json
-            if [[ ! -s firmware.json ]]; then
+            curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmwares.json
+            if [[ ! -s firmwares.json ]]; then
                 error "Downloading firmwares.json failed. Please run the script again"
             fi
-            cp firmware.json ../saved/firmwares.json /tmp
+            cp firmwares.json ../saved /tmp
         fi
         restore_futurerestore --use-pwndfu
     fi
