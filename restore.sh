@@ -1750,12 +1750,12 @@ ipsw_preference_set() {
 
     case $device_type in
         iPhone2,1 | iPod2,1 ) ipsw_canmemory=1;;
+        iPad2,[67] | iPad3,[2356] ) ipsw_canmemory=1;;
         iPhone3,1 | iPad1,1 | iPad2* | iPod[34],1 )
             case $device_target_vers in
                 [34]* ) ipsw_canmemory=1;;
             esac
         ;;
-        iPad2,[67] | iPad3,[2356] ) ipsw_canmemory=1;;
     esac
     if [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
           $device_target_powder == 1 || $device_target_tethered == 1 ||
@@ -2565,7 +2565,7 @@ ipsw_prepare_32bit() {
     local JBFiles=()
     local nskip
     case $device_type in
-        iPad2,[67] | iPad3,[2356] | $device_disable_bbupdate ) nskip=1;;
+        iPad2,[67] | iPad3,[2356] | "$device_disable_bbupdate" ) nskip=1;;
     esac
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         ipsw_prepare_jailbreak
