@@ -815,19 +815,11 @@ device_get_info() {
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
     case $device_type in
-        iPad2,[67] ) # MDM9615 9.3.6
-            device_use_bb="Mav5-11.80.00.Release.bbfw"
-            device_use_bb_sha1="aa52cf75b82fc686f94772e216008345b6a2a750"
-        ;;
-        iPad3,[23] ) # MDM9600
-            device_use_bb="Mav4-6.7.00.Release.bbfw"
-            device_use_bb_sha1="a5d6978ecead8d9c056250ad4622db4d6c71d15e"
-        ;;
         iPhone4,1 ) # MDM6610
             device_use_bb="Trek-6.7.00.Release.bbfw"
             device_use_bb_sha1="22a35425a3cdf8fa1458b5116cfb199448eecf49"
         ;;
-        iPad3,[56] | iPhone5,[12] ) # MDM9615 10.3.4 (32bit)
+        iPhone5,[12] ) # MDM9615 10.3.4 (32bit)
             device_use_bb="Mav5-11.80.00.Release.bbfw"
             device_use_bb_sha1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
         ;;
@@ -857,10 +849,6 @@ device_get_info() {
             device_latest_bb="ICE16-6.03.01.Release.bbfw"
             device_latest_bb_sha1="0e62ac6a7c8299f69f9410bdda27f6a3f9601a8f"
         ;;
-    esac
-    # disable bbupdate for all 32-bit ipads
-    case $device_type in
-        iPad[23]* ) device_disable_bbupdate="$device_type";;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 ]]; then
@@ -1767,6 +1755,7 @@ ipsw_preference_set() {
                 [34]* ) ipsw_canmemory=1;;
             esac
         ;;
+        iPad2,[67] | iPad3,[2356] ) ipsw_canmemory=1;;
     esac
     if [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
           $device_target_powder == 1 || $device_target_tethered == 1 ||
@@ -2105,7 +2094,7 @@ ipsw_prepare_jailbreak() {
     if [[ $device_target_vers == "3"* ]]; then
         ExtraArgs+=" -ramdiskgrow 10"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -2574,14 +2563,19 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
+    local nskip
+    case $device_type in
+        iPad2,[67] | iPad3,[2356] | $device_disable_bbupdate ) nskip=1;;
+    esac
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         ipsw_prepare_jailbreak
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $device_type != "$device_disable_bbupdate" && $ipsw_jailbreak != 1 &&
-            $device_target_build != "9A406" && # the 4s-exclusive 9a406 has unencrypted ramdisks, needs custom ipsw since futurerestore breaks (it expects encrypted ramdisks)
+    elif [[ $nskip == 1 ]]; then
+        :
+    elif [[ $ipsw_jailbreak != 1 && $device_target_build != "9A406" && # 9a406 needs custom ipsw
             $device_proc != 4 && $device_actrec != 1 && $device_target_tethered != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
@@ -2598,7 +2592,7 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -3243,7 +3237,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
@@ -3413,9 +3407,6 @@ restore_download_bbsep() {
     # Baseband
     if [[ $restore_baseband != 0 ]]; then
         restore_baseband_check="../saved/baseband/$restore_baseband"
-        if [[ $restore_baseband == "Mav5-11.80.00.Release.bbfw" ]]; then
-            restore_baseband_check="../saved/baseband/Mav5-11.80.00.Release_${baseband_sha1}.bbfw"
-        fi
         if [[ -e $restore_baseband_check ]]; then
             if [[ $baseband_sha1 != "$($sha1sum $restore_baseband_check | awk '{print $1}')" ]]; then
                 rm $restore_baseband_check
@@ -5265,7 +5256,7 @@ menu_ipsw() {
 
         if (( device_proc > 6 )); then
             :
-        elif (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
+        elif (( device_proc > 4 )) && [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
             print "* This restore will use $device_use_vers baseband"
             echo
         elif [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -5335,7 +5326,9 @@ ipsw_custom_set() {
     fi
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         device_use_bb=0
-        ipsw_custom+="B"
+        if [[ $device_type == "iPhone"* ]]; then
+            ipsw_custom+="B"
+        fi
     fi
     if [[ $ipsw_hacktivate == 1 ]]; then
         ipsw_custom+="H"

@@ -27,7 +27,7 @@
 - Boot SSH Ramdisk for 32-bit devices
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
-- The latest baseband will be flashed for A5/A6 devices with baseband
+- The latest baseband will be flashed for A5/A6 devices (iPhone 4S, 5, and 5C only)
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
 
