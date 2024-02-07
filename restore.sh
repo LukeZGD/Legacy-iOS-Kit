@@ -163,6 +163,7 @@ set_tool_paths() {
         else
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
+        PlistBuddy="$dir/PlistBuddy"
         zenity="$(which zenity)"
 
         # live cd/usb check
@@ -245,6 +246,7 @@ set_tool_paths() {
         fi
         bspatch="$(which bspatch)"
         ipwnder32="$dir/ipwnder32"
+        PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(which shasum) -a 1"
 
         # kill macos daemons
@@ -856,9 +858,9 @@ device_get_info() {
             device_latest_bb_sha1="0e62ac6a7c8299f69f9410bdda27f6a3f9601a8f"
         ;;
     esac
-    # disable bbupdate for ipad 2 cellular devices
+    # disable bbupdate for all 32-bit ipads
     case $device_type in
-        iPad2,[23] ) device_disable_bbupdate="$device_type";;
+        iPad[23]* ) device_disable_bbupdate="$device_type";;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 ]]; then
@@ -1196,7 +1198,7 @@ device_enter_mode() {
             local attempt=1
             local device_in
             while (( attempt < 6 )); do
-                log "Finding device in kDFU mode... (Attempt $attempt)"
+                log "Finding device in kDFU mode... (Attempt $attempt of 5)"
                 if [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "DFU" ]]; then
                     device_in=1
                 fi
@@ -2133,6 +2135,9 @@ ipsw_prepare_jailbreak() {
         log "Adding custom recovery to IPSW"
         zip -r0 temp.ipsw $all_flash/recoverymode.s5l8920x.img3
     fi
+    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+        ipsw_bbreplace
+    fi
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -2650,7 +2655,139 @@ ipsw_prepare_32bit() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+
+    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+        ipsw_bbreplace
+    fi
+
     mv temp.ipsw "$ipsw_custom.ipsw"
+}
+
+ipsw_bbdigest() {
+    local loc="BuildIdentities:0:"
+    if [[ $2 != "UniqueBuildID" ]]; then
+        loc+="Manifest:BasebandFirmware:"
+    fi
+    loc+="$2"
+    local out="$1"
+    if [[ $platform == "macos" ]]; then
+        echo $1 | base64 --decode > t
+        echo "Replacing $2"
+        $PlistBuddy -c "Import $loc t" BuildManifest.plist
+        rm t
+        return
+    fi
+    in=$("$dir/PlistBuddy" -c "Print $loc" BuildManifest.plist | tr -d "<>" | xxd -r -p | base64)
+    echo "${in}<" > replace
+    #sed -i'' "s,AAAAAAAAAAAAAAAAAAAAAAA<,==," replace
+    #sed -i'' "s,AAAAAAAAAAAAA<,=," replace
+    #sed -i'' "s,AAAAAAAAA<,=," replace
+    cat replace | sed "s,AAAAAAAAAAAAAAAAAAAAAAA<,==," > t
+    cat t  | sed "s,AAAAAAAAAAAAA<,=," > tt
+    cat tt | sed "s,AAAAAAAAA<,=," > replace
+    in="$(cat replace)"
+    rm replace t tt
+    case $2 in
+        *"PartialDigest" )
+            in="${in%????????????}"
+            in=$(cat BuildManifest.plist | grep "$in" -m1)
+            log "Replacing $2"
+            #sed -i'' "s,$in,replace," BuildManifest.plist
+            #sed -i'' "/replace/{n;d}" BuildManifest.plist
+            cat BuildManifest.plist | sed "s,$in,replace," > t
+            awk 'f{$0="";f=0}/replace/{f=1}1' t > tt
+            awk '/replace$/{printf("%s",$0);next}1' tt > tmp.plist
+            rm t tt
+            in="replace"
+        ;;
+        * ) log "Replacing $2"; mv BuildManifest.plist tmp.plist;;
+    esac
+    #sed -i'' "s,$in,$out," BuildManifest.plist
+    cat tmp.plist | sed "s,$in,$out," > BuildManifest.plist
+    rm tmp.plist
+}
+
+ipsw_bbreplace() {
+    local rsb1
+    local sbl1
+    local path
+    local rsb_latest
+    local sbl_latest
+    local bbfw="Print BuildIdentities:0:Manifest:BasebandFirmware"
+
+    unzip -o -j temp.ipsw BuildManifest.plist
+    mkdir Firmware
+    restore_download_bbsep
+    cp $restore_baseband Firmware/$device_use_bb
+
+    case $device_type in
+        iPhone4,1 )
+            rsb1=$($PlistBuddy -c "$bbfw:eDBL-Version" BuildManifest.plist)
+            sbl1=$($PlistBuddy -c "$bbfw:RestoreDBL-Version" BuildManifest.plist)
+            path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
+            rsb_latest="-1577031936"
+            sbl_latest="-1575983360"
+            ipsw_bbdigest d9Xbp0xyiFOxDvUcKMsoNjIvhwQ= UniqueBuildID
+            ipsw_bbdigest XAAAAADHAQCqerR8d+PvcfusucizfQ4ECBI0TA== RestoreDBL-PartialDigest
+            ipsw_bbdigest Q1TLjk+/PjayCzSJJo68FTtdhyE= AMSS-HashTableDigest
+            ipsw_bbdigest KkJI7ufv5tfNoqHcrU7gqoycmXA= OSBL-DownloadDigest
+            ipsw_bbdigest eAAAAADIAQDxcjzF1q5t+nvLBbvewn/arYVkLw== eDBL-PartialDigest
+            ipsw_bbdigest 3CHVk7EmtGjL14ApDND81cqFqhM= AMSS-DownloadDigest
+        ;;
+        iPhone5,[12] )
+            rsb1=$($PlistBuddy -c "$bbfw:RestoreSBL1-Version" BuildManifest.plist)
+            sbl1=$($PlistBuddy -c "$bbfw:SBL1-Version" BuildManifest.plist)
+            path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
+            rsb_latest="-1559114512"
+            sbl_latest="-1560163088"
+            ipsw_bbdigest lnU0rtBUK6gCyXhEtHuwbEz/IKY= UniqueBuildID
+            ipsw_bbdigest 2bmJ7Vd+WAmogV+hjq1a86UlBvA= APPS-DownloadDigest
+            ipsw_bbdigest oNmIZf39zd94CPiiKOpKvhGJbyg= APPS-HashTableDigest
+            ipsw_bbdigest dFi5J+pSSqOfz31fIvmah2GJO+E= DSP1-DownloadDigest
+            ipsw_bbdigest HXUnmGmwIHbVLxkT1rHLm5V6iDM= DSP1-HashTableDigest
+            ipsw_bbdigest oA5eQ8OurrWrFpkUOhD/3sGR3y8= DSP2-DownloadDigest
+            ipsw_bbdigest L7v8ulq1z1Pr7STR47RsNbxmjf0= DSP2-HashTableDigest
+            ipsw_bbdigest MZ1ERfoeFcbe79pFAl/hbWUSYKc= DSP3-DownloadDigest
+            ipsw_bbdigest sKmLhQcjfaOliydm+iwxucr9DGw= DSP3-HashTableDigest
+            ipsw_bbdigest oiW/8qZhN0r9OaLdUHCT+MMGknY= RPM-DownloadDigest
+            ipsw_bbdigest fAAAAEAQAgAH58t5X9KETIPrycULi8dg7b2rSw== RestoreSBL1-PartialDigest
+            ipsw_bbdigest ZAAAAIC9AQAfgUcPMN/lMt+U8s6bxipdy6td6w== SBL1-PartialDigest
+            ipsw_bbdigest kHLoJsT9APu4Xwu/aRjNK10Hx84= SBL2-DownloadDigest
+        ;;
+        iPhone5,[34] )
+            rsb1=$($PlistBuddy -c "$bbfw:RestoreSBL1-Version" BuildManifest.plist)
+            sbl1=$($PlistBuddy -c "$bbfw:SBL1-Version" BuildManifest.plist)
+            path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
+            rsb_latest="-1542379296"
+            sbl_latest="-1543427872"
+            ipsw_bbdigest Z4ST0TczwAhpfluQFQNBg7Y3BVE= UniqueBuildID
+            ipsw_bbdigest TSVi7eYY4FiAzXynDVik6TY2S1c= APPS-DownloadDigest
+            ipsw_bbdigest xd/JBOTxYJWmLkTWqLWl8GeINgU= APPS-HashTableDigest
+            ipsw_bbdigest RigCEz69gUymh2UdyJdwZVx74Ic= DSP1-DownloadDigest
+            ipsw_bbdigest a3XhREtzynTWtyQGqi/RXorXSVE= DSP1-HashTableDigest
+            ipsw_bbdigest 3JTgHWvC+XZYWa5U5MPvle+imj4= DSP2-DownloadDigest
+            ipsw_bbdigest Hvppb92/1o/cWQbl8ftoiW5jOLg= DSP2-HashTableDigest
+            ipsw_bbdigest R60ZfsOqZX+Pd/UnEaEhWfNvVlY= DSP3-DownloadDigest
+            ipsw_bbdigest DFQWkktFWNh90G2hOfwO14oEbrI= DSP3-HashTableDigest
+            ipsw_bbdigest Rsn+u2mOpYEmdrw98yA8EDT5LiE= RPM-DownloadDigest
+            ipsw_bbdigest cAAAAIC9AQBLeCHzsjHo8Q7+IzELZTV/ri/Vow== RestoreSBL1-PartialDigest
+            ipsw_bbdigest eAAAAEBsAQB9b44LqXjR3izAYl5gB4j3Iqegkg== SBL1-PartialDigest
+            ipsw_bbdigest iog3IVe+8VqgQzP2QspgFRUNwn8= SBL2-DownloadDigest
+        ;;
+    esac
+
+    log "Replacing $rsb1 with $rsb_latest"
+    #sed -i'' "s,$rsb1,$rsb_latest," BuildManifest.plist
+    cat BuildManifest.plist | sed "s,$rsb1,$rsb_latest," > t
+    log "Replacing $sbl1 with $sbl_latest"
+    #sed -i'' "s,$sbl1,$sbl_latest," BuildManifest.plist
+    cat t | sed "s,$sbl1,$sbl_latest," > tt
+    log "Replacing $path with Firmware/$device_use_bb"
+    #sed -i'' "s,$path,Firmware/$device_use_bb," BuildManifest.plist
+    cat tt | sed "s,$path,Firmware/$device_use_bb," > BuildManifest.plist
+    rm t tt
+
+    zip -r0 temp.ipsw Firmware BuildManifest.plist
 }
 
 patch_iboot() {
@@ -3168,6 +3305,10 @@ ipsw_prepare_powder() {
         "* You may try selecting N for memory option"
     fi
 
+    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+        ipsw_bbreplace
+    fi
+
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -3324,11 +3465,6 @@ restore_idevicerestore() {
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
     if [[ $device_use_bb == 0 ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
-    elif [[ $device_proc != 4 ]]; then
-        restore_download_bbsep
-        ExtraArgs="-r"
-        idevicerestore2="$idevicererestore"
-        re="re"
     fi
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
@@ -3535,7 +3671,7 @@ restore_prepare_1033() {
     $irecovery -f $iBSS.im4p
     sleep 1
     while (( attempt < 5 )); do
-        log "Entering pwnREC mode... (Attempt $attempt)"
+        log "Entering pwnREC mode... (Attempt $attempt of 4)"
         log "Sending iBSS..."
         $irecovery -f $iBSS.im4p
         sleep 1
@@ -3762,10 +3898,6 @@ ipsw_prepare() {
         ;;
 
         [56] )
-            if [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
-                device_disable_bbupdate="$device_type"
-                ipsw_custom_set
-            fi
             # 32-bit devices A5/A6
             if [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
@@ -4480,9 +4612,7 @@ menu_print_info() {
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     device_manufacturing
-    if [[ -n $device_disable_bbupdate && $device_type == "iPad"* ]]; then
-        print "* Disable bbupdate flag detected, baseband update is disabled."
-    elif [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
+    if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
@@ -5135,9 +5265,6 @@ menu_ipsw() {
 
         if (( device_proc > 6 )); then
             :
-        elif [[ $device_type == "iPhone4,1" && $device_target_vers == "5.0" ]]; then
-            print "* This restore will have baseband update disabled because of issues with iPhone4,1 5.0"
-            echo
         elif (( device_proc > 4 )) && [[ $device_type != "$device_disable_bbupdate" && -n $device_use_bb ]]; then
             print "* This restore will use $device_use_vers baseband"
             echo
