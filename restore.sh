@@ -2107,6 +2107,10 @@ ipsw_prepare_jailbreak() {
     if [[ $1 == "iboot" ]]; then
         ExtraArgs+=" iBoot.tar"
     fi
+    if [[ $ipsw_isbeta == 1 ]]; then
+        ipsw_prepare_systemversion
+        ExtraArgs+=" systemversion.tar"
+    fi
 
     log "Preparing custom IPSW: $dir/ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/ipsw" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
@@ -2636,7 +2640,6 @@ ipsw_prepare_32bit() {
             esac
         fi
     fi
-
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
@@ -2781,7 +2784,7 @@ ipsw_bbreplace() {
     cat tt | sed "s,$path,Firmware/$device_use_bb," > BuildManifest.plist
     rm t tt
 
-    zip -r0 temp.ipsw Firmware BuildManifest.plist
+    zip -r0 temp.ipsw Firmware/$device_use_bb BuildManifest.plist
 }
 
 patch_iboot() {
@@ -3181,6 +3184,11 @@ ipsw_prepare_ios4powder() {
         echo "0000010: 626F" | xxd -r - iBoot
         echo "0000020: 626F" | xxd -r - iBoot
     fi
+    if [[ $ipsw_isbeta == 1 ]]; then
+        ipsw_prepare_systemversion
+        ExtraArgs+=" systemversion.tar"
+    fi
+
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs ${JBFiles[@]}
 
@@ -3285,7 +3293,6 @@ ipsw_prepare_powder() {
         tar -cvf iBoot.tar iBEC
         ExtraArgs+=" iBoot.tar"
     fi
-
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
