@@ -1185,7 +1185,7 @@ device_enter_mode() {
 
             local attempt=1
             local device_in
-            while (( attempt < 6 )); do
+            while (( attempt <= 5 )); do
                 log "Finding device in kDFU mode... (Attempt $attempt of 5)"
                 if [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "DFU" ]]; then
                     device_in=1
@@ -1202,7 +1202,7 @@ device_enter_mode() {
                 fi
                 ((attempt++))
             done
-            if (( attempt >= 6 )); then
+            if (( attempt > 5 )); then
                 error "Failed to find device in kDFU mode. Please run the script again"
             fi
             kill $iproxy_pid
@@ -1750,7 +1750,7 @@ ipsw_preference_set() {
 
     case $device_type in
         iPhone2,1 | iPod2,1 ) ipsw_canmemory=1;;
-        iPad2,[67] | iPad3,[2356] ) ipsw_canmemory=1;;
+        iPad2,[2367] | iPad3,[2356] ) ipsw_canmemory=1;;
         iPhone3,1 | iPad1,1 | iPad2* | iPod[34],1 )
             case $device_target_vers in
                 [34]* ) ipsw_canmemory=1;;
@@ -2565,7 +2565,7 @@ ipsw_prepare_32bit() {
     local JBFiles=()
     local nskip
     case $device_type in
-        iPad2,[67] | iPad3,[2356] | "$device_disable_bbupdate" ) nskip=1;;
+        iPad2,[2367] | iPad3,[2356] | "$device_disable_bbupdate" ) nskip=1;;
     esac
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         ipsw_prepare_jailbreak
@@ -2665,13 +2665,13 @@ ipsw_bbdigest() {
     loc+="$2"
     local out="$1"
     if [[ $platform == "macos" ]]; then
-        echo $1 | base64 --decode > t
-        echo "Replacing $2"
+        echo $out | base64 --decode > t
+        log "Replacing $2"
         $PlistBuddy -c "Import $loc t" BuildManifest.plist
         rm t
         return
     fi
-    in=$("$dir/PlistBuddy" -c "Print $loc" BuildManifest.plist | tr -d "<>" | xxd -r -p | base64)
+    in=$($PlistBuddy -c "Print $loc" BuildManifest.plist | tr -d "<>" | xxd -r -p | base64)
     echo "${in}<" > replace
     #sed -i'' "s,AAAAAAAAAAAAAAAAAAAAAAA<,==," replace
     #sed -i'' "s,AAAAAAAAAAAAA<,=," replace
@@ -3661,8 +3661,8 @@ restore_prepare_1033() {
 
     $irecovery -f $iBSS.im4p
     sleep 1
-    while (( attempt < 5 )); do
-        log "Entering pwnREC mode... (Attempt $attempt of 4)"
+    while (( attempt <= 5 )); do
+        log "Entering pwnREC mode... (Attempt $attempt of 5)"
         log "Sending iBSS..."
         $irecovery -f $iBSS.im4p
         sleep 1
@@ -3677,7 +3677,7 @@ restore_prepare_1033() {
         ((attempt++))
     done
 
-    if (( attempt >= 5 )); then
+    if (( attempt > 5 )); then
         error "Failed to enter pwnREC mode. You might have to force restart your device and start over entering pwnDFU mode again"
     fi
 }
