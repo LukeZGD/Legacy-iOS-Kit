@@ -817,7 +817,11 @@ device_get_info() {
             device_use_bb="Trek-6.7.00.Release.bbfw"
             device_use_bb_sha1="22a35425a3cdf8fa1458b5116cfb199448eecf49"
         ;;
-        iPhone5,[12] ) # MDM9615 10.3.4 (32bit)
+        iPad2,[67] ) # MDM9615 9.3.6 (32bit)
+            device_use_bb="Mav5-11.80.00.Release.bbfw"
+            device_use_bb_sha1="aa52cf75b82fc686f94772e216008345b6a2a750"
+        ;;
+        iPhone5,[12] | iPad3,[56] ) # MDM9615 10.3.4 (32bit)
             device_use_bb="Mav5-11.80.00.Release.bbfw"
             device_use_bb_sha1="8951cf09f16029c5c0533e951eb4c06609d0ba7f"
         ;;
@@ -1748,7 +1752,7 @@ ipsw_preference_set() {
 
     case $device_type in
         iPhone2,1 | iPod2,1 ) ipsw_canmemory=1;;
-        iPad2,[2367] | iPad3,[2356] ) ipsw_canmemory=1;;
+        iPad[23],[23] ) ipsw_canmemory=1;;
         iPhone3,1 | iPad1,1 | iPad2* | iPod[34],1 )
             case $device_target_vers in
                 [34]* ) ipsw_canmemory=1;;
@@ -2126,7 +2130,7 @@ ipsw_prepare_jailbreak() {
         log "Adding custom recovery to IPSW"
         zip -r0 temp.ipsw $all_flash/recoverymode.s5l8920x.img3
     fi
-    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
         ipsw_bbreplace
     fi
 
@@ -2567,7 +2571,7 @@ ipsw_prepare_32bit() {
     local JBFiles=()
     local nskip
     case $device_type in
-        iPad2,[2367] | iPad3,[2356] | "$device_disable_bbupdate" ) nskip=1;;
+        iPad[23],[23] | "$device_disable_bbupdate" ) nskip=1;;
     esac
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         ipsw_prepare_jailbreak
@@ -2651,7 +2655,7 @@ ipsw_prepare_32bit() {
         "* You may try selecting N for memory option"
     fi
 
-    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
         ipsw_bbreplace
     fi
 
@@ -2729,7 +2733,7 @@ ipsw_bbreplace() {
             ipsw_bbdigest eAAAAADIAQDxcjzF1q5t+nvLBbvewn/arYVkLw== eDBL-PartialDigest
             ipsw_bbdigest 3CHVk7EmtGjL14ApDND81cqFqhM= AMSS-DownloadDigest
         ;;
-        iPhone5,[12] )
+        iPhone5,[12] | iPad2,[67] | iPad3,[56] )
             rsb1=$($PlistBuddy -c "$bbfw:RestoreSBL1-Version" BuildManifest.plist)
             sbl1=$($PlistBuddy -c "$bbfw:SBL1-Version" BuildManifest.plist)
             path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
@@ -3304,7 +3308,7 @@ ipsw_prepare_powder() {
         "* You may try selecting N for memory option"
     fi
 
-    if [[ $device_type == "iPhone"* ]] && (( device_proc > 4 )); then
+    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
         ipsw_bbreplace
     fi
 
@@ -5331,7 +5335,7 @@ ipsw_custom_set() {
     fi
     if [[ $device_type == "$device_disable_bbupdate" ]]; then
         device_use_bb=0
-        if [[ $device_type == "iPhone"* ]]; then
+        if [[ $device_type == "iPhone"* || $device_type == "iPad"* ]] && (( device_proc > 4 )); then
             ipsw_custom+="B"
         fi
     fi
