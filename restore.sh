@@ -497,27 +497,6 @@ device_manufacturing() {
         return
     fi
     if [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
-        if (( device_serial >= 946 )) || (( device_serial < 900 )); then
-            device_newbr=1
-        elif (( device_serial >= 940 )); then
-            device_newbr=2 # gray area
-        else
-            device_newbr=0
-        fi
-    elif [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
-        device_newbr=2
-        return
-    fi
-    if [[ $device_newbr == 1 ]]; then
-        print "* This $device_type is a new bootrom model"
-    elif [[ $device_newbr == 2 ]]; then
-        print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model"
-    elif [[ $device_newbr == 0 ]]; then
-        print "* This $device_type is an old bootrom model"
-    fi
-    if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
-        print "* Cannot check for manufacturing date in DFU mode"
-    elif [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
         local week=$(echo "$device_serial" | cut -c 2-)
         local year=$(echo "$device_serial" | cut -c 1)
         case $year in
@@ -526,6 +505,25 @@ device_manufacturing() {
             1 ) year="2011";;
             2 ) year="2012";;
         esac
+        if [[ $year != "2009" ]] || (( week >= 46 )); then
+            device_newbr=1
+        elif [[ $year == "2009" ]] && (( week >= 40 )); then
+            device_newbr=2 # gray area
+        else
+            device_newbr=0
+        fi
+    elif [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
+        device_newbr=2
+        return
+    fi
+    case $device_newbr in
+        0 ) print "* This $device_type is an old bootrom model";;
+        1 ) print "* This $device_type is a new bootrom model";;
+        2 ) print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model";;
+    esac
+    if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
+        print "* Cannot check for manufacturing date in DFU mode"
+    elif [[ $device_type == "iPhone2,1" ]]; then
         print "* Manufactured in Week $week $year"
     fi
 }
