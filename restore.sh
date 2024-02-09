@@ -2130,9 +2130,7 @@ ipsw_prepare_jailbreak() {
         log "Adding custom recovery to IPSW"
         zip -r0 temp.ipsw $all_flash/recoverymode.s5l8920x.img3
     fi
-    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
-        ipsw_bbreplace
-    fi
+    ipsw_bbreplace
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -2654,11 +2652,7 @@ ipsw_prepare_32bit() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
-
-    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
-        ipsw_bbreplace
-    fi
-
+    ipsw_bbreplace
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -2713,11 +2707,28 @@ ipsw_bbreplace() {
     local rsb_latest
     local sbl_latest
     local bbfw="Print BuildIdentities:0:Manifest:BasebandFirmware"
+    local ubid
+    if [[ $device_use_bb == 0 ]] || (( device_proc < 5 )); then
+        return
+    fi
 
     unzip -o -j temp.ipsw BuildManifest.plist
     mkdir Firmware
     restore_download_bbsep
     cp $restore_baseband Firmware/$device_use_bb
+
+    case $device_type in
+        iPhone4,1 ) ubid="d9Xbp0xyiFOxDvUcKMsoNjIvhwQ=";;
+        iPhone5,1 ) ubid="lnU0rtBUK6gCyXhEtHuwbEz/IKY=";;
+        iPhone5,2 ) ubid="GxETkgt8cFyki7MEPxxPweyLvLs=";;
+        iPhone5,3 ) ubid="Z4ST0TczwAhpfluQFQNBg7Y3BVE=";;
+        iPhone5,4 ) ubid="tc9rolnuc6g7TisSjn9bb/8R2oE=";;
+        iPad2,6 ) ubid="L73HfN42pH7qAzlWmsEuIZZg2oE=";;
+        iPad2,7 ) ubid="z/vJsvnUovZ+RGyXKSFB6DOjt1k=";;
+        iPad3,5 ) ubid="qSChmClUEIyiLWvysaiFF32/rJw=";;
+        iPad3,6 ) ubid="cO+N+Eo8ynFf+0rnsIWIQHTo6rg=";;
+    esac
+    ipsw_bbdigest $ubid UniqueBuildID
 
     case $device_type in
         iPhone4,1 )
@@ -2726,7 +2737,6 @@ ipsw_bbreplace() {
             path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
             rsb_latest="-1577031936"
             sbl_latest="-1575983360"
-            ipsw_bbdigest d9Xbp0xyiFOxDvUcKMsoNjIvhwQ= UniqueBuildID
             ipsw_bbdigest XAAAAADHAQCqerR8d+PvcfusucizfQ4ECBI0TA== RestoreDBL-PartialDigest
             ipsw_bbdigest Q1TLjk+/PjayCzSJJo68FTtdhyE= AMSS-HashTableDigest
             ipsw_bbdigest KkJI7ufv5tfNoqHcrU7gqoycmXA= OSBL-DownloadDigest
@@ -2739,7 +2749,6 @@ ipsw_bbreplace() {
             path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
             rsb_latest="-1559114512"
             sbl_latest="-1560163088"
-            ipsw_bbdigest lnU0rtBUK6gCyXhEtHuwbEz/IKY= UniqueBuildID
             ipsw_bbdigest 2bmJ7Vd+WAmogV+hjq1a86UlBvA= APPS-DownloadDigest
             ipsw_bbdigest oNmIZf39zd94CPiiKOpKvhGJbyg= APPS-HashTableDigest
             ipsw_bbdigest dFi5J+pSSqOfz31fIvmah2GJO+E= DSP1-DownloadDigest
@@ -2759,7 +2768,6 @@ ipsw_bbreplace() {
             path=$($PlistBuddy -c "$bbfw:Info:Path" BuildManifest.plist | tr -d '"')
             rsb_latest="-1542379296"
             sbl_latest="-1543427872"
-            ipsw_bbdigest Z4ST0TczwAhpfluQFQNBg7Y3BVE= UniqueBuildID
             ipsw_bbdigest TSVi7eYY4FiAzXynDVik6TY2S1c= APPS-DownloadDigest
             ipsw_bbdigest xd/JBOTxYJWmLkTWqLWl8GeINgU= APPS-HashTableDigest
             ipsw_bbdigest RigCEz69gUymh2UdyJdwZVx74Ic= DSP1-DownloadDigest
@@ -3307,11 +3315,7 @@ ipsw_prepare_powder() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
-
-    if [[ $device_use_bb != 0 ]] && (( device_proc > 4 )); then
-        ipsw_bbreplace
-    fi
-
+    ipsw_bbreplace
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
