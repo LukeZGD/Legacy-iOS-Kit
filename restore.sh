@@ -2719,13 +2719,13 @@ ipsw_bbreplace() {
 
     case $device_type in
         iPhone4,1 ) ubid="d9Xbp0xyiFOxDvUcKMsoNjIvhwQ=";;
-        iPhone5,1 ) ubid="lnU0rtBUK6gCyXhEtHuwbEz/IKY=";;
-        iPhone5,2 ) ubid="GxETkgt8cFyki7MEPxxPweyLvLs=";;
-        iPhone5,3 ) ubid="Z4ST0TczwAhpfluQFQNBg7Y3BVE=";;
-        iPhone5,4 ) ubid="tc9rolnuc6g7TisSjn9bb/8R2oE=";;
+        iPhone5,1 ) ubid="IcrFKRzWDvccKDfkfMNPOPYHEV0=";;
+        iPhone5,2 ) ubid="lnU0rtBUK6gCyXhEtHuwbEz/IKY=";;
+        iPhone5,3 ) ubid="dwrol4czV3ijtNHh3w1lWIdsNdA=";;
+        iPhone5,4 ) ubid="Z4ST0TczwAhpfluQFQNBg7Y3BVE=";;
         iPad2,6 ) ubid="L73HfN42pH7qAzlWmsEuIZZg2oE=";;
         iPad2,7 ) ubid="z/vJsvnUovZ+RGyXKSFB6DOjt1k=";;
-        iPad3,5 ) ubid="qSChmClUEIyiLWvysaiFF32/rJw=";;
+        iPad3,5 ) ubid="849RPGQ9kNXGMztIQBhVoU/l5lM=";;
         iPad3,6 ) ubid="cO+N+Eo8ynFf+0rnsIWIQHTo6rg=";;
     esac
     ipsw_bbdigest $ubid UniqueBuildID
