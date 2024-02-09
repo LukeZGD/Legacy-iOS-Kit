@@ -3901,7 +3901,7 @@ ipsw_prepare() {
                 ipsw_prepare_powder
             elif [[ $ipsw_jailbreak == 1 && $device_target_other != 1 ]]; then
                 ipsw_prepare_jailbreak
-            else
+            elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_32bit
             fi
         ;;
