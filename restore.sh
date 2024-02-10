@@ -800,14 +800,17 @@ device_get_info() {
             device_use_build="14G60"
         ;;
     esac
+    local latestver
     case $device_type in
         iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
         ;;
         iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
-            device_latest_vers="15.8.1"
-            device_latest_build="19H380"
+            log "Getting latest iOS version for $device_type"
+            latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+            device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+            device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
