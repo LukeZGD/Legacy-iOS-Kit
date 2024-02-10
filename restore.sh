@@ -811,6 +811,10 @@ device_get_info() {
             latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
             device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+            if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
+                device_latest_vers="15.8.1"
+                device_latest_build="19H380"
+            fi
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -837,22 +841,6 @@ device_get_info() {
         iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.4-latest
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
-        ;;
-        iPhone7,[12] ) # MDM9625 15.6-latest
-            device_latest_bb="Mav10-7.80.04.Release.bbfw"
-            device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
-        ;;
-        iPad5,[24] | iPhone8,[124] ) # MDM9615/MDM9635 15.6-latest
-            device_latest_bb="Mav10-11.61.01.Release.bbfw"
-            device_latest_bb_sha1="212cbb1e5bfd60912c01adda7dca66a569ddf758"
-        ;;
-        iPhone9,[12] ) # MDM9645 15.6-latest
-            device_latest_bb="Mav16-9.61.00.Release.bbfw"
-            device_latest_bb_sha1="7c742e0fc4857e7c07df1e4c48ccafbb60ae38bb"
-        ;;
-        iPhone9,[34] ) # PMB9943 15.6-latest
-            device_latest_bb="ICE16-6.03.01.Release.bbfw"
-            device_latest_bb_sha1="0e62ac6a7c8299f69f9410bdda27f6a3f9601a8f"
         ;;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
@@ -1123,16 +1111,23 @@ device_enter_mode() {
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
-            elif [[ $device_det == 5 ]]; then
-                if [[ $device_proc == 5 ]]; then
-                    opt="kloader5"
-                else
-                    opt="kloader_axi0mX"
-                fi
+            elif [[ $device_det == 5 && $device_proc == 5 ]]; then
+                local selection=("kloader5" "kloader_axi0mX")
+                input "kDFU Tool Option"
+                print "* Select tool to be used for entering kDFU mode."
+                print "* This option is set to kloader5 by default (1). Select this option if unsure."
+                print "* If the first option does not work, try many times and/or try the other option(s)."
+                input "Select your option:"
+                select opt2 in "${selection[@]}"; do
+                    case $opt2 in
+                        "kloader_axi0mX" ) opt="kloader_axi0mX"; break;;
+                        * ) opt="kloader5";;
+                    esac
+                done
                 log "Using $opt for kloader iOS 5"
                 echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/$opt")
-            elif (( device_det < 5 )); then
+            elif (( device_det <= 5 )); then
                 opt="kloader_axi0mX"
                 echo "/tmp/kloader_axi0mX /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader_axi0mX")
@@ -1156,9 +1151,6 @@ device_enter_mode() {
                 $ssh -p 2222 root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
-                if [[ $platform == "linux" ]]; then
-                    print "* Try running \"sudo systemctl restart usbmuxd\" before retrying USB SSH."
-                fi
                 if [[ $device_det == 1 ]]; then
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
@@ -2056,6 +2048,12 @@ ipsw_prepare_jailbreak() {
             fi
             if [[ $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/g1lbertJB.tar")
+            fi
+            if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
+                case $device_target_vers in
+                    4.2.1 ) :;;
+                    5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
+                esac
             fi
         fi
         ExtraArgs+=" -S 30" # system partition add

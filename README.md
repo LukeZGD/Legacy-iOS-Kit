@@ -94,7 +94,7 @@
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
     - iPhone 2G, 3G, iPod touch 1 - all versions
-        - iOS 1 doesn't seem to work and may require usage of [ZiPhone](https://github.com/Zibri/ZiPhone), [more info here](https://nitter.net/tihmstar/status/1734620913071542435)
+        - iOS 1 doesn't seem to work and may require usage of [ZiPhone](https://github.com/Zibri/ZiPhone), [more info here](https://twitter.com/tihmstar/status/1734620913071542435)
 
 ## Supported OS versions/distros
 
