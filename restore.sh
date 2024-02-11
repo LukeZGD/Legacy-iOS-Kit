@@ -329,18 +329,17 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
-        if [[ -n $ubuntu_ver ]] && (( ubuntu_ver < 23 )); then
-            : sudo apt install -y python2
-        fi
+        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git libimobiledevice openssl openssl-devel python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
+        sudo dnf install -y ca-certificates git libimobiledevice openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
+        sudo dnf group install -y "C Development Tools and Libraries"
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n in ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
+        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
+        sudo zypper -n install -t pattern devel_basis
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
