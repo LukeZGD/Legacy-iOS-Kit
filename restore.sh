@@ -2811,14 +2811,17 @@ patch_iboot() {
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
     local ibec
     local rsa="--rsa"
+    local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     log "Patch iBoot: $*"
     if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
         ibec=1
-        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
-    else
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/$iboot_name
+    elif [[ $1 == "--logo" ]]; then
         iboot_name="${iboot_name/iBoot/iBoot2}"
         rsa=
-        unzip -o -j temp.ipsw Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
+        unzip -o -j temp.ipsw $all_flash/$iboot_name
+    else
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/$iboot_name
     fi
     mv $iboot_name iBoot.orig
     "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
