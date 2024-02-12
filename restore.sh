@@ -2223,10 +2223,22 @@ ipsw_prepare_paths() {
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
     local str="<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/"
     local str2
+    local logostuff
     if [[ $2 == "target" ]]; then
         case $comp in
+            *"AppleLogo" )
+                if [[ $device_latest_vers == "5"* ]]; then
+                    logostuff=1
+                else
+                    case $device_target_vers in
+                        [789]* ) logostuff=1;;
+                    esac
+                fi
+            ;;
+        esac
+        case $comp in
             "NewAppleLogo" )
-                if [[ $device_latest_vers != "5"* ]]; then
+                if [[ $logostuff != 1 ]]; then
                     str+="$str2"
                 fi
             ;;
@@ -2238,7 +2250,7 @@ ipsw_prepare_paths() {
         case $comp in
             "AppleLogo" )
                 str+="$str2"
-                if [[ $device_latest_vers == "5"* ]]; then
+                if [[ $logostuff == 1 ]]; then
                     echo "$str2" >> $FirmwareBundle/manifest
                 fi
             ;;
@@ -3313,7 +3325,11 @@ ipsw_prepare_powder() {
         fi
     fi
 
-    local ExtraArr=("--boot-partition" "--boot-ramdisk" "--logo")
+    local ExtraArr=("--boot-partition" "--boot-ramdisk")
+    case $device_target_vers in
+        [789]* ) :;;
+        * ) ExtraArr+=("--logo");;
+    esac
     if [[ $device_type == "iPhone5"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
         if [[ $device_target_vers == "9"* ]]; then
@@ -3352,11 +3368,16 @@ ipsw_prepare_powder() {
     fi
 
     if [[ $device_type != "iPhone5"* && $device_type != "iPad1,1" ]]; then
-        patch_iboot --logo
-        local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
-        mkdir -p $all_flash
-        mv iBoot*.img3 $all_flash
-        zip -r0 temp.ipsw $all_flash/iBoot*.img3
+        case $device_target_vers in
+            [789]* ) :;;
+            * )
+                patch_iboot --logo
+                local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
+                mkdir -p $all_flash
+                mv iBoot*.img3 $all_flash
+                zip -r0 temp.ipsw $all_flash/iBoot*.img3
+            ;;
+        esac
     fi
     ipsw_bbreplace
 
