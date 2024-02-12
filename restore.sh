@@ -2226,7 +2226,7 @@ ipsw_prepare_paths() {
     if [[ $2 == "target" ]]; then
         case $comp in
             "NewAppleLogo" )
-                if [[ $device_target_vers != "4"* ]]; then
+                if [[ $device_latest_vers != "5"* ]]; then
                     str+="$str2"
                 fi
             ;;
@@ -2238,7 +2238,7 @@ ipsw_prepare_paths() {
         case $comp in
             "AppleLogo" )
                 str+="$str2"
-                if [[ $device_target_vers == "4"* ]]; then
+                if [[ $device_latest_vers == "5"* ]]; then
                     echo "$str2" >> $FirmwareBundle/manifest
                 fi
             ;;
@@ -3262,7 +3262,7 @@ ipsw_prepare_ios4powder() {
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
-        cp iBoot Firmware/all_flash/all_flash.${device_model}ap.production/iBoot4.${device_model}ap.RELEASE.img3
+        cp iBoot Firmware/all_flash/all_flash.${device_model}ap.production/iBoot2.${device_model}ap.RELEASE.img3
     fi
     zip -r0 temp.ipsw Firmware/all_flash/all_flash.${device_model}ap.production/* Firmware/dfu/*
 
