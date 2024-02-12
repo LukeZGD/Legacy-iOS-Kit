@@ -841,6 +841,10 @@ device_get_info() {
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
         ;;
+        iPhone7,[12] ) # MDM9625 12.4-latest
+            device_latest_bb="Mav10-7.80.04.Release.bbfw"
+            device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
+        ;;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 ]]; then
