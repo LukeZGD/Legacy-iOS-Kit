@@ -3004,9 +3004,16 @@ ipsw_prepare_ios4multipart() {
     unzip -o -j "$ipsw_path.ipsw" $all_flash2/$logo_name
     echo "0000010: 3467" | xxd -r - $logo_name
     echo "0000020: 3467" | xxd -r - $logo_name
-    mv $logo_name $all_flash/applelogo4.img3
     log "Add AppleLogo to all_flash"
-    echo "applelogo4.img3" >> $all_flash/manifest
+    if [[ $device_latest_vers == "5"* ]]; then
+        mv $logo_name $all_flash/applelogo4.img3
+        echo "applelogo4.img3" >> $all_flash/manifest
+    else
+        sed '/applelogo/d' $all_flash/manifest > manifest
+        rm $all_flash/manifest
+        echo "$logo_name" >> manifest
+        mv $logo_name manifest $all_flash/
+    fi
 
     log "Creating $ipsw_custom_part2.ipsw..."
     pushd $ipsw_custom_part2 >/dev/null
