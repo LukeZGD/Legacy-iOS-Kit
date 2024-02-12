@@ -19,12 +19,13 @@
     - Only unsupported versions are iOS 9.0.x
 - Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
-- Install IPA files for supported devices with AppSync installed
+- Install IPA files for supported devices with AppSync Unified installed
 - Sideload IPA files for supported devices on Linux
 - Save SHSH blobs for signed OTA versions for supported devices
 - Save onboard and Cydia SHSH blobs for 32-bit devices
+- Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
-- Boot SSH Ramdisk for 32-bit devices
+- Boot SSH Ramdisk for 32-bit and A7 devices
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
 - The latest baseband will be flashed for A5/A6 devices (iPhone 4S, 5, 5C, iPad 4, mini 1)
