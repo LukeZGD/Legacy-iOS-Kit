@@ -2225,14 +2225,23 @@ ipsw_prepare_paths() {
     local str2
     if [[ $2 == "target" ]]; then
         case $comp in
-            "NewAppleLogo" ) str2="${name/AppleLogo/NewAppleLogo}";;
+            "NewAppleLogo" )
+                if [[ $device_target_vers != "4"* ]]; then
+                    str+="$str2"
+                fi
+            ;;
             "AppleLogo" ) str2="${name/applelogo/applelogo7}";;
             "APTicket" ) str2="${name/applelogo/applelogoT}";;
             "RecoveryMode" ) str2="${name/recoverymode/recoverymode7}";;
             "NewiBoot" ) str2="${name/iBoot/iBoot2}";;
         esac
         case $comp in
-            *"AppleLogo" ) str+="$str2";;
+            "AppleLogo" )
+                str+="$str2"
+                if [[ $device_target_vers == "4"* ]]; then
+                    echo "$str2" >> $FirmwareBundle/manifest
+                fi
+            ;;
             "APTicket" | "RecoveryMode" )
                 str+="$str2"
                 echo "$str2" >> $FirmwareBundle/manifest
