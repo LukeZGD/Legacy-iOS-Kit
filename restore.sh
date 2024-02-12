@@ -3,6 +3,7 @@
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 jelbrek="../resources/jailbreak"
+ssh_port=6414
 
 print() {
     echo "${color_B}${1}${color_N}"
@@ -942,7 +943,7 @@ device_sshpass() {
 
 device_iproxy() {
     log "Running iproxy for SSH..."
-    $iproxy 2222 22 >/dev/null &
+    $iproxy $ssh_port 22 >/dev/null &
     iproxy_pid=$!
     sleep 1
 }
@@ -1148,10 +1149,10 @@ device_enter_mode() {
                 print "* Follow the steps in the GitHub wiki under \"A6(X) devices, jailbroken on iOS 10\""
             fi
             log "Sending files to device: ${sendfiles[*]}"
-            $scp -P 2222 ${sendfiles[@]} root@127.0.0.1:/tmp
+            $scp -P $ssh_port ${sendfiles[@]} root@127.0.0.1:/tmp
             if [[ $? == 0 ]]; then
                 log "Running kloader"
-                $ssh -p 2222 root@127.0.0.1 "bash /tmp/kloaders" &
+                $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
                 if [[ $device_det == 1 ]]; then
@@ -1196,7 +1197,7 @@ device_enter_mode() {
                     break
                 fi
                 if [[ $opt == "kloader_axi0mX" ]]; then
-                    $ssh -p 2222 root@$IPAddress "bash /tmp/kloaders" &
+                    $ssh -p $ssh_port root@$IPAddress "bash /tmp/kloaders" &
                 else
                     print "* Unplug and replug your device now"
                 fi
@@ -2224,13 +2225,15 @@ ipsw_prepare_paths() {
     local str2
     if [[ $2 == "target" ]]; then
         case $comp in
+            "NewAppleLogo" ) str2="${name/AppleLogo/NewAppleLogo}";;
             "AppleLogo" ) str2="${name/applelogo/applelogo7}";;
             "APTicket" ) str2="${name/applelogo/applelogoT}";;
             "RecoveryMode" ) str2="${name/recoverymode/recoverymode7}";;
-            "NewiBoot" ) str2="${name/iBoot/iBoot$(echo $device_target_vers | cut -c 1)}";;
+            "NewiBoot" ) str2="${name/iBoot/iBoot2}";;
         esac
         case $comp in
-            "AppleLogo" | "APTicket" | "RecoveryMode" )
+            *"AppleLogo" ) str+="$str2";;
+            "APTicket" | "RecoveryMode" )
                 str+="$str2"
                 echo "$str2" >> $FirmwareBundle/manifest
             ;;
@@ -2806,15 +2809,29 @@ patch_iboot() {
     local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
     local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+    local ibec
+    local rsa="--rsa"
     log "Patch iBoot: $*"
-    unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
-    mv $iboot_name ibot
-    "$dir/xpwntool" ibot ibot.dec -iv $iboot_iv -k $iboot_key
-    "$dir/iBoot32Patcher" ibot.dec ibot.pwned --rsa "$@"
-    "$dir/xpwntool" ibot.pwned iBoot -t ibot
-    rm ibot*
-    echo "0000010: 6365" | xxd -r - iBoot
-    echo "0000020: 6365" | xxd -r - iBoot
+    if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
+        ibec=1
+        unzip -o -j "$ipsw_path.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
+    else
+        iboot_name="${iboot_name/iBoot/iBoot2}"
+        rsa=
+        unzip -o -j temp.ipsw Firmware/all_flash/all_flash.${device_model}ap.production/$iboot_name
+    fi
+    mv $iboot_name iBoot.orig
+    "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
+    "$dir/iBoot32Patcher" iBoot.dec iBoot.pwned $rsa "$@"
+    "$dir/xpwntool" iBoot.pwned iBoot -t iBoot.orig
+    if [[ $ibec == 1 ]]; then
+        echo "0000010: 6365" | xxd -r - iBoot
+        echo "0000020: 6365" | xxd -r - iBoot
+        return
+    fi
+    echo "0000010: 626F" | xxd -r - iBoot
+    echo "0000020: 626F" | xxd -r - iBoot
+    "$dir/xpwntool" iBoot.pwned $iboot_name -t iBoot -iv $iboot_iv -k $iboot_key
 }
 
 ipsw_patch_file() {
@@ -2961,8 +2978,6 @@ ipsw_prepare_ios4multipart() {
         iboot="iboot"
     else
         log "Add $device_target_vers iBoot to all_flash"
-        echo "0000010: 626F" | xxd -r - iBoot
-        echo "0000020: 626F" | xxd -r - iBoot
         mv iBoot $all_flash/iBoot4.img3
         echo "iBoot4.img3" >> $all_flash/manifest
     fi
@@ -3194,9 +3209,6 @@ ipsw_prepare_ios4powder() {
         cp iBoot iBEC
         tar -cvf iBoot.tar iBEC
         ExtraArgs+=" iBoot.tar"
-    else
-        echo "0000010: 626F" | xxd -r - iBoot
-        echo "0000020: 626F" | xxd -r - iBoot
     fi
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
@@ -3282,7 +3294,7 @@ ipsw_prepare_powder() {
         fi
     fi
 
-    local ExtraArr=("--boot-partition" "--boot-ramdisk")
+    local ExtraArr=("--boot-partition" "--boot-ramdisk" "--logo")
     if [[ $device_type == "iPhone5"* ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
         if [[ $device_target_vers == "9"* ]]; then
@@ -3319,7 +3331,16 @@ ipsw_prepare_powder() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+
+    if [[ $device_type != "iPhone5"* && $device_type != "iPad1,1" ]]; then
+        patch_iboot --logo
+        local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
+        mkdir -p $all_flash
+        mv iBoot*.img3 $all_flash
+        zip -r0 temp.ipsw $all_flash/iBoot*.img3
+    fi
     ipsw_bbreplace
+
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -3949,9 +3970,9 @@ device_send_rdtar() {
         target+="/private/var"
     fi
     log "Sending $1"
-    $scp -P 2222 $jelbrek/$1 root@127.0.0.1:$target
+    $scp -P $ssh_port $jelbrek/$1 root@127.0.0.1:$target
     log "Extracting $1"
-    $ssh -p 2222 root@127.0.0.1 "tar -xvf $target/$1 -C /mnt1; rm $target/$1"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf $target/$1 -C /mnt1; rm $target/$1"
 }
 
 device_ramdisk64() {
@@ -4277,18 +4298,18 @@ device_ramdisk() {
             local dump="../saved/$device_type"
             local opt
             log "Mounting root filesystem"
-            $ssh -p 2222 root@127.0.0.1 "mount.sh root"
+            $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
             sleep 1
             #log "Let's just dump both activation and baseband tars"
             log "Creating baseband.tar"
-            $ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/local/standalone"
+            $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/local/standalone"
             log "Mounting data partition"
-            $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
+            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             #log "Creating activation.tar"
-            #$ssh -p 2222 root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
+            #$ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
             log "Copying tars"
-            #$scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
-            $scp -P 2222 root@127.0.0.1:/mnt1/baseband.tar .
+            #$scp -P $ssh_port root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
+            $scp -P $ssh_port root@127.0.0.1:/mnt1/baseband.tar .
             print "* Reminder to backup dump tars if needed"
             if [[ -s $dump/baseband.tar ]]; then
                 read -p "Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n)" opt
@@ -4309,7 +4330,7 @@ device_ramdisk() {
                 cp activation.tar $dump
             fi
             '
-            $ssh -p 2222 root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
+            $ssh -p $ssh_port root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
             log "Done, device should reboot to recovery mode now"
             return
         ;;
@@ -4319,10 +4340,10 @@ device_ramdisk() {
             local build
             local untether
             log "Mounting root filesystem"
-            $ssh -p 2222 root@127.0.0.1 "mount.sh root"
+            $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
             sleep 1
             log "Getting iOS version"
-            $scp -P 2222 root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
+            $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
             if [[ $platform == "macos" ]]; then
                 rm -f BuildVer Version
                 plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
@@ -4336,7 +4357,7 @@ device_ramdisk() {
             if [[ $1 == "getversion" && -n $vers ]]; then
                 log "Retrieved the current iOS version, rebooting device"
                 print "* iOS Version: $vers ($build)"
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
                 return
             fi
             case $vers in
@@ -4352,35 +4373,35 @@ device_ramdisk() {
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
                     return
                 ;;
                 * )
                     warn "iOS $vers is not supported for jailbreaking with SSHRD."
-                    $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
                     return
                 ;;
             esac
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
-            $scp -P 2222 $jelbrek/$untether root@127.0.0.1:/mnt1
+            $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
                 4.1 | 4.0* | 3.1* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
-                    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
             log "Mounting data partition"
-            $ssh -p 2222 root@127.0.0.1 "mount.sh pv"
+            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
                 9* | 8* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;;
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.1 )
                     if [[ $device_type != "iPhone1,2" ]]; then
-                        $ssh -p 2222 root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
+                        $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
                     fi
                 ;;
                 5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
@@ -4390,18 +4411,18 @@ device_ramdisk() {
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
                     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
-                        $scp -P 2222 $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
+                        $scp -P $ssh_port $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
                     else
-                        $scp -P 2222 $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
+                        $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
                     fi
-                    $ssh -p 2222 root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
+                    $ssh -p $ssh_port root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
                 ;;
             esac
             case $vers in
                 8* | 4.1 | 4.0* | 3* ) :;;
                 * )
                     log "Extracting $untether"
-                    $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
             case $vers in
@@ -4421,17 +4442,17 @@ device_ramdisk() {
             fi
             if [[ $vers == "8"* ]]; then
                 log "Sending daibutsu/move.sh"
-                $scp -P 2222 $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
+                $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
-                $ssh -p 2222 root@127.0.0.1 "bash /mnt1/move.sh; rm /mnt1/move.sh"
+                $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh; rm /mnt1/move.sh"
                 untether="untether.tar"
                 log "Extracting $untether"
-                $ssh -p 2222 root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 log "Running haxx_overwrite --${device_type}_${build}"
-                $ssh -p 2222 root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
+                $ssh -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
             else
                 log "Rebooting"
-                $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
@@ -4442,18 +4463,18 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p 2222 root@127.0.0.1 "nvram -c; reboot_bak"
+            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done, your device should reboot now"
             return
         ;;
 
         "setnvram" )
             log "Sending commands for NVRAM..."
-            $ssh -p 2222 root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
+            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
             if [[ $device_type == "iPhone3,3" && $rec == 2 ]]; then
-                $ssh -p 2222 root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg"
+                $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg"
             fi
-            $ssh -p 2222 root@127.0.0.1 "reboot_bak"
+            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             log "Done, your device should reboot now"
             return
         ;;
@@ -4500,12 +4521,12 @@ menu_ramdisk() {
             esac
         done
         case $mode in
-            "ssh" ) $ssh -p 2222 root@127.0.0.1;;
-            "reboot" ) $ssh -p 2222 root@127.0.0.1 "$reboot"; loop=1;;
+            "ssh" ) $ssh -p $ssh_port root@127.0.0.1;;
+            "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
                 local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
-                $ssh -p 2222 root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+                $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
                 pause
@@ -4531,7 +4552,7 @@ shsh_save_onboard64() {
     device_iproxy
     device_sshpass
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
-    $ssh -p 2222 root@127.0.0.1 "cat /dev/disk1" | dd of=dump.raw bs=256 count=$((0x4000))
+    $ssh -p $ssh_port root@127.0.0.1 "cat /dev/disk1" | dd of=dump.raw bs=256 count=$((0x4000))
     "$dir/img4tool" --convert -s $shsh dump.raw
     if [[ ! -s $shsh ]]; then
         error "Saving onboard SHSH blobs failed."
@@ -5752,13 +5773,13 @@ device_dump() {
         device_sshpass
         log "Creating $arg.tar"
         if [[ $arg == "activation" ]]; then
-            $ssh -p 2222 root@127.0.0.1 "mkdir -p /tmp/$dmp2; cp -R $dmps/* /tmp/$dmp2"
-            $ssh -p 2222 root@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
+            $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /tmp/$dmp2; cp -R $dmps/* /tmp/$dmp2"
+            $ssh -p $ssh_port root@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
         else
-            $ssh -p 2222 root@127.0.0.1 "tar -cvf /tmp/$arg.tar $dmps"
+            $ssh -p $ssh_port root@127.0.0.1 "tar -cvf /tmp/$arg.tar $dmps"
         fi
         log "Copying $arg.tar"
-        $scp -P 2222 root@127.0.0.1:/tmp/$arg.tar .
+        $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         device_ramdisk $arg
@@ -5812,14 +5833,14 @@ device_hacktivate() {
     device_iproxy
     device_sshpass
     log "Getting lockdownd"
-    $scp -P 2222 root@127.0.0.1:/usr/libexec/lockdownd .
+    $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd .
     log "Patching lockdownd"
     $bspatch lockdownd lockdownd.patched "$patch"
     log "Renaming original lockdownd"
-    $ssh -p 2222 root@127.0.0.1 "mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
+    $ssh -p $ssh_port root@127.0.0.1 "mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
     log "Copying patched lockdownd to device"
-    $scp -P 2222 lockdownd.patched root@127.0.0.1:/usr/libexec/lockdownd
-    $ssh -p 2222 root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
+    $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/usr/libexec/lockdownd
+    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
     log "Done. Your device will reboot now"
 }
 
