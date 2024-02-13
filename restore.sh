@@ -1234,9 +1234,7 @@ device_enter_mode() {
                     return
                 fi
             elif [[ $irec_pwned == 1 && $device_proc == 7 ]]; then
-                if [[ $platform == "macos" ]]; then
-                    ${ipwnder}2 -p
-                else
+                if [[ $platform != "macos" ]]; then
                     device_ipwndfu rmsigchks
                 fi
                 return
