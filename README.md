@@ -78,7 +78,7 @@
     - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 1, 2, 3, 4, 5
-- Restoring with SHSH blobs is also supported on some 64-bit devices:
+- Restoring with SHSH blobs and using SSH Ramdisks are also supported on some 64-bit devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
     - iPhone 5S, 6, 6S, SE 2016, 7 (including Plus variants)
     - iPad Air 1, 2

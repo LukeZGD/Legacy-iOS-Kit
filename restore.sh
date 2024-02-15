@@ -4126,7 +4126,7 @@ device_ramdisk64() {
             if [[ $device_type == "iPhone8,1" || $device_type == "iPhone8,2" ]] && [[ $getcomp == "Kernelcache" ]]; then
                 name="kernelcache.release.$device_model"
             fi
-            if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* && $ios8 != 1 ]]; then
+            if [[ $build_id == "18C66" ]]; then
                 case $getcomp in
                     "Trustcache"     ) name="038-83284-083.dmg.trustcache";;
                     "RestoreRamdisk" ) name="038-83284-083.dmg";;
@@ -4172,7 +4172,6 @@ device_ramdisk64() {
                     reco+=" -A"
                     mv $getcomp.orig $getcomp.orig0
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
-                    [[ -e DeviceTree.orig ]] && echo nice
                 fi
             ;;
             "Trustcache" ) reco+="rtsc";;
@@ -4437,44 +4436,6 @@ device_ramdisk() {
 
     case $mode in
         "activation" | "baseband" )
-            local arg="$1"
-            local dump="../saved/$device_type"
-            local opt
-            log "Mounting root filesystem"
-            $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
-            sleep 1
-            #log "Let's just dump both activation and baseband tars"
-            log "Creating baseband.tar"
-            $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf baseband.tar usr/local/standalone"
-            log "Mounting data partition"
-            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
-            #log "Creating activation.tar"
-            #$ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf activation.tar private/var/root/Library/Lockdown"
-            log "Copying tars"
-            #$scp -P $ssh_port root@127.0.0.1:/mnt1/baseband.tar root@127.0.0.1:/mnt1/activation.tar .
-            $scp -P $ssh_port root@127.0.0.1:/mnt1/baseband.tar .
-            print "* Reminder to backup dump tars if needed"
-            if [[ -s $dump/baseband.tar ]]; then
-                read -p "Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n)" opt
-                if [[ $opt != "N" && $opt != "n" ]]; then
-                    cp baseband.tar $dump
-                fi
-            else
-                cp baseband.tar $dump
-            fi
-            : '
-            opt=
-            if [[ -s $dump/activation.tar ]]; then
-                read -p "Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)" opt
-                if [[ $opt != "N" && $opt != "n" ]]; then
-                    cp activation.tar $dump
-                fi
-            else
-                cp activation.tar $dump
-            fi
-            '
-            $ssh -p $ssh_port root@127.0.0.1 "rm -f /mnt1/baseband.tar /mnt1/activation.tar; nvram auto-boot=0; reboot_bak"
-            log "Done, device should reboot to recovery mode now"
             return
         ;;
 
@@ -4639,7 +4600,7 @@ menu_ramdisk() {
         menu_items+=("Dump Blobs")
         reboot="/sbin/reboot"
     fi
-    if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* && $1 != "12"* ]]; then
+    if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
     fi
     menu_items+=("Reboot Device" "Exit")
@@ -5756,8 +5717,11 @@ menu_other() {
                     menu_items+=("Get iOS Version")
                 fi
                 menu_items+=("Clear NVRAM")
-                if [[ $device_type == "iPhone"* && $device_mode == "Normal" ]]; then
-                    menu_items+=("Dump Baseband")
+                case $device_type in
+                    iPhone* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
+                esac
+                if [[ $device_mode != "Normal" ]]; then
+                    menu_items+=("Activation Records")
                 fi
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
@@ -5910,18 +5874,22 @@ device_dump() {
     local dump="../saved/$device_type/$arg.tar"
     local dmps
     local dmp2
+    local acts
+    local act2
     case $arg in
         "baseband" ) dmps="/usr/local/standalone";;
         "activation" )
-            dmp2="private/var/root/Library/Lockdown"
+            act2="private/var/root/Library/Lockdown"
             case $device_vers in
-                [34567]* ) dmps="/$dmp2";;
-                8* ) dmps="/private/var/mobile/Library/mad";;
+                [34567]* ) acts="/$act2";;
+                8* ) acts="/private/var/mobile/Library/mad";;
                 * )
-                    dmps="/private/var/containers/Data/System/*/Library/activation_records"
-                    dmp2+="/activation_records"
+                    acts="/private/var/containers/Data/System/*/Library/activation_records"
+                    act2+="/activation_records"
                 ;;
             esac
+            dmps="$acts"
+            dmp2="$act2"
         ;;
     esac
 
@@ -5964,10 +5932,73 @@ device_dump() {
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         device_ramdisk $arg
-        if [[ $mode != "baseband" ]]; then
+        dump="../saved/$device_type"
+        log "Mounting filesystems"
+        $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+        sleep 1
+        log "Getting iOS version"
+        $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
+        if [[ $platform == "macos" ]]; then
+            rm -f BuildVer Version
+            plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
+            vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+            plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
+            build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+        else
+            vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+            build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+        fi
+        if [[ -z $vers ]]; then
+            warn "Something wrong happened. Failed to get iOS version."
+            print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
+            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+            return
+        fi
+        local tmp="/mnt1/private/var/tmp"
+        log "Dumping both baseband and activation tars"
+        log "Creating baseband.tar"
+        $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone"
+        act2="private/var/root/Library/Lockdown"
+        case $vers in
+            [34567]* ) acts="$act2";;
+            8* ) acts="private/var/mobile/Library/mad";;
+            * )
+                acts="private/var/containers/Data/System/*/Library/activation_records"
+                act2+="/activation_records"
+            ;;
+        esac
+        log "Creating activation.tar"
+        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /$act2; cp -R /mnt1/$acts/* $tmp/$act2"
+        $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf activation.tar $act2"
+        log "Copying tars"
+        $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar root@127.0.0.1:$tmp/activation.tar .
+        print "* Reminder to backup dump tars if needed"
+        if [[ -s $dump/baseband.tar ]]; then
+            read -p "$(input 'Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n) ')" opt
+            if [[ $opt != "N" && $opt != "n" ]]; then
+                cp baseband.tar $dump
+            fi
+        else
+            cp baseband.tar $dump
+        fi
+        opt=
+        if [[ -s $dump/activation.tar ]]; then
+            read -p "$(input 'Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)' )" opt
+            if [[ $opt != "N" && $opt != "n" ]]; then
+                cp activation.tar $dump
+            fi
+        else
+            cp activation.tar $dump
+        fi
+        $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar; nvram auto-boot=0; reboot_bak"
+        log "Done, device should reboot to recovery mode now"
+        if [[ $mode != "baseband" && $mode != "actrec" ]]; then
+            log "Put your device back in kDFU/pwnDFU mode to proceed"
             device_find_mode Recovery
             device_enter_mode DFU
             device_enter_mode pwnDFU
+        else
+            log "Just exit recovery mode if needed: Other Utilities -> Exit Recovery Mode"
         fi
     fi
     kill $iproxy_pid
