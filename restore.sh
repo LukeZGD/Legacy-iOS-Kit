@@ -4170,7 +4170,7 @@ device_ramdisk64() {
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
 
-    if [[ $ios8 == 1 ]];
+    if [[ $ios8 == 1 ]]; then
         device_iproxy 44
         print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
     else
