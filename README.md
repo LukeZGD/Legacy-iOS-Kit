@@ -158,6 +158,6 @@
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theiphonewiki.com/wiki/redsn0w)
 - Some patches made using patchers from [Bundle-Creation](https://github.com/Merculous/Bundle-Creation)
 - SSH Ramdisk tars from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
-- A7 SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script)
+- A7 SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12) and [iarchive.app](https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
     - [img4lib](https://github.com/xerub/img4lib) - xerub
     - [img4tool](https://github.com/tihmstar/img4tool) - tihmstar

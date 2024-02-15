@@ -942,8 +942,12 @@ device_sshpass() {
 }
 
 device_iproxy() {
+    local port=22
     log "Running iproxy for SSH..."
-    $iproxy $ssh_port 22 >/dev/null &
+    if [[ -n $1 ]]; then
+        port=$1
+    fi
+    $iproxy $ssh_port $port >/dev/null &
     iproxy_pid=$!
     sleep 1
 }
@@ -4015,7 +4019,7 @@ device_send_rdtar() {
 
 device_ramdisk64() {
     local sshtar="../saved/ssh-64.tar"
-    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "Trustcache" "RestoreRamdisk")
+    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
     local name
     local iv
     local key
@@ -4023,16 +4027,41 @@ device_ramdisk64() {
     local url
     local decrypt
     local build_id="16A366"
-    local ramdisk_path="../saved/$device_type/ramdisk_$build_id"
-    device_target_build="$build_id"
+    local ios8
+    local opt
 
-    if [[ ! -e $sshtar ]]; then
-        log "Downloading ssh.tar from SSHRD_Script..."
-        curl -LO https://github.com/verygenericname/sshtars/raw/a6a93db54cc30a72f577744e50fb66ae57b24990/ssh.tar.gz
-        mv ssh.tar.gz $sshtar.gz
-        gzip -d $sshtar.gz
+    print "* Version Selection"
+    print "* The version of the SSH Ramdisk is set to iOS 12 by default."
+    print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 or 8 not booting after using iOS 12 ramdisk."
+    print "* If not sure, just press Enter/Return. This will select the default version."
+    read -p "$(input "Select Y to use iOS 12, select N to use iOS 8 (Y/n) ")" opt
+    if [[ $opt == 'n' || $opt == 'N' ]]; then
+        ios8=1
     fi
 
+    if [[ $ios8 == 1 ]]; then
+        build_id="12B410"
+        if [[ $device_type == "iPhone"* ]]; then
+            build_id="12B411"
+        fi
+        sshtar="../saved/iram.tar"
+        if [[ ! -e $sshtar ]]; then
+            log "Downloading iram.tar from iarchive.app..."
+            curl -LO https://iarchive.app/Download/iram.tar
+            mv iram.tar $sshtar
+        fi
+    else
+        comps+=("Trustcache")
+        if [[ ! -e $sshtar ]]; then
+            log "Downloading ssh.tar from SSHRD_Script..."
+            curl -LO https://github.com/verygenericname/sshtars/raw/a6a93db54cc30a72f577744e50fb66ae57b24990/ssh.tar.gz
+            mv ssh.tar.gz $sshtar.gz
+            gzip -d $sshtar.gz
+        fi
+    fi
+
+    local ramdisk_path="../saved/$device_type/ramdisk_$build_id"
+    device_target_build="$build_id"
     device_fw_key_check
     ipsw_get_url $build_id
 
@@ -4047,6 +4076,9 @@ device_ramdisk64() {
             "Trustcache" ) path="Firmware/";;
             * ) path="";;
         esac
+        if [[ $ios8 == 1 && $getcomp == "DeviceTree" ]]; then
+            path+="all_flash.${device_model}ap.production/"
+        fi
         if [[ -z $name ]]; then
             local hwmodel
             case $device_type in
@@ -4075,20 +4107,45 @@ device_ramdisk64() {
         local reco="-i $getcomp.orig -o $getcomp.img4 -M ../resources/sshrd/IM4M -T "
         case $getcomp in
             "iBSS" | "iBEC" )
+                reco+="$(echo $getcomp | tr '[:upper:]' '[:lower:]') -A"
                 "$dir/img4" -i $getcomp.orig -o $getcomp.dec -k ${iv}${key}
                 mv $getcomp.orig $getcomp.orig0
-                $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
-                reco+="$(echo $getcomp | tr '[:upper:]' '[:lower:]') -A"
+                if [[ $ios8 == 1 ]]; then
+                    $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/ios8/$name.patch
+                else
+                    $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
+                fi
             ;;
-            "Kernelcache" ) reco+="rkrn -P ../resources/sshrd/$name.bpatch";;
-            "DeviceTree" ) reco+="rdtr";;
+            "Kernelcache" )
+                reco+="rkrn"
+                if [[ $ios8 == 1 ]]; then
+                    mv $getcomp.orig $getcomp.orig0
+                    "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key} -D
+                else
+                    reco+=" -P ../resources/sshrd/$name.bpatch"
+                fi
+            ;;
+            "DeviceTree" )
+                reco+="rdtr"
+                if [[ $ios8 == 1 ]]; then
+                    reco+=" -A"
+                    mv $getcomp.orig $getcomp.orig0
+                    "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
+                    [[ -e DeviceTree.orig ]] && echo nice
+                fi
+            ;;
             "Trustcache" ) reco+="rtsc";;
             "RestoreRamdisk" )
-                mv $getcomp.orig $getcomp.orig0
-                "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
-                "$dir/hfsplus" $getcomp.orig grow 210000000
-                "$dir/hfsplus" $getcomp.orig untar $sshtar
                 reco+="rdsk -A"
+                mv $getcomp.orig $getcomp.orig0
+                if [[ $ios8 == 1 ]]; then
+                    "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
+                    "$dir/hfsplus" $getcomp.orig grow 50000000
+                else
+                    "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
+                    "$dir/hfsplus" $getcomp.orig grow 210000000
+                fi
+                "$dir/hfsplus" $getcomp.orig untar $sshtar
             ;;
         esac
         "$dir/img4" $reco
@@ -4106,15 +4163,22 @@ device_ramdisk64() {
     $irecovery -c ramdisk
     $irecovery -f $ramdisk_path/DeviceTree.img4
     $irecovery -c devicetree
-    $irecovery -f $ramdisk_path/Trustcache.img4
-    $irecovery -c firmware
+    if [[ $ios8 != 1 ]]; then
+        $irecovery -f $ramdisk_path/Trustcache.img4
+        $irecovery -c firmware
+    fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
 
-    device_iproxy
+    if [[ $ios8 == 1 ]];
+        device_iproxy 44
+        print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
+    else
+        device_iproxy
+        print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
+    fi
     device_sshpass alpine
 
-    print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
     print "* Mount filesystems with this command (for newer iOS versions only!):"
     print "    mount_filesystems"
     print "* Mount root filesystem with this command (tested for iOS 10.3.x):"
@@ -5982,7 +6046,7 @@ device_enter_ramdisk() {
         return
     elif (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
-        print "* If not sure, just press Enter/Return. This will select the default build version."
+        print "* If not sure, just press Enter/Return. This will select the default version."
         read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
     fi
     device_ramdisk
