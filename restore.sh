@@ -4719,10 +4719,11 @@ menu_ramdisk() {
 shsh_save_onboard64() {
     log "Proceeding to dump onboard blobs on normal mode"
     print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
-    print "* For A7 devices, you can use SSH Ramdisk to dump onboard blobs: Other Utilities -> SSH Ramdisk"
-    print "* For A8 devices and newer, use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+    print "* You can use SSH Ramdisk option to dump onboard blobs: Other Utilities -> SSH Ramdisk"
+    print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
+        print "* Use the SSH Ramdisk option instead."
         return
     fi
     print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
