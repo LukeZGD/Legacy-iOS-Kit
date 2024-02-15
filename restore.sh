@@ -3739,7 +3739,9 @@ restore_prepare_1033() {
     device_enter_mode pwnDFU
     local attempt=1
 
-    $irecovery -f $iBSS.im4p
+    if [[ $device_proc == 7 ]]; then
+        $gaster reset
+    fi
     sleep 1
     while (( attempt <= 5 )); do
         log "Entering pwnREC mode... (Attempt $attempt of 5)"
@@ -3748,7 +3750,7 @@ restore_prepare_1033() {
         sleep 1
         log "Sending iBEC..."
         $irecovery -f $iBEC.im4p
-        sleep 5
+        sleep 3
         device_find_mode Recovery 1
         if [[ $? == 0 ]]; then
             break
@@ -3756,6 +3758,10 @@ restore_prepare_1033() {
         print "* You may also try to unplug and replug your device"
         ((attempt++))
     done
+    if [[ $device_proc == 10 ]]; then
+        $irecovery -c "go"
+        sleep 3
+    fi
 
     if (( attempt > 5 )); then
         error "Failed to enter pwnREC mode. You might have to force restart your device and start over entering pwnDFU mode again"
@@ -4026,23 +4032,34 @@ device_ramdisk64() {
     local path
     local url
     local decrypt
-    local build_id="16A366"
     local ios8
     local opt
+    local build_id="16A366"
+    if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* ]]; then
+        build_id="18C66"
+    fi
 
-    print "* Version Selection"
-    print "* The version of the SSH Ramdisk is set to iOS 12 by default."
-    print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 or 8 not booting after using iOS 12 ramdisk."
-    print "* If not sure, just press Enter/Return. This will select the default version."
-    read -p "$(input "Select Y to use iOS 12, select N to use iOS 8 (Y/n) ")" opt
-    if [[ $opt == 'n' || $opt == 'N' ]]; then
-        ios8=1
+    if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
+        local ver="12"
+        if [[ $device_type == "iPad5"* ]]; then
+            ver="14"
+        fi
+        print "* Version Selection"
+        print "* The version of the SSH Ramdisk is set to iOS $ver by default."
+        print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 or 8 not booting after using iOS $ver ramdisk."
+        print "* If not sure, just press Enter/Return. This will select the default version."
+        read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
+        if [[ $opt == 'n' || $opt == 'N' ]]; then
+            ios8=1
+        fi
     fi
 
     if [[ $ios8 == 1 ]]; then
         build_id="12B410"
         if [[ $device_type == "iPhone"* ]]; then
             build_id="12B411"
+        elif [[ $device_type == "iPod7,1" ]]; then
+            build_id="12H321"
         fi
         sshtar="../saved/iram.tar"
         if [[ ! -e $sshtar ]]; then
@@ -4070,6 +4087,11 @@ device_ramdisk64() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
+            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
+            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
+            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
+        fi
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" ) path="Firmware/all_flash/";;
@@ -4083,9 +4105,16 @@ device_ramdisk64() {
             local hwmodel
             case $device_type in
                 iPhone6*    ) hwmodel="iphone6";;
+                iPhone7*    ) hwmodel="iphone7";;
+                iPhone8,4   ) hwmodel="iphone8b";;
+                iPhone8*    ) hwmodel="iphone8";;
+                iPhone9*    ) hwmodel="iphone9";;
                 iPad4,[123] ) hwmodel="ipad4";;
                 iPad4,[456] ) hwmodel="ipad4b";;
                 iPad4,[789] ) hwmodel="ipad4bm";;
+                iPad5,[12]  ) hwmodel="ipad5";;
+                iPad5,[34]  ) hwmodel="ipad5b";;
+                *           ) hwmodel="$device_model";;
             esac
             case $getcomp in
                 "iBSS" | "iBEC"  ) name="$getcomp.$hwmodel.RELEASE.im4p";;
@@ -4094,6 +4123,15 @@ device_ramdisk64() {
                 "Trustcache"     ) name="048-08497-242.dmg.trustcache";;
                 "RestoreRamdisk" ) name="048-08497-242.dmg";;
             esac
+            if [[ $device_type == "iPhone8,1" || $device_type == "iPhone8,2" ]] && [[ $getcomp == "Kernelcache" ]]; then
+                name="kernelcache.release.$device_model"
+            fi
+            if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* && $ios8 != 1 ]]; then
+                case $getcomp in
+                    "Trustcache"     ) name="038-83284-083.dmg.trustcache";;
+                    "RestoreRamdisk" ) name="038-83284-083.dmg";;
+                esac
+            fi
         fi
 
         log "$getcomp"
@@ -4104,7 +4142,7 @@ device_ramdisk64() {
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
-        local reco="-i $getcomp.orig -o $getcomp.img4 -M ../resources/sshrd/IM4M -T "
+        local reco="-i $getcomp.orig -o $getcomp.img4 -M ../resources/sshrd/IM4M$device_proc -T "
         case $getcomp in
             "iBSS" | "iBEC" )
                 reco+="$(echo $getcomp | tr '[:upper:]' '[:lower:]') -A"
@@ -4123,6 +4161,9 @@ device_ramdisk64() {
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key} -D
                 else
                     reco+=" -P ../resources/sshrd/$name.bpatch"
+                    if [[ $platform == "linux" && $build_id == "18"* ]]; then
+                        reco+=" -J"
+                    fi
                 fi
             ;;
             "DeviceTree" )
@@ -4184,7 +4225,7 @@ device_ramdisk64() {
     print "* Mount root filesystem with this command (tested for iOS 10.3.x):"
     print "    mount_apfs /dev/disk0s1s1 /mnt1"
 
-    menu_ramdisk
+    menu_ramdisk $build_id
 }
 
 device_ramdisk() {
@@ -4594,9 +4635,12 @@ menu_ramdisk() {
     local mode
     local menu_items=("Connect to SSH")
     local reboot="reboot_bak"
-    if [[ $device_proc == 7 ]]; then
+    if (( device_proc >= 7 )); then
         menu_items+=("Dump Blobs")
         reboot="/sbin/reboot"
+    fi
+    if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* && $1 != "12"* ]]; then
+        menu_items+=("Install TrollStore")
     fi
     menu_items+=("Reboot Device" "Exit")
 
@@ -4619,11 +4663,15 @@ menu_ramdisk() {
                 "Connect to SSH" ) mode="ssh";;
                 "Reboot Device" ) mode="reboot";;
                 "Dump Blobs" ) mode="dump-blobs";;
+                "Install TrollStore" ) mode="trollstore";;
                 "Exit" ) mode="exit";;
             esac
         done
         case $mode in
-            "ssh" ) $ssh -p $ssh_port root@127.0.0.1;;
+            "ssh" )
+                log "Use the \"exit\" command to go back to SSH Ramdisk Menu"
+                $ssh -p $ssh_port root@127.0.0.1
+            ;;
             "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
@@ -4632,6 +4680,36 @@ menu_ramdisk() {
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
                 pause
+            ;;
+            "trollstore" )
+                print "* Make sure that your device is on iOS 14 or 15 before continuing."
+                print "* If your device is on iOS 13 or below, TrollStore will NOT work."
+                pause
+                log "Checking for latest TrollStore"
+                local troll=$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest)
+                local latest="$(echo "$troll" | $jq -r ".tag_name")"
+                local current="$(cat ../saved/TrollStore_version)"
+                if [[ $current != "$latest" ]]; then
+                    rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
+                fi
+                if [[ -s ../saved/TrollStore.tar && -s ../saved/PersistenceHelper_Embedded ]]; then
+                    cp ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded .
+                else
+                    rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded 2>/dev/null
+                    log "Downloading latest TrollStore"
+                    curl -LO $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"PersistenceHelper_Embedded\")) | .browser_download_url")
+                    curl -LO $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"TrollStore.tar\")) | .browser_download_url")
+                    cp TrollStore.tar PersistenceHelper_Embedded ../saved
+                    echo "$latest" > ../saved/TrollStore_version
+                fi
+                tar -xf TrollStore.tar
+                log "Installing TrollStore to Tips"
+                $ssh -p $ssh_port root@127.0.0.1 "mount_filesystems"
+                local tips="$($ssh -p $ssh_port root@127.0.0.1 "find /mnt2/containers/Bundle/Application/ -name \"Tips.app\"")"
+                $scp -P $ssh_port PersistenceHelper_Embedded TrollStore.app/trollstorehelper ../resources/sshrd/trollstore.sh root@127.0.0.1:$tips
+                rm -r PersistenceHelper_Embedded TrollStore*
+                $ssh -p $ssh_port root@127.0.0.1 "bash $tips/trollstore.sh; rm $tips/trollstore.sh"
+                log "Done!"
             ;;
         esac
         mode=
@@ -5695,7 +5773,7 @@ menu_other() {
             esac
         fi
         if [[ $device_mode != "none" ]]; then
-            if (( device_proc < 8 )); then
+            if (( device_proc < 11 )); then
                 menu_items+=("SSH Ramdisk")
             fi
             case $device_mode in
@@ -6041,7 +6119,7 @@ device_justboot() {
 }
 
 device_enter_ramdisk() {
-    if [[ $device_proc == 7 ]]; then
+    if (( device_proc >= 7 )); then
         device_ramdisk64
         return
     elif (( device_proc >= 5 )); then

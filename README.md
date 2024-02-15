@@ -7,7 +7,8 @@
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
-- Legacy iOS Kit supports all 32-bit iOS devices, and some A7/A8 64-bit devices
+- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10) devices
+    - Devices that received iOS 16 and newer are not supported and only have limited functionality (such as sideload on Linux etc.)
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore some 32-bit devices to other iOS versions without blobs
     - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
@@ -25,10 +26,12 @@
 - Save onboard and Cydia SHSH blobs for 32-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
-- Boot SSH Ramdisk for 32-bit and A7 devices
+- Boot SSH Ramdisk for supported 32-bit and 64-bit devices
+- Save onboard SHSH blobs using SSH Ramdisk for the supported 64-bit devices
+- Install [TrollStore](https://github.com/opa334/TrollStore) using SSH Ramdisk for the supported 64-bit devices on iOS 14/15
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
-- The latest baseband will be flashed for A5/A6 devices (iPhone 4S, 5, 5C, iPad 4, mini 1)
+- The latest baseband will be flashed for A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
 
@@ -158,6 +161,6 @@
 - Some patches from [PwnageTool](https://www.theiphonewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theiphonewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theiphonewiki.com/wiki/redsn0w)
 - Some patches made using patchers from [Bundle-Creation](https://github.com/Merculous/Bundle-Creation)
 - SSH Ramdisk tars from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
-- A7 SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12) and [iarchive.app](https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
+- 64-bit SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+) and [iarchive.app](https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
     - [img4lib](https://github.com/xerub/img4lib) - xerub
     - [img4tool](https://github.com/tihmstar/img4tool) - tihmstar
