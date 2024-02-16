@@ -4405,10 +4405,10 @@ device_ramdisk() {
     if (( device_proc < 5 )); then
         log "Sending iBSS..."
         $irecovery -f $ramdisk_path/iBSS
+        sleep 1
     fi
     if [[ $device_type != "iPod2,1" && $device_proc != 1 && $build_id != "7"* && $build_id != "8"* ]] ||
        [[ $device_type == "iPad2"* ]]; then
-        sleep 1
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
     fi
@@ -5874,22 +5874,18 @@ device_dump() {
     local dump="../saved/$device_type/$arg.tar"
     local dmps
     local dmp2
-    local acts
-    local act2
     case $arg in
         "baseband" ) dmps="/usr/local/standalone";;
         "activation" )
-            act2="private/var/root/Library/Lockdown"
+            dmp2="private/var/root/Library/Lockdown"
             case $device_vers in
-                [34567]* ) acts="/$act2";;
-                8* ) acts="/private/var/mobile/Library/mad";;
+                [34567]* ) dmps="/$dmp2";;
+                8* ) dmps="/private/var/mobile/Library/mad";;
                 * )
-                    acts="/private/var/containers/Data/System/*/Library/activation_records"
-                    act2+="/activation_records"
+                    dmps="/private/var/containers/Data/System/*/Library/activation_records"
+                    dmp2+="/activation_records"
                 ;;
             esac
-            dmps="$acts"
-            dmp2="$act2"
         ;;
     esac
 
@@ -5960,33 +5956,39 @@ device_dump() {
         log "Dumping both baseband and activation tars"
         log "Creating baseband.tar"
         $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone"
-        act2="private/var/root/Library/Lockdown"
+        dmp2="private/var/root/Library/Lockdown"
         case $vers in
-            [34567]* ) acts="$act2";;
-            8* ) acts="private/var/mobile/Library/mad";;
+            [34567]* ) dmps="$dmp2";;
+            8* ) dmps="private/var/mobile/Library/mad";;
             * )
-                acts="private/var/containers/Data/System/*/Library/activation_records"
-                act2+="/activation_records"
+                dmps="private/var/containers/Data/System/*/Library/activation_records"
+                dmp2+="/activation_records"
             ;;
         esac
         log "Creating activation.tar"
-        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /$act2; cp -R /mnt1/$acts/* $tmp/$act2"
-        $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf activation.tar $act2"
+        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/$dmp2; cp -R /mnt1/$dmps/* $tmp/$dmp2"
+        $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar $dmp2"
         log "Copying tars"
-        $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar root@127.0.0.1:$tmp/activation.tar .
         print "* Reminder to backup dump tars if needed"
+        log "Copying baseband.tar"
+        $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
         if [[ -s $dump/baseband.tar ]]; then
-            read -p "$(input 'Baseband dump exists in $dump/baseband.tar. Overwrite? (Y/n) ')" opt
-            if [[ $opt != "N" && $opt != "n" ]]; then
+            read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
+            if [[ $opt == 'Y' && $opt == 'y' ]]; then
+                log "Deleting existing dumped baseband"
+                rm $dump/baseband.tar
                 cp baseband.tar $dump
             fi
         else
             cp baseband.tar $dump
         fi
-        opt=
+        log "Copying activation.tar"
+        $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
         if [[ -s $dump/activation.tar ]]; then
-            read -p "$(input 'Activation records dump exists in $dump/activation.tar. Overwrite? (Y/n)' )" opt
-            if [[ $opt != "N" && $opt != "n" ]]; then
+            read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
+            if [[ $opt == 'Y' && $opt == 'y' ]]; then
+                log "Deleting existing dumped activation"
+                rm $dump/activation.tar
                 cp activation.tar $dump
             fi
         else
