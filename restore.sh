@@ -5931,7 +5931,9 @@ device_dump() {
         $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
-        device_ramdisk $arg
+        log "This operation requires an SSH ramdisk, proceeding"
+        print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
+        device_enter_ramdisk $arg
         dump="../saved/$device_type"
         log "Mounting filesystems"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
@@ -6159,7 +6161,7 @@ device_enter_ramdisk() {
         print "* If not sure, just press Enter/Return. This will select the default version."
         read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
     fi
-    device_ramdisk
+    device_ramdisk $1
 }
 
 device_ideviceinstaller() {
