@@ -4443,21 +4443,9 @@ device_ramdisk() {
             local vers
             local build
             local untether
-            log "Mounting root filesystem"
-            $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
-            sleep 1
-            log "Getting iOS version"
-            $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
-            if [[ $platform == "macos" ]]; then
-                rm -f BuildVer Version
-                plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
-                vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-                plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
-                build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-            else
-                vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-                build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-            fi
+            device_ramdisk_iosvers
+            vers=$device_vers
+            build=$device_build
             if [[ $1 == "getversion" && -n $vers ]]; then
                 log "Retrieved the current iOS version, rebooting device"
                 print "* iOS Version: $vers ($build)"
@@ -4591,6 +4579,26 @@ device_ramdisk() {
     menu_ramdisk
 }
 
+device_ramdisk_iosvers() {
+    device_vers=
+    device_build=
+    log "Mounting root filesystem"
+    $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
+    sleep 1
+    log "Getting iOS version"
+    $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
+    if [[ $platform == "macos" ]]; then
+        rm -f BuildVer Version
+        plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
+        device_vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+        plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
+        device_build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
+    else
+        device_vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+        device_build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+    fi
+}
+
 menu_ramdisk() {
     local loop
     local mode
@@ -4599,18 +4607,25 @@ menu_ramdisk() {
     if (( device_proc >= 7 )); then
         menu_items+=("Dump Blobs")
         reboot="/sbin/reboot"
+    else
+        menu_items+=("Get iOS Version" "Dump Baseband/Activation")
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
     fi
     menu_items+=("Reboot Device" "Exit")
 
+    print "* For accessing data, note the following:"
+    print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
+    echo
+    print "* Other Useful SSH Ramdisk commands:"
     print "* Clear NVRAM with this command:"
     print "    nvram -c"
     print "* Erase All Content and Settings with this command (iOS 9+ only):"
     print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
     print "    $reboot"
+    echo
 
     while [[ $loop != 1 ]]; do
         print "* SSH Ramdisk Menu"
@@ -4624,6 +4639,8 @@ menu_ramdisk() {
                 "Connect to SSH" ) mode="ssh";;
                 "Reboot Device" ) mode="reboot";;
                 "Dump Blobs" ) mode="dump-blobs";;
+                "Get iOS Version" ) mode="iosvers";;
+                "Dump Baseband/Activation" ) mode="dump-bbactrec";;
                 "Install TrollStore" ) mode="trollstore";;
                 "Exit" ) mode="exit";;
             esac
@@ -4640,8 +4657,17 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
-                pause
             ;;
+            "iosvers" )
+                device_ramdisk_iosvers
+                if [[ -n $device_vers ]]; then
+                    log "Retrieved the current iOS version"
+                    print "* iOS Version: $device_vers ($device_build)"
+                else
+                    warn "Something wrong happened. Failed to get iOS version."
+                fi
+            ;;
+            "dump-bbactrec" ) device_dumprd;;
             "trollstore" )
                 print "* Make sure that your device is on iOS 14 or 15 before continuing."
                 print "* If your device is on iOS 13 or below, TrollStore will NOT work."
@@ -5633,10 +5659,6 @@ menu_ipsw_browse() {
                 print "* You need iOS $base_vers IPSW and SHSH blobs for this device to use powdersn0w."
                 pause
                 return
-            elif [[ $device_target_build == "$device_base_build" ]]; then
-                log "The base version and the target version must not be the same."
-                pause
-                return
             fi
             ipsw_verify "$newpath" "$device_base_build"
             ipsw_base_path="$newpath"
@@ -5930,71 +5952,8 @@ device_dump() {
         log "This operation requires an SSH ramdisk, proceeding"
         print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
         device_enter_ramdisk $arg
-        dump="../saved/$device_type"
-        log "Mounting filesystems"
-        $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
-        sleep 1
-        log "Getting iOS version"
-        $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
-        if [[ $platform == "macos" ]]; then
-            rm -f BuildVer Version
-            plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
-            vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-            plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
-            build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-        else
-            vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-            build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-        fi
-        if [[ -z $vers ]]; then
-            warn "Something wrong happened. Failed to get iOS version."
-            print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
-            return
-        fi
-        local tmp="/mnt1/private/var/tmp"
-        log "Dumping both baseband and activation tars"
-        log "Creating baseband.tar"
-        $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone"
-        dmp2="private/var/root/Library/Lockdown"
-        case $vers in
-            [34567]* ) dmps="$dmp2";;
-            8* ) dmps="private/var/mobile/Library/mad";;
-            * )
-                dmps="private/var/containers/Data/System/*/Library/activation_records"
-                dmp2+="/activation_records"
-            ;;
-        esac
-        log "Creating activation.tar"
-        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/$dmp2; cp -R /mnt1/$dmps/* $tmp/$dmp2"
-        $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar $dmp2"
-        log "Copying tars"
-        print "* Reminder to backup dump tars if needed"
-        log "Copying baseband.tar"
-        $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
-        if [[ -s $dump/baseband.tar ]]; then
-            read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
-            if [[ $opt == 'Y' && $opt == 'y' ]]; then
-                log "Deleting existing dumped baseband"
-                rm $dump/baseband.tar
-                cp baseband.tar $dump
-            fi
-        else
-            cp baseband.tar $dump
-        fi
-        log "Copying activation.tar"
-        $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
-        if [[ -s $dump/activation.tar ]]; then
-            read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
-            if [[ $opt == 'Y' && $opt == 'y' ]]; then
-                log "Deleting existing dumped activation"
-                rm $dump/activation.tar
-                cp activation.tar $dump
-            fi
-        else
-            cp activation.tar $dump
-        fi
-        $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar; nvram auto-boot=0; reboot_bak"
+        device_dumprd
+        $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=0; reboot_bak"
         log "Done, device should reboot to recovery mode now"
         if [[ $mode != "baseband" && $mode != "actrec" ]]; then
             log "Put your device back in kDFU/pwnDFU mode to proceed"
@@ -6010,6 +5969,66 @@ device_dump() {
         error "Failed to dump $arg from device. Please run the script again"
     fi
     log "Dumping $arg done: $dump"
+}
+
+device_dumprd() {
+    local dump="../saved/$device_type"
+    local vers
+    device_ramdisk_iosvers
+    vers=$device_vers
+    if [[ -z $vers ]]; then
+        warn "Something wrong happened. Failed to get iOS version."
+        print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
+        $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+        return
+    fi
+    log "Mounting filesystems"
+    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+    sleep 1
+    local tmp="/mnt1/private/var/tmp"
+    log "Dumping both baseband and activation tars"
+    log "Creating baseband.tar"
+    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone"
+    local dmps
+    local dmp2="private/var/root/Library/Lockdown"
+    case $vers in
+        [34567]* ) dmps="$dmp2";;
+        8* ) dmps="private/var/mobile/Library/mad";;
+        * )
+            dmps="private/var/containers/Data/System/*/Library/activation_records"
+            dmp2+="/activation_records"
+        ;;
+    esac
+    log "Creating activation.tar"
+    $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/$dmp2; cp -R /mnt1/$dmps/* $tmp/$dmp2"
+    $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar $dmp2"
+    log "Copying tars"
+    print "* Reminder to backup dump tars if needed"
+    log "Copying baseband.tar"
+    $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
+    if [[ -s $dump/baseband.tar ]]; then
+        read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
+        if [[ $opt == 'Y' && $opt == 'y' ]]; then
+            log "Deleting existing dumped baseband"
+            rm $dump/baseband.tar
+            cp baseband.tar $dump
+        fi
+    else
+        cp baseband.tar $dump
+    fi
+    log "Copying activation.tar"
+    $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
+    if [[ -s $dump/activation.tar ]]; then
+        read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
+        if [[ $opt == 'Y' && $opt == 'y' ]]; then
+            log "Deleting existing dumped activation"
+            rm $dump/activation.tar
+            cp activation.tar $dump
+        fi
+    else
+        cp activation.tar $dump
+    fi
+    $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
 }
 
 device_activate() {
