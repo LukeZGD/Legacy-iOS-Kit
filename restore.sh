@@ -393,6 +393,8 @@ version_update() {
     fi
     if [[ -d .git ]]; then
         log "Running git pull..."
+        print "* If this fails for some reason, run: git reset --hard"
+        print "* To clean more files if needed, run: git clean -df"
         git pull
         log "Done! Please run the script again"
         exit
@@ -427,6 +429,10 @@ version_update() {
 version_get() {
     pushd .. >/dev/null
     if [[ -d .git ]]; then
+        if [[ -e .git/shallow ]]; then
+            log "Shallow git repository detected. Unshallowing..."
+            git fetch --unshallow
+        fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
         local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
         version_current=v${dm//-/.}.
