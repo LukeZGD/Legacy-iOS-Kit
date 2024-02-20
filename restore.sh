@@ -323,27 +323,27 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl libimobiledevice openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git libimobiledevice openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
+        sudo dnf install -y ca-certificates git libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
         sudo dnf group install -y "C Development Tools and Libraries"
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
+        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
         sudo zypper -n install -t pattern devel_basis
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av app-misc/ca-certificates net-misc/curl libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av app-arch/zstd app-misc/ca-certificates dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
@@ -721,6 +721,7 @@ device_get_info() {
         esac
     fi
 
+    all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     device_fw_dir="../resources/firmware/$device_type"
     if [[ -s $device_fw_dir/hwmodel ]]; then
         device_model="$(cat $device_fw_dir/hwmodel)"
@@ -2004,7 +2005,6 @@ ipsw_prepare_jailbreak() {
     local JBFiles=()
     local JBFiles2=()
     local daibutsu
-    local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     local iv
     local key
 
@@ -2180,7 +2180,7 @@ ipsw_prepare_keys() {
         ;;
 
         "iBoot" )
-            echo "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>$all_flash/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
             echo "<key>Patch</key><string>$comp.${device_model}ap.RELEASE.patch</string>" >> $NewPlist
         ;;
 
@@ -2189,7 +2189,7 @@ ipsw_prepare_keys() {
         ;;
 
         "RestoreDeviceTree" | "RestoreLogo" )
-            echo "<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>$all_flash/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string><key>DecryptPath</key><string>Downgrade/$comp</string>" >> $NewPlist
         ;;
 
         "RestoreKernelCache" )
@@ -2229,7 +2229,7 @@ ipsw_prepare_paths() {
         fw_key="$device_fw_key_base"
     fi
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-    local str="<key>$comp</key><dict><key>File</key><string>Firmware/all_flash/all_flash.${device_model}ap.production/"
+    local str="<key>$comp</key><dict><key>File</key><string>$all_flash/"
     local str2
     local logostuff
     if [[ $2 == "target" ]]; then
@@ -2395,7 +2395,7 @@ ipsw_prepare_bundle() {
     mkdir -p $FirmwareBundle
 
     log "Generating firmware bundle for $device_type-$vers ($build) $1..."
-    unzip -o -j "$ipsw_p.ipsw" Firmware/all_flash/all_flash.${device_model}ap.production/manifest
+    unzip -o -j "$ipsw_p.ipsw" $all_flash/manifest
     mv manifest $FirmwareBundle/
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .iv')
@@ -2840,7 +2840,6 @@ patch_iboot() {
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
     local ibec
     local rsa="--rsa"
-    local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     log "Patch iBoot: $*"
     if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
         ibec=1
@@ -2879,8 +2878,7 @@ ipsw_patch_file() {
 ipsw_prepare_ios4multipart() {
     local JBFiles=()
     ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
-    local all_flash2="Firmware/all_flash/all_flash.${device_model}ap.production"
-    local all_flash="$ipsw_custom_part2/$all_flash2"
+    local all_flash2="$ipsw_custom_part2/$all_flash"
     local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 --433"
     local iboot
 
@@ -2892,7 +2890,7 @@ ipsw_prepare_ios4multipart() {
     fi
 
     log "Preparing NOR flash IPSW..."
-    mkdir -p $ipsw_custom_part2/Firmware/dfu $ipsw_custom_part2/Downgrade $all_flash
+    mkdir -p $ipsw_custom_part2/Firmware/dfu $ipsw_custom_part2/Downgrade $all_flash2
 
     local comps=()
     local name
@@ -2914,7 +2912,7 @@ ipsw_prepare_ios4multipart() {
         key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
-            "DeviceTree" ) path="Firmware/all_flash/all_flash.${device_model}ap.production/";;
+            "DeviceTree" ) path="$all_flash/";;
             * ) path="";;
         esac
         log "$getcomp"
@@ -2994,11 +2992,11 @@ ipsw_prepare_ios4multipart() {
     "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
 
     log "Extract all_flash from $device_base_vers base"
-    unzip -o -j "$ipsw_base_path.ipsw" Firmware/all_flash/\* -d $all_flash
+    unzip -o -j "$ipsw_base_path.ipsw" Firmware/all_flash/\* -d $all_flash2
 
     log "Add $device_target_vers DeviceTree to all_flash"
-    rm $all_flash/DeviceTree.${device_model}ap.img3
-    unzip -o -j "$ipsw_path.ipsw" $all_flash2/DeviceTree.${device_model}ap.img3 -d $all_flash
+    rm $all_flash2/DeviceTree.${device_model}ap.img3
+    unzip -o -j "$ipsw_path.ipsw" $all_flash2/DeviceTree.${device_model}ap.img3 -d $all_flash2
 
     if [[ $ipsw_verbose == 1 ]]; then
         ExtraArgs2+=" -b -v"
@@ -3010,29 +3008,29 @@ ipsw_prepare_ios4multipart() {
         iboot="iboot"
     else
         log "Add $device_target_vers iBoot to all_flash"
-        mv iBoot $all_flash/iBoot4.img3
-        echo "iBoot4.img3" >> $all_flash/manifest
+        mv iBoot $all_flash2/iBoot4.img3
+        echo "iBoot4.img3" >> $all_flash2/manifest
     fi
 
     log "Add APTicket to all_flash"
     cat "$shsh_path" | sed '64,$d' | sed -ne '/<data>/,/<\/data>/p' | sed -e "s/<data>//" | sed "s/<\/data>//" | tr -d '[:space:]' | base64 --decode > apticket.der
-    "$dir/xpwntool" apticket.der $all_flash/applelogoT.img3 -t ../resources/firmware/src/scab_template.img3
-    echo "applelogoT.img3" >> $all_flash/manifest
+    "$dir/xpwntool" apticket.der $all_flash2/applelogoT.img3 -t ../resources/firmware/src/scab_template.img3
+    echo "applelogoT.img3" >> $all_flash2/manifest
 
     log "AppleLogo"
     local logo_name="$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')"
-    unzip -o -j "$ipsw_path.ipsw" $all_flash2/$logo_name
+    unzip -o -j "$ipsw_path.ipsw" $all_flash/$logo_name
     echo "0000010: 3467" | xxd -r - $logo_name
     echo "0000020: 3467" | xxd -r - $logo_name
     log "Add AppleLogo to all_flash"
     if [[ $device_latest_vers == "5"* ]]; then
-        mv $logo_name $all_flash/applelogo4.img3
-        echo "applelogo4.img3" >> $all_flash/manifest
+        mv $logo_name $all_flash2/applelogo4.img3
+        echo "applelogo4.img3" >> $all_flash2/manifest
     else
-        sed '/applelogo/d' $all_flash/manifest > manifest
-        rm $all_flash/manifest
+        sed '/applelogo/d' $all_flash2/manifest > manifest
+        rm $all_flash2/manifest
         echo "$logo_name" >> manifest
-        mv $logo_name manifest $all_flash/
+        mv $logo_name manifest $all_flash2/
     fi
 
     log "Creating $ipsw_custom_part2.ipsw..."
@@ -3073,7 +3071,7 @@ ipsw_prepare_ios4multipart() {
         key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
-            "DeviceTree" ) path="Firmware/all_flash/all_flash.${device_model}ap.production/";;
+            "DeviceTree" ) path="$all_flash/";;
             * ) path="";;
         esac
         log "$getcomp"
@@ -3099,6 +3097,12 @@ ipsw_prepare_ios4multipart() {
                 "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
             ;;
         esac
+        if [[ $getcomp == "iB"* ]]; then
+            log "Patch $getcomp"
+            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1"
+            "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
+            zip -r0 temp.ipsw ${path}$name
+        fi
     done
 
     log "Grow ramdisk"
@@ -3107,16 +3111,6 @@ ipsw_prepare_ios4multipart() {
     else
         "$dir/hfsplus" RestoreRamdisk.dec grow 18000000
     fi
-
-    log "Patch iBSS"
-    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
-    zip -r0 temp.ipsw Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
-
-    log "Patch iBEC"
-    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
-    zip -r0 temp.ipsw Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
 
     log "Patch ASR"
     cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
@@ -3263,7 +3257,7 @@ ipsw_prepare_ios4powder() {
     fi
 
     log "Applying iOS 4 patches"
-    mkdir -p Firmware/all_flash/all_flash.${device_model}ap.production Firmware/dfu
+    mkdir -p $all_flash Firmware/dfu
     log "Patch iBSS"
     unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
     local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
@@ -3282,16 +3276,16 @@ ipsw_prepare_ios4powder() {
     "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
     log "Patch AppleLogo"
     local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
-    unzip -o -j temp.ipsw Firmware/all_flash/all_flash.${device_model}ap.production/$applelogo_name
+    unzip -o -j temp.ipsw $all_flash/$applelogo_name
     echo "0000010: 3467" | xxd -r - $applelogo_name
     echo "0000020: 3467" | xxd -r - $applelogo_name
-    mv $applelogo_name Firmware/all_flash/all_flash.${device_model}ap.production/$applelogo_name
+    mv $applelogo_name $all_flash/$applelogo_name
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
-        cp iBoot Firmware/all_flash/all_flash.${device_model}ap.production/iBoot2.${device_model}ap.RELEASE.img3
+        cp iBoot $all_flash/iBoot2.${device_model}ap.RELEASE.img3
     fi
-    zip -r0 temp.ipsw Firmware/all_flash/all_flash.${device_model}ap.production/* Firmware/dfu/*
+    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/*
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -3380,7 +3374,6 @@ ipsw_prepare_powder() {
             [789]* ) :;;
             * )
                 patch_iboot --logo
-                local all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
                 mkdir -p $all_flash
                 mv iBoot*.img3 $all_flash
                 zip -r0 temp.ipsw $all_flash/iBoot*.img3
@@ -3393,7 +3386,7 @@ ipsw_prepare_powder() {
 }
 
 ipsw_prepare_patchcomp() {
-    local path="Firmware/all_flash/all_flash.${device_model}ap.production"
+    local path="$all_flash"
     local name="LLB.${device_model}ap.RELEASE"
     local patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle"
     local ext="img3"
@@ -4105,7 +4098,7 @@ device_ramdisk64() {
             * ) path="";;
         esac
         if [[ $ios8 == 1 && $getcomp == "DeviceTree" ]]; then
-            path+="all_flash.${device_model}ap.production/"
+            path="$all_flash/"
         fi
         if [[ -z $name ]]; then
             local hwmodel
@@ -4281,7 +4274,7 @@ device_ramdisk() {
                 path="Firmware/all_flash/"
                 case $build_id in
                     14[EFG]* ) :;;
-                    * ) path+="all_flash.${device_model}ap.production/";;
+                    * ) path="$all_flash/";;
                 esac
             ;;
             * ) path="";;
@@ -6154,7 +6147,7 @@ restore_dfuipsw() {
                 iPad3,[456] ) llb="LLB.ipad3b.RELEASE.img3";;
             esac
         else
-            all+="/all_flash.${device_model}ap.production"
+            all="$all_flash"
         fi
         mkdir -p $all
         unzip -o -j temp.ipsw $all/$applelogo -d .
