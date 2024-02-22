@@ -2996,7 +2996,7 @@ ipsw_prepare_ios4multipart() {
 
     log "Add $device_target_vers DeviceTree to all_flash"
     rm $all_flash2/DeviceTree.${device_model}ap.img3
-    unzip -o -j "$ipsw_path.ipsw" $all_flash2/DeviceTree.${device_model}ap.img3 -d $all_flash2
+    unzip -o -j "$ipsw_path.ipsw" $all_flash/DeviceTree.${device_model}ap.img3 -d $all_flash2
 
     if [[ $ipsw_verbose == 1 ]]; then
         ExtraArgs2+=" -b -v"
