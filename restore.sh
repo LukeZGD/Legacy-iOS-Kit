@@ -5782,6 +5782,12 @@ menu_other() {
         fi
         if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
+            case $device_type in
+                iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Enable disable-bbupdate flag");;
+            esac
+            if [[ $device_proc != 1 ]]; then
+                menu_items+=("Enable activation-records flag")
+            fi
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         menu_print_info
@@ -5811,6 +5817,30 @@ menu_other() {
             "Get iOS Version" ) mode="getversion";;
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
+            "Enable disable-bbupdate flag" )
+                warn "This will enable the --disable-bbupdate flag."
+                print "* This will disable baseband update for custom IPSWs."
+                print "* This will enable usage of dumped baseband and stitch to IPSW."
+                print "* This applies to the ff: iPhone 4S, 5, 5C, iPad 4, mini 1"
+                print "* Only do this if you know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the disable-bbupdate flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    device_disable_bbupdate="$device_type"
+                    back=1
+                fi
+            ;;
+            "Enable activation-records flag" )
+                warn "This will enable the --activation-records flag."
+                print "* This will enable usage of dumped activation records and stitch to IPSW."
+                print "* Only do this if you know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the activation-records flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    device_actrec=1
+                    back=1
+                fi
+            ;;
             "Go Back" ) back=1;;
         esac
     done
