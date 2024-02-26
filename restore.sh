@@ -6449,6 +6449,7 @@ for i in "$@"; do
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
         "--activation-records" ) device_actrec=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
+        "--skip-ibss" ) device_skipibss=1;;
     esac
 done
 
