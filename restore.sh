@@ -1231,13 +1231,9 @@ device_enter_mode() {
             if [[ $device_mode == "DFU" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
-            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc != 4 ]] && (( device_proc < 7 )); then
+            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc == 6 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                if [[ $device_proc == 5 ]]; then
-                    print "* Select N if this is not the case."
-                else
-                    print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
-                fi
+                print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
@@ -1254,6 +1250,7 @@ device_enter_mode() {
             if [[ $device_proc == 5 ]]; then
                 print "* DFU mode for A5 device - Make sure that your device is in PWNED DFU mode."
                 print "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
+                print "* Also make sure that you have not sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, select N and restart your device in normal mode."
                 read -p "$(input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N): ')" opt
                 if [[ $opt != "Y" && $opt != "y" ]]; then
@@ -1435,7 +1432,10 @@ device_ipwndfu() {
     fi
 
     mkdir ../saved/ipwndfu 2>/dev/null
-    if [[ $1 == "send_ibss" ]]; then
+    rm -f ../saved/ipwndfu/pwnediBSS
+    if [[ $1 == "send_ibss" && $device_boot4 == 1 ]]; then
+        cp iBSS.patched ../saved/ipwndfu/pwnediBSS
+    elif [[ $1 == "send_ibss" ]]; then
         device_rd_build=
         patch_ibss
         cp pwnediBSS ../saved/ipwndfu/
@@ -3539,16 +3539,13 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad1,1" && $device_target_vers == "4.3"* ]]; then
-        patch_ibss
-        log "Sending iBSS..."
-        $irecovery -f pwnediBSS.dfu
-        sleep 1
-        log "Sending iBEC..."
-        $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
-        device_find_mode Recovery
-    elif [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* ]]; then
-        ExtraArgs="-e"
+    elif [[ $device_type == "iPad"* && $device_target_vers == "4.3"* ]]; then
+        if [[ $device_type == "iPad1,1" ]]; then
+            patch_ibss
+            log "Sending iBSS..."
+            $irecovery -f pwnediBSS.dfu
+            sleep 1
+        fi
         log "Sending iBEC..."
         $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
@@ -4361,6 +4358,7 @@ device_ramdisk() {
         "$dir/xpwntool" iBSS.dec iBSS.raw
         if [[ $build_id == "8"* && $device_type == "iPad2"* ]]; then
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v cs_enforcement_disable=1"
+            device_boot4=1
         else
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
         fi
@@ -4406,8 +4404,7 @@ device_ramdisk() {
         $irecovery -f $ramdisk_path/iBSS
         sleep 1
     fi
-    if [[ $device_type != "iPod2,1" && $device_proc != 1 && $build_id != "7"* && $build_id != "8"* ]] ||
-       [[ $device_type == "iPad2"* ]]; then
+    if [[ $device_type != "iPod2,1" && $device_proc != 1 && $build_id != "7"* && $build_id != "8"* ]]; then
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
     fi
@@ -5522,10 +5519,6 @@ ipsw_custom_set() {
     if [[ -n $1 ]]; then
         ipsw_custom="../$1_Custom"
     fi
-    # disable bbupdate for iphone 5 devices on other/powder
-    #if [[ $device_type == "iPhone5"* ]] && [[ $device_target_other == 1 || $device_target_powder == 1 ]]; then
-    #    device_disable_bbupdate="$device_type"
-    #fi
     if [[ $device_actrec == 1 ]]; then
         ipsw_custom+="A"
     fi
@@ -5556,7 +5549,7 @@ ipsw_custom_set() {
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
     fi
-    if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "4.3"* ]]; then
+    if [[ $device_target_powder == 1 && $device_target_vers == "4.3"* ]]; then
         ipsw_custom+="-$device_ecid"
     fi
 }
@@ -5729,12 +5722,16 @@ menu_other() {
         if [[ $device_mode != "none" && $device_proc != 1 ]]; then
             if (( device_proc < 7 )); then
                 if [[ $device_mode == "Normal" ]]; then
-                    menu_items+=("Enter kDFU Mode" "Enter pwnDFU Mode")
+                    menu_items+=("Enter kDFU Mode")
+                    if [[ $device_proc != 5 ]]; then
+                        menu_items+=("Enter pwnDFU Mode")
+                    fi
                 else
-                    case $device_proc in
-                        5 | 6 ) menu_items+=("Send Pwned iBSS");;
-                        * ) menu_items+=("Enter pwnDFU Mode");;
-                    esac
+                    if [[ $device_proc == 6 ]]; then
+                        menu_items+=("Send Pwned iBSS")
+                    elif [[ $device_proc != 5 ]]; then
+                        menu_items+=("Enter pwnDFU Mode")
+                    fi
                     menu_items+=("Get iOS Version")
                 fi
                 menu_items+=("Clear NVRAM")
