@@ -4187,6 +4187,7 @@ device_ramdisk64() {
                     "$dir/hfsplus" $getcomp.orig grow 210000000
                 fi
                 "$dir/hfsplus" $getcomp.orig untar $sshtar
+                "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
             ;;
         esac
         "$dir/img4" $reco
@@ -4324,6 +4325,7 @@ device_ramdisk() {
         "$dir/hfsplus" Ramdisk.raw grow 30000000
     fi
 
+    "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
     if [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
@@ -4705,7 +4707,7 @@ menu_ramdisk() {
             "erase78" )
                 warn "This will do a \"Erase All Content and Settings\" procedure for iOS 7 and 8 devices."
                 print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
-                print "* After the reboot, boot an iOS 8 ramdisk, then force restart the device."
+                print "* If your device is on iOS 7, boot an iOS 8 ramdisk afterwards, then force restart the device."
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
                 pause
                 $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
