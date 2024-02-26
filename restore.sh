@@ -82,6 +82,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
+    --skip-ibss               Assume that pwned iBSS has already been sent to device
 
     * Default IPSW path: <script location>/name_of_ipswfile.ipsw
     * Default SHSH path: <script location>/saved/shsh/name_of_blobfile.shsh(2)
@@ -1231,7 +1232,11 @@ device_enter_mode() {
             if [[ $device_mode == "DFU" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
-            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc == 6 ]]; then
+            if [[ $device_skipibss == 1 ]]; then
+                warn "skip ibss flag detected, skipping pwned DFU check. Proceed with caution"
+                pause
+                return
+            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc == 6 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
@@ -4608,6 +4613,8 @@ menu_ramdisk() {
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
+    elif (( device_proc <= 8 )); then
+        menu_items+=("Erase All (iOS 7 and 8)")
     fi
     menu_items+=("Reboot Device" "Exit")
 
@@ -4638,6 +4645,7 @@ menu_ramdisk() {
                 "Get iOS Version" ) mode="iosvers";;
                 "Dump Baseband/Activation" ) mode="dump-bbactrec";;
                 "Install TrollStore" ) mode="trollstore";;
+                "Erase All (iOS 7 and 8)" ) mode="erase78";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -4693,6 +4701,20 @@ menu_ramdisk() {
                 rm -r PersistenceHelper_Embedded TrollStore*
                 $ssh -p $ssh_port root@127.0.0.1 "bash $tips/trollstore.sh; rm $tips/trollstore.sh"
                 log "Done!"
+            ;;
+            "erase78" )
+                warn "This will do a \"Erase All Content and Settings\" procedure for iOS 7 and 8 devices."
+                print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
+                print "* After the reboot, boot an iOS 8 ramdisk, then force restart the device."
+                print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
+                pause
+                $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
+                $ssh -p $ssh_port root@127.0.0.1 "sync cd / umount /mnt2; umount /mnt1; sync; reboot"
+                log "Done, your device should reboot now"
+                print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk to fix booting."
+                print "* Proceed to trigger a restore by entering wrong passwords 10 times."
+                loop=1
             ;;
         esac
         mode=
@@ -5727,7 +5749,7 @@ menu_other() {
                         menu_items+=("Enter pwnDFU Mode")
                     fi
                 else
-                    if [[ $device_proc == 6 ]]; then
+                    if [[ $device_proc == 6 || $device_skipibss == 1 ]]; then
                         menu_items+=("Send Pwned iBSS")
                     elif [[ $device_proc != 5 ]]; then
                         menu_items+=("Enter pwnDFU Mode")
@@ -5785,6 +5807,9 @@ menu_other() {
             if [[ $device_proc != 1 ]]; then
                 menu_items+=("Enable activation-records flag")
             fi
+            if [[ $device_proc != 4 ]]; then
+                menu_items+=("Enable skip-ibss flag")
+            fi
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         menu_print_info
@@ -5819,7 +5844,7 @@ menu_other() {
                 print "* This will disable baseband update for custom IPSWs."
                 print "* This will enable usage of dumped baseband and stitch to IPSW."
                 print "* This applies to the ff: iPhone 4S, 5, 5C, iPad 4, mini 1"
-                print "* Only do this if you know what you are doing."
+                print "* Do not enable this if you do not know what you are doing."
                 local opt
                 read -p "$(input 'Do you want to enable the disable-bbupdate flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
@@ -5830,11 +5855,22 @@ menu_other() {
             "Enable activation-records flag" )
                 warn "This will enable the --activation-records flag."
                 print "* This will enable usage of dumped activation records and stitch to IPSW."
-                print "* Only do this if you know what you are doing."
+                print "* Do not enable this if you do not know what you are doing."
                 local opt
                 read -p "$(input 'Do you want to enable the activation-records flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
                     device_actrec=1
+                    back=1
+                fi
+            ;;
+            "Enable skip-ibss flag" )
+                warn "This will enable the --skip-ibss flag."
+                print "* This will assume that a pwned iBSS has already been sent to the device."
+                print "* Do not enable this if you do not know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    device_skipibss=1
                     back=1
                 fi
             ;;
