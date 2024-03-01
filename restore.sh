@@ -1236,7 +1236,8 @@ device_enter_mode() {
                 warn "skip ibss flag detected, skipping pwned DFU check. Proceed with caution"
                 pause
                 return
-            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_proc == 6 ]]; then
+            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_boot4 != 1 &&
+                    $device_proc != 4 ]] && (( device_proc < 7 )); then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
@@ -5089,7 +5090,7 @@ menu_restore() {
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
-            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPad3,[456] | iPod5,1 )
+            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
                 menu_items+=("Other (powdersn0w 7.x blobs)");;
             iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPad1,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
