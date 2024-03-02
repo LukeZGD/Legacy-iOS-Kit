@@ -1720,11 +1720,7 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $device_target_vers == "3.1"* && $device_proc != 1 &&
-          $device_target_powder != 1 && $device_type != "iPod2,1" ]]; then
-        #log "Jailbreak Option is always enabled for 3.1.x ($device_target_vers)"
-        ipsw_jailbreak=1
-    elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
+    if [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
@@ -1757,10 +1753,6 @@ ipsw_preference_set() {
             log "Hacktivate option disabled."
             ipsw_hacktivate=
         fi
-        echo
-    elif [[ $ipsw_jailbreak != 1 ]] &&
-         [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
-        log "Hacktivate option is not available. Jailbreak option must be enabled"
         echo
     fi
 
@@ -4483,12 +4475,18 @@ device_ramdisk() {
             $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.1 | 4.0* | 3.1* )
+                4.1 | 4.0* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
+            # Do not extract untether for 3GS 3.1.x
+            if [[ $vers == "3.1"* && $device_type != "iPhone2,1" ]]; then
+                untether="${device_type}_${build}.tar"
+                log "Extracting $untether"
+                $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+            fi
             log "Mounting data partition"
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
