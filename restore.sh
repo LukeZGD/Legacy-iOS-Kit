@@ -1239,7 +1239,11 @@ device_enter_mode() {
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_boot4 != 1 &&
                     $device_proc != 4 ]] && (( device_proc < 7 )); then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
+                if [[ $device_proc == 5 ]]; then
+                    print "* Select N if this is not the case. (pwned using checkm8-a5)"
+                else
+                    print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
+                fi
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
@@ -4828,6 +4832,9 @@ menu_print_info() {
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     device_manufacturing
+    if [[ $device_proc == 1 ]]; then
+        warn "This device is only partially supported by Legacy iOS Kit. Some features may not work properly."
+    fi
     if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
@@ -5808,7 +5815,7 @@ menu_other() {
             if [[ $device_proc != 1 ]]; then
                 menu_items+=("Enable activation-records flag")
             fi
-            if [[ $device_proc != 4 ]]; then
+            if (( device_proc >= 5 )); then
                 menu_items+=("Enable skip-ibss flag")
             fi
         fi
