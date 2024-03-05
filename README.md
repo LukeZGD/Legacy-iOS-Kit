@@ -18,7 +18,7 @@
 - Jailbreak all 32-bit iOS devices on (almost) any iOS version
     - Available on iOS versions 3.1.3 to 9.3.4
     - Only unsupported versions are iOS 9.0.x
-- Hacktivation for iPhone 2G, 3G, 3GS (activate without valid SIM card)
+- Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Install IPA files for supported devices with AppSync Unified installed
 - Sideload IPA files for supported devices on Linux

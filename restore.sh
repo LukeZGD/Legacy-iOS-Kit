@@ -50,8 +50,11 @@ clean_sudo() {
 
 clean_usbmuxd() {
     clean_sudo
-    sudo systemctl restart usbmuxd
-    sudo systemctl restart usbmuxd
+    sudo killall usbmuxd 2>/dev/null
+    if [[ $(which systemctl 2>/dev/null) ]]; then
+        sleep 1
+        sudo systemctl restart usbmuxd
+    fi
 }
 
 bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
@@ -220,7 +223,11 @@ set_tool_paths() {
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
             if [[ -z $device_disable_usbmuxd ]]; then
-                sudo systemctl stop usbmuxd
+                if [[ $(which systemctl 2>/dev/null) ]]; then
+                    sudo systemctl stop usbmuxd
+                fi
+                sudo killall usbmuxd 2>/dev/null
+                sleep 1
                 sudo -b $dir/usbmuxd -pf 2>/dev/null
                 trap "clean_usbmuxd" EXIT
             fi
@@ -332,7 +339,9 @@ install_depends() {
         fi
         sudo apt update
         sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
-        sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
+        if [[ $(which systemctl 2>/dev/null) ]]; then
+            sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
+        fi
 
     elif [[ $distro == "fedora" ]]; then
         sudo dnf install -y ca-certificates git libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
@@ -344,7 +353,7 @@ install_depends() {
         sudo zypper -n install -t pattern devel_basis
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av app-arch/zstd app-misc/ca-certificates dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
@@ -363,7 +372,9 @@ install_depends() {
     echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" ]]; then
         # from linux_fix script by Cryptiiiic
-        sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
+        if [[ $(which systemctl 2>/dev/null) ]]; then
+            sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
+        fi
         echo "QUNUSU9OPT0iYWRkIiwgU1VCU1lTVEVNPT0idXNiIiwgQVRUUntpZFZlbmRvcn09PSIwNWFjIiwgQVRUUntpZFByb2R1Y3R9PT0iMTIyWzI3XXwxMjhbMC0zXSIsIE9XTkVSPSJyb290IiwgR1JPVVA9InVzYm11eGQiLCBNT0RFPSIwNjYwIiwgVEFHKz0idWFjY2VzcyIKCkFDVElPTj09ImFkZCIsIFNVQlNZU1RFTT09InVzYiIsIEFUVFJ7aWRWZW5kb3J9PT0iMDVhYyIsIEFUVFJ7aWRQcm9kdWN0fT09IjEzMzgiLCBPV05FUj0icm9vdCIsIEdST1VQPSJ1c2JtdXhkIiwgTU9ERT0iMDY2MCIsIFRBRys9InVhY2Nlc3MiCgoK" | base64 -d | sudo tee /etc/udev/rules.d/39-libirecovery.rules >/dev/null 2>/dev/null
         sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
@@ -1260,7 +1271,7 @@ device_enter_mode() {
             if [[ $device_proc == 5 ]]; then
                 print "* DFU mode for A5 device - Make sure that your device is in PWNED DFU mode."
                 print "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
-                print "* Also make sure that you have not sent a pwned iBSS yet."
+                print "* Also make sure that you have NOT sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, select N and restart your device in normal mode."
                 read -p "$(input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N): ')" opt
                 if [[ $opt != "Y" && $opt != "y" ]]; then
@@ -5759,7 +5770,7 @@ menu_other() {
                         menu_items+=("Enter pwnDFU Mode")
                     fi
                 else
-                    if [[ $device_proc == 6 || $device_skipibss == 1 ]]; then
+                    if (( device_proc >= 5 )); then
                         menu_items+=("Send Pwned iBSS")
                     elif [[ $device_proc != 5 ]]; then
                         menu_items+=("Enter pwnDFU Mode")
