@@ -226,8 +226,8 @@ set_tool_paths() {
                 if [[ $(which systemctl 2>/dev/null) ]]; then
                     sudo systemctl stop usbmuxd
                 fi
-                sudo killall usbmuxd 2>/dev/null
-                sleep 1
+                #sudo killall usbmuxd 2>/dev/null
+                #sleep 1
                 sudo -b $dir/usbmuxd -pf 2>/dev/null
                 trap "clean_usbmuxd" EXIT
             fi
@@ -584,6 +584,9 @@ device_get_info() {
         device_vers="Unknown"
     else
         log "Finding device in Normal mode..."
+        if [[ $platform == "linux" ]]; then
+            print "* If it gets stuck here, try to restart your PC"
+        fi
     fi
 
     $ideviceinfo -s >/dev/null
@@ -2851,13 +2854,9 @@ patch_iboot() {
     local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
     local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
-    local ibec
     local rsa="--rsa"
     log "Patch iBoot: $*"
-    if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
-        ibec=1
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/$iboot_name
-    elif [[ $1 == "--logo" ]]; then
+    if [[ $1 == "--logo" ]]; then
         iboot_name="${iboot_name/iBoot/iBoot2}"
         rsa=
         unzip -o -j temp.ipsw $all_flash/$iboot_name
@@ -2868,7 +2867,7 @@ patch_iboot() {
     "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
     "$dir/iBoot32Patcher" iBoot.dec iBoot.pwned $rsa "$@"
     "$dir/xpwntool" iBoot.pwned iBoot -t iBoot.orig
-    if [[ $ibec == 1 ]]; then
+    if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
         return
@@ -3361,6 +3360,7 @@ ipsw_prepare_powder() {
         tar -cvf iBoot.tar iBoot
         ExtraArgs+=" iBoot.tar"
     elif [[ $device_type == "iPad1,1" ]]; then
+        # ipad 1 ramdiskH jumps to /iBEC instead
         if [[ $ipsw_verbose == 1 ]]; then
             ExtraArr+=("-b" "-v")
         fi
