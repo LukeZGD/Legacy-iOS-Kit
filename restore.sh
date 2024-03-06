@@ -6025,11 +6025,41 @@ device_dump() {
         if [[ $arg == "activation" ]]; then
             $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /tmp/$dmp2; cp -R $dmps/* /tmp/$dmp2"
             $ssh -p $ssh_port root@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
+            log "Copying $arg.tar"
+            $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
         else
-            $ssh -p $ssh_port root@127.0.0.1 "tar -cvf /tmp/$arg.tar $dmps"
+            local bb2="Mav5"
+            if [[ $device_type == "iPhone4,1" ]]; then
+                bb2="Trek"
+            fi
+            case $device_vers in
+                5* ) $scp -P $ssh_port root@127.0.0.1:/usr/standalone/firmware/$bb2-personalized.zip .;;
+                6* ) $scp -P $ssh_port root@127.0.0.1:/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip .;;
+            esac
+            case $device_vers in
+                [56]* )
+                    mkdir -p baseband/usr/local/standalone/firmware/Baseband/$bb2
+                    unzip $bb2-personalized.zip -d baseband/usr/local/standalone/firmware/Baseband/$bb2
+                    cp $bb2-personalized.zip baseband/usr/local/standalone/firmware/Baseband/$bb2
+                ;;
+                * )
+                    $ssh -p $ssh_port root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/local/standalone/firmware"
+                    $scp -P $ssh_port root@127.0.0.1:/tmp/baseband.tar .
+                    mkdir baseband
+                    tar -xvf baseband.tar -C baseband
+                    rm baseband.tar
+                    pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
+                    zip -r0 $bb2-personalized.zip *
+                    popd >/dev/null
+                ;;
+            esac
+            if [[ $device_type == "iPhone4,1" ]]; then
+                mkdir -p baseband/usr/standalone/firmware
+                cp $bb2-personalized.zip baseband/usr/standalone/firmware
+            fi
+            mv baseband/usr .
+            tar -cvf baseband.tar usr
         fi
-        log "Copying $arg.tar"
-        $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
         cp $arg.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         log "This operation requires an SSH ramdisk, proceeding"
@@ -6056,7 +6086,11 @@ device_dump() {
 
 device_dumprd() {
     local dump="../saved/$device_type"
+    local dmps
+    local dmp2
     local vers
+    local tmp="/mnt1/private/var/tmp"
+
     device_ramdisk_iosvers
     vers=$device_vers
     if [[ -z $vers ]]; then
@@ -6068,12 +6102,57 @@ device_dumprd() {
     log "Mounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
     sleep 1
-    local tmp="/mnt1/private/var/tmp"
-    log "Dumping both baseband and activation tars"
-    log "Creating baseband.tar"
-    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone"
-    local dmps
-    local dmp2="private/var/root/Library/Lockdown"
+
+    case $device_type in
+        iPhone[45]* | iPad2,[67] | iPad3,[56] )
+            log "Dumping both baseband and activation tars"
+            log "Creating baseband.tar"
+            local bb2="Mav5"
+            if [[ $device_type == "iPhone4,1" ]]; then
+                bb2="Trek"
+            fi
+            case $device_vers in
+                5* ) $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/standalone/firmware/$bb2-personalized.zip .;;
+                6* ) $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip .;;
+            esac
+            case $device_vers in
+                [56]* )
+                    mkdir -p baseband/usr/local/standalone/firmware/Baseband/$bb2
+                    unzip $bb2-personalized.zip -d baseband/usr/local/standalone/firmware/Baseband/$bb2
+                    cp $bb2-personalized.zip baseband/usr/local/standalone/firmware/Baseband/$bb2
+                ;;
+                * )
+                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone/firmware"
+                    $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
+                    mkdir baseband
+                    tar -xvf baseband.tar -C baseband
+                    rm baseband.tar
+                    pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
+                    zip -r0 $bb2-personalized.zip *
+                    popd >/dev/null
+                ;;
+            esac
+            if [[ $device_type == "iPhone4,1" ]]; then
+                mkdir -p baseband/usr/standalone/firmware
+                cp $bb2-personalized.zip baseband/usr/standalone/firmware
+            fi
+            mv baseband/usr .
+            tar -cvf baseband.tar usr
+            print "* Reminder to backup dump tars if needed"
+            if [[ -s $dump/baseband.tar ]]; then
+                read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
+                if [[ $opt == 'Y' && $opt == 'y' ]]; then
+                    log "Deleting existing dumped baseband"
+                    rm $dump/baseband.tar
+                    cp baseband.tar $dump
+                fi
+            else
+                cp baseband.tar $dump
+            fi
+        ;;
+    esac
+
+    dmp2="private/var/root/Library/Lockdown"
     case $vers in
         [34567]* ) dmps="$dmp2";;
         8* ) dmps="private/var/mobile/Library/mad";;
@@ -6085,21 +6164,8 @@ device_dumprd() {
     log "Creating activation.tar"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/$dmp2; cp -R /mnt1/$dmps/* $tmp/$dmp2"
     $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar $dmp2"
-    log "Copying tars"
-    print "* Reminder to backup dump tars if needed"
-    log "Copying baseband.tar"
-    $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
-    if [[ -s $dump/baseband.tar ]]; then
-        read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
-        if [[ $opt == 'Y' && $opt == 'y' ]]; then
-            log "Deleting existing dumped baseband"
-            rm $dump/baseband.tar
-            cp baseband.tar $dump
-        fi
-    else
-        cp baseband.tar $dump
-    fi
     log "Copying activation.tar"
+    print "* Reminder to backup dump tars if needed"
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
     if [[ -s $dump/activation.tar ]]; then
         read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
