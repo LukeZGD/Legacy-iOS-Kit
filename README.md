@@ -92,7 +92,7 @@
     - iPod touch 3 - iOS 4.0 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - No blob requirement for iPhone 4, iPad 1, iPod touch 3 (7.1.2 and 5.1.1 are signed)
-        - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
+        - For iPhone 5, both 7.0.x and 7.1.x blobs can be used
 - Restoring to other unsigned versions without blobs is supported on the following devices and target versions:
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)

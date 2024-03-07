@@ -5376,17 +5376,13 @@ menu_ipsw() {
             local text2="(iOS 7.1.x)"
             case $device_type in
                 iPhone3,[13] ) text2="(iOS 7.1.2)";;
-                iPhone5,[1234] ) text2="(iOS 7.x)";;
+                iPhone5,[12] ) text2="(iOS 7.x)";;
                 iPad3,[456] ) text2="(iOS 7.0.x)";;
                 iPad1,1 | iPod3,1 ) text2="(iOS 5.1.1)";;
             esac
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
-                if [[ $device_base_build == "11A"* ]]; then
-                    warn "There might be an issue when selecting iOS 7.0-7.0.2 base."
-                    print "* The device might get stuck at recovery mode after the restore."
-                fi
                 if [[ $device_proc != 4 ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
@@ -5672,7 +5668,7 @@ menu_ipsw_browse() {
             local check_vers="7.1"
             local base_vers="7.1.x"
             case $device_type in
-                iPhone5* )
+                iPhone5,[12] )
                     check_vers="7"
                     base_vers="7.x"
                 ;;
