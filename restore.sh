@@ -6055,7 +6055,7 @@ device_dump() {
             esac
             if [[ $device_type == "iPhone4,1" ]]; then
                 mkdir -p baseband/usr/standalone/firmware
-                cp $bb2-personalized.zip baseband/usr/standalone/firmware
+                cp baseband/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip baseband/usr/standalone/firmware
             fi
             mv baseband/usr .
             tar -cvf baseband.tar usr
@@ -6134,7 +6134,7 @@ device_dumprd() {
             esac
             if [[ $device_type == "iPhone4,1" ]]; then
                 mkdir -p baseband/usr/standalone/firmware
-                cp $bb2-personalized.zip baseband/usr/standalone/firmware
+                cp baseband/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip baseband/usr/standalone/firmware
             fi
             mv baseband/usr .
             tar -cvf baseband.tar usr
