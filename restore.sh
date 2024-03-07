@@ -6141,7 +6141,7 @@ device_dumprd() {
             print "* Reminder to backup dump tars if needed"
             if [[ -s $dump/baseband.tar ]]; then
                 read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
-                if [[ $opt == 'Y' && $opt == 'y' ]]; then
+                if [[ $opt == 'Y' || $opt == 'y' ]]; then
                     log "Deleting existing dumped baseband"
                     rm $dump/baseband.tar
                     cp baseband.tar $dump
@@ -6169,7 +6169,7 @@ device_dumprd() {
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
     if [[ -s $dump/activation.tar ]]; then
         read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
-        if [[ $opt == 'Y' && $opt == 'y' ]]; then
+        if [[ $opt == 'Y' || $opt == 'y' ]]; then
             log "Deleting existing dumped activation"
             rm $dump/activation.tar
             cp activation.tar $dump
