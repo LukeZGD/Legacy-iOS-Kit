@@ -2387,7 +2387,7 @@ ipsw_prepare_bundle() {
     elif [[ $1 == "target" ]]; then
         if [[ $ipsw_jailbreak == 1 ]]; then
             case $vers in
-                [457]* ) ipsw_prepare_config false true;;
+                [4567]* ) ipsw_prepare_config false true;;
                 * ) ipsw_prepare_config true true;;
             esac
         else
@@ -3329,10 +3329,13 @@ ipsw_prepare_powder() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
+        ExtraArgs+=" freeze.tar "
         case $device_target_vers in
-            "5"* ) ExtraArgs+=" freeze.tar $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
-            "7.0"* ) ExtraArgs+=" freeze.tar $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
-            "7.1"* ) ExtraArgs+=" freeze.tar $jelbrek/panguaxe.tar $jelbrek/fstab7.tar";;
+            5* ) ExtraArgs+="$jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
+            6.1.[34] ) ExtraArgs+="$jelbrek/p0sixspwn.tar $jelbrek/fstab_rw.tar";;
+            6*   ) ExtraArgs+="$jelbrek/evasi0n6-untether.tar $jelbrek/fstab_rw.tar";;
+            7.0* ) ExtraArgs+="$jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
+            7.1* ) ExtraArgs+="$jelbrek/panguaxe.tar $jelbrek/fstab7.tar";;
         esac
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
