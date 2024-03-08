@@ -150,7 +150,7 @@ set_tool_paths() {
             else
                 debian_ver="$(echo "$debian_ver" | cut -c -2)"
             fi
-        elif [[ $ID == "fedora" || $ID == "nobara" ]]; then
+        elif [[ $ID == "fedora" || $ID == "nobara" || $ID_LIKE == "fedora" ]]; then
             fedora_ver=$VERSION_ID
         fi
 
