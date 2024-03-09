@@ -1110,7 +1110,7 @@ device_enter_mode() {
         "kDFU" )
             local sendfiles=()
             local device_det=$(echo "$device_vers" | cut -c 1)
-            local IPAddress="127.0.0.1"
+            local ip="127.0.0.1"
 
             if [[ $device_mode != "Normal" ]]; then
                 device_enter_mode pwnDFU
@@ -1141,26 +1141,14 @@ device_enter_mode() {
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
-            elif [[ $device_det == 5 && $device_proc == 5 ]]; then
-                local selection=("kloader5" "kloader_axi0mX")
-                input "kDFU Tool Option"
-                print "* Select tool to be used for entering kDFU mode."
-                print "* This option is set to kloader5 by default (1). Select this option if unsure."
-                print "* If the first option does not work, try many times and/or try the other option(s)."
-                input "Select your option:"
-                select opt2 in "${selection[@]}"; do
-                    case $opt2 in
-                        "kloader_axi0mX" ) opt="kloader_axi0mX"; break;;
-                        * ) opt="kloader5";;
-                    esac
-                done
-                log "Using $opt for kloader iOS 5"
-                echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
-                sendfiles+=("../resources/kloader/$opt")
             elif (( device_det <= 5 )); then
                 opt="kloader_axi0mX"
-                echo "/tmp/kloader_axi0mX /tmp/pwnediBSS" >> kloaders
-                sendfiles+=("../resources/kloader/kloader_axi0mX")
+                case $device_type in
+                    iPad2,4 | iPad3* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
+                esac
+                log "Using $opt for $device_type iOS $device_det"
+                echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
+                sendfiles+=("../resources/kloader/$opt")
             else
                 echo "/tmp/kloader /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/kloader")
@@ -1197,21 +1185,25 @@ device_enter_mode() {
                 log "Trying again with Wi-Fi SSH..."
                 print "* Make sure that your iOS device and PC/Mac are on the same network."
                 print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' or '>' next to your network name"
-                IPAddress=
-                until [[ -n $IPAddress ]]; do
-                    read -p "$(input 'Enter the IP Address of your device: ')" IPAddress
+                ip=
+                until [[ -n $ip ]]; do
+                    read -p "$(input 'Enter the IP Address of your device: ')" ip
                 done
                 log "Sending files to device: ${sendfiles[*]}"
-                $scp ${sendfiles[@]} root@$IPAddress:/tmp
+                $scp ${sendfiles[@]} root@$ip:/tmp
                 if [[ $? != 0 ]]; then
                     error "Failed to connect to device via SSH, cannot continue."
                 fi
                 log "Running kloader"
-                $ssh root@$IPAddress "bash /tmp/kloaders" &
+                $ssh root@$ip "bash /tmp/kloaders" &
             fi
 
             local attempt=1
             local device_in
+            local port
+            if [[ $ip == "127.0.0.1" ]]; then
+                port="-p $ssh_port"
+            fi
             while (( attempt <= 5 )); do
                 log "Finding device in kDFU mode... (Attempt $attempt of 5)"
                 if [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "DFU" ]]; then
@@ -1223,7 +1215,8 @@ device_enter_mode() {
                     break
                 fi
                 if [[ $opt == "kloader_axi0mX" ]]; then
-                    $ssh -p $ssh_port root@$IPAddress "bash /tmp/kloaders" &
+                    print "* Keep the device plugged in"
+                    $ssh $port root@$ip "bash /tmp/kloaders" &
                 else
                     print "* Unplug and replug your device now"
                 fi
@@ -4061,7 +4054,7 @@ device_ramdisk64() {
         fi
         print "* Version Selection"
         print "* The version of the SSH Ramdisk is set to iOS $ver by default."
-        print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 or 8 not booting after using iOS $ver ramdisk."
+        print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
         print "* If not sure, just press Enter/Return. This will select the default version."
         read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
         if [[ $opt == 'n' || $opt == 'N' ]]; then
@@ -4341,7 +4334,7 @@ device_ramdisk() {
         "$dir/hfsplus" Ramdisk.raw grow 30000000
     fi
 
-    "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
+    "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
     if [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
@@ -4729,14 +4722,15 @@ menu_ramdisk() {
             "erase78" )
                 warn "This will do a \"Erase All Content and Settings\" procedure for iOS 7 and 8 devices."
                 print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
-                print "* If your device is on iOS 7, boot an iOS 8 ramdisk afterwards, then force restart the device."
+                if (( device_proc >= 7 )); then
+                    print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
+                fi
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
                 pause
                 $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
                 $ssh -p $ssh_port root@127.0.0.1 "sync; cd /; umount /mnt2; umount /mnt1; sync; reboot"
                 log "Done, your device should reboot now"
-                print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk to fix booting."
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
             ;;
@@ -6052,6 +6046,7 @@ device_dump() {
                     rm baseband.tar
                     pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
                     zip -r0 $bb2-personalized.zip *
+                    unzip -o $bb2-personalized.zip -d .
                     popd >/dev/null
                 ;;
             esac
@@ -6131,6 +6126,7 @@ device_dumprd() {
                     rm baseband.tar
                     pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
                     zip -r0 $bb2-personalized.zip *
+                    unzip -o $bb2-personalized.zip -d .
                     popd >/dev/null
                 ;;
             esac
