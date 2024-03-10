@@ -2122,11 +2122,11 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
-        ExtraArgs+=" ../saved/$device_type/baseband.tar"
+        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
-        ExtraArgs+=" ../saved/$device_type/activation.tar"
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
     if [[ $1 == "iboot" ]]; then
         ExtraArgs+=" iBoot.tar"
@@ -2645,11 +2645,11 @@ ipsw_prepare_32bit() {
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
-        ExtraArgs+=" ../saved/$device_type/baseband.tar"
+        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
-        ExtraArgs+=" ../saved/$device_type/activation.tar"
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
@@ -3232,7 +3232,7 @@ ipsw_prepare_ios4powder() {
     fi
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
-        ExtraArgs+=" ../saved/$device_type/activation.tar"
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
     case $device_target_vers in
         4.3.[45] ) :;;
@@ -3313,11 +3313,11 @@ ipsw_prepare_powder() {
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
         device_dump baseband
-        ExtraArgs+=" ../saved/$device_type/baseband.tar"
+        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
-        ExtraArgs+=" ../saved/$device_type/activation.tar"
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
