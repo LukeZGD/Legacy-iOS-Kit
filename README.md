@@ -133,8 +133,8 @@
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7/A8 devices that support iOS 12.5.7
-    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15.8.1
+    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7/A8 devices that support iOS 12.5.x
+    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15.8.x
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)

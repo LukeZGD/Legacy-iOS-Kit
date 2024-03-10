@@ -834,8 +834,8 @@ device_get_info() {
             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
             device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
             if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
-                device_latest_vers="15.8.1"
-                device_latest_build="19H380"
+                device_latest_vers="15.8.2"
+                device_latest_build="19H384"
             fi
         ;;
     esac
@@ -2380,7 +2380,7 @@ ipsw_prepare_bundle() {
     elif [[ $1 == "target" ]]; then
         if [[ $ipsw_jailbreak == 1 ]]; then
             case $vers in
-                [89]* ) ipsw_prepare_config true true;;
+                [689]* ) ipsw_prepare_config true true;;
                 * ) ipsw_prepare_config false true;;
             esac
         else
@@ -3324,13 +3324,11 @@ ipsw_prepare_powder() {
         cp $jelbrek/freeze.tar .
         case $device_target_vers in
             5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
-            6.1.[34] ) ExtraArgs+=" $jelbrek/p0sixspwn.tar $jelbrek/fstab_rw.tar";;
-            6*   ) ExtraArgs+=" $jelbrek/evasi0n6-untether.tar $jelbrek/fstab_rw.tar";;
             7.0* ) ExtraArgs+=" $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
             7.1* ) ExtraArgs+=" $jelbrek/panguaxe.tar $jelbrek/fstab7.tar";;
         esac
         case $device_target_vers in
-            [89]* ) :;;
+            [689]* ) :;;
             * ) ExtraArgs+=" freeze.tar";;
         esac
         if [[ $ipsw_openssh == 1 ]]; then
@@ -3349,9 +3347,9 @@ ipsw_prepare_powder() {
             ExtraArr[0]+="9"
         fi
         if [[ $ipsw_jailbreak == 1 && $ipsw_verbose == 1 && $device_target_vers != "7"* ]]; then
-            ExtraArr+=("-b" "-v cs_enforcement_disable=1 amfi_get_out_of_my_way=1")
+            ExtraArr+=("-b" "-v cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff")
         elif [[ $ipsw_jailbreak == 1 && $device_target_vers != "7"* ]]; then
-            ExtraArr+=("-b" "cs_enforcement_disable=1 amfi_get_out_of_my_way=1")
+            ExtraArr+=("-b" "cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff")
         elif [[ $ipsw_verbose == 1 ]]; then
             ExtraArr+=("-b" "-v")
         fi
@@ -5972,7 +5970,7 @@ device_jailbreakrd() {
 
 device_dump() {
     local arg="$1"
-    local dump="../saved/$device_type/$arg.tar"
+    local dump="../saved/$device_type/$arg-$device_ecid.tar"
     local dmps
     local dmp2
     case $arg in
@@ -6017,47 +6015,17 @@ device_dump() {
         print "* The default root password is: alpine"
         device_iproxy
         device_sshpass
-        log "Creating $arg.tar"
         if [[ $arg == "activation" ]]; then
+            log "Creating $arg.tar"
             $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /tmp/$dmp2; cp -R $dmps/* /tmp/$dmp2"
             $ssh -p $ssh_port root@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
             log "Copying $arg.tar"
             $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
+            mv $arg.tar $arg-$device_ecid.tar
         else
-            local bb2="Mav5"
-            if [[ $device_type == "iPhone4,1" ]]; then
-                bb2="Trek"
-            fi
-            case $device_vers in
-                5* ) $scp -P $ssh_port root@127.0.0.1:/usr/standalone/firmware/$bb2-personalized.zip .;;
-                6* ) $scp -P $ssh_port root@127.0.0.1:/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip .;;
-            esac
-            case $device_vers in
-                [56]* )
-                    mkdir -p baseband/usr/local/standalone/firmware/Baseband/$bb2
-                    unzip $bb2-personalized.zip -d baseband/usr/local/standalone/firmware/Baseband/$bb2
-                    cp $bb2-personalized.zip baseband/usr/local/standalone/firmware/Baseband/$bb2
-                ;;
-                * )
-                    $ssh -p $ssh_port root@127.0.0.1 "tar -cvf /tmp/baseband.tar /usr/local/standalone/firmware"
-                    $scp -P $ssh_port root@127.0.0.1:/tmp/baseband.tar .
-                    mkdir baseband
-                    tar -xvf baseband.tar -C baseband
-                    rm baseband.tar
-                    pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
-                    zip -r0 $bb2-personalized.zip *
-                    unzip -o $bb2-personalized.zip -d .
-                    popd >/dev/null
-                ;;
-            esac
-            if [[ $device_type == "iPhone4,1" ]]; then
-                mkdir -p baseband/usr/standalone/firmware
-                cp baseband/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip baseband/usr/standalone/firmware
-            fi
-            mv baseband/usr .
-            tar -cvf baseband.tar usr
+            device_dumpbb
         fi
-        cp $arg.tar $dump
+        cp $arg-$device_ecid.tar $dump
     elif [[ $device_mode == "DFU" ]]; then
         log "This operation requires an SSH ramdisk, proceeding"
         print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
@@ -6081,12 +6049,52 @@ device_dump() {
     log "Dumping $arg done: $dump"
 }
 
+device_dumpbb() {
+    local bb2="Mav5"
+    local root="/"
+    local tmp="/tmp"
+    if [[ $device_type == "iPhone4,1" ]]; then
+        bb2="Trek"
+    fi
+    if [[ $1 == "rd" ]]; then
+        root="/mnt1/"
+        tmp="/mnt2/tmp"
+    fi
+    log "Creating baseband.tar"
+    case $device_vers in
+        5* ) $scp -P $ssh_port root@127.0.0.1:${root}usr/standalone/firmware/$bb2-personalized.zip .;;
+        6* ) $scp -P $ssh_port root@127.0.0.1:${root}usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip .;;
+    esac
+    case $device_vers in
+        [56]* )
+            mkdir -p usr/local/standalone/firmware/Baseband/$bb2
+            unzip $bb2-personalized.zip -d usr/local/standalone/firmware/Baseband/$bb2
+            cp $bb2-personalized.zip usr/local/standalone/firmware/Baseband/$bb2
+        ;;
+        * )
+            $ssh -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root}usr/local/standalone/firmware"
+            $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
+            tar -xvf baseband.tar -C .
+            rm baseband.tar
+            pushd usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
+            zip -r0 $bb2-personalized.zip *
+            unzip -o $bb2-personalized.zip -d .
+            popd >/dev/null
+        ;;
+    esac
+    if [[ $device_type == "iPhone4,1" ]]; then
+        mkdir -p usr/standalone/firmware
+        cp usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip usr/standalone/firmware
+    fi
+    tar -cvf baseband-$device_ecid.tar usr
+}
+
 device_dumprd() {
     local dump="../saved/$device_type"
     local dmps
     local dmp2
     local vers
-    local tmp="/mnt1/private/var/tmp"
+    local tmp="/mnt2/tmp"
 
     device_ramdisk_iosvers
     vers=$device_vers
@@ -6097,84 +6105,49 @@ device_dumprd() {
         return
     fi
     log "Mounting filesystems"
-    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+    $ssh -p $ssh_port root@127.0.0.1 "mount.sh"
     sleep 1
 
     case $device_type in
         iPhone[45]* | iPad2,[67] | iPad3,[56] )
             log "Dumping both baseband and activation tars"
-            log "Creating baseband.tar"
-            local bb2="Mav5"
-            if [[ $device_type == "iPhone4,1" ]]; then
-                bb2="Trek"
-            fi
-            case $device_vers in
-                5* ) $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/standalone/firmware/$bb2-personalized.zip .;;
-                6* ) $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip .;;
-            esac
-            case $device_vers in
-                [56]* )
-                    mkdir -p baseband/usr/local/standalone/firmware/Baseband/$bb2
-                    unzip $bb2-personalized.zip -d baseband/usr/local/standalone/firmware/Baseband/$bb2
-                    cp $bb2-personalized.zip baseband/usr/local/standalone/firmware/Baseband/$bb2
-                ;;
-                * )
-                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -cvf $tmp/baseband.tar usr/local/standalone/firmware"
-                    $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
-                    mkdir baseband
-                    tar -xvf baseband.tar -C baseband
-                    rm baseband.tar
-                    pushd baseband/usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
-                    zip -r0 $bb2-personalized.zip *
-                    unzip -o $bb2-personalized.zip -d .
-                    popd >/dev/null
-                ;;
-            esac
-            if [[ $device_type == "iPhone4,1" ]]; then
-                mkdir -p baseband/usr/standalone/firmware
-                cp baseband/usr/local/standalone/firmware/Baseband/$bb2/$bb2-personalized.zip baseband/usr/standalone/firmware
-            fi
-            mv baseband/usr .
-            tar -cvf baseband.tar usr
+            device_dumpbb rd
             print "* Reminder to backup dump tars if needed"
-            if [[ -s $dump/baseband.tar ]]; then
-                read -p "$(input "Baseband dump exists in $dump/baseband.tar. Overwrite? (y/N) ")" opt
+            if [[ -s $dump/baseband-$device_ecid.tar ]]; then
+                read -p "$(input "Baseband dump exists in $dump/baseband-$device_ecid.tar. Overwrite? (y/N) ")" opt
                 if [[ $opt == 'Y' || $opt == 'y' ]]; then
                     log "Deleting existing dumped baseband"
-                    rm $dump/baseband.tar
-                    cp baseband.tar $dump
+                    rm $dump/baseband-$device_ecid.tar
                 fi
-            else
-                cp baseband.tar $dump
             fi
+            cp baseband-$device_ecid.tar $dump
         ;;
     esac
 
-    dmp2="private/var/root/Library/Lockdown"
+    dmp2="root/Library/Lockdown"
     case $vers in
         [34567]* ) dmps="$dmp2";;
-        8* ) dmps="private/var/mobile/Library/mad";;
+        8* ) dmps="mobile/Library/mad";;
         * )
-            dmps="private/var/containers/Data/System/*/Library/activation_records"
+            dmps="containers/Data/System/*/Library/activation_records"
             dmp2+="/activation_records"
         ;;
     esac
     log "Creating activation.tar"
-    $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/$dmp2; cp -R /mnt1/$dmps/* $tmp/$dmp2"
-    $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar $dmp2"
+    $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/private/var/$dmp2; cp -R /mnt2/$dmps/* $tmp/private/var/$dmp2"
+    $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar private/var/$dmp2"
     log "Copying activation.tar"
     print "* Reminder to backup dump tars if needed"
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
-    if [[ -s $dump/activation.tar ]]; then
-        read -p "$(input "Activation records dump exists in $dump/activation.tar. Overwrite? (y/N) ")" opt
+    mv activation.tar activation-$device_ecid.tar
+    if [[ -s $dump/activation-$device_ecid.tar ]]; then
+        read -p "$(input "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite? (y/N) ")" opt
         if [[ $opt == 'Y' || $opt == 'y' ]]; then
             log "Deleting existing dumped activation"
-            rm $dump/activation.tar
-            cp activation.tar $dump
+            rm $dump/activation-$device_ecid.tar
         fi
-    else
-        cp activation.tar $dump
     fi
+    cp activation-$device_ecid.tar $dump
     $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
 }
 
