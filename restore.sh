@@ -1726,6 +1726,7 @@ ipsw_preference_set() {
         esac
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
+            3.1.3 ) :;;
             3.1* )
                 ipsw_canjailbreak=1
                 warn "Jailbreak option might have issues on versions below 3.1.3. I recommend selecting 3.1.3 or newer instead"
@@ -5948,9 +5949,17 @@ device_jailbreakrd() {
     fi
     case $device_vers in
         9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
+        3.1* )
+            if [[ $device_type != "iPhone2,1" ]]; then
+                warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+                print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+                return
+            fi
+        ;;
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+            return
         ;;
     esac
     case $device_vers in
