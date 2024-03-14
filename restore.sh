@@ -1704,7 +1704,7 @@ ipsw_preference_set() {
     fi
 
     case $device_latest_vers in
-        7.1.2 | 6.1.6 | 5.1.1 | 4.2.1 | 3.1.3 ) ipsw_canjailbreak=1;;
+        [7654]* ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]]; then
         return
@@ -1714,10 +1714,22 @@ ipsw_preference_set() {
 
     case $device_target_vers in
         9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* ) ipsw_canjailbreak=1;;
+        3.1.3 )
+            log "Jailbreak option is not available, but you may jailbreak (and hacktivate) later after the restore"
+            print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
+            print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
+        ;;
     esac
     if [[ $device_proc == 5 ]]; then
         case $device_target_vers in
             8.2 | 8.[10]* ) ipsw_canjailbreak=;;
+        esac
+    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+        case $device_target_vers in
+            3.1* )
+                ipsw_canjailbreak=1
+                warn "Jailbreak option might have issues on versions below 3.1.3. I recommend selecting 3.1.3 or newer instead"
+            ;;
         esac
     fi
 
@@ -5181,7 +5193,7 @@ menu_restore_more() {
                 menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3")
                 menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0")
             ;;
-            iPod2,1 ) menu_items+=("4.0.2" "4.0");;
+            iPod2,1 ) menu_items+=("4.0.2" "4.0" "3.1.2" "3.1.1");;
         esac
         menu_items+=("Go Back")
         menu_print_info
@@ -5192,6 +5204,9 @@ menu_restore_more() {
         fi
         if [[ -z $1 && $device_type == "iPod2,1" && $device_newbr != 0 ]]; then
             warn "These versions are for old bootrom devices only. They may not work on your device"
+            echo
+        else
+            warn "These versions might not work on your device"
             echo
         fi
         input "Select an option:"
@@ -5800,9 +5815,14 @@ menu_other() {
                 "Normal" )
                     menu_items+=("Attempt Activation")
                     case $device_vers in
-                        [3456]* )
+                        3.1* | [456]* )
                             case $device_type in
-                                iPhone1* | iPhone[23],1 ) menu_items+=("Hacktivate Device");;
+                                iPhone1* )
+                                    if [[ $device_vers == "3.1.3" ]]; then
+                                        menu_items+=("Hacktivate Device")
+                                    fi
+                                ;;
+                                iPhone[23],1 ) menu_items+=("Hacktivate Device");;
                             esac
                         ;;
                     esac
@@ -6201,10 +6221,12 @@ device_hacktivate() {
 
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
-    print "* Proceed with caution when restoring to custom IPSWs not made with Legacy iOS Kit."
+    print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
     if [[ $device_newbr == 1 ]]; then
         warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
         print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+    else
+        warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
     fi
     pause
     menu_ipsw_browse custom
