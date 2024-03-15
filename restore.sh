@@ -4772,8 +4772,9 @@ shsh_save_onboard64() {
     if [[ ! -s $shsh ]]; then
         warn "Failed to convert raw dump to SHSH."
         if [[ -s dump.raw ]]; then
-            mv dump.raw ../saved/rawdump_$device_ecid-$device_type-$device_target_vers.raw
-            log "Raw dump saved at: ../saved/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            local raw="../saved/shsh/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            mv dump.raw $raw
+            log "Raw dump saved at: $raw"
             warn "This raw dump is not usable for restoring, you need to convert it first."
             print "* If unable to be converted, this dump is likely not usable for restoring."
         fi
@@ -4810,8 +4811,9 @@ shsh_save_onboard() {
     if [[ $? != 0 ]]; then
         warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
         if [[ -s dump.raw ]]; then
-            mv dump.raw ../saved/rawdump_$device_ecid-$device_type-$device_target_vers.raw
-            log "Raw dump saved at: ../saved/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            local raw="../saved/shsh/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            mv dump.raw $raw
+            log "Raw dump saved at: $raw"
             warn "This raw dump is not usable for restoring, you need to convert it first."
             print "* If unable to be converted, this dump is likely not usable for restoring."
         fi
@@ -4838,7 +4840,7 @@ shsh_convert_onboard() {
     if [[ ! -s dump.shsh ]]; then
         error "Converting onboard SHSH blobs failed."
     fi
-    local shsh="../saved/shsh/converted-$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
+    local shsh="../saved/shsh/converted_$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
     mv dump.shsh $shsh
     log "Successfully saved $device_target_vers blobs: $shsh"
 }
@@ -5140,6 +5142,8 @@ menu_shsh_convert() {
         if [[ -n $shsh_path ]]; then
             print "* Selected dump: $shsh_path"
             menu_items+=("Convert Raw Dump")
+        else
+            print "* Select raw dump file to continue"
         fi
         menu_items+=("Go Back")
         echo
@@ -5442,7 +5446,7 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
-                    7* | 8[CE]* ) warn "Selected target version will restore but is most likely not functional.";;
+                    7* | 8[CE]* ) warn "Selected target version will restore but will most likely not boot.";;
                 esac
             else
                 print "* Select Target IPSW to continue"
@@ -5697,6 +5701,7 @@ menu_logo_browse() {
 menu_ipsw_browse() {
     local versionc
     local newpath
+    local ipswcc=0
     local text="target"
     [[ $1 == "base" ]] && text="base"
 
@@ -5706,6 +5711,16 @@ menu_ipsw_browse() {
     [[ ! -s "$newpath" ]] && return
     newpath="${newpath%?????}"
     log "Selected IPSW file: $newpath.ipsw"
+    if (( device_proc < 7 )); then
+        ipswcc="$(unzip -l "$newpath.ipsw" | grep -c 20[23])"
+    fi
+    if [[ $1 != "custom" && $ipswcc != 0 ]]; then
+        warn "Custom IPSW selected, cannot continue."
+        print "* Do NOT select a custom IPSW for this selection."
+        print "* Please select the original IPSW for the IPSW selection."
+        pause
+        return
+    fi
     ipsw_version_set "$newpath" "$1"
     if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
