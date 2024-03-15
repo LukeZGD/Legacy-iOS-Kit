@@ -5714,13 +5714,6 @@ menu_ipsw_browse() {
     if (( device_proc < 7 )); then
         ipswcc="$(unzip -l "$newpath.ipsw" | grep -c 20[23])"
     fi
-    if [[ $1 != "custom" && $ipswcc != 0 ]]; then
-        warn "Custom IPSW selected, cannot continue."
-        print "* Do NOT select a custom IPSW for this selection."
-        print "* Please select the original IPSW for the IPSW selection."
-        pause
-        return
-    fi
     ipsw_version_set "$newpath" "$1"
     if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
