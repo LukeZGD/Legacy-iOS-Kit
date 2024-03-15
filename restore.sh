@@ -4685,7 +4685,7 @@ menu_ramdisk() {
             "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
-                local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
+                local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
                 $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
@@ -4766,10 +4766,17 @@ shsh_save_onboard64() {
     print "* The default root password is: alpine"
     device_iproxy
     device_sshpass
-    local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
+    local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh"
     $ssh -p $ssh_port root@127.0.0.1 "cat /dev/disk1" | dd of=dump.raw bs=256 count=$((0x4000))
     "$dir/img4tool" --convert -s $shsh dump.raw
     if [[ ! -s $shsh ]]; then
+        warn "Failed to convert raw dump to SHSH."
+        if [[ -s dump.raw ]]; then
+            mv dump.raw ../saved/rawdump_$device_ecid-$device_type-$device_target_vers.raw
+            log "Raw dump saved at: ../saved/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            warn "This raw dump is not usable for restoring, you need to convert it first."
+            print "* If unable to be converted, this dump is likely not usable for restoring."
+        fi
         error "Saving onboard SHSH blobs failed."
     fi
     log "Successfully saved $device_vers blobs: $shsh"
@@ -4796,18 +4803,43 @@ shsh_save_onboard() {
     device_find_mode Recovery
     log "Dumping blobs now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
-    $irecovery2 -g myblob.dump
+    $irecovery2 -g dump.raw
     $irecovery -n
-    "$dir/ticket" myblob.dump myblob.shsh "$ipsw_path.ipsw" -z
-    "$dir/validate" myblob.shsh "$ipsw_path.ipsw" -z
+    "$dir/ticket" dump.raw dump.shsh "$ipsw_path.ipsw" -z
+    "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
     if [[ $? != 0 ]]; then
         warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
+        if [[ -s dump.raw ]]; then
+            mv dump.raw ../saved/rawdump_$device_ecid-$device_type-$device_target_vers.raw
+            log "Raw dump saved at: ../saved/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            warn "This raw dump is not usable for restoring, you need to convert it first."
+            print "* If unable to be converted, this dump is likely not usable for restoring."
+        fi
     fi
-    if [[ ! -s myblob.shsh ]]; then
+    if [[ ! -s dump.shsh ]]; then
         error "Saving onboard SHSH blobs failed."
     fi
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh"
-    mv myblob.shsh $shsh
+    mv dump.shsh $shsh
+    log "Successfully saved $device_target_vers blobs: $shsh"
+}
+
+shsh_convert_onboard() {
+    cp "$shsh_path" dump.raw
+    if (( device_proc < 7 )); then
+        "$dir/ticket" dump.raw dump.shsh "$ipsw_path.ipsw" -z
+        "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
+        if [[ $? != 0 ]]; then
+            warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
+        fi
+    else
+        "$dir/img4tool" --convert -s dump.shsh dump.raw
+    fi
+    if [[ ! -s dump.shsh ]]; then
+        error "Converting onboard SHSH blobs failed."
+    fi
+    local shsh="../saved/shsh/converted-$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
+    mv dump.shsh $shsh
     log "Successfully saved $device_target_vers blobs: $shsh"
 }
 
@@ -5005,7 +5037,7 @@ menu_shsh() {
         if (( device_proc < 7 )); then
             menu_items+=("Cydia Blobs")
         fi
-        menu_items+=("Go Back")
+        menu_items+=("Convert Raw Dump" "Go Back")
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
             print "* Dumping onboard blobs might not work for this device, proceed with caution"
@@ -5036,6 +5068,7 @@ menu_shsh() {
             "iOS"* ) mode="save-ota-blobs";;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Cydia Blobs" ) mode="save-cydia-blobs";;
+            "Convert Raw Dump" ) menu_shsh_convert;;
             "Go Back" ) back=1;;
         esac
     done
@@ -5079,6 +5112,47 @@ menu_shsh_onboard() {
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Save Onboard Blobs" ) mode="save-onboard-blobs";;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_shsh_convert() {
+    local menu_items
+    local selected
+    local back
+
+    ipsw_path=
+    while [[ -z "$mode" && -z "$back" ]]; do
+        if (( device_proc < 7 )); then
+            menu_items=("Select IPSW")
+        else
+            menu_items=("Select Raw Dump")
+        fi
+        menu_print_info
+        if [[ -n $ipsw_path ]]; then
+            print "* Selected IPSW: $ipsw_path.ipsw"
+            print "* IPSW Version: $device_target_vers-$device_target_build"
+            menu_items+=("Select Raw Dump")
+        else
+            print "* Select IPSW of your current iOS version to continue"
+        fi
+        if [[ -n $shsh_path ]]; then
+            print "* Selected dump: $shsh_path"
+            menu_items+=("Convert Raw Dump")
+        fi
+        menu_items+=("Go Back")
+        echo
+        print " > Main Menu > Save SHSH Blobs > Convert Raw Dump"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Select IPSW" ) menu_ipsw_browse;;
+            "Select Raw Dump" ) menu_shshdump_browse;;
+            "Convert Raw Dump" ) mode="convert-onboard-blobs";;
             "Go Back" ) back=1;;
         esac
     done
@@ -5761,6 +5835,16 @@ menu_shsh_browse() {
         warn "Validation failed. Did you select the correct IPSW/SHSH?"
         pause
     fi
+    shsh_path="$newpath"
+}
+
+menu_shshdump_browse() {
+    local newpath
+    input "Select your raw dump file in the file selection window."
+    newpath="$($zenity --file-selection --file-filter='Raw Dump | *.raw' --title="Select Raw Dump")"
+    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Ctrl+C to cancel): ")" newpath
+    [[ ! -s "$newpath" ]] && return
+    log "Selected raw dump file: $newpath"
     shsh_path="$newpath"
 }
 
@@ -6512,6 +6596,7 @@ main() {
         "altserver_linux" ) device_altserver_linux;;
         "hacktivate" ) device_hacktivate;;
         "restore-latest" ) restore_latest64;;
+        "convert-onboard-blobs" ) shsh_convert_onboard;;
         * ) :;;
     esac
 
