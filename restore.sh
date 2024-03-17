@@ -1892,7 +1892,9 @@ ipsw_download() {
     local ipsw_dl="$1"
     ipsw_get_url $build_id
     if [[ ! -e "$ipsw_dl.ipsw" ]]; then
-        print "* The script will now proceed to download iOS $version IPSW."
+        if [[ -n $version ]]; then
+            print "* The script will now proceed to download iOS $version IPSW."
+        fi
         print "* If you want to download it yourself, here is the link: $ipsw_url"
         log "Downloading IPSW... (Press Ctrl+C to cancel)"
         curl -L "$ipsw_url" -o temp.ipsw
@@ -4907,7 +4909,7 @@ menu_print_info() {
     else
         print "* iOS Version: $device_vers"
     fi
-    if [[ $device_vers == "Unknown" && $device_proc != 1 ]] && (( device_proc < 7 )); then
+    if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
     print "* ECID: $device_ecid"
@@ -5185,7 +5187,7 @@ menu_restore() {
             iPhone1,2 )
                 menu_items+=("4.1" "3.1.3");;
             iPod2,1 )
-                menu_items+=("4.1" "3.1.3");; # "More versions");;
+                menu_items+=("4.1" "3.1.3" "More versions");;
         esac
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 )
@@ -5220,7 +5222,7 @@ menu_restore() {
                 menu_items+=("DFU IPSW")
             fi
         fi
-        menu_items+=("Go Back")
+        menu_items+=("IPSW Downloader" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Other Utilities > Create Custom IPSW"
@@ -5254,7 +5256,56 @@ menu_restore() {
             "DFU IPSW" ) mode="dfuipsw${1}";;
             "More versions" ) menu_restore_more "$1";;
             "Latest iOS" ) mode="restore-latest";;
+            "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             * ) menu_ipsw "$selected" "$1";;
+        esac
+    done
+}
+
+menu_ipsw_downloader() {
+    local menu_items
+    local selected
+    local back
+    local vers
+
+    while [[ -z "$back" ]]; do
+        menu_items=("Enter Build Version")
+        if [[ -n $vers ]]; then
+            menu_items+=("Start Download")
+        fi
+        menu_items+=("Go Back")
+        menu_print_info
+        if [[ $1 == "ipsw" ]]; then
+            print " > Main Menu > Other Utilities > Create Custom IPSW > IPSW Downloader"
+        else
+            print " > Main Menu > Restore/Downgrade > IPSW Downloader"
+        fi
+        print "* To know more about build version, go here: https://theapplewiki.com/wiki/Firmware"
+        if [[ -n $vers ]]; then
+            print "* Build Version entered: $vers"
+        else
+            print "* Enter build version to continue"
+        fi
+        echo
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Enter Build Version" )
+                print "* Enter the build version of the IPSW you want to download."
+                until [[ -n $vers ]]; do
+                    read -p "$(input 'Enter build version (eg. 10B329): ')" vers
+                done
+            ;;
+            "Start Download" )
+                device_target_build="$vers"
+                ipsw_download
+                log "IPSW downloading is done"
+                pause
+            ;;
+            "Go Back" ) back=1;;
         esac
     done
 }
@@ -5440,6 +5491,8 @@ menu_ipsw() {
 
         menu_items=("Select Target IPSW")
         menu_print_info
+        print "* Only select unmodified IPSW for the selection. Do not select custom IPSWs"
+        echo
         if [[ $1 == *"powdersn0w"* ]]; then
             menu_items+=("Select Base IPSW")
             if [[ -n $ipsw_path ]]; then
@@ -5571,6 +5624,8 @@ menu_ipsw() {
         fi
 
         if [[ $ipsw_cancustomlogo == 1 ]]; then
+            print "* You can select your own custom logo and recovery image. This is optional"
+            print "* Note that the images must be in PNG format, and up to 320x480 resolution only"
             if [[ -n $ipsw_customlogo ]]; then
                 print "* Custom boot logo: $ipsw_customlogo"
             else
@@ -5581,7 +5636,6 @@ menu_ipsw() {
             else
                 print "* No custom recovery logo selected"
             fi
-            print "* Note that the images must be in PNG format, and up to 320x480 resolution"
             menu_items+=("Select Boot Logo" "Select Recovery Logo")
             echo
         fi
@@ -5592,7 +5646,7 @@ menu_ipsw() {
         elif (( device_proc > 4 )) && [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
             print "* This restore will use $device_use_vers baseband"
             echo
-        elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+        elif [[ $device_target_vers == "$device_latest_vers" && $device_use_bb != 0 ]]; then
             print "* This restore will use $device_use_vers baseband if the jailbreak option is disabled"
             echo
         fi
@@ -5701,7 +5755,6 @@ menu_logo_browse() {
 menu_ipsw_browse() {
     local versionc
     local newpath
-    local ipswcc=0
     local text="target"
     [[ $1 == "base" ]] && text="base"
 
@@ -5711,9 +5764,6 @@ menu_ipsw_browse() {
     [[ ! -s "$newpath" ]] && return
     newpath="${newpath%?????}"
     log "Selected IPSW file: $newpath.ipsw"
-    if (( device_proc < 7 )); then
-        ipswcc="$(unzip -l "$newpath.ipsw" | grep -c 20[23])"
-    fi
     ipsw_version_set "$newpath" "$1"
     if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
