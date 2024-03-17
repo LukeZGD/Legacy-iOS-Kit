@@ -1891,6 +1891,10 @@ ipsw_download() {
     local build_id="$device_target_build"
     local ipsw_dl="$1"
     ipsw_get_url $build_id
+    if [[ -z $ipsw_dl ]]; then
+        ipsw_dl="../${ipsw_url##*/}"
+        ipsw_dl="${ipsw_dl%?????}"
+    fi
     if [[ ! -e "$ipsw_dl.ipsw" ]]; then
         if [[ -n $version ]]; then
             print "* The script will now proceed to download iOS $version IPSW."
@@ -5922,11 +5926,10 @@ menu_other() {
                         menu_items+=("Enter pwnDFU Mode")
                     fi
                 else
-                    if (( device_proc >= 5 )); then
-                        menu_items+=("Send Pwned iBSS")
-                    elif [[ $device_proc != 5 ]]; then
-                        menu_items+=("Enter pwnDFU Mode")
-                    fi
+                    case $device_proc in
+                        [56] ) menu_items+=("Send Pwned iBSS");;
+                        * ) menu_items+=("Enter pwnDFU Mode");;
+                    esac
                     menu_items+=("Get iOS Version")
                 fi
                 menu_items+=("Clear NVRAM")
