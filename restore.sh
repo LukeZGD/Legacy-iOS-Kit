@@ -5922,7 +5922,9 @@ menu_other() {
             if (( device_proc < 7 )); then
                 if [[ $device_mode == "Normal" ]]; then
                     menu_items+=("Enter kDFU Mode")
-                    if [[ $device_proc != 5 ]]; then
+                    if [[ $device_proc == 6 ]]; then
+                        menu_items+=("Send Pwned iBSS")
+                    elif [[ $device_proc != 5 ]]; then
                         menu_items+=("Enter pwnDFU Mode")
                     fi
                 else
