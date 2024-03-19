@@ -3365,13 +3365,14 @@ ipsw_prepare_powder() {
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArr[0]+="9"
         fi
-        if [[ $ipsw_jailbreak == 1 && $ipsw_verbose == 1 && $device_target_vers != "7"* ]]; then
-            ExtraArr+=("-b" "-v cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff")
-        elif [[ $ipsw_jailbreak == 1 && $device_target_vers != "7"* ]]; then
-            ExtraArr+=("-b" "cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff")
-        elif [[ $ipsw_verbose == 1 ]]; then
-            ExtraArr+=("-b" "-v")
+        local bootargs
+        if [[ $ipsw_jailbreak == 1 && $device_target_vers != "7"* ]]; then
+            bootargs+="cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff"
         fi
+        if [[ $ipsw_verbose == 1 ]]; then
+            bootargs+=" -v"
+        fi
+        ExtraArr+=("-b" "$bootargs")
         patch_iboot "${ExtraArr[@]}"
         tar -cvf iBoot.tar iBoot
         ExtraArgs+=" iBoot.tar"
@@ -3452,7 +3453,7 @@ ipsw_prepare_custom() {
         if [[ $device_target_vers == "4"* ]]; then
             ipsw_prepare_patchcomp WTF2 # just to make sure
         fi
-    else
+    else # 3GS
         case $device_target_vers in
             6.1.6 | 4.1 ) :;;
             * ) ipsw_prepare_patchcomp LLB;;
@@ -3465,8 +3466,6 @@ ipsw_extract() {
     local ipsw="$ipsw_path"
     if [[ $1 == "custom" ]]; then
         ipsw="$ipsw_custom"
-    elif [[ $1 == "no_rootfs" ]]; then
-        ExtraArgs="-x $2"
     fi
     if [[ ! -d "$ipsw" ]]; then
         mkdir "$ipsw"
@@ -4049,7 +4048,7 @@ device_send_rdtar() {
 }
 
 device_ramdisk64() {
-    local sshtar="../saved/ssh-64.tar"
+    local sshtar="../saved/ssh64.tar"
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
     local name
     local iv
@@ -4096,7 +4095,7 @@ device_ramdisk64() {
         comps+=("Trustcache")
         if [[ ! -e $sshtar ]]; then
             log "Downloading ssh.tar from SSHRD_Script..."
-            curl -LO https://github.com/verygenericname/sshtars/raw/a6a93db54cc30a72f577744e50fb66ae57b24990/ssh.tar.gz
+            curl -LO https://github.com/LukeZGD/sshtars/raw/cbaf9f826ca994452beb9e99a3a4ffb496f918fb/ssh.tar.gz
             mv ssh.tar.gz $sshtar.gz
             gzip -d $sshtar.gz
         fi
