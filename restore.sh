@@ -1571,7 +1571,10 @@ device_fw_key_check() {
             fi
         done
         if [[ $(cat index.html | grep -c "$build") != 1 ]]; then
-            error "Failed to download firmware keys."
+            local error_msg="* You may need to run wikiproxy to get firmware keys."
+            error_msg+=$'\n* For more details, go to the "Troubleshooting" wiki page in GitHub.'
+            error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#running-wikiproxy'
+            error "Failed to download firmware keys." "$error_msg"
         fi
         mv index.html "$keys_path/"
     fi
