@@ -1727,6 +1727,11 @@ ipsw_preference_set() {
         case $device_target_vers in
             8.2 | 8.[10]* ) ipsw_canjailbreak=;;
         esac
+    elif [[ $device_proc == 1 ]]; then
+        ipsw_canjailbreak=
+        log "Jailbreak option is not available, but you may jailbreak (and hacktivate) later after the restore"
+        print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
+        print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
     elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
             3.1.3 ) :;;
@@ -3816,6 +3821,9 @@ restore_prepare() {
         1 )
             if [[ $device_target_vers == "3.1.3" ]]; then
                 device_enter_mode DFU
+            elif [[ $device_target_vers == "4"* ]]; then
+                restore_latest
+                return
             else
                 device_enter_mode WTFreal
             fi
@@ -6360,6 +6368,7 @@ device_hacktivate() {
         return
     fi
     print "* Make sure that your device is restored with the jailbreak option enabled."
+    print "* Or jailbroken using Legacy iOS Kit's \"Jailbreak Device\" option."
     print "* This will use SSH to patch lockdownd on your device for hacktivation."
     print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
     pause
