@@ -5976,9 +5976,9 @@ menu_other() {
                         3.1* | [456]* )
                             case $device_type in
                                 iPhone1* )
-                                    if [[ $device_vers == "3.1.3" ]]; then
-                                        menu_items+=("Hacktivate Device")
-                                    fi
+                                    case $device_vers in
+                                        3.1.3 | 4* ) menu_items+=("Hacktivate Device");;
+                                    esac
                                 ;;
                                 iPhone[23],1 ) menu_items+=("Hacktivate Device");;
                             esac
