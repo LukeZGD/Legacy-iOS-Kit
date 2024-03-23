@@ -9,7 +9,7 @@
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10) devices
     - Devices that received iOS 16 and newer are not supported and only have limited functionality (such as sideload on Linux etc.)
-    - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features may not work properly
+    - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features are not available
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore some 32-bit devices to other iOS versions without blobs
     - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
@@ -98,7 +98,7 @@
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
     - iPhone 2G, 3G, iPod touch 1 - all versions
-        - iOS 1 doesn't seem to work and may require usage of [ZiPhone](https://github.com/Zibri/ZiPhone), [more info here](https://twitter.com/tihmstar/status/1734620913071542435)
+        - Lowest working version is 2.0. Going to 1.x does not work
 
 ## Supported OS versions/distros
 
