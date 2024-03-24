@@ -9,7 +9,7 @@
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10) devices
     - Devices that received iOS 16 and newer are not supported and only have limited functionality (such as sideload on Linux etc.)
-    - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features are not available
+    - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features like SSH ramdisk are not available
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore some 32-bit devices to other iOS versions without blobs
     - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
@@ -75,10 +75,9 @@
 </table>
 
 - Restoring with SHSH blobs, jailbreaking, and using SSH Ramdisks are supported on the following devices:
-    - Supports all 32-bit iOS devices
-    - iPhone 2G, 3G, 3GS, 4, 4S, 5, 5C
+    - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
-    - iPod touch 1, 2, 3, 4, 5
+    - iPod touch 2, 3, 4, 5
 - Restoring with SHSH blobs and using SSH Ramdisks are also supported on some 64-bit devices:
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
     - iPhone 5S, 6, 6S, SE 2016, 7 (including Plus variants)
@@ -94,10 +93,11 @@
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - No blob requirement for iPhone 4, iPad 1, iPod touch 3 (7.1.2 and 5.1.1 are signed)
         - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
-- Restoring to other unsigned versions without blobs is supported on the following devices and target versions:
+- Restoring and jailbreaking to other unsigned versions without blobs is supported on the following devices and target version range:
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
     - iPhone 2G, 3G, iPod touch 1 - all versions
+        - Supported jailbreak versions are only 3.1.3, 4.1, and 4.2.1
         - Lowest working version is 2.0. Going to 1.x does not work
 
 ## Supported OS versions/distros

@@ -4990,9 +4990,6 @@ menu_print_info() {
     echo
     print "* Device: $device_type (${device_model}ap) in $device_mode mode"
     device_manufacturing
-    if [[ $device_proc == 1 ]]; then
-        warn "This device is only partially supported by Legacy iOS Kit. Some features are not available."
-    fi
     if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
@@ -5716,10 +5713,6 @@ menu_ipsw() {
             menu_items+=("Download Target IPSW")
             if [[ -n $ipsw_path ]]; then
                 print "* Selected IPSW: $ipsw_path.ipsw"
-                if [[ $device_proc == 1 && $device_target_vers == "4"* ]]; then
-                    warn "iPhone 3G iOS 4 will likely fail to restore with jailbreak/hacktivate option."
-                    print  "* It is recommended to select 3.1.3 instead."
-                fi
                 menu_items+=("$start")
             else
                 print "* Select $1 IPSW to continue"
