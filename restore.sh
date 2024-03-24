@@ -3442,6 +3442,10 @@ ipsw_prepare_patchcomp() {
         path="Firmware/dfu"
         name="WTF.s5l8900xall.RELEASE"
         ext="dfu"
+    elif [[ $1 == "iBEC" ]]; then
+        path="Firmware/dfu"
+        name="iBEC.${device_model}ap.RELEASE"
+        ext="dfu"
     elif [[ $1 == "iBoot" ]]; then
         name="iBoot.${device_model}ap.RELEASE"
     elif [[ $1 == "Kernelcache" ]]; then
@@ -3522,6 +3526,7 @@ ipsw_prepare_custom() {
         fi
         if [[ $device_target_vers == "4"* ]]; then
             ipsw_prepare_patchcomp WTF2
+            ipsw_prepare_patchcomp iBEC
         fi
     else # 3GS
         case $device_target_vers in
@@ -3807,9 +3812,20 @@ restore_latest() {
         device_enter_mode Recovery
         ipsw_extract
     fi
-    if [[ $device_type == "iPhone1,2" && $ipsw_jailbreak != 1 ]]; then
+    if [[ $device_type == "iPhone1,2" ]]; then
         case $device_target_vers in
-            4.2.1 | 4.1 ) ExtraArgs="-e";;
+            4.2.1 | 4.1 )
+                if [[ $1 == "custom" ]]; then
+                    log "Sending s5l8900xall..."
+                    $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+                    device_find_mode DFUreal
+                    log "Sending iBSS..."
+                    $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+                    device_find_mode Recovery
+                else
+                    ExtraArgs="-e"
+                fi
+            ;;
         esac
     fi
     if [[ $debug_mode == 1 ]]; then
@@ -5315,12 +5331,11 @@ menu_restore() {
         fi
         if [[ -z $1 ]]; then
             if [[ $device_proc == 1 ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to any iOS version"
-                print "* iOS 1 may require the usage of ZiPhone: https://nitter.net/tihmstar/status/1734620913071542435"
+                print "* Select \"Other (Custom IPSW)\" to restore to any other iOS version (2.0 to 3.1.2)"
                 echo
             fi
             if [[ $device_type == "iPod2,1" ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to any iOS version (2.1.1 to 3.0)"
+                print "* Select \"Other (Custom IPSW)\" to restore to any other iOS version (2.1.1 to 3.0)"
                 echo
             fi
             if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
@@ -5633,7 +5648,10 @@ menu_ipsw() {
                     if [[ $shsh_validate == 0 ]]; then
                         print "* Selected SHSH file is validated"
                     else
-                        warn "Selected SHSH file failed validation"
+                        warn "Selected SHSH file failed validation, proceed with caution"
+                        if (( device_proc >= 7 )); then
+                            print "* If this is an OTA blob, it should be fine to use for restoring"
+                        fi
                     fi
                 elif [[ $2 != "ipsw" ]]; then
                     print "* Select Base $text2 SHSH to continue"
