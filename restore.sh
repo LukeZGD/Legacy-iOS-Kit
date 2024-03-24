@@ -3812,21 +3812,17 @@ restore_latest() {
         device_enter_mode Recovery
         ipsw_extract
     fi
-    if [[ $device_type == "iPhone1,2" ]]; then
-        case $device_target_vers in
-            4.2.1 | 4.1 )
-                if [[ $1 == "custom" ]]; then
-                    log "Sending s5l8900xall..."
-                    $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
-                    device_find_mode DFUreal
-                    log "Sending iBSS..."
-                    $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
-                    device_find_mode Recovery
-                else
-                    ExtraArgs="-e"
-                fi
-            ;;
-        esac
+    if [[ $device_type == "iPhone1,2" && $device_target_vers == "4"* ]]; then
+        if [[ $1 == "custom" ]]; then
+            log "Sending s5l8900xall..."
+            $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+            device_find_mode DFUreal
+            log "Sending iBSS..."
+            $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+            device_find_mode Recovery
+        else
+            ExtraArgs="-e"
+        fi
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
