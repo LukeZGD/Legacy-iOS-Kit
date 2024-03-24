@@ -3373,7 +3373,10 @@ ipsw_prepare_powder() {
         [789]* ) :;;
         * ) ExtraArr+=("--logo");;
     esac
-    if [[ $device_type == "iPhone5"* ]]; then
+    if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_base_vers == "7.0"* ]]; then
+        ipsw_powder_5c70=1
+    fi
+    if [[ $device_type == "iPhone5"* && $ipsw_powder_5c70 != 1 ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArr[0]+="9"
@@ -3412,7 +3415,7 @@ ipsw_prepare_powder() {
         "* You may try selecting N for memory option"
     fi
 
-    if [[ $device_type != "iPhone5"* && $device_type != "iPad1,1" ]]; then
+    if [[ $device_type != "iPhone5"* && $device_type != "iPad1,1" ]] || [[ $ipsw_powder_5c70 == 1 ]]; then
         case $device_target_vers in
             [789]* ) :;;
             * )
@@ -5607,7 +5610,7 @@ menu_ipsw() {
             local text2="(iOS 7.1.x)"
             case $device_type in
                 iPhone3,[13] ) text2="(iOS 7.1.2)";;
-                iPhone5,[12] ) text2="(iOS 7.x)";;
+                iPhone5,[1234] ) text2="(iOS 7.x)";;
                 iPad3,[456] ) text2="(iOS 7.0.x)";;
                 iPad1,1 | iPod3,1 ) text2="(iOS 5.1.1)";;
             esac
@@ -5904,7 +5907,7 @@ menu_ipsw_browse() {
             local check_vers="7.1"
             local base_vers="7.1.x"
             case $device_type in
-                iPhone5,[12] )
+                iPhone5,[1234] )
                     check_vers="7"
                     base_vers="7.x"
                 ;;

@@ -93,7 +93,7 @@
     - iPod touch 3 - iOS 4.0 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - No blob requirement for iPhone 4, iPad 1, iPod touch 3 (7.1.2 and 5.1.1 are signed)
-        - For iPhone 5, both 7.0.x and 7.1.x blobs can be used
+        - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
 - Restoring to other unsigned versions without blobs is supported on the following devices and target versions:
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
@@ -117,8 +117,9 @@
 - bspatch
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
     - [Most of the exploit ramdisks used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
-    - [5C 7.0.x exploit ramdisk is from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
-    - [iPad 1 exploit ramdisk is from Ralph0045's iBoot-5-Stuff repo](https://github.com/Ralph0045/iBoot-5-Stuff)
+    - [iPhone 5C 7.0.x exploit ramdisk is from m1zole](https://github.com/m1zole/untitled_pub)
+    - [Other iPhone 5/5C ramdisks are from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
+    - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
