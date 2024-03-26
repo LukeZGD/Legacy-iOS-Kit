@@ -2146,7 +2146,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_target_vers == "3"* ]]; then
+    if [[ $device_target_vers == "3"* || $device_proc == 1 ]]; then
         ExtraArgs+=" -ramdiskgrow 10"
     fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
@@ -3459,7 +3459,6 @@ ipsw_prepare_patchcomp() {
         log "Patch $1"
         unzip -o -j "$ipsw_custom.ipsw" $name.$ext
         mv $name.$ext kc.orig
-        cp kc.orig ..
         $bspatch kc.orig $name.$ext $patch.patch
         zip -r0 "$ipsw_custom.ipsw" $name.$ext
         return
@@ -3482,7 +3481,7 @@ ipsw_prepare_patchcomp() {
     patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle/$name.patch"
     if [[ $1 == "RestoreRamdisk" ]]; then
         local ivkey
-        if [[ $device_target_vers == "4"* ]]; then
+        if [[ $device_target_vers == "4"* || $device_type == *"1,1" ]]; then
             ivkey="-iv $iv -k $key"
         fi
         log "Patch $1"
@@ -3503,7 +3502,31 @@ ipsw_prepare_patchcomp() {
 }
 
 ipsw_prepare_custom() {
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -e "$ipsw_custom.ipsw" && $device_proc == 1 ]]; then
+        local rname="018-6494-014.dmg"
+        local sha1E="249ca3fb74b06dbe3d1d195b1a14cf0789cc2557"
+        if [[ $device_target_vers == "4.1" ]]; then
+            rname="018-7079-079.dmg"
+            sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
+        elif [[ $device_target_vers == "4.2.1" ]]; then
+            rname="038-0029-002.dmg"
+            sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
+        elif [[ $device_type == "iPhone1,2" ]]; then
+            sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
+        elif [[ $device_type == "iPod1,1" ]]; then
+            sha1E="be84e387a5497def53a37f7b1d92ffc49bfb15c8"
+        fi
+        log "Checking RestoreRamdisk hash of custom IPSW"
+        unzip -o -j "$ipsw_custom.ipsw" $rname
+        local sha1L="$($sha1sum $rname | awk '{print $1}')"
+        if [[ $sha1L == "$sha1E" ]]; then
+            log "Found existing Custom IPSW. Skipping IPSW creation."
+            return
+        fi
+        log "RestoreRamdisk does not match. Expected $sha1E, got $sha1L"
+        log "Deleting existing custom IPSW"
+        rm "$ipsw_custom.ipsw"
+    elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
@@ -4063,7 +4086,7 @@ restore_prepare() {
 ipsw_prepare() {
     case $device_proc in
         1 )
-            if [[ $ipsw_jailbreak == 1 || $mode == "custom-ipsw" ]]; then
+            if [[ $ipsw_jailbreak == 1 ]]; then
                 ipsw_prepare_custom
             fi
         ;;
@@ -6473,12 +6496,18 @@ device_hacktivate() {
 
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
-    print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
-    if [[ $device_newbr == 1 ]]; then
-        warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
-        print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+    if [[ $device_proc == 1 ]]; then
+        print "* This option is for restoring with custom IPSWs for downgrading and/or jailbreaking the device."
     else
-        warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
+        print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
+        if [[ $device_newbr == 1 ]]; then
+            warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
+            print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+        elif [[ $device_type == "iPod2,1" ]]; then
+            print "* You may also use this option for downgrading the device to 3.0 and lower for old bootrom models."
+        else
+            warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
+        fi
     fi
     pause
     menu_ipsw_browse custom
