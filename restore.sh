@@ -2452,10 +2452,9 @@ ipsw_prepare_bundle() {
         RootSize=1000
     elif [[ $device_target_vers == "3"* ]]; then
         case $device_type in
-            iPod1,1      ) RootSize=413;;
-            iPhone1,[12] ) RootSize=420;;
-            iPod2,1      ) RootSize=450;;
-            *            ) RootSize=750;;
+            iPhone1* | iPod1,1 ) RootSize=420;;
+            iPod2,1 ) RootSize=450;;
+            *       ) RootSize=750;;
         esac
     elif [[ $platform == "macos" ]]; then
         plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
@@ -3504,7 +3503,7 @@ ipsw_prepare_patchcomp() {
 ipsw_prepare_custom() {
     if [[ -e "$ipsw_custom.ipsw" && $device_proc == 1 ]]; then
         local rname="018-6494-014.dmg"
-        local sha1E="249ca3fb74b06dbe3d1d195b1a14cf0789cc2557"
+        local sha1E="bcca72ebdb421616fa6fc7daaa53413cce87a379"
         if [[ $device_target_vers == "4.1" ]]; then
             rname="018-7079-079.dmg"
             sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
@@ -3514,7 +3513,7 @@ ipsw_prepare_custom() {
         elif [[ $device_type == "iPhone1,2" ]]; then
             sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
         elif [[ $device_type == "iPod1,1" ]]; then
-            sha1E="be84e387a5497def53a37f7b1d92ffc49bfb15c8"
+            sha1E="1331e730170da474b23bec16c7e4c8f7f76e4690"
         fi
         log "Checking RestoreRamdisk hash of custom IPSW"
         unzip -o -j "$ipsw_custom.ipsw" $rname
