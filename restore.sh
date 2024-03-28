@@ -552,6 +552,7 @@ device_s5l8900xall() {
     local wtf_patched="$wtf_saved.patched"
     local wtf_patch="../resources/patch/WTF.s5l8900xall.RELEASE.patch"
     local wtf_sha_local="$($sha1sum "$wtf_saved" 2>/dev/null | awk '{print $1}')"
+    mkdir ../saved 2>/dev/null
     if [[ $wtf_sha_local != "$wtf_sha" ]]; then
         log "Downloading WTF.s5l8900xall"
         "$dir/pzb" -g "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu" -o WTF.s5l8900xall.RELEASE.dfu "http://appldnld.apple.com/iPhone/061-7481.20100202.4orot/iPhone1,1_3.1.3_7E18_Restore.ipsw"
@@ -5738,6 +5739,15 @@ menu_ipsw() {
                 menu_items+=("$start")
             else
                 print "* Select $1 IPSW to continue"
+            fi
+            if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+                warn "3.1.3 for $device_type will likely fail to restore with jailbreak/hacktivate option."
+                print "* It is recommended to use other custom IPSWs instead."
+                print "* You may get 3.1.3 custom IPSWs here: https://archive.org/download/pwnagetool-3.1.3-ipsws"
+                print "* Mirror link: https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/tag/jailbreak"
+            elif [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
+                warn "4.2.1 for $device_type will likely fail to restore with jailbreak/hacktivate option."
+                print "* It is recommended to select 4.1 or 3.1.3 instead."
             fi
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"

@@ -97,8 +97,9 @@
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
     - iPhone 2G, 3G, iPod touch 1 - all versions
-        - Supported jailbreak versions are only 3.1.3, 4.1, and 4.2.1
-        - Lowest working version is 2.0. Going to 1.x does not work
+- Note that for 2G, 3G, and touch 1, supported jailbreak versions are only 3.1.3, as well as 4.1 and 4.2.1 for the 3G
+- Lowest downgradable version is 2.0. Going to 1.x does not work
+- For 3GS and touch 2, 2.x and 3.0.x are not supported for jailbreaking. 3.1 and newer only
 
 ## Supported OS versions/distros
 
