@@ -247,9 +247,9 @@ set_tool_paths() {
                 "* You need to be on macOS 10.13 or newer to continue."
             fi
             if [[ $(which curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
-                local error_msg="* You need to install curl from Homebrew or MacPorts."
-                error_msg+=$'\n* Make sure that /usr/local/bin (or /opt/local/bin) is in your $PATH.'
-                error_msg+=$'\n* Please read the wiki and install the requirements needed in Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+                local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
+                error_msg+=$'\n* Make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
+                error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
@@ -1390,7 +1390,7 @@ device_pwnerror() {
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
     elif [[ $platform == "macos" ]]; then
-        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts: brew install libusb'
+        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -1488,7 +1488,7 @@ device_ipwndfu() {
                 popd >/dev/null
                 local error_msg
                 if [[ $platform == "macos" ]]; then
-                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew/MacPorts: brew install libusb\n'
+                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew/MacPorts\n'
                 fi
                 error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
@@ -1518,7 +1518,7 @@ device_ipwndfu() {
             log "Installing alloc8 to device"
             $python2 ipwndfu -x
             if [[ $platform == "macos" ]]; then
-                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts: brew install libusb"
+                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
             fi
         ;;
     esac
@@ -5409,6 +5409,7 @@ menu_ipsw_downloader() {
         done
         case $selected in
             "Enter Build Version" )
+                vers=
                 print "* Enter the build version of the IPSW you want to download."
                 until [[ -n $vers ]]; do
                     read -p "$(input 'Enter build version (eg. 10B329): ')" vers
@@ -5450,8 +5451,8 @@ menu_restore_more() {
         if [[ -z $1 && $device_type == "iPod2,1" && $device_newbr != 0 ]]; then
             warn "These versions are for old bootrom devices only. They may not work on your device"
             echo
-        else
-            warn "These versions might not work on your device"
+        elif [[ $device_type == "iPod2,1" ]]; then
+            warn "These versions might not restore/boot properly"
             echo
         fi
         input "Select an option:"
@@ -5748,6 +5749,9 @@ menu_ipsw() {
             elif [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
                 warn "4.2.1 for $device_type will likely fail to restore with jailbreak/hacktivate option."
                 print "* It is recommended to select 4.1 or 3.1.3 instead."
+            elif [[ $device_type == "iPhone2,1" && $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
+                warn "3.0.x is for old bootrom devices only, it will not restore/boot if your device is not compatible."
+                print "* It is recommended to select 3.1 or newer instead."
             fi
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
