@@ -145,7 +145,7 @@ set_tool_paths() {
             fi
         elif [[ -e /etc/debian_version ]]; then
             debian_ver=$(cat /etc/debian_version)
-            if [[ $debian_ver == *"sid" ]]; then
+            if [[ $debian_ver == *"sid" || $debian_ver == "kali"* ]]; then
                 debian_ver="sid"
             else
                 debian_ver="$(echo "$debian_ver" | cut -c -2)"
@@ -2147,9 +2147,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
-    if [[ $device_target_vers == "3"* || $device_proc == 1 ]]; then
-        ExtraArgs+=" -ramdiskgrow 10"
-    fi
+    ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
