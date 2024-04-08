@@ -3500,30 +3500,65 @@ ipsw_prepare_patchcomp() {
 }
 
 ipsw_prepare_custom() {
-    if [[ -e "$ipsw_custom.ipsw" && $device_proc == 1 ]]; then
+    if [[ $device_proc == 1 ]]; then
         local rname="018-6494-014.dmg"
-        local sha1E="bcca72ebdb421616fa6fc7daaa53413cce87a379"
+        local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
+        local sha1L
         if [[ $device_target_vers == "4.1" ]]; then
             rname="018-7079-079.dmg"
             sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
         elif [[ $device_target_vers == "4.2.1" ]]; then
             rname="038-0029-002.dmg"
             sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
-        elif [[ $device_type == "iPhone1,2" ]]; then
-            sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
+        elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
+            sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
+            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
+            ipsw_sha1="f642829875ce632cd071e62169a1acbdcffcf0c8"
+        elif [[ $device_type == "iPhone1,1" ]]; then
+            sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
+            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom.ipsw"
+            ipsw_sha1="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
         elif [[ $device_type == "iPod1,1" ]]; then
-            sha1E="1331e730170da474b23bec16c7e4c8f7f76e4690"
+            sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
+            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod1.1_3.1.3_7E18_Custom.ipsw"
+            ipsw_sha1="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
         fi
-        log "Checking RestoreRamdisk hash of custom IPSW"
-        unzip -o -j "$ipsw_custom.ipsw" $rname
-        local sha1L="$($sha1sum $rname | awk '{print $1}')"
-        if [[ $sha1L == "$sha1E" ]]; then
-            log "Found existing Custom IPSW. Skipping IPSW creation."
+        if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
+            log "Checking RestoreRamdisk hash of custom IPSW"
+            unzip -o -j "$ipsw_custom.ipsw" $rname
+            local sha1L="$($sha1sum $rname | awk '{print $1}')"
+            if [[ $sha1L == "$sha1E" ]]; then
+                log "Found existing Custom IPSW. Skipping IPSW creation."
+                return
+            fi
+            log "RestoreRamdisk does not match. Expected $sha1E, got $sha1L"
+        elif [[ -e "$ipsw_custom.ipsw" ]]; then
+            log "Getting SHA1 hash for $ipsw_custom.ipsw..."
+            sha1E=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
+            if [[ $sha1E == "$ipsw_sha1" ]]; then
+                log "Found existing Custom IPSW. Skipping IPSW creation."
+                return
+            else
+                log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
+            fi
+        fi
+
+        log "Deleting custom IPSW if it exists"
+        rm -f "$ipsw_custom.ipsw"
+
+        if [[ $device_type != "iPhone1,2" ]]; then
+            log "Downloading IPSW: $ipsw_url"
+            curl -L "$ipsw_url" -o temp.ipsw
+            log "Getting SHA1 hash for IPSW..."
+            local ipsw_sha1l=$($sha1sum temp.ipsw | awk '{print $1}')
+            if [[ $ipsw_sha1l != "$ipsw_sha1" ]]; then
+                error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
+                "* SHA1sum mismatch. Expected $ipsw_sha1, got $ipsw_sha1l"
+            fi
+            mv temp.ipsw "$ipsw_custom.ipsw"
             return
         fi
-        log "RestoreRamdisk does not match. Expected $sha1E, got $sha1L"
-        log "Deleting existing custom IPSW"
-        rm "$ipsw_custom.ipsw"
+
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -5528,7 +5563,7 @@ menu_ipsw() {
         if [[ $device_type != "iPhone"* ]]; then
             ipsw_canhacktivate=
         fi
-        if [[ $device_proc == 1 ]]; then
+        if [[ $device_type == "iPhone1,2" ]]; then
             ipsw_cancustomlogo=1
         fi
         case $1 in
@@ -5739,12 +5774,7 @@ menu_ipsw() {
             else
                 print "* Select $1 IPSW to continue"
             fi
-            if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
-                warn "3.1.3 for $device_type will likely fail to restore with jailbreak/hacktivate option."
-                print "* It is recommended to use other custom IPSWs instead."
-                print "* You may get 3.1.3 custom IPSWs here: https://archive.org/download/pwnagetool-3.1.3-ipsws"
-                print "* Mirror link: https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/tag/jailbreak"
-            elif [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
+            if [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
                 warn "4.2.1 for $device_type will likely fail to restore with jailbreak/hacktivate option."
                 print "* It is recommended to select 4.1 or 3.1.3 instead."
             elif [[ $device_type == "iPhone2,1" && $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
