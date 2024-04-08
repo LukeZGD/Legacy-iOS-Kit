@@ -1301,9 +1301,32 @@ device_enter_mode() {
                     $ipwnder -p
                     tool_pwned=$?
                 elif [[ $device_proc == 4 ]]; then
-                    # A4 linux uses ipwndfu
-                    device_ipwndfu pwn
-                    tool_pwned=$?
+                    # A4 linux uses ipwndfu/ipwnder
+                    local selection=("ipwndfu" "ipwnder (SHAtter)" "ipwnder (limera1n)")
+                    input "PwnDFU Tool Option"
+                    print "* Select tool to be used for entering pwned DFU mode."
+                    print "* This option is set to ipwndfu by default (1). Select this option if unsure."
+                    print "* If the first option does not work, try the other option(s)."
+                    input "Select your option:"
+                    select opt2 in "${selection[@]}"; do
+                        case $opt2 in
+                            "ipwndfu" )
+                                device_ipwndfu pwn
+                                tool_pwned=$?
+                                break
+                            ;;
+                            "ipwnder (SHAtter)" )
+                                $ipwnder -s
+                                tool_pwned=$?
+                                break
+                            ;;
+                            "ipwnder (limera1n)" )
+                                $ipwnder -p
+                                tool_pwned=$?
+                                break
+                            ;;
+                        esac
+                    done
                 else
                     # the linux checkm8 section. success rates are absolute garbage here
                     # A6 linux uses ipwndfu, A7 linux uses gaster
@@ -1389,6 +1412,9 @@ device_pwnerror() {
     if [[ $platform == "linux" && $device_proc != 4 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
+    elif [[ $platform == "linux" && $device_proc == 4 ]]; then
+        error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD CPU.'
+        error_msg+=$'\n* Pwning using an Intel PC or another device may be better options.'
     elif [[ $platform == "macos" ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     fi
