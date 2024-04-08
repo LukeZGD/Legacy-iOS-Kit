@@ -3513,34 +3513,26 @@ ipsw_prepare_custom() {
         elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
             sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
             ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
-            ipsw_sha1="f642829875ce632cd071e62169a1acbdcffcf0c8"
         elif [[ $device_type == "iPhone1,1" ]]; then
             sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
             ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom.ipsw"
-            ipsw_sha1="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
         elif [[ $device_type == "iPod1,1" ]]; then
             sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
             ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod1.1_3.1.3_7E18_Custom.ipsw"
-            ipsw_sha1="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
         fi
         if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
             log "Checking RestoreRamdisk hash of custom IPSW"
             unzip -o -j "$ipsw_custom.ipsw" $rname
-            local sha1L="$($sha1sum $rname | awk '{print $1}')"
-            if [[ $sha1L == "$sha1E" ]]; then
-                log "Found existing Custom IPSW. Skipping IPSW creation."
-                return
-            fi
-            log "RestoreRamdisk does not match. Expected $sha1E, got $sha1L"
+            sha1L="$($sha1sum $rname | awk '{print $1}')"
         elif [[ -e "$ipsw_custom.ipsw" ]]; then
             log "Getting SHA1 hash for $ipsw_custom.ipsw..."
-            sha1E=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
-            if [[ $sha1E == "$ipsw_sha1" ]]; then
-                log "Found existing Custom IPSW. Skipping IPSW creation."
-                return
-            else
-                log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
-            fi
+            sha1L=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
+        fi
+        if [[ $sha1L == "$sha1E" ]]; then
+            log "Found existing Custom IPSW. Skipping IPSW creation."
+            return
+        else
+            log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
         fi
 
         log "Deleting custom IPSW if it exists"
@@ -3550,10 +3542,10 @@ ipsw_prepare_custom() {
             log "Downloading IPSW: $ipsw_url"
             curl -L "$ipsw_url" -o temp.ipsw
             log "Getting SHA1 hash for IPSW..."
-            local ipsw_sha1l=$($sha1sum temp.ipsw | awk '{print $1}')
-            if [[ $ipsw_sha1l != "$ipsw_sha1" ]]; then
+            sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
+            if [[ $sha1L != "$sha1E" ]]; then
                 error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
-                "* SHA1sum mismatch. Expected $ipsw_sha1, got $ipsw_sha1l"
+                "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
             fi
             mv temp.ipsw "$ipsw_custom.ipsw"
             return
