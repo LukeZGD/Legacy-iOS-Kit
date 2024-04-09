@@ -763,6 +763,10 @@ device_get_info() {
             device_proc=9;; # A9
         iPhone9,[1234] | iPod9,1 )
             device_proc=10;; # A10
+        iPhone10* | iPad6* )
+            device_proc=10
+            device_ios16=1
+        ;;
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
     esac
@@ -830,15 +834,11 @@ device_get_info() {
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
         ;;
-        iPad5,[1234] | iPhone8,[124] | iPhone9,[1234] | iPod9,1 )
+        iPad[56]* | iPhone[89]* | iPhone10* | iPod9,1 )
             log "Getting latest iOS version for $device_type"
             latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
             device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
-            if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
-                device_latest_vers="15.8.2"
-                device_latest_build="19H384"
-            fi
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -5981,6 +5981,16 @@ menu_ipsw_browse() {
                 return
             ;;
         esac
+    elif [[ $device_ios16 == 1 ]]; then
+        case $device_target_build in
+            20[GH]* ) :;; # 16.6 and newer only
+            * )
+                log "Selected IPSW ($device_target_vers) is not supported as target version."
+                print "* Latest SEP/BB is not compatible."
+                pause
+                return
+            ;;
+        esac
     fi
     case $1 in
         "iOS 10.3.3" ) versionc="10.3.3";;
@@ -6131,7 +6141,7 @@ menu_other() {
                 iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
-            if (( device_proc < 11 )); then
+            if (( device_proc < 11 )) && [[ $device_ios16 != 1 ]]; then
                 menu_items+=("SSH Ramdisk")
             fi
         fi
