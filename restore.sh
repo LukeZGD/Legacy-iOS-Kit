@@ -761,12 +761,8 @@ device_get_info() {
             device_proc=8;; # A8
         iPhone8,[124] )
             device_proc=9;; # A9
-        iPhone9,[1234] | iPod9,1 )
-            device_proc=10;; # A10
-        iPhone10* | iPad6* )
-            device_proc=10
-            device_ios16=1
-        ;;
+        iPhone9,[1234] | iPhone10* | iPad6* | iPod9,1 )
+            device_proc=10;; # A10 (or A9/A11 iOS 16 device)
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
     esac
@@ -3525,59 +3521,76 @@ ipsw_prepare_patchcomp() {
     zip -r0 "$ipsw_custom.ipsw" $path/$name.$ext
 }
 
-ipsw_prepare_custom() {
-    if [[ $device_proc == 1 ]]; then
-        local rname="018-6494-014.dmg"
-        local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
-        local sha1L
-        if [[ $device_target_vers == "4.1" ]]; then
-            rname="018-7079-079.dmg"
-            sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
-        elif [[ $device_target_vers == "4.2.1" ]]; then
-            rname="038-0029-002.dmg"
-            sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
-        elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
-            sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
-            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
-        elif [[ $device_type == "iPhone1,1" ]]; then
-            sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
-            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom.ipsw"
-        elif [[ $device_type == "iPod1,1" ]]; then
-            sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
-            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod1.1_3.1.3_7E18_Custom.ipsw"
-        fi
-        if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
-            log "Checking RestoreRamdisk hash of custom IPSW"
-            unzip -o -j "$ipsw_custom.ipsw" $rname
-            sha1L="$($sha1sum $rname | awk '{print $1}')"
-        elif [[ -e "$ipsw_custom.ipsw" ]]; then
-            log "Getting SHA1 hash for $ipsw_custom.ipsw..."
-            sha1L=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
-        fi
-        if [[ $sha1L == "$sha1E" ]]; then
-            log "Found existing Custom IPSW. Skipping IPSW creation."
-            return
-        else
-            log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
-        fi
+ipsw_prepare_s5l8900() {
+    local rname="018-6494-014.dmg"
+    local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
+    local sha1L
+    if [[ $device_target_vers == "4.1" ]]; then
+        rname="018-7079-079.dmg"
+        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
+    elif [[ $device_target_vers == "4.2.1" ]]; then
+        rname="038-0029-002.dmg"
+        sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
+    elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
+        sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
+        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
+    elif [[ $device_type == "iPhone1,1" ]]; then
+        sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
+        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom.ipsw"
+    elif [[ $device_type == "iPod1,1" ]]; then
+        sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
+        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod1.1_3.1.3_7E18_Custom.ipsw"
+    fi
 
-        log "Deleting custom IPSW if it exists"
-        rm -f "$ipsw_custom.ipsw"
-
-        if [[ $device_type != "iPhone1,2" ]]; then
-            log "Downloading IPSW: $ipsw_url"
-            curl -L "$ipsw_url" -o temp.ipsw
-            log "Getting SHA1 hash for IPSW..."
-            sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
-            if [[ $sha1L != "$sha1E" ]]; then
-                error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
-                "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
-            fi
-            mv temp.ipsw "$ipsw_custom.ipsw"
-            return
-        fi
-
+    if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
+        log "Checking RestoreRamdisk hash of custom IPSW"
+        unzip -o -j "$ipsw_custom.ipsw" $rname
+        sha1L="$($sha1sum $rname | awk '{print $1}')"
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
+        log "Getting SHA1 hash for $ipsw_custom.ipsw..."
+        sha1L=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
+    fi
+    if [[ $sha1L == "$sha1E" ]]; then
+        log "Verified existing Custom IPSW. Skipping IPSW creation."
+        return
+    else
+        log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
+    fi
+
+    if [[ -e "$ipsw_custom.ipsw" ]]; then
+        log "Deleting existing custom IPSW"
+        rm "$ipsw_custom.ipsw"
+    fi
+
+    if [[ $device_type != "iPhone1,2" ]]; then
+        log "Downloading IPSW: $ipsw_url"
+        curl -L "$ipsw_url" -o temp.ipsw
+        log "Getting SHA1 hash for IPSW..."
+        sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
+        if [[ $sha1L != "$sha1E" ]]; then
+            error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
+            "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
+        fi
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
+    fi
+
+    ipsw_prepare_jailbreak old
+
+    ipsw_prepare_patchcomp LLB
+    ipsw_prepare_patchcomp iBoot
+    ipsw_prepare_patchcomp RestoreRamdisk
+    if [[ $device_target_vers != "4.1" ]]; then
+        ipsw_prepare_patchcomp Kernelcache
+    fi
+    if [[ $device_target_vers == "4"* ]]; then
+        ipsw_prepare_patchcomp WTF2
+        ipsw_prepare_patchcomp iBEC
+    fi
+}
+
+ipsw_prepare_custom() {
+    if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
@@ -3586,22 +3599,12 @@ ipsw_prepare_custom() {
     fi
 
     ipsw_prepare_jailbreak old
+
     if [[ $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
             4.2.1 | 4.1 | 3.1.3 ) :;;
             * ) ipsw_prepare_patchcomp LLB;;
         esac
-    elif [[ $device_proc == 1 ]]; then
-        ipsw_prepare_patchcomp LLB
-        ipsw_prepare_patchcomp iBoot
-        ipsw_prepare_patchcomp RestoreRamdisk
-        if [[ $device_target_vers != "4.1" ]]; then
-            ipsw_prepare_patchcomp Kernelcache
-        fi
-        if [[ $device_target_vers == "4"* ]]; then
-            ipsw_prepare_patchcomp WTF2
-            ipsw_prepare_patchcomp iBEC
-        fi
     else # 3GS
         case $device_target_vers in
             6.1.6 | 4.1 ) :;;
@@ -3629,7 +3632,7 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
-    if [[ $device_latest_vers == "15"* ]]; then
+    if [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         return
     elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
@@ -4114,7 +4117,7 @@ restore_prepare() {
             fi
         ;;
     esac
-    if [[ $device_latest_vers == "15"* ]]; then
+    if [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
             restore_latest
             return
@@ -4138,7 +4141,7 @@ ipsw_prepare() {
     case $device_proc in
         1 )
             if [[ $ipsw_jailbreak == 1 ]]; then
-                ipsw_prepare_custom
+                ipsw_prepare_s5l8900
             fi
         ;;
 
@@ -4178,8 +4181,8 @@ ipsw_prepare() {
         ;;
 
         7 )
+            # A7 devices 10.3.3
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-                # A7 devices 10.3.3
                 ipsw_prepare_1033
             fi
         ;;
@@ -5981,7 +5984,7 @@ menu_ipsw_browse() {
                 return
             ;;
         esac
-    elif [[ $device_ios16 == 1 ]]; then
+    elif [[ $device_latest_vers == "16"* ]]; then
         case $device_target_build in
             20[GH]* ) :;; # 16.6 and newer only
             * )
@@ -6141,7 +6144,7 @@ menu_other() {
                 iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
-            if (( device_proc < 11 )) && [[ $device_ios16 != 1 ]]; then
+            if (( device_proc < 11 )) && [[ $device_latest_vers != "16"* ]]; then
                 menu_items+=("SSH Ramdisk")
             fi
         fi
