@@ -6418,12 +6418,14 @@ device_dump() {
 device_dumpbb() {
     local bb2="Mav5"
     local root="/"
+    local root2="/"
     local tmp="/tmp"
     if [[ $device_type == "iPhone4,1" ]]; then
         bb2="Trek"
     fi
     if [[ $1 == "rd" ]]; then
         root="/mnt1/"
+        root2=
         tmp="/mnt2/tmp"
     fi
     log "Creating baseband.tar"
@@ -6438,7 +6440,7 @@ device_dumpbb() {
             cp $bb2-personalized.zip usr/local/standalone/firmware/Baseband/$bb2
         ;;
         * )
-            $ssh -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root}usr/local/standalone/firmware"
+            $ssh -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root2}usr/local/standalone/firmware"
             $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
             tar -xvf baseband.tar -C .
             rm baseband.tar

@@ -74,7 +74,8 @@
     </tbody>
 </table>
 
-- Restoring with SHSH blobs, jailbreaking, and using SSH Ramdisks are supported on the following devices:
+- Restoring with SHSH blobs, jailbreaking, and using SSH ramdisks are supported on the following devices:
+    - iPhone 2G, 3G, iPod touch 1 (SSH ramdisks not supported)
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
@@ -84,6 +85,10 @@
     - iPad Air 1, 2
     - iPad mini 2, 3, 4
     - iPod touch 6, 7
+- Restoring with iOS 16.6.x SHSH blobs using futurerestore is also supported on these devices:
+    - iPhone 8, X
+    - iPad 5
+    - iPad Pro 9.7/12.9 1st gen
 - Restoring with powdersn0w is supported on the following devices and target version range:
     - iPhone 4 GSM - iOS 4.0 to 7.1.1 (all versions except 4.2.1)
     - iPhone 4 CDMA - iOS 5.0 to 7.1.1
@@ -97,8 +102,8 @@
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
     - iPhone 2G, 3G, iPod touch 1 - all versions
-- Note that for 2G, 3G, and touch 1, supported jailbreak versions are only 3.1.3, as well as 4.1 and 4.2.1 for the 3G
-- Lowest downgradable version is 2.0. Going to 1.x does not work
+- For 2G, 3G, and touch 1, supported jailbreak versions are only 3.1.3, as well as 4.1 and 4.2.1 for the 3G
+    - Lowest downgradable version is 2.0. Going to 1.x does not work
 - For 3GS and touch 2, 2.x and 3.0.x are not supported for jailbreaking. 3.1 and newer only
 
 ## Supported OS versions/distros
@@ -137,7 +142,7 @@
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7/A8 devices that support iOS 12.5.x
-    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10 devices that support iOS 15.8.x
+    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices that support iOS 15.8.x/16.7.x
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
