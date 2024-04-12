@@ -1625,7 +1625,7 @@ ipsw_get_url() {
         if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
             url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
         fi
-        mkdir $device_fw_dir/$build_id 2>/dev/null
+        mkdir -p $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
     fi
     ipsw_url="$url"
@@ -1987,7 +1987,7 @@ ipsw_verify() {
     if [[ -z $IPSWSHA1 ]]; then
         log "Getting SHA1 hash from The Apple Wiki..."
         IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
-        mkdir $device_fw_dir/$build_id 2>/dev/null
+        mkdir -p $device_fw_dir/$build_id 2>/dev/null
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     else
         log "Using saved SHA1 hash for this IPSW: $IPSWSHA1"
@@ -4257,7 +4257,8 @@ device_ramdisk64() {
         sshtar="../saved/iram.tar"
         if [[ ! -e $sshtar ]]; then
             log "Downloading iram.tar from iarchive.app..."
-            curl -LO https://iarchive.app/Download/iram.tar
+            curl -LO https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip
+            unzip iram.zip
             mv iram.tar $sshtar
         fi
     else
