@@ -379,7 +379,7 @@ install_depends() {
         sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
         sudo udevadm control --reload-rules
-        sudo udevadm trigger
+        sudo udevadm trigger -s usb
     fi
 
     log "Install script done! Please run the script again to proceed"
