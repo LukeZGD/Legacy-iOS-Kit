@@ -1972,10 +1972,12 @@ ipsw_verify() {
         17* ) cutver=13;;
         18* ) cutver=14;;
         19* ) cutver=15;;
+        20* ) cutver=16;;
     esac
     case $device_type in
         iPad4,[123] | iPad5,[34] ) device="iPad_Air";;
         iPad2,[567] | iPad[45],* ) device="iPad_mini";;
+        iPad6,[3478] ) device="iPad_Pro";;
         iPad* ) device="iPad";;
         iPho* ) device="iPhone";;
         iPod* ) device="iPod_touch";;
