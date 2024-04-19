@@ -7,8 +7,8 @@
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
-- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10) devices
-    - Devices that received iOS 16 and newer are not supported and only have limited functionality (such as sideload on Linux etc.)
+- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10/A11) devices
+    - Devices that received iOS 16 and newer are mostly not supported and only have limited functionality (such as sideload on Linux etc.)
     - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features like SSH ramdisk are not available
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore some 32-bit devices to other iOS versions without blobs
@@ -85,7 +85,7 @@
     - iPad Air 1, 2
     - iPad mini 2, 3, 4
     - iPod touch 6, 7
-- Restoring with iOS 16.6.x SHSH blobs using futurerestore is also supported on these devices:
+- Restoring with iOS 16.6.x SHSH blobs using futurerestore is also supported on these devices (SSH ramdisks not supported):
     - iPhone 8, X
     - iPad 5
     - iPad Pro 9.7/12.9 1st gen

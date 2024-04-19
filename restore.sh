@@ -243,8 +243,9 @@ set_tool_paths() {
             local mac_ver=${platform_ver:3}
             mac_ver=${mac_ver%.*}
             if (( mac_ver < 13 )); then
-                error "Your macOS version ($platform_ver) is not supported." \
-                "* You need to be on macOS 10.13 or newer to continue."
+                warn "Your macOS version ($platform_ver) is not supported. Expect features to not work properly."
+                print "* Supported versions are macOS 10.13 and newer. (10.15 and newer recommended)"
+                pause
             fi
             if [[ $(which curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
                 local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
@@ -3527,6 +3528,7 @@ ipsw_prepare_s5l8900() {
     local rname="018-6494-014.dmg"
     local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
     local sha1L
+    ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/"
     if [[ $device_target_vers == "4.1" ]]; then
         rname="018-7079-079.dmg"
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
@@ -3534,14 +3536,14 @@ ipsw_prepare_s5l8900() {
         rname="038-0029-002.dmg"
         sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
     elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
+        ipsw_url+="iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
         sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
-        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
     elif [[ $device_type == "iPhone1,1" ]]; then
+        ipsw_url+="iPhone1.1_3.1.3_7E18_Custom.ipsw"
         sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
-        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPhone1.1_3.1.3_7E18_Custom.ipsw"
     elif [[ $device_type == "iPod1,1" ]]; then
+        ipsw_url+="iPod1.1_3.1.3_7E18_Custom.ipsw"
         sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
-        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod1.1_3.1.3_7E18_Custom.ipsw"
     fi
 
     if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
@@ -6585,17 +6587,20 @@ restore_customipsw() {
         else
             warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
         fi
+        if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
+            warn "* Restoring to 2.x might not work on newer macOS versions."
+        fi
+    fi
+    if [[ $device_proc == 1 ]]; then
+        echo
+        print "* Note that you might need to restore twice, due to NOR flash."
+        print "* For iPhone 2G/3G, the second restore may fail due to baseband."
+        print "* You can exit recovery mode after by going to: Other Utilities -> Exit Recovery Mode"
     fi
     pause
     menu_ipsw_browse custom
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
-    fi
-    if [[ $device_proc == 1 ]]; then
-        print "* Note that you might need to restore twice, due to NOR flash."
-        print "* For iPhone 2G/3G, the second restore may fail due to baseband."
-        print "* You can exit recovery mode after by going to: Other Utilities -> Exit Recovery Mode"
-        pause
     fi
     if [[ $device_proc == 1 ]]; then
         device_enter_mode WTFreal
