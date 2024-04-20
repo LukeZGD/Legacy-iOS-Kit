@@ -1533,12 +1533,12 @@ device_ipwndfu() {
             $python2 rmsigchks.py
         ;;
 
-        "alloc8" )
+        "allocm8" )
             if [[ ! -s n88ap-iBSS-4.3.5.img3 ]]; then
                 log "Downloading iOS 4.3.5 iBSS"
                 "../$dir/pzb" -g "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" -o n88ap-iBSS-4.3.5.img3 http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw
             fi
-            log "Installing alloc8 to device"
+            log "Installing allocm8 to device"
             $python2 ipwndfu -x
             if [[ $platform == "macos" ]]; then
                 print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
@@ -4061,8 +4061,8 @@ restore_prepare() {
                 device_enter_mode pwnDFU
                 restore_latest custom
                 if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
-                    print "* Proceed to install the alloc8 exploit for the device to boot:"
-                    print " -> Go to: Other Utilities -> Install alloc8 Exploit"
+                    print "* Proceed to install the allocm8 exploit for the device to boot:"
+                    print " -> Go to: Other Utilities -> Install allocm8 Exploit"
                 fi
             fi
         ;;
@@ -6147,7 +6147,7 @@ menu_other() {
             fi
             case $device_type in
                 iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
-                iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
+                iPhone2,1 ) menu_items+=("Install allocm8 Exploit");;
             esac
             if (( device_proc < 11 )) && [[ $device_latest_vers != "16"* ]]; then
                 menu_items+=("SSH Ramdisk")
@@ -6207,7 +6207,7 @@ menu_other() {
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
             "(Re-)Install Dependencies" ) install_depends;;
             "Attempt Activation" ) mode="activate";;
-            "Install alloc8 Exploit" ) mode="alloc8";;
+            "Install allocm8 Exploit" ) mode="allocm8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
@@ -6257,9 +6257,9 @@ menu_other() {
     done
 }
 
-device_alloc8() {
+device_allocm8() {
     device_enter_mode pwnDFU
-    device_ipwndfu alloc8
+    device_ipwndfu allocm8
     log "Done!"
     print "* This may take several tries. If it fails, unplug and replug your device, then run the script again"
     print "* For more troubleshooting, go to: https://github.com/axi0mX/ipwndfu/blob/master/JAILBREAK-GUIDE.md"
@@ -6581,7 +6581,7 @@ restore_customipsw() {
         print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
         if [[ $device_newbr == 1 ]]; then
             warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
-            print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+            print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install allocm8 Exploit"
         elif [[ $device_type == "iPod2,1" ]]; then
             print "* You may also use this option for downgrading the device to 3.0 and lower for old bootrom models."
         else
@@ -6850,7 +6850,7 @@ main() {
         "save-onboard-blobs" ) shsh_save_onboard;;
         "save-cydia-blobs" ) shsh_save_cydia;;
         "activate" ) device_activate;;
-        "alloc8" ) device_alloc8;;
+        "allocm8" ) device_allocm8;;
         "jailbreak" ) device_jailbreakrd;;
         "customipsw" ) restore_customipsw;;
         "enterrecovery" ) device_enter_mode Recovery;;
