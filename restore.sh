@@ -3812,7 +3812,7 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
-    elif [[ $device_latest_vers == "15"* ]]; then
+    elif [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         futurerestore2="../saved/futurerestore_$platform"
         ExtraArr=("--latest-sep")
         if [[ $restore_baseband == 0 ]]; then
@@ -3881,7 +3881,7 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
-    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* ]]; then
+    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         idevicerestore2+="2"
         ExtraArgs+="y"
     fi
@@ -5726,7 +5726,8 @@ menu_ipsw() {
                     else
                         warn "Selected SHSH file failed validation, proceed with caution"
                         if (( device_proc >= 7 )); then
-                            print "* If this is an OTA blob, it should be fine to use for restoring"
+                            print "* If this is an OTA/onboard blob, it should be fine to use for restoring"
+                            print "* If the restore does not work here, use futurerestore manually"
                         fi
                     fi
                 elif [[ $2 != "ipsw" ]]; then
