@@ -4419,11 +4419,12 @@ device_ramdisk64() {
     device_sshpass alpine
 
     print "* Mount filesystems with this command (for iOS 11 and newer):"
-    print "    mount_filesystems"
+    print "    /usr/bin/mount_filesystems"
     print "* Mount filesystems with this command (for iOS 10.3.x):"
-    print "    mount_apfs /dev/disk0s1s1 /mnt1; mount_apfs /dev/disk0s1s2 /mnt2"
+    print "    /sbin/mount_apfs /dev/disk0s1s1 /mnt1; /sbin/mount_apfs /dev/disk0s1s2 /mnt2"
     print "* Mount filesystems with this command (for iOS 10.2.1 and older):"
-    print "    mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2"
+    print "    /sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
+    print "* Mounting data (/mnt2) might not work depending on iOS"
 
     menu_ramdisk $build_id
 }
@@ -4920,9 +4921,9 @@ menu_ramdisk() {
                 fi
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
                 pause
-                $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
+                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
-                $ssh -p $ssh_port root@127.0.0.1 "sync; cd /; umount /mnt2; umount /mnt1; sync; reboot"
+                $ssh -p $ssh_port root@127.0.0.1 "sync; cd /; /sbin/umount /mnt2; /sbin/umount /mnt1; sync; /sbin/reboot"
                 log "Done, your device should reboot now"
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
