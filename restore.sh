@@ -1616,7 +1616,8 @@ ipsw_get_url() {
     local build_id="$1"
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
     ipsw_url=
-    if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+    log "Checking URL in $device_fw_dir/$build_id/url"
+    if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
         rm "$device_fw_dir/$build_id/url"
         url=
     fi
@@ -1944,7 +1945,8 @@ ipsw_verify() {
     local build_id="$2"
     local cutver
     local device
-    local IPSWSHA1=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    local IPSWSHA1
+    local IPSWSHA1E=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
@@ -1983,21 +1985,30 @@ ipsw_verify() {
         iPho* ) device="iPhone";;
         iPod* ) device="iPod_touch";;
     esac
-    if [[ $(echo "$IPSWSHA1" | grep -c '<') != 0 ]]; then
+
+    if [[ $(echo "$IPSWSHA1E" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
-        IPSWSHA1=
     fi
-    if [[ -z $IPSWSHA1 ]]; then
-        log "Getting SHA1 hash from The Apple Wiki..."
-        IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
-        mkdir -p $device_fw_dir/$build_id 2>/dev/null
-        echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
-    else
+
+    log "Getting SHA1 hash from The Apple Wiki..."
+    IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+    mkdir -p $device_fw_dir/$build_id 2>/dev/null
+
+    if [[ $IPSWSHA1 == "$IPSWSHA1E" ]]; then
         log "Using saved SHA1 hash for this IPSW: $IPSWSHA1"
+    elif [[ -z $IPSWSHA1 && -n $IPSWSHA1E ]]; then
+        warn "No SHA1 hash from The Apple Wiki, using local hash"
+        IPSWSHA1="$IPSWSHA1E"
+    elif [[ -z $IPSWSHA1 && -z $IPSWSHA1E ]]; then
+        warn "No SHA1 hash from either The Apple Wiki or local hash."
+    elif [[ -n $IPSWSHA1E ]]; then
+        warn "Local SHA1 hash mismatch. Overwriting local hash."
+        echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
+    elif [[ -z $IPSWSHA1E ]]; then
+        warn "Local SHA1 hash does not exist. Creating local hash."
+        echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
-    if [[ -z $IPSWSHA1 ]]; then
-        IPSWSHA1L="no SHA1 hash from The Apple Wiki (check if the site is currently down)"
-    fi
+
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
         if [[ -z $3 ]]; then
