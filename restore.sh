@@ -506,9 +506,11 @@ device_entry() {
     until [[ -n $device_type ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
-    until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
-        read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
-    done
+    if [[ $device_proc != 1 ]]; then
+        until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
+            read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
+        done
+    fi
 }
 
 device_manufacturing() {
@@ -623,15 +625,15 @@ device_get_info() {
     fi
     case $device_mode in
         "DFU" | "Recovery" )
-            #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
-            local ProdCut=7 # cut 7 for ipod/ipad
-            device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
-            if [[ $(echo "$device_type" | cut -c 3) == 'h' ]]; then
-                ProdCut=9 # cut 9 for iphone
-            fi
             if [[ -n $device_argmode ]]; then
                 device_entry
             else
+                #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
+                local ProdCut=7 # cut 7 for ipod/ipad
+                device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
+                if [[ $(echo "$device_type" | cut -c 3) == 'h' ]]; then
+                    ProdCut=9 # cut 9 for iphone
+                fi
                 device_type=$(echo "$device_type" | cut -c -$ProdCut)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
