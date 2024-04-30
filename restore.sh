@@ -506,7 +506,7 @@ device_entry() {
     until [[ -n $device_type ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
-    if [[ $device_proc != 1 ]]; then
+    if [[ $device_type != "iPhone1"* && $device_type != "iPod1,1" ]]; then
         until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
         done
