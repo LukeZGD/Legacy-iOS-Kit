@@ -3649,7 +3649,7 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
-    if [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         return
     elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
@@ -3736,7 +3736,7 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* && $device_target_vers == "4.3"* ]]; then
+    elif [[ $device_type == "iPad"* ]] && [[ $device_target_vers == "3.2"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -3825,7 +3825,7 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
-    elif [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    elif [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         futurerestore2="../saved/futurerestore_$platform"
         ExtraArr=("--latest-sep")
         if [[ $restore_baseband == 0 ]]; then
@@ -4107,7 +4107,7 @@ restore_prepare() {
         ;;
 
         [78] )
-            if [[ $device_latest_vers == "15"* ]]; then
+            if [[ $device_proc == 8 || $device_latest_vers == "15"* ]]; then
                 :
             elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 # A7 devices 10.3.3
@@ -4134,7 +4134,7 @@ restore_prepare() {
             fi
         ;;
     esac
-    if [[ $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
             restore_latest
             return
@@ -4558,6 +4558,7 @@ device_ramdisk() {
     else
         if [[ $1 != "justboot" ]]; then
             "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh.tar
+            #"$dir/hfsplus" Ramdisk.raw untar ../resources/firmware/src/bin.tar
             if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
                 "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
             fi
