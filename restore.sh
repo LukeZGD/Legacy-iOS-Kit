@@ -637,6 +637,14 @@ device_get_info() {
                 device_type=$(echo "$device_type" | cut -c -$ProdCut)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
+            if [[ $device_type == "iPhone1,1" && -z $device_argmode ]]; then
+                print "* Device type selection"
+                print "* Select Y if the device is an iPhone 2G, or N if it is an iPod touch 1"
+                read -p "$(input 'Is this device an iPhone 2G? (Y/n): ')" opt
+                if [[ $opt == 'n' || $opt == 'N' ]]; then
+                    device_type="iPod1,1"
+                fi
+            fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
@@ -753,7 +761,7 @@ device_get_info() {
         iPhone1,[12] | iPod1,1 )
             device_proc=1;; # S5L8900
         iPhone3,[123] | iPhone2,1 | iPad1,1 | iPod[234],1 )
-            device_proc=4;; # A4/S5L8920/8922/8720
+            device_proc=4;; # A4/S5L8720/8920/8922
         iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
             device_proc=5;; # A5
         iPad3,[456] | iPhone5,[1234] )
@@ -765,7 +773,7 @@ device_get_info() {
         iPhone8,[124] )
             device_proc=9;; # A9
         iPhone9,[1234] | iPhone10* | iPad6* | iPod9,1 )
-            device_proc=10;; # A10 (or A9/A11 iOS 16 device)
+            device_proc=10;; # A10 (or A9 iPad/A11 device)
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
     esac
@@ -1559,6 +1567,12 @@ download_file() {
     local filename="$(basename $2)"
     log "Downloading $filename..."
     curl -L $1 -o $2
+    if [[ ! -s $2 ]]; then
+        error "Downloading $2 failed. Please run the script again"
+    fi
+    if [[ -z $3 ]]; then
+        return
+    fi
     local sha1=$($sha1sum $2 | awk '{print $1}')
     if [[ $sha1 != "$3" ]]; then
         error "Verifying $filename failed. The downloaded file may be corrupted or incomplete. Please run the script again" \
@@ -3853,11 +3867,7 @@ restore_futurerestore() {
                 "linux" ) file+="Linux-x86_64-RELEASE.zip";;
             esac
             url+="$file"
-            log "Downloading futurerestore: $url"
-            curl -LO "$url"
-            if [[ ! -s "$file" ]]; then
-                error "Downloading futurerestore failed. Please run the script again"
-            fi
+            download_file $url $file
             unzip -q "$file" -d .
             tar -xJvf futurerestore*.xz
             mv futurerestore $futurerestore2
@@ -4106,10 +4116,8 @@ restore_prepare() {
             fi
         ;;
 
-        [78] )
-            if [[ $device_proc == 8 || $device_latest_vers == "15"* ]]; then
-                :
-            elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+        7 )
+            if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 # A7 devices 10.3.3
                 shsh_save
                 if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
@@ -4133,25 +4141,23 @@ restore_prepare() {
                 restore_futurerestore
             fi
         ;;
-    esac
-    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
-        if [[ $device_target_vers == "$device_latest_vers" ]]; then
-            restore_latest
-            return
-        fi
-        device_enter_mode pwnDFU
-        if [[ -s ../saved/firmwares.json ]]; then
-            cp ../saved/firmwares.json /tmp
-        else
-            log "Downloading firmwares.json from ipsw.me"
-            curl -L https://api.ipsw.me/v2.1/firmwares.json/condensed -o firmwares.json
-            if [[ ! -s firmwares.json ]]; then
-                error "Downloading firmwares.json failed. Please run the script again"
+
+        [89] | 10 )
+            if [[ $device_target_vers == "$device_latest_vers" ]]; then
+                restore_latest
+                return
             fi
-            cp firmwares.json ../saved /tmp
-        fi
-        restore_futurerestore --use-pwndfu
-    fi
+            device_enter_mode pwnDFU
+            if [[ -s ../saved/firmwares.json ]]; then
+                cp ../saved/firmwares.json /tmp
+            else
+                log "Downloading firmwares.json from ipsw.me"
+                download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+                cp firmwares.json ../saved /tmp
+            fi
+            restore_futurerestore --use-pwndfu
+        ;;
+    esac
 }
 
 ipsw_prepare() {
@@ -4274,7 +4280,7 @@ device_ramdisk64() {
         sshtar="../saved/iram.tar"
         if [[ ! -e $sshtar ]]; then
             log "Downloading iram.tar from iarchive.app..."
-            curl -LO https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip
+            download_file https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip iram.zip
             unzip iram.zip
             mv iram.tar $sshtar
         fi
@@ -4282,7 +4288,7 @@ device_ramdisk64() {
         comps+=("Trustcache")
         if [[ ! -e $sshtar ]]; then
             log "Downloading ssh.tar from SSHRD_Script..."
-            curl -LO https://github.com/LukeZGD/sshtars/raw/cbaf9f826ca994452beb9e99a3a4ffb496f918fb/ssh.tar.gz
+            download_file https://github.com/LukeZGD/sshtars/raw/cbaf9f826ca994452beb9e99a3a4ffb496f918fb/ssh.tar.gz ssh.tar.gz
             mv ssh.tar.gz $sshtar.gz
             gzip -d $sshtar.gz
         fi
@@ -4912,9 +4918,9 @@ menu_ramdisk() {
                     cp ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded .
                 else
                     rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded 2>/dev/null
-                    log "Downloading latest TrollStore"
-                    curl -LO $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"PersistenceHelper_Embedded\")) | .browser_download_url")
-                    curl -LO $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"TrollStore.tar\")) | .browser_download_url")
+                    log "Downloading files for latest TrollStore"
+                    download_file $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"PersistenceHelper_Embedded\")) | .browser_download_url") PersistenceHelper_Embedded
+                    download_file $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"TrollStore.tar\")) | .browser_download_url") TrollStore.tar
                     cp TrollStore.tar PersistenceHelper_Embedded ../saved
                     echo "$latest" > ../saved/TrollStore_version
                 fi
@@ -5133,7 +5139,7 @@ menu_main() {
         if [[ $device_mode == "Normal" ]]; then
             if [[ $platform == "linux" ]]; then
                 case $device_vers in
-                    9* | 1* ) menu_items+=("Sideload IPA");;
+                    [89]* | 1* ) menu_items+=("Sideload IPA");;
                 esac
             fi
             menu_items+=("Install IPA (AppSync)")
@@ -5169,13 +5175,17 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 9 and newer."
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
+            print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
         fi
         echo
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
             menu_items+=("Install IPA")
-        else
+        elif [[ $1 == "Install"* ]]; then
             print "* Select IPA files to install (multiple selection)"
+        else
+            print "* Select IPA file to install (or select Use Dadoum Sideloader)"
+            menu_items+=("Use Dadoum Sideloader")
         fi
         menu_items+=("Go Back")
         echo
@@ -5193,6 +5203,33 @@ menu_ipa() {
                 else
                     mode="altserver_linux"
                 fi
+            ;;
+            "Use Dadoum Sideloader" )
+                arch="$platform_arch"
+                case $arch in
+                    "armhf" )
+                        warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
+                        pause
+                        continue
+                    ;;
+                    "arm64" ) arch="aarch64";;
+                esac
+                local sideloader="sideloader-gtk-linux-$arch"
+                log "Checking for latest Sideloader"
+                local troll=$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest)
+                local latest="$(echo "$troll" | $jq -r ".tag_name")"
+                local current="$(cat ../saved/Sideloader_version)"
+                if [[ $current != "$latest" ]]; then
+                    rm ../saved/$sideloader
+                fi
+                if [[ ! -e ../saved/$sideloader ]]; then
+                    download_file https://github.com/Dadoum/Sideloader/releases/download/1.0-pre3/$sideloader.zip $sideloader.zip
+                    unzip -o -j $sideloader.zip $sideloader -d ../saved
+                fi
+                echo "$latest" > ../saved/Sideloader_version
+                log "Launching Dadoum Sideloader"
+                chmod +x ../saved/$sideloader
+                ../saved/$sideloader
             ;;
             "Go Back" ) back=1;;
         esac
@@ -6729,13 +6766,11 @@ device_altserver_linux() {
         anisette+="_$arch"
     fi
     if [[ ! -e $altserver ]]; then
-        log "Downloading AltServer-Linux..."
-        curl -LO https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch
+        download_file https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
         mv AltServer-$arch $altserver
     fi
     if [[ ! -e $anisette ]]; then
-        log "Downloading Anisette server..."
-        curl -LO https://github.com/Dadoum/Provision/releases/download/2.2.0/anisette-server-$arch
+        download_file https://github.com/Dadoum/Provision/releases/download/2.2.0/anisette-server-$arch anisette-server-$arch
         mv anisette-server-$arch $anisette
     fi
     chmod +x $altserver $anisette

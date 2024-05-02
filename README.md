@@ -138,6 +138,7 @@
 - [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
+- [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux)
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
