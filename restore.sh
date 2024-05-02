@@ -4908,8 +4908,7 @@ menu_ramdisk() {
                 print "* If your device is on iOS 13 or below, TrollStore will NOT work."
                 pause
                 log "Checking for latest TrollStore"
-                local troll=$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest)
-                local latest="$(echo "$troll" | $jq -r ".tag_name")"
+                local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version)"
                 if [[ $current != "$latest" ]]; then
                     rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
@@ -4919,8 +4918,8 @@ menu_ramdisk() {
                 else
                     rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded 2>/dev/null
                     log "Downloading files for latest TrollStore"
-                    download_file $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"PersistenceHelper_Embedded\")) | .browser_download_url") PersistenceHelper_Embedded
-                    download_file $(echo "$troll" | $jq -r ".assets[] | select(.name|test(\"TrollStore.tar\")) | .browser_download_url") TrollStore.tar
+                    download_file https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
+                    download_file https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
                     cp TrollStore.tar PersistenceHelper_Embedded ../saved
                     echo "$latest" > ../saved/TrollStore_version
                 fi
@@ -5216,14 +5215,13 @@ menu_ipa() {
                 esac
                 local sideloader="sideloader-gtk-linux-$arch"
                 log "Checking for latest Sideloader"
-                local troll=$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest)
-                local latest="$(echo "$troll" | $jq -r ".tag_name")"
+                local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/Sideloader_version)"
                 if [[ $current != "$latest" ]]; then
                     rm ../saved/$sideloader
                 fi
                 if [[ ! -e ../saved/$sideloader ]]; then
-                    download_file https://github.com/Dadoum/Sideloader/releases/download/1.0-pre3/$sideloader.zip $sideloader.zip
+                    download_file https://github.com/Dadoum/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
                     unzip -o -j $sideloader.zip $sideloader -d ../saved
                 fi
                 echo "$latest" > ../saved/Sideloader_version
