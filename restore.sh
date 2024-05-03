@@ -638,7 +638,7 @@ device_get_info() {
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             if [[ $device_type == "iPhone1,1" && -z $device_argmode ]]; then
-                print "* Device type selection"
+                print "* Device Type Option"
                 print "* Select Y if the device is an iPhone 2G, or N if it is an iPod touch 1"
                 read -p "$(input 'Is this device an iPhone 2G? (Y/n): ')" opt
                 if [[ $opt == 'n' || $opt == 'N' ]]; then
@@ -3138,10 +3138,7 @@ ipsw_prepare_ios4multipart() {
 
     vers="4.2.1"
     build="8C148"
-    if [[ $device_type == "iPad1,1" ]]; then
-        vers="4.3"
-        build="8F190"
-    elif [[ $device_type == "iPhone3,3" ]]; then
+    if [[ $device_type == "iPhone3,3" ]]; then
         vers="4.2.10"
         build="8E600"
     fi
@@ -3750,7 +3747,7 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* ]] && [[ $device_target_vers == "3.2"* || $device_target_vers == "4"* ]]; then
+    elif [[ $device_type == "iPad"* ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -4151,7 +4148,6 @@ restore_prepare() {
             if [[ -s ../saved/firmwares.json ]]; then
                 cp ../saved/firmwares.json /tmp
             else
-                log "Downloading firmwares.json from ipsw.me"
                 download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
                 cp firmwares.json ../saved /tmp
             fi
@@ -4564,7 +4560,6 @@ device_ramdisk() {
     else
         if [[ $1 != "justboot" ]]; then
             "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh.tar
-            #"$dir/hfsplus" Ramdisk.raw untar ../resources/firmware/src/bin.tar
             if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
                 "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
             fi
@@ -5730,7 +5725,7 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
-                    7* | 8[CE]* ) warn "Selected target version will restore but will most likely not boot.";;
+                    7* | 8[CE]* ) warn "Selected target version is not supported. It might not restore/boot properly";;
                 esac
             else
                 print "* Select Target IPSW to continue"
@@ -5812,8 +5807,7 @@ menu_ipsw() {
                 print "* Target Version: $device_target_vers-$device_target_build"
                 menu_items+=("Select Target SHSH")
                 if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
-                    warn "There might be an issue with 4.2.1 restores for iPhone 4."
-                    print "* The device might get stuck at boot after the restore."
+                    warn "There is an issue with 4.2.1 restores for iPhone 4. The device might get stuck at boot after the restore."
                 fi
             else
                 print "* Select Target IPSW to continue"
