@@ -873,10 +873,6 @@ device_get_info() {
             device_latest_bb="Mav7Mav8-10.80.02.Release.bbfw"
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
         ;;
-        iPhone7,[12] ) # MDM9625 12.4-latest
-            device_latest_bb="Mav10-7.80.04.Release.bbfw"
-            device_latest_bb_sha1="7ec8d734da78ca2bb1ba202afdbb6fe3fd093cb0"
-        ;;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 ]]; then
@@ -3839,11 +3835,10 @@ restore_futurerestore() {
     elif [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
         futurerestore2="../saved/futurerestore_$platform"
         ExtraArr=("--latest-sep")
-        if [[ $restore_baseband == 0 ]]; then
-            ExtraArr+=("--no-baseband")
-        else
-            ExtraArr+=("--latest-baseband")
-        fi
+        case $device_type in
+            iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 ) ExtraArr+=("--latest-baseband");;
+            * ) ExtraArr+=("--no-baseband");;
+        esac
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
             warn "futurerestore nightly is not supported on $platform_arch, cannot continue. x86_64 only."
@@ -4145,12 +4140,11 @@ restore_prepare() {
                 return
             fi
             device_enter_mode pwnDFU
-            if [[ -s ../saved/firmwares.json ]]; then
-                cp ../saved/firmwares.json /tmp
-            else
+            if [[ ! -s ../saved/firmwares.json ]]; then
                 download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
-                cp firmwares.json ../saved /tmp
+                cp firmwares.json ../saved
             fi
+            cp ../saved/firmwares.json /tmp
             restore_futurerestore --use-pwndfu
         ;;
     esac
@@ -5266,7 +5260,7 @@ menu_shsh() {
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
             print "* Dumping onboard blobs might not work for this device, proceed with caution"
-            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices"
+            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
             echo
         fi
         print " > Main Menu > Save SHSH Blobs"
@@ -5313,7 +5307,7 @@ menu_shsh_onboard() {
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
             print "* Dumping onboard blobs might not work for this device, proceed with caution"
-            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices"
+            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
             echo
         fi
         if [[ -n $ipsw_path ]]; then
@@ -5725,7 +5719,7 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
-                    7* | 8[CE]* ) warn "Selected target version is not supported. It might not restore/boot properly";;
+                    7* | 8[CE]* ) warn "Selected target version is not supported. It will not restore/boot properly";;
                 esac
             else
                 print "* Select Target IPSW to continue"
