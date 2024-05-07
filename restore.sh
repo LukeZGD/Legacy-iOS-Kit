@@ -85,6 +85,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
+    --pwned-recovery          Assume that device is in pwned recovery mode
     --skip-ibss               Assume that pwned iBSS has already been sent to device
 
     * Default IPSW path: <script location>/name_of_ipswfile.ipsw
@@ -607,6 +608,10 @@ device_get_info() {
     if [[ -z $device_mode ]]; then
         log "Finding device in Recovery/DFU mode..."
         device_mode="$($irecovery -q | grep -w "MODE" | cut -c 7-)"
+    fi
+
+    if [[ $device_mode == "Recovery" && $device_pwnrec == 1 ]]; then
+        device_mode="DFU"
     fi
 
     if [[ -z $device_mode ]]; then
@@ -1245,8 +1250,10 @@ device_enter_mode() {
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
             if [[ $device_skipibss == 1 ]]; then
-                warn "skip ibss flag detected, skipping pwned DFU check. Proceed with caution"
-                pause
+                warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
+                return
+            elif [[ $device_pwnrec == 1 ]]; then
+                warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_boot4 != 1 &&
                     $device_proc != 4 ]] && (( device_proc < 7 )); then
@@ -3743,7 +3750,8 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
+         [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -3946,6 +3954,10 @@ restore_prepare_1033() {
     device_enter_mode pwnDFU
     local attempt=1
 
+    if [[ $device_pwnrec == 1 ]]; then
+        warn "Pwned recovery flag detected, skipping pwnREC mode procedure. Proceed with caution"
+        return
+    fi
     if [[ $device_proc == 7 ]]; then
         $gaster reset
     fi
@@ -4616,7 +4628,7 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
 
-    if (( device_proc < 5 )); then
+    if (( device_proc < 5 )) && [[ $device_pwnrec != 1 ]]; then
         log "Sending iBSS..."
         $irecovery -f $ramdisk_path/iBSS
         sleep 2
@@ -4624,6 +4636,10 @@ device_ramdisk() {
     if [[ $build_id != "7"* && $build_id != "8"* ]]; then
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
+        if [[ $device_pwnrec == 1 ]]; then
+            $irecovery -c "go"
+            sleep 3
+        fi
     fi
     device_find_mode Recovery
     if [[ $1 != "justboot" ]]; then
@@ -4984,7 +5000,7 @@ shsh_save_onboard() {
     else
         device_enter_mode kDFU
     fi
-    if [[ $device_proc == 4 ]]; then
+    if [[ $device_proc == 4 && $device_pwnrec != 1 ]]; then
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
@@ -4993,6 +5009,10 @@ shsh_save_onboard() {
     patch_ibec
     log "Sending iBEC..."
     $irecovery -f pwnediBEC.dfu
+    if [[ $device_pwnrec == 1 ]]; then
+        $irecovery -c "go"
+        sleep 3
+    fi
     device_find_mode Recovery
     log "Dumping blobs now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
@@ -5090,6 +5110,11 @@ menu_print_info() {
     if [[ $device_actrec == 1 ]]; then
         warn "Activation records flag detected. Proceed with caution"
         print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+    fi
+    if [[ $device_pwnrec == 1 ]]; then
+        warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
+    elif [[ $device_skipibss == 1 ]]; then
+        warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -6932,6 +6957,7 @@ for i in "$@"; do
         "--activation-records" ) device_actrec=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--skip-ibss" ) device_skipibss=1;;
+        "--pwned-recovery" ) device_pwnrec=1;;
     esac
 done
 
