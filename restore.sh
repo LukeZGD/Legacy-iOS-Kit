@@ -2013,13 +2013,15 @@ ipsw_verify() {
     IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
-    if [[ $IPSWSHA1 == "$IPSWSHA1E" ]]; then
+    if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
         log "Using saved SHA1 hash for this IPSW: $IPSWSHA1"
     elif [[ -z $IPSWSHA1 && -n $IPSWSHA1E ]]; then
         warn "No SHA1 hash from The Apple Wiki, using local hash"
         IPSWSHA1="$IPSWSHA1E"
     elif [[ -z $IPSWSHA1 && -z $IPSWSHA1E ]]; then
-        warn "No SHA1 hash from either The Apple Wiki or local hash."
+        warn "No SHA1 hash from either The Apple Wiki or local hash, cannot verify IPSW."
+        pause
+        return
     elif [[ -n $IPSWSHA1E ]]; then
         warn "Local SHA1 hash mismatch. Overwriting local hash."
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
