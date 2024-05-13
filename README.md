@@ -93,7 +93,7 @@
     - iPhone 4 GSM - iOS 4.0 to 7.1.1 (all versions except 4.2.1)
     - iPhone 4 CDMA - iOS 5.0 to 7.1.1
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - iOS 5.0 to 9.3.5
-    - iPad 1 - iOS 4.3 to 5.1
+    - iPad 1 - iOS 4.2.1 to 5.1
     - iPod touch 3 - iOS 4.0 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - No blob requirement for iPhone 4, iPad 1, iPod touch 3 (7.1.2 and 5.1.1 are signed)

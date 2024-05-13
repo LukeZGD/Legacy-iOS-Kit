@@ -2971,7 +2971,7 @@ ipsw_prepare_ios4multipart() {
     local JBFiles=()
     ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
     local all_flash2="$ipsw_custom_part2/$all_flash"
-    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 --433"
+    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 --433 -b"
     local iboot
 
     if [[ -e "../$ipsw_custom_part2.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
@@ -3090,10 +3090,11 @@ ipsw_prepare_ios4multipart() {
     rm $all_flash2/DeviceTree.${device_model}ap.img3
     unzip -o -j "$ipsw_path.ipsw" $all_flash/DeviceTree.${device_model}ap.img3 -d $all_flash2
 
+    local ExtraArgs3="pio-error=0"
     if [[ $ipsw_verbose == 1 ]]; then
-        ExtraArgs2+=" -b -v"
+        ExtraArgs3+=" -v"
     fi
-    patch_iboot $ExtraArgs2
+    patch_iboot $ExtraArgs2 "$ExtraArgs3"
     if [[ $device_type == "iPad1,1" ]]; then
         cp iBoot iBEC
         tar -cvf iBoot.tar iBEC
@@ -3143,7 +3144,10 @@ ipsw_prepare_ios4multipart() {
 
     vers="4.2.1"
     build="8C148"
-    if [[ $device_type == "iPhone3,3" ]]; then
+    if [[ $device_type == "iPad1,1" ]] || [[ $device_type == "iPod3,1" && $device_target_vers == "3"* ]]; then
+        vers="$device_target_vers"
+        build="$device_target_build"
+    elif [[ $device_type == "iPhone3,3" ]]; then
         vers="4.2.10"
         build="8E600"
     fi
@@ -3188,7 +3192,7 @@ ipsw_prepare_ios4multipart() {
         esac
         if [[ $getcomp == "iB"* ]]; then
             log "Patch $getcomp"
-            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1"
+            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1 pio-error=0"
             "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
             zip -r0 temp.ipsw ${path}$name
         fi
@@ -4481,9 +4485,7 @@ device_ramdisk() {
     esac
     if [[ -n $device_rd_build ]]; then
         device_target_build=$device_rd_build
-        if [[ $device_type == "iPad1,1" && $device_target_build == "7"* ]]; then
-            device_target_build="7B500"
-        fi
+        device_rd_build=
     fi
     build_id=$device_target_build
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
@@ -4546,9 +4548,9 @@ device_ramdisk() {
         log "Patch RestoreRamdisk"
         "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
         "$dir/hfsplus" Ramdisk.raw grow 30000000
+        "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
     fi
 
-    "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
     if [[ $device_type == "iPod2,1" ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
@@ -4587,13 +4589,13 @@ device_ramdisk() {
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
         if [[ $build_id == "8"* && $device_type == "iPad2"* ]]; then
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v cs_enforcement_disable=1"
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v amfi=0xff cs_enforcement_disable=1"
             device_boot4=1
         else
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad2"* ]]; then
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
             :
         else
             log "Patch iBEC"
@@ -4601,7 +4603,7 @@ device_ramdisk() {
             if [[ $1 == "justboot" && $device_type == "iPad2"* && $build_id == "8"* ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v cs_enforcement_disable=1"
             elif [[ $1 == "justboot" ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v pio-error=0"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
             fi
@@ -4609,8 +4611,7 @@ device_ramdisk() {
         fi
     fi
 
-    if [[ $device_type == "iPad2"* && $build_id == "8"* ]] ||
-       [[ $device_type == "iPad1"* && $build_id == "7"* ]]; then
+    if [[ $device_type == "iPad2"* && $build_id == "8"* ]]; then
         log "Patch Kernelcache"
         mv Kernelcache.dec Kernelcache0.dec
         "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
@@ -4630,7 +4631,14 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
 
-    if (( device_proc < 5 )) && [[ $device_pwnrec != 1 ]]; then
+    if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
+        patch_ibss
+        log "Sending iBSS..."
+        $irecovery -f pwnediBSS.dfu
+        sleep 2
+        log "Sending iBEC..."
+        $irecovery -f $ramdisk_path/iBEC
+    elif (( device_proc < 5 )) && [[ $device_pwnrec != 1 ]]; then
         log "Sending iBSS..."
         $irecovery -f $ramdisk_path/iBSS
         sleep 2
@@ -5745,9 +5753,13 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
-                case $device_target_build in
-                    7* | 8[CE]* ) warn "Selected target version is not supported. It will not restore/boot properly";;
-                esac
+                if [[ $device_type == "iPhone3"* ]]; then
+                    case $device_target_build in
+                        8[CE]* ) warn "Selected target version is not supported. It will not restore/boot properly";;
+                    esac
+                elif [[ $device_target_build == "7"* ]]; then
+                    warn "Selected target version is not supported. It will not restore/boot properly"
+                fi
             else
                 print "* Select Target IPSW to continue"
                 local lo
