@@ -1284,7 +1284,7 @@ device_enter_mode() {
                 read -p "$(input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N): ')" opt
                 if [[ $opt != "Y" && $opt != "y" ]]; then
                     local error_msg=$'\n* Please put the device in normal mode and jailbroken before proceeding.'
-                    error_msg+=$'\n* Exit DFU mode by holding the TOP and HOME buttons for 15 seconds.'
+                    error_msg+=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
                     error_msg+=$'\n* For usage of kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
                     error "32-bit A5 device is not in PWNED DFU mode." "$error_msg"
                 fi
@@ -4263,16 +4263,12 @@ device_ramdisk64() {
         build_id="18C66"
     fi
 
-    if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
-        local ver="12"
-        if [[ $device_type == "iPad5"* ]]; then
-            ver="14"
-        fi
+    if [[ $device_proc == 7 ]]; then
         print "* Version Selection"
-        print "* The version of the SSH Ramdisk is set to iOS $ver by default."
-        print "* There is also an option to use iOS 8 ramdisk. Select N to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
+        print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
+        print "* There is also an option to use iOS 8 ramdisk. This is only for fixing devices on iOS 7 not booting after using iOS 12 ramdisk."
         print "* If not sure, just press Enter/Return. This will select the default version."
-        read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
+        read -p "$(input "Select Y to use iOS 12, select N to use iOS 8 (Y/n) ")" opt
         if [[ $opt == 'n' || $opt == 'N' ]]; then
             ios8=1
         fi
@@ -4600,9 +4596,7 @@ device_ramdisk() {
         else
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
-            if [[ $1 == "justboot" && $device_type == "iPad2"* && $build_id == "8"* ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v cs_enforcement_disable=1"
-            elif [[ $1 == "justboot" ]]; then
+            if [[ $1 == "justboot" ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v pio-error=0"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
@@ -4859,6 +4853,14 @@ menu_ramdisk() {
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
+    elif (( device_proc >= 7 )) && [[ $1 == "12"* ]]; then
+        local top="TOP"
+        if [[ $device_type == "iPhone7"* ]]; then
+            top="SIDE"
+        fi
+        log "Ramdisk should now boot and fix iOS 7 not booting."
+        print "* Wait for \"OK\" to show up on screen, then proceed to force restart the device by holding the $top and HOME buttons for about 15 seconds."
+        return
     elif (( device_proc <= 8 )); then
         menu_items+=("Erase All (iOS 7 and 8)")
     fi
@@ -6246,6 +6248,7 @@ menu_other() {
                                 ;;
                                 iPhone[23],1 ) menu_items+=("Hacktivate Device");;
                             esac
+                            menu_items+=("Revert Hacktivation")
                         ;;
                     esac
                     menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode")
@@ -6278,6 +6281,7 @@ menu_other() {
         done
         case $selected in
             "Hacktivate Device" ) mode="hacktivate";;
+            "Revert Hacktivation" ) mode="reverthacktivate";;
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Enter kDFU Mode" ) mode="kdfu";;
             "Disable/Enable Exploit" ) mode="remove4";;
@@ -6645,30 +6649,42 @@ device_hacktivate() {
     log "Patching lockdownd"
     $bspatch lockdownd lockdownd.patched "$patch"
     log "Renaming original lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
+    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /usr/libexec/lockdownd.orig ]] && mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
     log "Copying patched lockdownd to device"
     $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/usr/libexec/lockdownd
     $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
-    log "Done. Your device will reboot now"
+    log "Done. Your device should reboot now"
+}
+
+device_reverthacktivate() {
+    print "* This will use revert hacktivation for this device."
+    print "* This option can only be used if the hacktivation is done using Legacy iOS Kit's \"Hacktivate Device\" option."
+    pause
+    device_iproxy
+    device_sshpass
+    log "Reverting lockdownd"
+    $ssh -p $ssh_port root@127.0.0.1 "[[ -e /usr/libexec/lockdownd.orig ]] && rm /usr/libexec/lockdownd && mv /usr/libexec/lockdownd.orig /usr/libexec/lockdownd"
+    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
+    log "Done. Your device should reboot now"
 }
 
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
     if [[ $device_proc == 1 ]]; then
-        print "* This option is for restoring with custom IPSWs for downgrading and/or jailbreaking the device."
+        print "* This option is for restoring with other IPSWs for downgrading and/or jailbreaking the device."
     else
         print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
         if [[ $device_newbr == 1 ]]; then
-            warn "Your device is a new bootrom model and custom IPSWs might not be compatible."
+            warn "Your device is a new bootrom model and some custom IPSWs might not be compatible."
             print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
         elif [[ $device_type == "iPod2,1" ]]; then
             print "* You may also use this option for downgrading the device to 3.0 and lower for old bootrom models."
         else
             warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
         fi
-        if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
-            warn "* Restoring to 2.x might not work on newer macOS versions."
-        fi
+    fi
+    if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
+        warn "* Restoring to 2.x might not work on newer macOS versions."
     fi
     if [[ $device_proc == 1 ]]; then
         echo
@@ -6942,6 +6958,7 @@ main() {
         "ideviceinstaller" ) device_ideviceinstaller;;
         "altserver_linux" ) device_altserver_linux;;
         "hacktivate" ) device_hacktivate;;
+        "reverthacktivate" ) device_reverthacktivate;;
         "restore-latest" ) restore_latest64;;
         "convert-onboard-blobs" ) shsh_convert_onboard;;
         * ) :;;

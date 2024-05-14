@@ -51,7 +51,7 @@ sleep 1s
 fsck_hfs -f /dev/rdisk0s1s3
 sleep 2s
 
-dd of=/dev/rdisk0s1s3 if=/exploit bs=512k count=1
+dd of=/dev/rdisk0s1s3 if=/exploit bs=64k count=1
 sleep 1s
 fi
 
@@ -61,7 +61,7 @@ sleep 1s
 fsck_hfs -f /dev/rdisk0s1s4
 sleep 2s
 
-dd of=/dev/rdisk0s1s4 if=/exploit bs=512k count=1
+dd of=/dev/rdisk0s1s4 if=/exploit bs=64k count=1
 sleep 1s
 fi
 
