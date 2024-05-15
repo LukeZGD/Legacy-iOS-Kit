@@ -3136,11 +3136,10 @@ ipsw_prepare_ios4multipart() {
     ipsw_prepare_jailbreak $iboot
     mv "$ipsw_custom.ipsw" temp.ipsw
     rm asr* iBSS* iBEC* ramdisk* *.dmg 2>/dev/null
-    options_plist="options"
+    options_plist="options.plist"
     if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
-        options_plist+=".$device_model"
+        options_plist="options.$device_model.plist"
     fi
-    options_plist+=".plist"
 
     vers="4.2.1"
     build="8C148"
@@ -3199,11 +3198,7 @@ ipsw_prepare_ios4multipart() {
     done
 
     log "Grow ramdisk"
-    if [[ $device_type == "iPad1,1" ]]; then
-        "$dir/hfsplus" RestoreRamdisk.dec grow 25000000
-    else
-        "$dir/hfsplus" RestoreRamdisk.dec grow 18000000
-    fi
+    "$dir/hfsplus" RestoreRamdisk.dec grow 18000000
 
     log "Patch ASR"
     cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
@@ -3214,12 +3209,6 @@ ipsw_prepare_ios4multipart() {
     mv $ramdisk_name ramdisk2.orig
     "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
     "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
-
-    if [[ $device_type == "iPad1,1" && $device_target_vers == "3.2"* ]]; then
-        options_plist="options.k48.plist"
-        rm $options_plist
-        mv options.plist $options_plist
-    fi
 
     log "Modify options.plist"
     "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
@@ -3246,12 +3235,12 @@ ipsw_prepare_tethered() {
     local name
     local iv
     local key
-    options_plist="options"
-    if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]] ||
-       [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]]; then
-        options_plist+=".$device_model"
+    local options_plist="options.$device_model.plist"
+    if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
+        :
+    elif [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+        options_plist="options.plist"
     fi
-    options_plist+=".plist"
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -6248,7 +6237,9 @@ menu_other() {
                                 ;;
                                 iPhone[23],1 ) menu_items+=("Hacktivate Device");;
                             esac
-                            menu_items+=("Revert Hacktivation")
+                            case $device_type in
+                                iPhone1* | iPhone[23],1 ) menu_items+=("Revert Hacktivation");;
+                            esac
                         ;;
                     esac
                     menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode")
