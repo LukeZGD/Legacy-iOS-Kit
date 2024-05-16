@@ -175,13 +175,13 @@ set_tool_paths() {
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
             live_cdusb=1
-            live_cdusb_str="Live"
-            log "Linux Live CD/USB detected."
+            live_cdusb_str="Live session"
+            log "Linux Live session detected."
             if [[ $(pwd) == "/home"* ]]; then
                 df . -h
                 if [[ $(lsblk -o label | grep -c "casper-rw") == 1 || $(lsblk -o label | grep -c "persistence") == 1 ]]; then
                     log "Detected Legacy iOS Kit running on persistent storage."
-                    live_cdusb_str="Live - Persistent storage"
+                    live_cdusb_str+=" - Persistent storage"
                 else
                     warn "Detected Legacy iOS Kit running on temporary storage."
                     print "* You may run out of space and get errors during the downgrade process."
@@ -189,7 +189,7 @@ set_tool_paths() {
                     print "* This may mean using another external HDD/flash drive to store Legacy iOS Kit on."
                     print "* To use one USB drive only, create the live USB using Rufus with Persistent Storage enabled."
                     pause
-                    live_cdusb_str="Live - Temporary storage"
+                    live_cdusb_str+=" - Temporary storage"
                 fi
             fi
         fi
@@ -238,6 +238,11 @@ set_tool_paths() {
         platform="macos"
         platform_ver="${1:-$(sw_vers -productVersion)}"
         dir="../bin/macos"
+
+        platform_arch="$(uname -m)"
+        if [[ $platform_arch != "x86_64" ]]; then
+            platform_arch="arm64"
+        fi
 
         # macos version check
         if [[ ${platform_ver:0:2} == 10 ]]; then
@@ -365,7 +370,7 @@ install_depends() {
         chown -R $USER:staff $dir
         log "Installing Xcode Command Line Tools"
         xcode-select --install
-        if [[ $(uname -m) != "x86_64" ]]; then
+        if [[ $platform_arch == "arm64" ]]; then
             log "Installing Rosetta 2"
             softwareupdate --install-rosetta
         fi
@@ -633,13 +638,7 @@ device_get_info() {
             if [[ -n $device_argmode ]]; then
                 device_entry
             else
-                #device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
-                local ProdCut=7 # cut 7 for ipod/ipad
-                device_type=$($irecovery -qv 2>&1 | grep "Connected to iP" | cut -c 14-)
-                if [[ $(echo "$device_type" | cut -c 3) == 'h' ]]; then
-                    ProdCut=9 # cut 9 for iphone
-                fi
-                device_type=$(echo "$device_type" | cut -c -$ProdCut)
+                device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             if [[ $device_type == "iPhone1,1" && -z $device_argmode ]]; then
@@ -5151,6 +5150,7 @@ menu_main() {
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
+            # remove linux check here on later sideloader update
             if [[ $platform == "linux" ]]; then
                 case $device_vers in
                     [89]* | 1* ) menu_items+=("Sideload IPA");;
@@ -5190,6 +5190,9 @@ menu_ipa() {
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
+            if [[ $platform == "macos" ]]; then
+                menu_items=()
+            fi
         fi
         echo
         if [[ -n $ipa_path ]]; then
@@ -5219,15 +5222,21 @@ menu_ipa() {
                 fi
             ;;
             "Use Dadoum Sideloader" )
-                arch="$platform_arch"
-                case $arch in
-                    "armhf" )
-                        warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
-                        pause
-                        continue
-                    ;;
-                    "arm64" ) arch="aarch64";;
-                esac
+                local arch="$platform_arch"
+                local plat="$platform"
+                if [[ $plat == "macos" ]]; then
+                    plat="macOS"
+                else
+                    case $arch in
+                        "armhf" )
+                            warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
+                            pause
+                            continue
+                        ;;
+                        "arm64" ) arch="aarch64";;
+                    esac
+                fi
+                #local sideloader="sideloader-qt-$plat-$arch"
                 local sideloader="sideloader-gtk-linux-$arch"
                 log "Checking for latest Sideloader"
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
@@ -5269,7 +5278,7 @@ menu_shsh() {
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
-            iPad2,[1234567] | iPad3,[123456] | iPhone4,1 | iPhone5,[12] | iPod5,1 )
+            iPad[23]* | iPhone4,1 | iPhone5,[12] | iPod5,1 )
                 menu_items+=("iOS 8.4.1");;
         esac
         case $device_type in
@@ -5285,7 +5294,7 @@ menu_shsh() {
         menu_items+=("Convert Raw Dump" "Go Back")
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
-            print "* Dumping onboard blobs might not work for this device, proceed with caution"
+            warn "Dumping onboard blobs might not work for this device, proceed with caution"
             print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
             echo
         fi
@@ -5332,7 +5341,7 @@ menu_shsh_onboard() {
         menu_items=("Select IPSW")
         menu_print_info
         if [[ $device_mode != "none" && $device_proc == 4 ]]; then
-            print "* Dumping onboard blobs might not work for this device, proceed with caution"
+            warn "Dumping onboard blobs might not work for this device, proceed with caution"
             print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
             echo
         fi
