@@ -2478,11 +2478,9 @@ ipsw_prepare_bundle() {
         ipsw_prepare_config false false
     fi
     local FirmwareBundle2="../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle"
-    if [[ $device_target_powder == 1 && $device_target_vers == "4.3"* ]]; then
+    if [[ $ipsw_prepare_usepowder == 1 ]]; then
         FirmwareBundle2=
-    elif [[ $device_target_powder == 1 || $device_target_other == 1 ]] && [[ $device_proc != 4 ]]; then
-        FirmwareBundle2=
-    elif [[ -d $FirmwareBundle2 && $ipsw_prepare_usepowder != 1 ]]; then
+    elif [[ -d $FirmwareBundle2 ]]; then
         FirmwareBundle+="Down_"
     fi
     FirmwareBundle+="${device_type}_${vers}_${build}.bundle"
