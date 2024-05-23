@@ -127,10 +127,10 @@
     - [Other iPhone 5/5C ramdisks are from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
     - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
-- [ipwnder_lite](https://github.com/dora2-iOS/ipwnder_lite/tree/7265a06d184e433989db640d5e83ea58d5862609) - dora2ios (used on macOS)
+- [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite) - dora2ios (used on macOS); LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
-- [daibutsuCFW](https://github.com/dora2-iOS/daibutsuCFW) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/daibutsuCFW)
+- [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
@@ -142,10 +142,10 @@
 - [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7/A8 devices that support iOS 12.5.x
-    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices that support iOS 15.8.x/16.7.x
+    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices
+    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
-- [idevicerestore](https://github.com/libimobiledevice/idevicerestore) - libimobiledevice; [LukeZGD fork](https://github.com/LukeZGD/idevicerestore)
+- [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
 - [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb)
@@ -169,6 +169,6 @@
 - Some patches from [PwnageTool](https://www.theapplewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theapplewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theapplewiki.com/wiki/redsn0w)
 - Some patches made using patchers from [Bundle-Creation](https://github.com/Merculous/Bundle-Creation)
 - SSH Ramdisk tars from [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and [msftguy's ssh-rd](https://github.com/msftguy/ssh-rd)
-- 64-bit SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+) and [iarchive.app](https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
+- 64-bit SSH Ramdisk stuff is based on [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+) and [iarchive.app](https://web.archive.org/web/20240324134204/https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
     - [img4lib](https://github.com/xerub/img4lib) - xerub
     - [img4tool](https://github.com/tihmstar/img4tool) - tihmstar

@@ -672,6 +672,7 @@ device_get_info() {
             fi
             device_model=$($ideviceinfo -s -k HardwareModel)
             device_vers=$($ideviceinfo -s -k ProductVersion)
+            device_det=$(echo "$device_vers" | cut -c 1)
             device_build=$($ideviceinfo -s -k BuildVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
             [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -1118,7 +1119,6 @@ device_enter_mode() {
 
         "kDFU" )
             local sendfiles=()
-            local device_det=$(echo "$device_vers" | cut -c 1)
             local ip="127.0.0.1"
 
             if [[ $device_mode != "Normal" ]]; then
@@ -2089,6 +2089,62 @@ ipsw_prepare_rebootsh() {
     echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
 }
 
+ipsw_prepare_logos_convert() {
+    local iv
+    local key
+    local name
+    if [[ -n $ipsw_customlogo ]]; then
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .key')
+        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        logoname="$name"
+        log "Converting custom logo"
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
+        "$dir/xpwntool" $name logo-orig.img3 -iv $iv -k $key -decrypt
+        "$dir/imagetool" inject "$ipsw_customlogo" logo.img3 logo-orig.img3
+        if [[ ! -s logo.img3 ]]; then
+            error "Converting custom logo failed. Check your image"
+        fi
+        if [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
+            log "log4"
+            echo "0000010: 3467" | xxd -r - logo.img3
+            echo "0000020: 3467" | xxd -r - logo.img3
+        elif [[ $device_target_powder == 1 ]]; then
+            log "logb"
+            echo "0000010: 6267" | xxd -r - logo.img3
+            echo "0000020: 6267" | xxd -r - logo.img3
+        fi
+        mkdir -p $all_flash 2>/dev/null
+        mv logo.img3 $all_flash/$name
+    fi
+    if [[ -n $ipsw_customrecovery ]]; then
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .key')
+        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        recmname="$name"
+        log "Converting custom recovery"
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
+        "$dir/xpwntool" $name recovery-orig.img3 -iv $iv -k $key -decrypt
+        "$dir/imagetool" inject "$ipsw_customrecovery" recovery.img3 recovery-orig.img3
+        if [[ ! -s recovery.img3 ]]; then
+            error "Converting custom recovery failed. Check your image"
+        fi
+        mkdir -p $all_flash 2>/dev/null
+        mv recovery.img3 $all_flash/$name
+    fi
+}
+
+ipsw_prepare_logos_add() {
+    if [[ -n $ipsw_customlogo ]]; then
+        log "Adding custom logo to IPSW"
+        zip -r0 temp.ipsw $all_flash/$logoname
+    fi
+    if [[ -n $ipsw_customrecovery ]]; then
+        log "Adding custom recovery to IPSW"
+        zip -r0 temp.ipsw $all_flash/$recmname
+    fi
+}
+
 ipsw_prepare_jailbreak() {
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -2098,12 +2154,6 @@ ipsw_prepare_jailbreak() {
     local JBFiles=()
     local JBFiles2=()
     local daibutsu
-    local iv
-    local key
-    local proc="s5l8920x"
-    if [[ $device_proc == 1 ]]; then
-        proc="s5l8900x"
-    fi
 
     if [[ $1 == "old" ]]; then
         daibutsu="old"
@@ -2172,33 +2222,7 @@ ipsw_prepare_jailbreak() {
     fi
 
     ipsw_prepare_bundle $daibutsu
-
-    if [[ -n $ipsw_customlogo ]]; then
-        log "Converting custom logo"
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/applelogo.$proc.img3
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .key')
-        "$dir/xpwntool" applelogo.$proc.img3 logo-orig.img3 -iv $iv -k $key -decrypt
-        "$dir/imagetool" inject "$ipsw_customlogo" logo.img3 logo-orig.img3
-        if [[ ! -s logo.img3 ]]; then
-            error "Converting custom logo failed. Check your image"
-        fi
-        mkdir -p $all_flash 2>/dev/null
-        mv logo.img3 $all_flash/applelogo.$proc.img3
-    fi
-    if [[ -n $ipsw_customrecovery ]]; then
-        log "Converting custom recovery"
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/recoverymode.$proc.img3
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .key')
-        "$dir/xpwntool" recoverymode.$proc.img3 recovery-orig.img3 -iv $iv -k $key -decrypt
-        "$dir/imagetool" inject "$ipsw_customrecovery" recovery.img3 recovery-orig.img3
-        if [[ ! -s recovery.img3 ]]; then
-            error "Converting custom recovery failed. Check your image"
-        fi
-        mkdir -p $all_flash 2>/dev/null
-        mv recovery.img3 $all_flash/recoverymode.$proc.img3
-    fi
+    ipsw_prepare_logos_convert
 
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
@@ -2230,14 +2254,7 @@ ipsw_prepare_jailbreak() {
         "* You may try selecting N for memory option"
     fi
 
-    if [[ -n $ipsw_customlogo ]]; then
-        log "Adding custom logo to IPSW"
-        zip -r0 temp.ipsw $all_flash/applelogo.$proc.img3
-    fi
-    if [[ -n $ipsw_customrecovery ]]; then
-        log "Adding custom recovery to IPSW"
-        zip -r0 temp.ipsw $all_flash/recoverymode.$proc.img3
-    fi
+    ipsw_prepare_logos_add
     ipsw_bbreplace
 
     mv temp.ipsw "$ipsw_custom.ipsw"
@@ -2340,11 +2357,6 @@ ipsw_prepare_paths() {
             ;;
         esac
         case $comp in
-            "NewAppleLogo" )
-                if [[ $logostuff != 1 ]]; then
-                    str+="$str2"
-                fi
-            ;;
             "AppleLogo" ) str2="${name/applelogo/applelogo7}";;
             "APTicket" ) str2="${name/applelogo/applelogoT}";;
             "RecoveryMode" ) str2="${name/recoverymode/recoverymode7}";;
@@ -2700,7 +2712,10 @@ ipsw_prepare_32bit() {
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) nskip=1;;
     esac
-    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* ]]; then
+        nskip=1
+    fi
+    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $nskip != 1 ]]; then
         ipsw_prepare_jailbreak
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -2725,6 +2740,7 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
     fi
+    ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
@@ -2744,8 +2760,7 @@ ipsw_prepare_32bit() {
             7* )         JBFiles+=("evasi0n7-untether.tar");;
             6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
             6* )         JBFiles+=("evasi0n6-untether.tar");;
-            5* )         JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar")
-            ;;
+            5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
         esac
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
@@ -2753,7 +2768,21 @@ ipsw_prepare_32bit() {
         case $device_target_vers in
             9* | 8* ) JBFiles+=("$jelbrek/fstab8.tar");;
             7* ) JBFiles+=("$jelbrek/fstab7.tar");;
+            4* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
+        esac
+        case $device_target_vers in
+            4.3* )
+                if [[ $device_type == "iPad2"* ]]; then
+                    JBFiles[0]=
+                fi
+            ;;
+            4.2.1 )
+                if [[ $device_type != "iPhone1,2" ]]; then
+                    ExtraArgs+="-punchd"
+                    JBFiles[0]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+                fi
+            ;;
         esac
         JBFiles+=("$jelbrek/freeze.tar")
         if [[ $device_target_vers == "5"* ]]; then
@@ -2781,7 +2810,14 @@ ipsw_prepare_32bit() {
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
+
     ipsw_bbreplace
+    if [[ $device_target_vers == "4"* ]]; then
+        ipsw_prepare_ios4patches
+        log "Add all to custom IPSW"
+        zip -r0 temp.ipsw Firmware/dfu/*
+    fi
+
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -2841,8 +2877,9 @@ ipsw_bbreplace() {
         return
     fi
 
+    log "Extracting BuildManifest from IPSW"
     unzip -o -j temp.ipsw BuildManifest.plist
-    mkdir Firmware
+    mkdir Firmware 2>/dev/null
     restore_download_bbsep
     cp $restore_baseband Firmware/$device_use_bb
 
@@ -3109,9 +3146,14 @@ ipsw_prepare_ios4multipart() {
 
     log "AppleLogo"
     local logo_name="$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')"
-    unzip -o -j "$ipsw_path.ipsw" $all_flash/$logo_name
-    echo "0000010: 3467" | xxd -r - $logo_name
-    echo "0000020: 3467" | xxd -r - $logo_name
+    if [[ -n $ipsw_customlogo ]]; then
+        ipsw_prepare_logos_convert
+        mv $all_flash/$logoname $logo_name
+    else
+        unzip -o -j "$ipsw_path.ipsw" $all_flash/$logo_name
+        echo "0000010: 3467" | xxd -r - $logo_name
+        echo "0000020: 3467" | xxd -r - $logo_name
+    fi
     log "Add AppleLogo to all_flash"
     if [[ $device_latest_vers == "5"* ]]; then
         mv $logo_name $all_flash2/applelogo4.img3
@@ -3271,6 +3313,27 @@ ipsw_prepare_tethered() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
+ipsw_prepare_ios4patches() {
+    log "Applying iOS 4 patches"
+    mkdir -p $all_flash Firmware/dfu
+    log "Patch iBSS"
+    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
+    local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
+    local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+    mv iBSS.${device_model}ap.RELEASE.dfu iBSS.orig
+    "$dir/xpwntool" iBSS.orig iBSS.dec -iv $ibss_iv -k $ibss_key
+    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+    "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
+    log "Patch iBEC"
+    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
+    local ibec_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
+    local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
+    mv iBEC.${device_model}ap.RELEASE.dfu iBEC.orig
+    "$dir/xpwntool" iBEC.orig iBEC.dec -iv $ibec_iv -k $ibec_key
+    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+    "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
+}
+
 ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
     local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 "
@@ -3295,6 +3358,7 @@ ipsw_prepare_ios4powder() {
 
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
+    ipsw_prepare_logos_convert
     cp -R ../resources/firmware/src .
     rm src/target/$device_model/$device_base_build/partition
     mv src/target/$device_model/reboot4 src/target/$device_model/$device_base_build/partition
@@ -3335,30 +3399,17 @@ ipsw_prepare_ios4powder() {
         "* You may try selecting N for memory option"
     fi
 
-    log "Applying iOS 4 patches"
-    mkdir -p $all_flash Firmware/dfu
-    log "Patch iBSS"
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
-    local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-    local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
-    mv iBSS.${device_model}ap.RELEASE.dfu iBSS.orig
-    "$dir/xpwntool" iBSS.orig iBSS.dec -iv $ibss_iv -k $ibss_key
-    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
-    log "Patch iBEC"
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
-    local ibec_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
-    local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
-    mv iBEC.${device_model}ap.RELEASE.dfu iBEC.orig
-    "$dir/xpwntool" iBEC.orig iBEC.dec -iv $ibec_iv -k $ibec_key
-    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
-    log "Patch AppleLogo"
-    local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
-    unzip -o -j temp.ipsw $all_flash/$applelogo_name
-    echo "0000010: 3467" | xxd -r - $applelogo_name
-    echo "0000020: 3467" | xxd -r - $applelogo_name
-    mv $applelogo_name $all_flash/$applelogo_name
+    ipsw_prepare_ios4patches
+    if [[ -n $ipsw_customlogo ]]; then
+        ipsw_prepare_logos_add
+    else
+        log "Patch AppleLogo"
+        local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        unzip -o -j temp.ipsw $all_flash/$applelogo_name
+        echo "0000010: 3467" | xxd -r - $applelogo_name
+        echo "0000020: 3467" | xxd -r - $applelogo_name
+        mv $applelogo_name $all_flash/$applelogo_name
+    fi
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
@@ -3379,6 +3430,7 @@ ipsw_prepare_powder() {
 
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
+    ipsw_prepare_logos_convert
     cp -R ../resources/firmware/src .
     if [[ $ipsw_memory == 1 ]]; then
         ExtraArgs+=" -memory"
@@ -3468,6 +3520,7 @@ ipsw_prepare_powder() {
             ;;
         esac
     fi
+    ipsw_prepare_logos_add
     ipsw_bbreplace
 
     mv temp.ipsw "$ipsw_custom.ipsw"
@@ -3569,11 +3622,20 @@ ipsw_prepare_s5l8900() {
         log "Checking RestoreRamdisk hash of custom IPSW"
         unzip -o -j "$ipsw_custom.ipsw" $rname
         sha1L="$($sha1sum $rname | awk '{print $1}')"
-    elif [[ -e "$ipsw_custom.ipsw" ]]; then
-        log "Getting SHA1 hash for $ipsw_custom.ipsw..."
-        sha1L=$($sha1sum "$ipsw_custom.ipsw" | awk '{print $1}')
+    elif [[ -e "$ipsw_custom2.ipsw" ]]; then
+        log "Getting SHA1 hash for $ipsw_custom2.ipsw..."
+        sha1L=$($sha1sum "$ipsw_custom2.ipsw" | awk '{print $1}')
     fi
-    if [[ $sha1L == "$sha1E" ]]; then
+    if [[ $sha1L == "$sha1E" && $ipsw_customlogo2 == 1 ]]; then
+        log "Verified existing Custom IPSW. Preparing custom logo images and IPSW"
+        rm -f "$ipsw_custom.ipsw"
+        cp "$ipsw_custom2.ipsw" temp.ipsw
+        device_fw_key_check
+        ipsw_prepare_logos_convert
+        ipsw_prepare_logos_add
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
+    elif [[ $sha1L == "$sha1E" ]]; then
         log "Verified existing Custom IPSW. Skipping IPSW creation."
         return
     else
@@ -3593,6 +3655,12 @@ ipsw_prepare_s5l8900() {
         if [[ $sha1L != "$sha1E" ]]; then
             error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
             "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
+        fi
+        if [[ $ipsw_customlogo2 == 1 ]]; then
+            cp temp.ipsw "$ipsw_custom2.ipsw"
+            device_fw_key_check
+            ipsw_prepare_logos_convert
+            ipsw_prepare_logos_add
         fi
         mv temp.ipsw "$ipsw_custom.ipsw"
         return
@@ -5151,7 +5219,8 @@ menu_main() {
             # remove linux check here on later sideloader update
             if [[ $platform == "linux" ]]; then
                 case $device_vers in
-                    [89]* | 1* ) menu_items+=("Sideload IPA");;
+                    [12].*  ) :;;
+                    [1289]* ) menu_items+=("Sideload IPA");;
                 esac
             fi
             menu_items+=("Install IPA (AppSync)")
@@ -5221,9 +5290,9 @@ menu_ipa() {
             ;;
             "Use Dadoum Sideloader" )
                 local arch="$platform_arch"
-                local plat="$platform"
-                if [[ $plat == "macos" ]]; then
-                    plat="macOS"
+                local sideloader="sideloader-"
+                if [[ $platform == "macos" ]]; then
+                    sideloader+="qt-macOS-$arch"
                 else
                     case $arch in
                         "armhf" )
@@ -5233,9 +5302,8 @@ menu_ipa() {
                         ;;
                         "arm64" ) arch="aarch64";;
                     esac
+                    sideloader+="gtk-linux-$arch"
                 fi
-                #local sideloader="sideloader-qt-$plat-$arch"
-                local sideloader="sideloader-gtk-linux-$arch"
                 log "Checking for latest Sideloader"
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/Sideloader_version)"
@@ -5617,6 +5685,7 @@ menu_ipsw() {
     fi
 
     ipsw_cancustomlogo=
+    ipsw_cancustomlogo2=
     ipsw_customlogo=
     ipsw_customrecovery=
     ipsw_path=
@@ -5662,7 +5731,7 @@ menu_ipsw() {
         if [[ $device_type != "iPhone"* ]]; then
             ipsw_canhacktivate=
         fi
-        if [[ $device_type == "iPhone1,2" ]]; then
+        if [[ $device_proc == 1 ]]; then
             ipsw_cancustomlogo=1
         fi
         case $1 in
@@ -5758,6 +5827,10 @@ menu_ipsw() {
                 elif [[ $device_target_build == "7"* ]]; then
                     warn "Selected target version is not supported. It will not restore/boot properly"
                 fi
+                ipsw_cancustomlogo2=
+                case $device_target_vers in
+                    [456]* ) ipsw_cancustomlogo2=1;;
+                esac
             else
                 print "* Select Target IPSW to continue"
                 local lo
@@ -5806,11 +5879,12 @@ menu_ipsw() {
                             print "* If this is an OTA/onboard blob, it should be fine to use for restoring"
                             print "* If the restore does not work here, use futurerestore manually"
                         fi
+                        echo
                     fi
                 elif [[ $2 != "ipsw" ]]; then
                     print "* Select Base $text2 SHSH to continue"
+                    echo
                 fi
-                echo
             fi
             if [[ -n $ipsw_path && -n $ipsw_base_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
@@ -5890,20 +5964,30 @@ menu_ipsw() {
             echo
         fi
 
-        if [[ $ipsw_cancustomlogo == 1 ]]; then
+        if [[ $ipsw_cancustomlogo2 == 1 ]]; then
+            print "* You can select your own custom Apple logo image. This is optional and an experimental option"
+            print "* Note that the images must be in PNG format, and up to 320x480 resolution only"
+            if [[ -n $ipsw_customlogo ]]; then
+                print "* Custom Apple logo: $ipsw_customlogo"
+            else
+                print "* No custom Apple logo selected"
+            fi
+            menu_items+=("Select Apple Logo")
+            echo
+        elif [[ $ipsw_cancustomlogo == 1 ]]; then
             print "* You can select your own custom logo and recovery image. This is optional"
             print "* Note that the images must be in PNG format, and up to 320x480 resolution only"
             if [[ -n $ipsw_customlogo ]]; then
-                print "* Custom boot logo: $ipsw_customlogo"
+                print "* Custom Apple logo: $ipsw_customlogo"
             else
-                print "* No custom boot logo selected"
+                print "* No custom Apple logo selected"
             fi
             if [[ -n $ipsw_customrecovery ]]; then
                 print "* Custom recovery logo: $ipsw_customrecovery"
             else
                 print "* No custom recovery logo selected"
             fi
-            menu_items+=("Select Boot Logo" "Select Recovery Logo")
+            menu_items+=("Select Apple Logo" "Select Recovery Logo")
             echo
         fi
         menu_items+=("Go Back")
@@ -5932,7 +6016,7 @@ menu_ipsw() {
             "Select Target SHSH" ) menu_shsh_browse "$1";;
             "Select Base SHSH" ) menu_shsh_browse "base";;
             "Download Target IPSW" ) ipsw_download "../$newpath";;
-            "Select Boot Logo" ) menu_logo_browse "boot";;
+            "Select Apple Logo" ) menu_logo_browse "boot";;
             "Select Recovery Logo" ) menu_logo_browse "recovery";;
             "Go Back" ) back=1;;
         esac
@@ -5986,8 +6070,14 @@ ipsw_custom_set() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         ipsw_custom+="J"
     fi
+    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+        ipsw_custom2="$ipsw_custom"
+    fi
     if [[ -n $ipsw_customlogo || -n $ipsw_customrecovery ]]; then
         ipsw_custom+="L"
+        if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+            ipsw_customlogo2=1
+        fi
     fi
     if [[ $device_target_powder == 1 ]]; then
         ipsw_custom+="P"
@@ -6528,6 +6618,10 @@ device_dumpbb() {
         * )
             $ssh -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root2}usr/local/standalone/firmware"
             $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
+            if [[ ! -s baseband.tar ]]; then
+                error "Dumping baseband tar failed. Please run the script again" \
+                "If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
+            fi
             tar -xvf baseband.tar -C .
             rm baseband.tar
             pushd usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
@@ -6593,6 +6687,10 @@ device_dumprd() {
     log "Copying activation.tar"
     print "* Reminder to backup dump tars if needed"
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
+    if [[ ! -s activation.tar ]]; then
+        error "Dumping activation record tar failed. Please run the script again" \
+        "If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
+    fi
     mv activation.tar activation-$device_ecid.tar
     if [[ -s $dump/activation-$device_ecid.tar ]]; then
         read -p "$(input "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite? (y/N) ")" opt
@@ -6775,6 +6873,10 @@ device_enter_ramdisk() {
     if (( device_proc >= 7 )); then
         device_ramdisk64
         return
+    elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
+        device_rd_build="13A452"
+    elif (( device_proc >= 5 )) && (( device_det <= 8 )); then
+        :
     elif (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
         print "* If not sure, just press Enter/Return. This will select the default version."
