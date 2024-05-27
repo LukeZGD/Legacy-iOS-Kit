@@ -5842,7 +5842,7 @@ menu_ipsw() {
                     iPad2,4 | iPad3,[123]      ) lo=5.1; hi=9.3.5;;
                     iPhone5,[12] | iPad3,[456] ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
-                    iPad1,1 ) lo=4.3; hi=5.1;;
+                    iPad1,1 ) lo=4.2.1; hi=5.1;;
                     iPod3,1 ) lo=4.0; hi=5.1;;
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
@@ -5912,7 +5912,7 @@ menu_ipsw() {
                 print "* Target Version: $device_target_vers-$device_target_build"
                 menu_items+=("Select Target SHSH")
                 if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
-                    warn "There is an issue with 4.2.1 restores for iPhone 4. The device might get stuck at boot after the restore."
+                    warn "There is an issue with 4.2.1 restores for iPhone 4. The device will fail to boot after the restore."
                 fi
             else
                 print "* Select Target IPSW to continue"
@@ -5952,10 +5952,10 @@ menu_ipsw() {
                 print "* Select $1 IPSW to continue"
             fi
             if [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
-                warn "4.2.1 for $device_type will likely fail to restore with jailbreak/hacktivate option."
+                warn "4.2.1 for $device_type will fail to restore with jailbreak/hacktivate option."
                 print "* It is recommended to select 4.1 or 3.1.3 instead."
             elif [[ $device_type == "iPhone2,1" && $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
-                warn "3.0.x is for old bootrom devices only, it will not restore/boot if your device is not compatible."
+                warn "3.0.x is for old bootrom devices only, it will fail to restore/boot if your device is not compatible."
                 print "* It is recommended to select 3.1 or newer instead."
             fi
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
