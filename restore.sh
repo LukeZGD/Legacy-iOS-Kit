@@ -6875,7 +6875,7 @@ device_enter_ramdisk() {
         return
     elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
         device_rd_build="13A452"
-    elif (( device_proc >= 5 )) && (( device_det <= 8 )); then
+    elif (( device_proc >= 5 )) && (( device_det <= 8 )) && [[ $device_mode == "Normal" ]]; then
         :
     elif (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
