@@ -4317,12 +4317,16 @@ device_ramdisk64() {
         build_id="18C66"
     fi
 
-    if [[ $device_proc == 7 ]]; then
+    if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
+        local ver="12"
+        if [[ $device_type == "iPad5"* ]]; then
+            ver="14"
+        fi
         print "* Version Selection"
-        print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
-        print "* There is also an option to use iOS 8 ramdisk. This is only for fixing devices on iOS 7 not booting after using iOS 12 ramdisk."
+        print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
+        print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
         print "* If not sure, just press Enter/Return. This will select the default version."
-        read -p "$(input "Select Y to use iOS 12, select N to use iOS 8 (Y/n) ")" opt
+        read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
         if [[ $opt == 'n' || $opt == 'N' ]]; then
             ios8=1
         fi
@@ -4907,14 +4911,8 @@ menu_ramdisk() {
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
-    elif (( device_proc >= 7 )) && [[ $1 == "12"* ]]; then
-        local top="TOP"
-        if [[ $device_type == "iPhone7"* ]]; then
-            top="SIDE"
-        fi
+    elif [[ $device_proc == 7 && $1 == "12"* ]]; then
         log "Ramdisk should now boot and fix iOS 7 not booting."
-        print "* Wait for \"OK\" to show up on screen, then proceed to force restart the device by holding the $top and HOME buttons for about 15 seconds."
-        return
     elif (( device_proc <= 8 )); then
         menu_items+=("Erase All (iOS 7 and 8)")
     fi
@@ -4954,6 +4952,13 @@ menu_ramdisk() {
         case $mode in
             "ssh" )
                 log "Use the \"exit\" command to go back to SSH Ramdisk Menu"
+                if (( device_proc >= 7 )) && [[ $1 == "12"* ]]; then
+                    $ssh -p $ssh_port root@127.0.0.1 &
+                    ssh_pid=$!
+                    sleep 1
+                    kill $ssh_pid
+                    killall ssh
+                fi
                 $ssh -p $ssh_port root@127.0.0.1
             ;;
             "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
