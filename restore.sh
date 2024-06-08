@@ -5039,10 +5039,7 @@ shsh_save_onboard64() {
         print "* Use the SSH Ramdisk option instead."
         return
     fi
-    print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
-    print "* Only proceed if you have these requirements installed using Cydia/Zebra/Sileo."
-    print "* You will be prompted to enter the root password of your iOS device."
-    print "* The default root password is: alpine"
+    device_ssh_message
     device_iproxy
     device_sshpass
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh"
@@ -5085,34 +5082,51 @@ shsh_save_onboard() {
         sleep 3
     fi
     device_find_mode Recovery
-    log "Dumping blobs now"
+    log "Dumping raw dump now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
     $irecovery2 -g dump.raw
+    log "Rebooting device"
     $irecovery -n
-    "$dir/ticket" dump.raw dump.shsh "$ipsw_path.ipsw" -z
-    "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
-    if [[ $? != 0 ]]; then
-        warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
-        if [[ -s dump.raw ]]; then
-            local raw="../saved/shsh/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
-            mv dump.raw $raw
-            log "Raw dump saved at: $raw"
-            warn "This raw dump is not usable for restoring, you need to convert it first."
-            print "* If unable to be converted, this dump is likely not usable for restoring."
-        fi
+    local raw
+    local err
+    shsh_convert_onboard $1
+    err=$?
+    if [[ $1 == "dump" ]]; then
+        raw="../saved/shsh/rawdump_${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M)_${shsh_onboard_iboot}.raw"
+    else
+        raw="../saved/shsh/rawdump_${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}_$(date +%Y-%m-%d-%H%M)_${shsh_onboard_iboot}.raw"
     fi
-    if [[ ! -s dump.shsh ]]; then
-        error "Saving onboard SHSH blobs failed."
+    if [[ $1 == "dump" ]] || [[ $err != 0 && -s dump.raw ]]; then
+        mv dump.raw $raw
+        log "Raw dump saved at: $raw"
+        warn "This raw dump is not usable for restoring, you need to convert it first."
+        print "* If unable to be converted, this dump is likely not usable for restoring."
+        print "* For the IPSW to download and use, see the raw dump iBoot version above"
+        print "* Then go here and find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
     fi
-    local shsh="../saved/shsh/$device_ecid-$device_type-$device_target_vers-$device_target_build.shsh"
-    mv dump.shsh $shsh
-    log "Successfully saved $device_target_vers blobs: $shsh"
 }
 
 shsh_convert_onboard() {
-    cp "$shsh_path" dump.raw
+    local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc < 7 )); then
+        shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
+        # remove ibob for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62
+        local blob=$(xxd -p dump.raw | tr -d '\n')
+        local bobi="626f6269"
+        local blli="626c6c69"
+        if [[ $blob == *"$bobi"* ]]; then
+            log "Detected \"ibob\". Fixing... (This happens on DRA/powdersn0w downgraded devices)"
+            rm -f dump.raw
+            printf "${blob%$bobi*}${blli}${blob##*$blli}" | xxd -r -p > dump.raw
+        fi
+        shsh_onboard_iboot="$(cat dump.raw | strings | grep iBoot | head -1)"
+        log "Raw dump iBoot version: $shsh_onboard_iboot"
+        if [[ $1 == "dump" ]]; then
+            return
+        fi
+        log "Converting raw dump to SHSH blob"
         "$dir/ticket" dump.raw dump.shsh "$ipsw_path.ipsw" -z
+        log "Attempting to validate SHSH blob"
         "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
         if [[ $? != 0 ]]; then
             warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
@@ -5121,9 +5135,9 @@ shsh_convert_onboard() {
         "$dir/img4tool" --convert -s dump.shsh dump.raw
     fi
     if [[ ! -s dump.shsh ]]; then
-        error "Converting onboard SHSH blobs failed."
+        warn "Converting onboard SHSH blobs failed."
+        return 1
     fi
-    local shsh="../saved/shsh/converted_$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
     mv dump.shsh $shsh
     log "Successfully saved $device_target_vers blobs: $shsh"
 }
@@ -5356,11 +5370,14 @@ menu_shsh() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
         esac
-        if [[ $device_mode != "none" ]]; then
-            menu_items+=("Onboard Blobs")
-        fi
         if (( device_proc < 7 )); then
             menu_items+=("Cydia Blobs")
+        fi
+        if [[ $device_mode != "none" ]]; then
+            menu_items+=("Onboard Blobs")
+            if (( device_proc < 7 )); then
+                menu_items+=("Onboard Blobs (Raw Dump)")
+            fi
         fi
         menu_items+=("Convert Raw Dump" "Go Back")
         menu_print_info
@@ -5392,6 +5409,7 @@ menu_shsh() {
         case $selected in
             "iOS"* ) mode="save-ota-blobs";;
             "Onboard Blobs" ) menu_shsh_onboard;;
+            "Onboard Blobs (Raw Dump)" ) mode="save-onboard-dump";;
             "Cydia Blobs" ) mode="save-cydia-blobs";;
             "Convert Raw Dump" ) menu_shsh_convert;;
             "Go Back" ) back=1;;
@@ -5421,6 +5439,9 @@ menu_shsh_onboard() {
             print "* IPSW Version: $device_target_vers-$device_target_build"
             if [[ $device_mode == "Normal" && $device_target_vers != "$device_vers" ]]; then
                 warn "Selected IPSW does not seem to match the current version."
+                if (( device_proc < 7 )); then
+                    print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
+                fi
             fi
             menu_items+=("Save Onboard Blobs")
         else
@@ -6344,7 +6365,7 @@ menu_other() {
                             esac
                         ;;
                     esac
-                    menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode")
+                    menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Connect to SSH")
                 ;;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
@@ -6393,6 +6414,7 @@ menu_other() {
             "Get iOS Version" ) mode="getversion";;
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
+            "Connect to SSH" ) mode="ssh";;
             "Enable disable-bbupdate flag" )
                 warn "This will enable the --disable-bbupdate flag."
                 print "* This will disable baseband update for custom IPSWs."
@@ -6431,6 +6453,16 @@ menu_other() {
             "Go Back" ) back=1;;
         esac
     done
+}
+
+device_ssh() {
+    device_ssh_message
+    device_iproxy
+    device_sshpass
+    log "Connecting to device SSH..."
+    print "* For accessing data, note the following:"
+    print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
+    $ssh -p $ssh_port root@127.0.0.1
 }
 
 device_alloc8() {
@@ -6515,6 +6547,18 @@ device_jailbreakrd() {
     device_ramdisk jailbreak
 }
 
+device_ssh_message() {
+    print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
+    if [[ $device_det == 1 ]] && (( device_proc < 7 )); then
+        print "* Install all updates in Cydia/Zebra."
+        print "* Make sure to also have Dropbear installed from my repo."
+        print "* Repo: https://lukezgd.github.io/repo"
+    fi
+    print "* Only proceed if you have these requirements installed using Cydia/Zebra/Sileo."
+    print "* You will be prompted to enter the root password of your iOS device."
+    print "* The default root password is: alpine"
+}
+
 device_dump() {
     local arg="$1"
     local dump="../saved/$device_type/$arg-$device_ecid.tar"
@@ -6551,15 +6595,7 @@ device_dump() {
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
-        print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
-        if [[ $(echo "$device_vers" | cut -c 1) == 1 ]]; then
-            print "* Install all updates in Cydia/Zebra."
-            print "* Make sure to also have Dropbear installed from my repo."
-            print "* Repo: https://lukezgd.github.io/repo"
-        fi
-        print "* Only proceed if you have these requirements installed using Cydia/Zebra."
-        print "* You will be prompted to enter the root password of your iOS device."
-        print "* The default root password is: alpine"
+        device_ssh_message
         device_iproxy
         device_sshpass
         if [[ $arg == "activation" ]]; then
@@ -7046,6 +7082,7 @@ main() {
         "ramdisknvram" ) device_ramdisk clearnvram;;
         "pwned-ibss" ) device_enter_mode pwnDFU;;
         "save-onboard-blobs" ) shsh_save_onboard;;
+        "save-onboard-dump" ) shsh_save_onboard dump;;
         "save-cydia-blobs" ) shsh_save_cydia;;
         "activate" ) device_activate;;
         "alloc8" ) device_alloc8;;
@@ -7065,7 +7102,8 @@ main() {
         "hacktivate" ) device_hacktivate;;
         "reverthacktivate" ) device_reverthacktivate;;
         "restore-latest" ) restore_latest64;;
-        "convert-onboard-blobs" ) shsh_convert_onboard;;
+        "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
+        "ssh" ) device_ssh;;
         * ) :;;
     esac
 
