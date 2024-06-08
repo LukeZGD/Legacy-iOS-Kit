@@ -5102,7 +5102,7 @@ shsh_save_onboard() {
         warn "This raw dump is not usable for restoring, you need to convert it first."
         print "* If unable to be converted, this dump is likely not usable for restoring."
         print "* For the IPSW to download and use, see the raw dump iBoot version above"
-        print "* Then go here and find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
+        print "* Then go here to find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
     fi
 }
 
@@ -5469,25 +5469,31 @@ menu_shsh_convert() {
     local back
 
     ipsw_path=
+    shsh_path=
     while [[ -z "$mode" && -z "$back" ]]; do
-        if (( device_proc < 7 )); then
-            menu_items=("Select IPSW")
-        else
-            menu_items=("Select Raw Dump")
-        fi
+        menu_items=("Select Raw Dump")
         menu_print_info
-        if [[ -n $ipsw_path ]]; then
-            print "* Selected IPSW: $ipsw_path.ipsw"
-            print "* IPSW Version: $device_target_vers-$device_target_build"
-            menu_items+=("Select Raw Dump")
-        else
-            print "* Select IPSW of your current iOS version to continue"
-        fi
         if [[ -n $shsh_path ]]; then
             print "* Selected dump: $shsh_path"
-            menu_items+=("Convert Raw Dump")
+            if (( device_proc < 7 )); then
+                shsh_onboard_iboot="$(cat "$shsh_path" | strings | grep iBoot | head -1)"
+                print "* Raw dump iBoot version: $shsh_onboard_iboot"
+                print "* Go here to find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
+                menu_items+=("Select IPSW")
+            else
+                menu_items+=("Convert Raw Dump")
+            fi
         else
             print "* Select raw dump file to continue"
+        fi
+        if [[ -n $ipsw_path ]]; then
+            echo
+            print "* Selected IPSW: $ipsw_path.ipsw"
+            print "* IPSW Version: $device_target_vers-$device_target_build"
+            menu_items+=("Convert Raw Dump")
+        elif (( device_proc < 7 )); then
+            echo
+            print "* Select IPSW of the raw dump's iOS version to continue"
         fi
         menu_items+=("Go Back")
         echo
