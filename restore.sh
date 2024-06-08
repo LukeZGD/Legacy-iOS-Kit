@@ -1795,6 +1795,10 @@ ipsw_preference_set() {
         return
     fi
 
+    if [[ $ipsw_fourthree == 1 ]]; then
+        ipsw_jailbreak=1
+    fi
+
     if [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
@@ -2219,6 +2223,9 @@ ipsw_prepare_jailbreak() {
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
+        if [[ $ipsw_fourthree == 1 ]]; then
+            JBFiles+=("$jelbrek/dualbootstuff.tar")
+        fi
     fi
 
     ipsw_prepare_bundle $daibutsu
@@ -2255,9 +2262,121 @@ ipsw_prepare_jailbreak() {
     fi
 
     ipsw_prepare_logos_add
+    ipsw_prepare_fourthree
     ipsw_bbreplace
 
     mv temp.ipsw "$ipsw_custom.ipsw"
+}
+
+ipsw_prepare_fourthree() {
+    local comps=("AppleLogo" "DeviceTree" "iBoot" "RecoveryMode")
+    local saved_path="../saved/$device_type/8L1"
+    local bpatch="../resources/patch/fourthree/$device_type/6.1.3"
+    local name
+    local iv
+    local key
+    if [[ $ipsw_fourthree != 1 ]]; then
+        return
+    fi
+    ipsw_get_url 8L1
+    url="$ipsw_url"
+    device_fw_key_check
+    device_fw_key_check temp 8L1
+    mkdir -p $all_flash Downgrade $saved_path 2>/dev/null
+    log "Extracting files"
+    unzip -o -j "$ipsw_path.ipsw" $all_flash/manifest -d $all_flash
+    unzip -o -j temp.ipsw Downgrade/RestoreDeviceTree
+    log "RestoreDeviceTree"
+    iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .iv')
+    key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .key')
+    "$dir/xpwntool" RestoreDeviceTree RestoreDeviceTree.dec -iv $iv -k $key -decrypt
+    $bspatch RestoreDeviceTree.dec Downgrade/RestoreDeviceTree $bpatch/RestoreDeviceTree.patch
+    for getcomp in "${comps[@]}"; do
+        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
+        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
+        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        path="$all_flash/"
+        log "$getcomp"
+        if [[ $vers == "$device_base_vers" ]]; then
+            unzip -o -j "$ipsw_base_path.ipsw" ${path}$name
+        elif [[ -e $saved_path/$name ]]; then
+            cp $saved_path/$name .
+        else
+            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            cp $name $saved_path/
+        fi
+        "$dir/xpwntool" $name $getcomp.dec -iv $iv -k $key -decrypt
+        case $getcomp in
+            "AppleLogo" )
+                getcomp="applelogo"
+                mv AppleLogo.dec applelogo.dec
+                echo "0000010: 6267" | xxd -r - applelogo.dec
+                echo "0000020: 6267" | xxd -r - applelogo.dec
+            ;;
+            "DeviceTree" )
+                echo "0000010: 6272" | xxd -r - DeviceTree.dec
+                echo "0000020: 6272" | xxd -r - DeviceTree.dec
+            ;;
+            "RecoveryMode" )
+                getcomp="recoverymode"
+                mv RecoveryMode.dec recoverymode.dec
+                echo "0000010: 6263" | xxd -r - recoverymode.dec
+                echo "0000020: 6263" | xxd -r - recoverymode.dec
+            ;;
+            "iBoot" )
+                mv iBoot.dec iBoot.dec0
+                $bspatch iBoot.dec0 iBoot.dec $bpatch/iBoot.${device_model}ap.RELEASE.patch
+                #"$dir/xpwntool" iBoot.dec0 iBoot.dec2
+                #"$dir/iBoot32Patcher" iBoot.dec2 iBoot.patched --rsa -b "rd=disk0s3 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
+                #"$dir/xpwntool" iBoot.patched iBoot.dec -t iBoot.dec0
+                #echo "0000010: 626F" | xxd -r - iBoot.dec
+                #echo "0000020: 626F" | xxd -r - iBoot.dec
+            ;;
+        esac
+        mv $getcomp.dec $path/${getcomp}B.img3
+        echo "${getcomp}B.img3" >> $path/manifest
+    done
+    log "Add files to IPSW"
+    zip -r0 temp.ipsw $all_flash/* Downgrade/*
+}
+
+ipsw_prepare_fourthree_part2() {
+    device_fw_key_check base
+    local saved_path="../saved/$device_type/$device_base_build"
+    local bpatch="../resources/patch/fourthree/$device_type/$device_base_vers"
+    local iv
+    local key
+    mkdir -p $saved_path 2>/dev/null
+    if [[ ! -s $saved_path/Kernelcache ]]; then
+        log "Kernelcache"
+        iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "Kernelcache") | .iv')
+        key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "Kernelcache") | .key')
+        unzip -o -j "$ipsw_base_path.ipsw" kernelcache.release.$device_model
+        "$dir/xpwntool" kernelcache.release.$device_model kernelcache.dec -iv $iv -k $key
+        $bspatch kernelcache.dec kernelcache.patched $bpatch/kernelcache.release.patch
+        #$bspatch kernelcache.dec kernelcache.patched ../resources/patch/kernelcache.release.$device_model.$device_base_build.patch
+        "$dir/xpwntool" kernelcache.patched kernelcachb -t kernelcache.release.$device_model -iv $iv -k $key
+        "$dir/xpwntool" kernelcachb $saved_path/Kernelcache -iv $iv -k $key -decrypt
+    fi
+    if [[ ! -s $saved_path/LLB ]]; then
+        log "LLB"
+        iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "LLB") | .iv')
+        key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "LLB") | .key')
+        unzip -o -j "$ipsw_base_path.ipsw" $all_flash/LLB.${device_model}ap.RELEASE.img3
+        "$dir/xpwntool" LLB.${device_model}ap.RELEASE.img3 llb.dec -iv $iv -k $key
+        $bspatch llb.dec $saved_path/LLB $bpatch/LLB.${device_model}ap.RELEASE.patch
+    fi
+    if [[ ! -s $saved_path/RootFS.dmg ]]; then
+        log "RootFS"
+        name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
+        key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RootFS") | .key')
+        unzip -o -j "$ipsw_base_path.ipsw" $name
+        "$dir/dmg" extract $name rootfs.dec -k $key
+        rm $name
+        "$dir/dmg" build rootfs.dec $saved_path/RootFS.dmg
+    fi
+    echo "device_base_vers=$device_base_vers" > ../saved/$device_type/fourthree_$device_ecid
+    echo "device_base_build=$device_base_build" >> ../saved/$device_type/fourthree_$device_ecid
 }
 
 ipsw_prepare_keys() {
@@ -4263,6 +4382,9 @@ ipsw_prepare() {
             elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_32bit
             fi
+            if [[ $ipsw_fourthree == 1 ]]; then
+                ipsw_prepare_fourthree_part2
+            fi
         ;;
 
         7 )
@@ -4733,6 +4855,13 @@ device_ramdisk() {
 
     case $mode in
         "activation" | "baseband" )
+            return
+        ;;
+
+        "TwistedMind2" )
+            log "Sending dd command for TwistedMind2"
+            $scp -P $ssh_port TwistedMind2 root@127.0.0.1:/
+            $ssh -p $ssh_port root@127.0.0.1 "dd if=/TwistedMind2 of=/dev/rdisk0 bs=8192; reboot_bak"
             return
         ;;
 
@@ -5244,6 +5373,9 @@ menu_main() {
             fi
             menu_items+=("Install IPA (AppSync)")
         fi
+        case $device_type in
+            iPad2,[123] ) menu_items+=("FourThree Utility");;
+        esac
         menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -5255,7 +5387,37 @@ menu_main() {
             "Save SHSH Blobs" ) menu_shsh;;
             "Install IPA (AppSync)" | "Sideload IPA" ) menu_ipa "$selected";;
             "Other Utilities" ) menu_other;;
+            "FourThree Utility" ) menu_fourthree;;
             "Exit" ) mode="exit";;
+        esac
+    done
+}
+
+menu_fourthree() {
+    local menu_items
+    local selected
+    local back
+
+    ipa_path=
+    ipsw_fourthree=
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Step 1: Restore" "Step 2: Partition" "Step 3: OS Install" "Reinstall App" "Go Back")
+        menu_print_info
+        print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
+        print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
+        echo
+        print " > Main Menu > FourThree Utility"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Step 1: Restore" ) ipsw_fourthree=1; menu_ipsw "iOS 6.1.3" "fourthree";;
+            "Step 2: Partition" ) mode="device_fourthree_step2";;
+            "Step 3: OS Install" ) mode="device_fourthree_step3";;
+            "Reinstall App" ) mode="device_fourthree_app";;
+            "Go Back" ) back=1;;
         esac
     done
 }
@@ -5334,6 +5496,13 @@ menu_ipa() {
                     unzip -o -j $sideloader.zip $sideloader -d ../saved
                 fi
                 echo "$latest" > ../saved/Sideloader_version
+                log "Attempting idevicepair"
+                "$dir/idevicepair" pair
+                if [[ $? != 0 ]]; then
+                    log "Press \"Trust\" on the device before pressing Enter/Return."
+                    pause
+                fi
+                "$dir/idevicepair" pair
                 log "Launching Dadoum Sideloader"
                 chmod +x ../saved/$sideloader
                 ../saved/$sideloader
@@ -5711,6 +5880,9 @@ menu_ipsw() {
     if [[ $2 == "ipsw" ]]; then
         nav=" > Main Menu > Other Utilities > Create Custom IPSW > $1"
         start="Create IPSW"
+    elif [[ $2 == "fourthree" ]]; then
+        nav=" > Main Menu > FourThree Utility > Step 1: Restore"
+        start="Start Restore"
     else
         nav=" > Main Menu > Restore/Downgrade > $1"
         start="Start Restore"
@@ -5922,6 +6094,26 @@ menu_ipsw() {
                 menu_items+=("$start")
             fi
 
+        elif [[ $2 == "fourthree" ]]; then
+            menu_items+=("Download Target IPSW" "Select Base IPSW")
+            if [[ -n $ipsw_path ]]; then
+                print "* Selected Target (iOS 6.1.3) IPSW: $ipsw_path.ipsw"
+            else
+                print "* Select Target (iOS 6.1.3) IPSW to continue"
+            fi
+            echo
+            if [[ -n $ipsw_base_path ]]; then
+                print "* Selected Base (iOS 4.3.x) IPSW: $ipsw_base_path.ipsw"
+                print "* Base Version: $device_base_vers-$device_base_build"
+                echo
+            else
+                print "* Select Base (iOS 4.3.x) IPSW to continue"
+                echo
+            fi
+            if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
+                menu_items+=("$start")
+            fi
+
         elif [[ $1 == *"Tethered"* ]]; then
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
@@ -6083,10 +6275,16 @@ ipsw_version_set() {
 }
 
 ipsw_custom_set() {
+    if [[ $ipsw_fourthree == 1 ]]; then
+        ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_FourThree"
+        return
+    fi
+
     ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Custom"
     if [[ -n $1 ]]; then
         ipsw_custom="../$1_Custom"
     fi
+
     if [[ $device_actrec == 1 ]]; then
         ipsw_custom+="A"
     fi
@@ -6229,10 +6427,17 @@ menu_ipsw_browse() {
                     check_vers="5.1.1"
                     base_vers="$check_vers"
                 ;;
+                iPad2,[123] )
+                    # fourthree
+                    check_vers="4.3"
+                    base_vers="4.3.x"
+                ;;
             esac
             if [[ $device_base_vers != "$check_vers"* ]]; then
                 log "Selected IPSW is not for iOS $base_vers."
-                print "* You need iOS $base_vers IPSW and SHSH blobs for this device to use powdersn0w."
+                if [[ $ipsw_fourthree != 1 ]]; then
+                    print "* You need iOS $base_vers IPSW and SHSH blobs for this device to use powdersn0w."
+                fi
                 pause
                 return
             fi
@@ -6975,6 +7180,10 @@ device_altserver_linux() {
     altserver_linux="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
     log "Attempting idevicepair"
     "$dir/idevicepair" pair
+    if [[ $? != 0 ]]; then
+        log "Press \"Trust\" on the device before pressing Enter/Return."
+        pause
+    fi
     log "Enter Apple ID details to continue."
     print "* Your Apple ID and password will only be sent to Apple servers."
     local apple_id
@@ -7007,6 +7216,86 @@ restore_latest64() {
     fi
     $idevicerestore2 $opt
     mv *.ipsw ..
+}
+
+device_fourthree_step2() {
+    if [[ $device_mode != "Normal" ]]; then
+        error "Device is not in normal mode. Place the device in normal mode to proceed." \
+        "The device must also be restored already with Step 1: Restore."
+    fi
+    print "* Make sure that the device is already restored with Step 1: Restore before proceeding."
+    pause
+    device_iproxy
+    device_sshpass alpine
+    log "Transferring package files"
+    $scp -P $ssh_port $jelbrek/dualbootstuff.tar root@127.0.0.1:/tmp
+    log "Installing packages"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/dualbootstuff.tar -C /; dpkg -i /tmp/dualbootstuff/*.deb"
+    log "Running TwistedMind2"
+    $ssh -p $ssh_port root@127.0.0.1 "rm /TwistedMind2*; TwistedMind2 -d1 3221225472 -s2 879124480 -d2 max"
+    local tm2="$($ssh -p $ssh_port root@127.0.0.1 "ls /TwistedMind2*")"
+    $scp -P $ssh_port root@127.0.0.1:$tm2 TwistedMind2
+    kill $iproxy_pid
+    log "Rebooting to SSH ramdisk for next procedure"
+    device_ramdisk TwistedMind2
+    log "Done, proceed to Step 3 after the device boots"
+}
+
+device_fourthree_step3() {
+    if [[ $device_mode != "Normal" ]]; then
+        error "Device is not in normal mode. Place the device in normal mode to proceed." \
+        "The device must also set up already with Step 2: Partition."
+    fi
+    print "* Make sure that the device is set up with Step 2: Partition before proceeding."
+    pause
+    . ../saved/$device_type/fourthree_$device_ecid
+    log "4.3.x version: $device_base_vers-$device_base_build"
+    local saved_path="../saved/$device_type/$device_base_build"
+    device_iproxy
+    device_sshpass alpine
+    log "Creating filesystems"
+    $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt1 /mnt2"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_hfs -s -v System -J -b 8192 -n a=8192,c=8192,e=8192 /dev/disk0s3"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_hfs -s -v Data -J -b 8192 -n a=8192,c=8192,e=8192 /dev/disk0s4"
+    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt2"
+    log "Sending root filesystem, this will take a while."
+    $scp -P $ssh_port $saved_path/RootFS.dmg root@127.0.0.1:/var
+    log "Restoring root filesystem"
+    $ssh -p $ssh_port root@127.0.0.1 "echo 'y' | asr restore --source /var/RootFS.dmg --target /dev/disk0s3 --erase"
+    log "Checking root filesystem"
+    $ssh -p $ssh_port root@127.0.0.1 "rm /var/RootFS.dmg; fsck_hfs -f /dev/disk0s3"
+    log "Restoring data partition"
+    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2; mount_hfs /dev/disk0s3 /mnt1; mount_hfs /dev/disk0s4 /mnt2; mv /mnt1/private/var/* /mnt2"
+    log "Fixing fstab"
+    $ssh -p $ssh_port root@127.0.0.1 "echo '/dev/disk0s3 / hfs rw 0 1' | tee /mnt1/private/etc/fstab; echo '/dev/disk0s4 /private/var hfs rw 0 2' | tee -a /mnt1/private/etc/fstab"
+    log "Fixing system keybag"
+    $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
+    log "Unmounting filesystems"
+    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2"
+    log "Sending freeze.tar"
+    $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/tmp
+    log "Installing Cydia and bootstrap"
+    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt1/private/var; tar -xvf /tmp/freeze.tar -C /mnt1"
+    log "Unmounting filesystems"
+    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt1/private/var; umount /mnt1"
+    log "Sending Kernelcache and LLB"
+    $scp -P $ssh_port $saved_path/Kernelcache root@127.0.0.1:/System/Library/Caches/com.apple.kernelcaches/kernelcachb
+    $scp -P $ssh_port $saved_path/LLB root@127.0.0.1:/LLB
+    device_fourthree_app install
+    log "Done!"
+}
+
+device_fourthree_app() {
+    if [[ $1 != "install" ]]; then
+        device_iproxy
+        device_sshpass alpine
+    fi
+    log "Sending app"
+    $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
+    log "Installing app"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; chmod 6755 /Applications/FourThree.app/FourThree; chmod 6755 /usr/bin/runasroot; chmod 6755 /Applications/FourThree.app/boot.sh"
+    log "Running uicache"
+    $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
 }
 
 main() {
@@ -7110,6 +7399,9 @@ main() {
         "restore-latest" ) restore_latest64;;
         "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
         "ssh" ) device_ssh;;
+        "device_fourthree_step2" ) device_fourthree_step2;;
+        "device_fourthree_step3" ) device_fourthree_step3;;
+        "device_fourthree_app" ) device_fourthree_app;;
         * ) :;;
     esac
 

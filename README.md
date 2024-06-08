@@ -15,11 +15,12 @@
     - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
 - Restore with SHSH blobs on supported devices
 - Restore to other iOS versions with iOS 7 blobs (powdersn0w)
-- Tethered restores to other iOS versions for A5/A6 and other devices
+- Tethered downgrades/restores to other iOS versions for A5/A6 and other devices
 - Jailbreak all 32-bit iOS devices on (almost) any iOS version
     - Available on iOS versions 3.1 to 9.3.4
     - Only unsupported versions are iOS 9.0.x
 - Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
+- [FourThree Utility](https://github.com/LukeZGD/FourThree-iPad2) - Dualboot iOS 4.3.x for the iPad 2
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Install IPA files for supported devices with AppSync Unified installed
 - Sideload IPA files for supported devices on Linux
