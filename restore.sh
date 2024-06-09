@@ -113,7 +113,7 @@ set_tool_paths() {
     '
 
     if [[ $OSTYPE == "linux"* ]]; then
-        . /etc/os-release
+        source /etc/os-release
         platform="linux"
         platform_ver="$PRETTY_NAME"
         dir="../bin/linux/"
@@ -138,7 +138,7 @@ set_tool_paths() {
                 "noble" ) ubuntu_ver=24;;
             esac
             if [[ -z $ubuntu_ver ]]; then
-                . /etc/upstream-release/lsb-release 2>/dev/null
+                source /etc/upstream-release/lsb-release 2>/dev/null
                 ubuntu_ver="$(echo "$DISTRIB_RELEASE" | cut -c -2)"
             fi
             if [[ -z $ubuntu_ver ]]; then
@@ -2222,9 +2222,6 @@ ipsw_prepare_jailbreak() {
         ExtraArgs+=" -S 30" # system partition add
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
-        fi
-        if [[ $ipsw_fourthree == 1 ]]; then
-            JBFiles+=("$jelbrek/dualbootstuff.tar")
         fi
     fi
 
@@ -7009,6 +7006,7 @@ device_reverthacktivate() {
     print "* This option can only be used if the hacktivation is done using Legacy iOS Kit's \"Hacktivate Device\" option."
     pause
     device_iproxy
+    print "* The default root password is: alpine"
     device_sshpass
     log "Reverting lockdownd"
     $ssh -p $ssh_port root@127.0.0.1 "[[ -e /usr/libexec/lockdownd.orig ]] && rm /usr/libexec/lockdownd && mv /usr/libexec/lockdownd.orig /usr/libexec/lockdownd"
@@ -7244,11 +7242,11 @@ device_fourthree_step2() {
 device_fourthree_step3() {
     if [[ $device_mode != "Normal" ]]; then
         error "Device is not in normal mode. Place the device in normal mode to proceed." \
-        "The device must also set up already with Step 2: Partition."
+        "The device must also be set up already with Step 2: Partition."
     fi
     print "* Make sure that the device is set up with Step 2: Partition before proceeding."
     pause
-    . ../saved/$device_type/fourthree_$device_ecid
+    source ../saved/$device_type/fourthree_$device_ecid
     log "4.3.x version: $device_base_vers-$device_base_build"
     local saved_path="../saved/$device_type/$device_base_build"
     device_iproxy
@@ -7272,10 +7270,11 @@ device_fourthree_step3() {
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
     log "Unmounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2"
-    log "Sending freeze.tar"
+    log "Sending jailbreak tars"
     $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/tmp
+    $scp -P $ssh_port $jelbrek/sshdeb.tar root@127.0.0.1:/tmp
     log "Installing Cydia and bootstrap"
-    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt1/private/var; tar -xvf /tmp/freeze.tar -C /mnt1"
+    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt1/private/var; tar -xvf /tmp/freeze.tar -C /mnt1; tar -xvf /tmp/sshdeb.tar -C /mnt1"
     log "Unmounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt1/private/var; umount /mnt1"
     log "Sending Kernelcache and LLB"
