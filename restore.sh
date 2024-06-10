@@ -51,7 +51,7 @@ clean_sudo() {
 clean_usbmuxd() {
     clean_sudo
     sudo killall usbmuxd 2>/dev/null
-    if [[ $(which systemctl 2>/dev/null) ]]; then
+    if [[ $(command -v systemctl 2>/dev/null) ]]; then
         sleep 1
         sudo systemctl restart usbmuxd
     fi
@@ -170,7 +170,7 @@ set_tool_paths() {
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
         PlistBuddy="$dir/PlistBuddy"
-        zenity="$(which zenity)"
+        zenity="$(command -v zenity)"
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
@@ -224,7 +224,7 @@ set_tool_paths() {
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
             if [[ -z $device_disable_usbmuxd ]]; then
-                if [[ $(which systemctl 2>/dev/null) ]]; then
+                if [[ $(command -v systemctl 2>/dev/null) ]]; then
                     sudo systemctl stop usbmuxd
                 fi
                 #sudo killall usbmuxd 2>/dev/null
@@ -253,17 +253,17 @@ set_tool_paths() {
                 print "* Supported versions are macOS 10.13 and newer. (10.15 and newer recommended)"
                 pause
             fi
-            if [[ $(which curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
+            if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
                 local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
                 error_msg+=$'\n* Make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
                 error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
-        bspatch="$(which bspatch)"
+        bspatch="$(command -v bspatch)"
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
-        sha1sum="$(which shasum) -a 1"
+        sha1sum="$(command -v shasum) -a 1"
 
         # kill macos daemons
         killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -289,21 +289,11 @@ set_tool_paths() {
     ideviceinfo="$dir/ideviceinfo"
     iproxy="$dir/iproxy"
     irecovery+="$dir/irecovery"
-    if [[ $platform == "macos" ]]; then
-        #local ideviceinfot="$(which ideviceinfo 2>/dev/null)"
-        #local irecoveryt="$(which irecovery 2>/dev/null)"
-        if [[ -n $ideviceinfot && -n $irecoveryt ]]; then
-            log "Detected libimobiledevice and libirecovery from Homebrew/MacPorts"
-            ideviceenterrecovery="$(which ideviceenterrecovery)"
-            ideviceinfo="$(which ideviceinfo)"
-            iproxy="$(which iproxy)"
-            irecovery="$(which irecovery)"
-        fi
-    else
+    if [[ $platform != "macos" ]]; then
         bspatch="$dir/bspatch"
-        sha1sum="$(which sha1sum)"
+        sha1sum="$(command -v sha1sum)"
     fi
-    ideviceactivation="$(which ideviceactivation 2>/dev/null)"
+    ideviceactivation="$(command -v ideviceactivation 2>/dev/null)"
     if [[ -z $ideviceactivation ]]; then
         ideviceactivation="$dir/ideviceactivation"
     fi
@@ -346,7 +336,7 @@ install_depends() {
         fi
         sudo apt update
         sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
-        if [[ $(which systemctl 2>/dev/null) ]]; then
+        if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
@@ -379,7 +369,7 @@ install_depends() {
     echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" ]]; then
         # from linux_fix script by Cryptiiiic
-        if [[ $(which systemctl 2>/dev/null) ]]; then
+        if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
         fi
         echo "QUNUSU9OPT0iYWRkIiwgU1VCU1lTVEVNPT0idXNiIiwgQVRUUntpZFZlbmRvcn09PSIwNWFjIiwgQVRUUntpZFByb2R1Y3R9PT0iMTIyWzI3XXwxMjhbMC0zXSIsIE9XTkVSPSJyb290IiwgR1JPVVA9InVzYm11eGQiLCBNT0RFPSIwNjYwIiwgVEFHKz0idWFjY2VzcyIKCkFDVElPTj09ImFkZCIsIFNVQlNZU1RFTT09InVzYiIsIEFUVFJ7aWRWZW5kb3J9PT0iMDVhYyIsIEFUVFJ7aWRQcm9kdWN0fT09IjEzMzgiLCBPV05FUj0icm9vdCIsIEdST1VQPSJ1c2JtdXhkIiwgTU9ERT0iMDY2MCIsIFRBRys9InVhY2Nlc3MiCgoK" | base64 -d | sudo tee /etc/udev/rules.d/39-libirecovery.rules >/dev/null 2>/dev/null
@@ -1437,8 +1427,8 @@ device_pwnerror() {
 device_ipwndfu() {
     local tool_pwned=0
     local mac_ver=0
-    local python2=$(which python2 2>/dev/null)
-    local pyenv=$(which pyenv 2>/dev/null)
+    local python2=$(command -v python2 2>/dev/null)
+    local pyenv=$(command -v pyenv 2>/dev/null)
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
     if [[ -z $pyenv && -e "$HOME/.pyenv/bin/pyenv" ]]; then
@@ -1743,6 +1733,19 @@ patch_ibec() {
     log "Pwned iBEC img3 saved at: saved/$device_type/pwnediBEC.dfu"
 }
 
+ipsw_nojailbreak_message() {
+    local hac
+    local tohac
+    case $device_type in
+        iPhone[23],1 ) hac=" (and hacktivate)"; tohac=1;;
+    esac
+    log "Jailbreak option is not available, but you may jailbreak$hac later after the restore"
+    print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
+    if [[ $tohac == 1 ]]; then
+        print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
+    fi
+}
+
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
 
@@ -1760,36 +1763,37 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.[321]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
-            if [[ $device_proc == 1 ]]; then
-                ipsw_canjailbreak=1
-            else
-                log "Jailbreak option is not available, but you may jailbreak (and hacktivate) later after the restore"
-                print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
-                print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
-            fi
+            case $device_proc in
+                1 ) ipsw_canjailbreak=1;;
+                * ) ipsw_nojailbreak_message;;
+            esac
         ;;
     esac
+
     if [[ $device_proc == 5 ]]; then
         case $device_target_vers in
-            8.2 | 8.[10]* ) ipsw_canjailbreak=;;
+            8.[210]* ) ipsw_canjailbreak=;;
         esac
-    elif [[ $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+    elif [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
+            4* ) ipsw_canjailbreak=1;;
             3.1.3 ) :;;
             3.1* )
                 ipsw_canjailbreak=1
                 warn "Jailbreak option might have issues on versions below 3.1.3. I recommend selecting 3.1.3 or newer instead"
             ;;
         esac
+    else
+        case $device_target_vers in
+            4.[10]* ) ipsw_nojailbreak_message;;
+        esac
     fi
 
     if [[ $device_target_powder == 1 ]]; then
-        ipsw_canjailbreak=
         case $device_target_vers in
-            4.2.1 | 4.1 | 4.0* | 3* ) :;;
-            * ) ipsw_canjailbreak=1;;
+            9* ) ipsw_canjailbreak=1;;
         esac
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
@@ -3988,10 +3992,10 @@ restore_futurerestore() {
                 opt="/usr/bin/python -m SimpleHTTPServer $port"
             fi
         else
-            if [[ -z $(which python3) ]]; then
+            if [[ -z $(command -v python3) ]]; then
                 error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
             fi
-            opt="$(which python3) -m http.server -b 127.0.0.1 $port"
+            opt="$(command -v python3) -m http.server -b 127.0.0.1 $port"
         fi
         log "Starting local server for firmware keys: $opt"
         $opt &
@@ -5243,7 +5247,7 @@ shsh_convert_onboard() {
         if [[ $blob == *"$bobi"* ]]; then
             log "Detected \"ibob\". Fixing... (This happens on DRA/powdersn0w downgraded devices)"
             rm -f dump.raw
-            printf "${blob%$bobi*}${blli}${blob##*$blli}" | xxd -r -p > dump.raw
+            printf "%s" "${blob%"$bobi"*}${blli}${blob##*"$blli"}" | xxd -r -p > dump.raw
         fi
         shsh_onboard_iboot="$(cat dump.raw | strings | grep iBoot | head -1)"
         log "Raw dump iBoot version: $shsh_onboard_iboot"
@@ -7223,6 +7227,15 @@ device_fourthree_step2() {
     fi
     print "* Make sure that the device is already restored with Step 1: Restore before proceeding."
     pause
+    print "* How much GB do you want to allocate/leave to the 6.1.3 data partition?"
+    print "* The rest of the space will be allocated to the 4.3.x system."
+    print "* If unsure, set it to 3 (this means 3 GB for 6.1.3, the rest for 4.3.x)."
+    local size
+    until [[ -n $size ]] && [ "$size" -eq "$size" ]; do
+        read -p "$(input 'iOS 6.1.3 Data Partition Size (in GB): ')" size
+    done
+    log "iOS 6.1.3 Data Partition Size: $size GB"
+    size=$((size*1024*1024*1024))
     device_iproxy
     device_sshpass alpine
     log "Transferring package files"
@@ -7230,7 +7243,7 @@ device_fourthree_step2() {
     log "Installing packages"
     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/dualbootstuff.tar -C /; dpkg -i /tmp/dualbootstuff/*.deb"
     log "Running TwistedMind2"
-    $ssh -p $ssh_port root@127.0.0.1 "rm /TwistedMind2*; TwistedMind2 -d1 3221225472 -s2 879124480 -d2 max"
+    $ssh -p $ssh_port root@127.0.0.1 "rm /TwistedMind2*; TwistedMind2 -d1 $size -s2 879124480 -d2 max"
     local tm2="$($ssh -p $ssh_port root@127.0.0.1 "ls /TwistedMind2*")"
     $scp -P $ssh_port root@127.0.0.1:$tm2 TwistedMind2
     kill $iproxy_pid
@@ -7332,7 +7345,7 @@ main() {
     version_check
 
     if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" ||
-          -z $zenity || ! $(which curl) ]]; then
+          -z $zenity || ! $(command -v curl) ]]; then
         install_depends
     fi
 
