@@ -5438,6 +5438,7 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 9 and newer."
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
+            print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
             if [[ $platform == "macos" ]]; then
                 menu_items=()
@@ -6119,6 +6120,7 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
+                ipsw_print_warnings
             else
                 print "* Select Target IPSW to continue"
             fi
@@ -6135,10 +6137,8 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
+                ipsw_print_warnings
                 menu_items+=("Select Target SHSH")
-                if [[ $device_type == "iPhone3,1" && $device_target_vers == "4.2.1" ]]; then
-                    warn "There is an issue with 4.2.1 restores for iPhone 4. The device will fail to boot after the restore."
-                fi
             else
                 print "* Select Target IPSW to continue"
             fi
@@ -6176,13 +6176,7 @@ menu_ipsw() {
             else
                 print "* Select $1 IPSW to continue"
             fi
-            if [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
-                warn "4.2.1 for $device_type will fail to restore with jailbreak/hacktivate option."
-                print "* It is recommended to select 4.1 or 3.1.3 instead."
-            elif [[ $device_type == "iPhone2,1" && $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
-                warn "3.0.x is for old bootrom devices only, it will fail to restore/boot if your device is not compatible."
-                print "* It is recommended to select 3.1 or newer instead."
-            fi
+            ipsw_print_warnings
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
@@ -6246,6 +6240,38 @@ menu_ipsw() {
             "Go Back" ) back=1;;
         esac
     done
+}
+
+ipsw_print_warnings() {
+    case $device_type in
+        "iPhone3,1" )
+            if [[ $device_target_vers == "4.2.1" ]]; then
+                warn "iOS 4.2.1 for iPhone3,1 will fail to boot after the restore."
+                print "* It is recommended to select another version instead."
+            fi
+        ;;
+        "iPod4,1" )
+            if [[ $device_target_vers == "4.2.1" ]]; then
+                warn "iOS 4.2.1 for iPod4,1 may fail to boot after the restore/jailbreak."
+                print "* It is recommended to select another version instead."
+            elif [[ $device_target_build == "8B118" ]]; then
+                warn "iOS 4.1 (8B118) for iPod4,1 may fail to boot after the restore/jailbreak."
+                print "* It is recommended to select 8B117 or another version instead."
+            fi
+        ;;
+        "iPhone2,1" )
+            if [[ $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
+                warn "3.0.x versions are for old bootrom devices only. It will fail to restore/boot if your device is not compatible."
+                print "* It is recommended to select 3.1 or newer instead."
+            fi
+        ;;
+        "iPhone1,2" )
+            if [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
+                warn "iOS 4.2.1 for iPhone1,2 will fail to restore with the jailbreak/hacktivate option."
+                print "* It is recommended to select 4.1 or 3.1.3 instead."
+            fi
+        ;;
+    esac
 }
 
 ipsw_version_set() {
@@ -7238,7 +7264,7 @@ device_fourthree_step2() {
     size=$((size*1024*1024*1024))
     device_iproxy
     device_sshpass alpine
-    log "Transferring package files"
+    log "Sending package files"
     $scp -P $ssh_port $jelbrek/dualbootstuff.tar root@127.0.0.1:/tmp
     log "Installing packages"
     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/dualbootstuff.tar -C /; dpkg -i /tmp/dualbootstuff/*.deb"
@@ -7281,13 +7307,16 @@ device_fourthree_step3() {
     $ssh -p $ssh_port root@127.0.0.1 "echo '/dev/disk0s3 / hfs rw 0 1' | tee /mnt1/private/etc/fstab; echo '/dev/disk0s4 /private/var hfs rw 0 2' | tee -a /mnt1/private/etc/fstab"
     log "Fixing system keybag"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
-    log "Unmounting filesystems"
-    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2"
-    log "Sending jailbreak tars"
+    log "Remounting data partition"
+    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2; mount_hfs /dev/disk0s4 /mnt1/private/var"
+    log "Installing jailbreak"
     $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/tmp
-    $scp -P $ssh_port $jelbrek/sshdeb.tar root@127.0.0.1:/tmp
-    log "Installing Cydia and bootstrap"
-    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt1/private/var; tar -xvf /tmp/freeze.tar -C /mnt1; tar -xvf /tmp/sshdeb.tar -C /mnt1"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/freeze.tar -C /mnt1"
+    if [[ $ipsw_openssh == 1 ]]; then
+        log "Installing OpenSSH"
+        $scp -P $ssh_port $jelbrek/sshdeb.tar root@127.0.0.1:/tmp
+        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/sshdeb.tar -C /mnt1"
+    fi
     log "Unmounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt1/private/var; umount /mnt1"
     log "Sending Kernelcache and LLB"
@@ -7302,10 +7331,9 @@ device_fourthree_app() {
         device_iproxy
         device_sshpass alpine
     fi
-    log "Sending app"
+    log "Installing FourThree app"
     $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
-    log "Installing app"
-    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; chmod 6755 /Applications/FourThree.app/FourThree; chmod 6755 /usr/bin/runasroot; chmod 6755 /Applications/FourThree.app/boot.sh"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 FourThree boot.sh /usr/bin/runasroot"
     log "Running uicache"
     $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
 }
