@@ -133,9 +133,9 @@ set_tool_paths() {
         # version check
         if [[ -n $UBUNTU_CODENAME ]]; then
             case $UBUNTU_CODENAME in
-                "jammy" | "kinetic" ) ubuntu_ver=22;;
-                "lunar" | "mantic" ) ubuntu_ver=23;;
-                "noble" ) ubuntu_ver=24;;
+                "jammy" | "kinetic"  ) ubuntu_ver=22;;
+                "lunar" | "mantic"   ) ubuntu_ver=23;;
+                "noble" | "oracular" ) ubuntu_ver=24;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
@@ -146,11 +146,10 @@ set_tool_paths() {
             fi
         elif [[ -e /etc/debian_version ]]; then
             debian_ver=$(cat /etc/debian_version)
-            if [[ $debian_ver == *"sid" || $debian_ver == "kali"* ]]; then
-                debian_ver="sid"
-            else
-                debian_ver="$(echo "$debian_ver" | cut -c -2)"
-            fi
+            case $debian_ver in
+                *"sid" | "kali"* ) debian_ver="sid";;
+                * ) debian_ver="$(echo "$debian_ver" | cut -c -2)";;
+            esac
         elif [[ $ID == "fedora" || $ID == "nobara" || $ID_LIKE == "fedora" ]]; then
             fedora_ver=$VERSION_ID
         fi
@@ -220,7 +219,7 @@ set_tool_paths() {
             irecovery2="sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
                 log "Running on platform: $platform ($platform_ver)"
-                error "Failed to find bin directory, found $(ls -x ../bin/linux) instead of $platform_arch." \
+                error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
             if [[ -z $device_disable_usbmuxd ]]; then
@@ -233,6 +232,9 @@ set_tool_paths() {
                 trap "clean_usbmuxd" EXIT
             fi
         fi
+
+    elif [[ $(uname -m) == "iP"* ]]; then
+        error "Running Legacy iOS Kit on iOS is not supported (yet)" "* Supported platforms: Linux, macOS"
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
@@ -255,8 +257,9 @@ set_tool_paths() {
             fi
             if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
                 local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
-                error_msg+=$'\n* Make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
                 error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+                error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
+                errpr_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
@@ -279,7 +282,7 @@ set_tool_paths() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo chmod +x $dir/*
         if [[ $? != 0 ]]; then
-            error "Failed setting up permissions, cannot continue."
+            error "Failed to set up execute permissions, cannot continue. Try to move Legacy iOS Kit somewhere else."
         fi
     else
         chmod +x $dir/*
@@ -5498,13 +5501,7 @@ menu_ipa() {
                     unzip -o -j $sideloader.zip $sideloader -d ../saved
                 fi
                 echo "$latest" > ../saved/Sideloader_version
-                log "Attempting idevicepair"
-                "$dir/idevicepair" pair
-                if [[ $? != 0 ]]; then
-                    log "Press \"Trust\" on the device before pressing Enter/Return."
-                    pause
-                fi
-                "$dir/idevicepair" pair
+                device_pair
                 log "Launching Dadoum Sideloader"
                 chmod +x ../saved/$sideloader
                 ../saved/$sideloader
@@ -6603,7 +6600,7 @@ menu_other() {
                             esac
                         ;;
                     esac
-                    menu_items+=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Connect to SSH")
+                    menu_items+=("Pair Device" "Shutdown Device" "Restart Device" "Enter Recovery Mode" "Connect to SSH")
                 ;;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
@@ -6653,6 +6650,7 @@ menu_other() {
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
             "Connect to SSH" ) mode="ssh";;
+            "Pair Device" ) device_pair;;
             "Enable disable-bbupdate flag" )
                 warn "This will enable the --disable-bbupdate flag."
                 print "* This will disable baseband update for custom IPSWs."
@@ -6693,7 +6691,19 @@ menu_other() {
     done
 }
 
+device_pair() {
+    log "Attempting idevicepair"
+    "$dir/idevicepair" pair
+    if [[ $? != 0 ]]; then
+        log "Press \"Trust\" on the device before pressing Enter/Return."
+        pause
+    fi
+    "$dir/idevicepair" pair
+}
+
 device_ssh() {
+    print "* Note: This is for connecting via SSH to devices that are already jailbroken and have OpenSSH installed."
+    print "* If this is not what you want, you might be looking for the \"SSH Ramdisk\" option instead."
     device_ssh_message
     device_iproxy
     device_sshpass
@@ -7208,12 +7218,7 @@ device_altserver_linux() {
     done
     export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
     altserver_linux="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
-    log "Attempting idevicepair"
-    "$dir/idevicepair" pair
-    if [[ $? != 0 ]]; then
-        log "Press \"Trust\" on the device before pressing Enter/Return."
-        pause
-    fi
+    device_pair
     log "Enter Apple ID details to continue."
     print "* Your Apple ID and password will only be sent to Apple servers."
     local apple_id
@@ -7225,8 +7230,6 @@ device_altserver_linux() {
         read -s -p "$(input 'Password: ')" apple_pass
     done
     echo
-    log "Attempting idevicepair"
-    "$dir/idevicepair" pair
     log "Running AltServer-Linux with given Apple ID details..."
     pushd ../saved >/dev/null
     $altserver_linux -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
@@ -7275,7 +7278,7 @@ device_fourthree_step2() {
     local tm2="$($ssh -p $ssh_port root@127.0.0.1 "ls /TwistedMind2*")"
     $scp -P $ssh_port root@127.0.0.1:$tm2 TwistedMind2
     kill $iproxy_pid
-    log "Rebooting to SSH ramdisk for next procedure"
+    log "Rebooting to SSH ramdisk for the next procedure"
     device_ramdisk TwistedMind2
     log "Done, proceed to Step 3 after the device boots"
 }
@@ -7331,7 +7334,8 @@ device_fourthree_step3() {
 device_fourthree_app() {
     if [[ $1 != "install" ]]; then
         device_iproxy
-        device_sshpass alpine
+        print "* The default root password is: alpine"
+        device_sshpass
     fi
     log "Installing FourThree app"
     $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
