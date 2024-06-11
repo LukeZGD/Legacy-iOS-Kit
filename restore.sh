@@ -259,7 +259,7 @@ set_tool_paths() {
                 local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
                 error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
                 error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
-                errpr_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
+                error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
