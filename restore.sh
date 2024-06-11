@@ -6722,7 +6722,9 @@ device_jailbreakrd() {
                 print "* Ignore the \"Error Code 1\" and \"Error Code 102\" errors, this is normal and part of the jailbreaking process."
                 pause
                 pushd ../resources/jailbreak/g1lbertJB >/dev/null
+                log "Copying freeze.tar to Cydia.tar"
                 cp ../freeze.tar payload/common/Cydia.tar
+                log "Running g1lbertJB..."
                 ../../$dir/gilbertjb
                 rm payload/common/Cydia.tar
                 popd >/dev/null
