@@ -7002,6 +7002,16 @@ device_activate() {
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
         fi
     fi
+    case $device_type in
+        iPod[123],1 )
+            if (( device_det <= 3 )); then
+                warn "Unfortunately ideviceactivation is broken for iPod touch devices on lower than iOS 4: https://github.com/libimobiledevice/libideviceactivation/issues/70"
+                print "* You may need to use iTunes/Finder to activate the device instead."
+                pause
+                log "Continuing anyway..."
+            fi
+        ;;
+    esac
     $ideviceactivation activate
     print "* If it returns an error, just try again."
 }
