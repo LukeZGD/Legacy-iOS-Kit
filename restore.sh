@@ -996,6 +996,42 @@ device_find_all() {
     esac
 }
 
+device_dfuhelper2() {
+    local top="SIDE"
+    if [[ $device_type == "iPad"* ]]; then
+        top="TOP"
+    fi
+    echo
+    print "* Press the VOL UP button."
+    sleep 1
+    print "* Press the VOL DOWN button."
+    sleep 1
+    print "* Press and hold the $top button."
+    for i in {10..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
+    for i in {05..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
+    for i in {08..01}; do
+        echo -n "$i "
+        device_find_all $1
+        opt=$?
+        if [[ $opt == 1 ]]; then
+            echo -e "\n$(log 'Found device in DFU mode.')"
+            device_mode="DFU"
+            return
+        fi
+        sleep 1
+    done
+    echo
+    device_find_mode DFU
+}
+
 device_dfuhelper() {
     local opt
     local rec="recovery mode "
@@ -1024,6 +1060,10 @@ device_dfuhelper() {
         echo -n "$i "
         sleep 1
     done
+    case $device_type in
+        iPhone1,* | iPad1[12]* ) :;;
+        iPhone1* | iPad[81]* ) device_dfuhelper2; return;;
+    esac
     local top="TOP"
     local home="HOME"
     case $device_type in
@@ -1742,10 +1782,13 @@ ipsw_nojailbreak_message() {
     case $device_type in
         iPhone[23],1 ) hac=" (and hacktivate)"; tohac=1;;
     esac
-    log "Jailbreak option is not available, but you may jailbreak$hac later after the restore"
+    log "Jailbreak option is not available for this version. You may jailbreak$hac later after the restore"
     print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
     if [[ $tohac == 1 ]]; then
         print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
+    fi
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        warn "Jailbreak flag detected, jailbreak option enabled by user."
     fi
 }
 
@@ -6081,6 +6124,8 @@ menu_ipsw() {
                         if (( device_proc >= 7 )); then
                             print "* If this is an OTA/onboard blob, it should be fine to use for restoring"
                             print "* If the restore does not work here, use futurerestore manually"
+                        elif (( device_proc < 5 )); then
+                            warn "Validation might be a false negative for A4 and older devices."
                         fi
                         echo
                     fi
@@ -6519,6 +6564,9 @@ menu_shsh_browse() {
     fi
     if [[ $shsh_validate != 0 ]]; then
         warn "Validation failed. Did you select the correct IPSW/SHSH?"
+        if (( device_proc < 5 )); then
+            warn "Validation might be a false negative for A4 and older devices."
+        fi
         pause
     fi
     shsh_path="$newpath"
@@ -6567,7 +6615,7 @@ menu_other() {
                 if [[ $device_type != "iPod2,1" ]]; then
                     menu_items+=("Just Boot")
                 fi
-            else
+            elif (( device_proc <= 10 )); then
                 menu_items+=("Enter pwnDFU Mode")
             fi
             if [[ $device_mode == "Normal" ]]; then
@@ -6605,7 +6653,7 @@ menu_other() {
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
             if [[ $device_mode != "DFU" ]]; then
-                menu_items+=("Enter DFU Mode")
+                menu_items+=("DFU Mode Helper")
             fi
         fi
         if (( device_proc < 7 )); then
@@ -6619,6 +6667,7 @@ menu_other() {
             if (( device_proc >= 5 )); then
                 menu_items+=("Enable skip-ibss flag")
             fi
+            menu_items+=("Enable jailbreak flag")
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         menu_print_info
@@ -6644,7 +6693,7 @@ menu_other() {
             "Activation Records" ) mode="actrec";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
-            "Enter DFU Mode" ) mode="enterdfu";;
+            "DFU Mode Helper" ) mode="enterdfu";;
             "Just Boot" ) mode="justboot";;
             "Get iOS Version" ) mode="getversion";;
             "Shutdown Device" ) mode="shutdown";;
@@ -6655,7 +6704,7 @@ menu_other() {
                 warn "This will enable the --disable-bbupdate flag."
                 print "* This will disable baseband update for custom IPSWs."
                 print "* This will enable usage of dumped baseband and stitch to IPSW."
-                print "* This applies to the ff: iPhone 4S, 5, 5C, iPad 4, mini 1"
+                print "* This applies to the following: iPhone 4S, 5, 5C, iPad 4, mini 1"
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
                 read -p "$(input 'Do you want to enable the disable-bbupdate flag? (y/N): ')" opt
@@ -6683,6 +6732,20 @@ menu_other() {
                 read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
                     device_skipibss=1
+                    back=1
+                fi
+            ;;
+            "Enable jailbreak flag" )
+                warn "This will enable the --jailbreak flag."
+                print "* This will enable the jailbreak option for the custom IPSW."
+                print "* This is mostly only useful for 3.1.3-4.1, where jailbreak option is disabled in most cases."
+                print "* It is disabled for these versions because of some issues with the custom IPSW jailbreak."
+                print "* The recommended method is to instead jailbreak after the restore."
+                print "* Do not enable this if you do not know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the jailbreak flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    ipsw_jailbreak=1
                     back=1
                 fi
             ;;
