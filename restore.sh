@@ -338,7 +338,7 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -5038,8 +5038,21 @@ device_ramdisk() {
         "setnvram" )
             log "Sending commands for NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
-            if [[ $device_type == "iPhone3,3" && $rec == 2 ]]; then
-                $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg"
+            if [[ $rec == 2 ]]; then
+                case $device_type in
+                    iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg";;
+                    iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
+                    iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
+                    iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
+                    iPhone5*  )
+                        read -p "$(input "Select Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
+                        if [[ $opt != 'N' && $opt != 'n' ]]; then
+                            $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
+                        else
+                            $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
+                        fi
+                    ;;
+                esac
             fi
             $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             log "Done, your device should reboot now"
@@ -6622,7 +6635,7 @@ menu_other() {
                 menu_items+=("Activation Records")
             fi
             case $device_type in
-                iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
+                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
             if (( device_proc < 11 )) && [[ $device_latest_vers != "16"* ]]; then
@@ -6950,9 +6963,10 @@ device_dumpbb() {
     local root="/"
     local root2="/"
     local tmp="/tmp"
-    if [[ $device_type == "iPhone4,1" ]]; then
-        bb2="Trek"
-    fi
+    case $device_type in
+        iPhone4,1 ) bb2="Trek";;
+        iPhone5,[34] ) bb2="Mav7Mav8";;
+    esac
     if [[ $1 == "rd" ]]; then
         root="/mnt1/"
         root2=
@@ -7449,7 +7463,7 @@ main() {
     version_check
 
     if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" ||
-          -z $zenity || ! $(command -v curl) ]]; then
+          -z $zenity || ! $(command -v curl) || ! $(command -v xxd) ]]; then
         install_depends
     fi
 
