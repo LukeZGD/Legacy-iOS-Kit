@@ -6635,7 +6635,7 @@ menu_other() {
                 menu_items+=("Activation Records")
             fi
             case $device_type in
-                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod3,1 ) menu_items+=("Disable/Enable Exploit");;
+                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
             if (( device_proc < 11 )) && [[ $device_latest_vers != "16"* ]]; then
