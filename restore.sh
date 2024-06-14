@@ -1718,8 +1718,8 @@ patch_ibss() {
     fi
     download_comp $build_id iBSS
     device_fw_key_check temp $build_id
-    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBSS") | .iv')
+    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBSS") | .key')
     log "Decrypting iBSS..."
     "$dir/xpwntool" iBSS iBSS.dec -iv $iv -k $key
     log "Patching iBSS..."
@@ -1755,8 +1755,8 @@ patch_ibec() {
     download_comp $build_id iBEC
     device_fw_key_check temp $build_id
     local name="iBEC"
-    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
-    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
+    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBEC") | .iv')
+    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBEC") | .key')
     local address="0x80000000"
     if [[ $device_proc == 4 ]]; then
         address="0x40000000"
@@ -2148,9 +2148,9 @@ ipsw_prepare_logos_convert() {
     local key
     local name
     if [[ -n $ipsw_customlogo ]]; then
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .key')
-        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .key')
+        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         logoname="$name"
         log "Converting custom logo"
         unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
@@ -2172,9 +2172,9 @@ ipsw_prepare_logos_convert() {
         mv logo.img3 $all_flash/$name
     fi
     if [[ -n $ipsw_customrecovery ]]; then
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("RecoveryMode")) | .key')
-        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RecoveryMode") | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RecoveryMode") | .key')
+        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RecoveryMode") | .filename')
         recmname="$name"
         log "Converting custom recovery"
         unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
@@ -2334,14 +2334,14 @@ ipsw_prepare_fourthree() {
     unzip -o -j "$ipsw_path.ipsw" $all_flash/manifest -d $all_flash
     unzip -o -j temp.ipsw Downgrade/RestoreDeviceTree
     log "RestoreDeviceTree"
-    iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .iv')
-    key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("DeviceTree")) | .key')
+    iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "DeviceTree") | .iv')
+    key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "DeviceTree") | .key')
     "$dir/xpwntool" RestoreDeviceTree RestoreDeviceTree.dec -iv $iv -k $key -decrypt
     $bspatch RestoreDeviceTree.dec Downgrade/RestoreDeviceTree $bpatch/RestoreDeviceTree.patch
     for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         path="$all_flash/"
         log "$getcomp"
         if [[ $vers == "$device_base_vers" ]]; then
@@ -2438,9 +2438,9 @@ ipsw_prepare_keys() {
     if [[ $2 == "base" ]]; then
         fw_key="$device_fw_key_base"
     fi
-    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-    local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-    local key=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+    local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+    local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
 
     case $comp in
         "iBSS" | "iBEC" )
@@ -2506,7 +2506,7 @@ ipsw_prepare_paths() {
     if [[ $2 == "base" ]]; then
         fw_key="$device_fw_key_base"
     fi
-    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
+    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
     local str="<key>$comp</key><dict><key>File</key><string>$all_flash/"
     local str2
     local logostuff
@@ -2554,8 +2554,8 @@ ipsw_prepare_paths() {
     str+="</string>"
 
     if [[ $comp == "NewiBoot" ]]; then
-        local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        local key=$(echo $fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         str+="<key>IV</key><string>$iv</string><key>Key</key><string>$key</string>"
     elif [[ $comp == "manifest" ]]; then
         str+="<key>manifest</key><string>manifest</string>"
@@ -2668,9 +2668,9 @@ ipsw_prepare_bundle() {
     log "Generating firmware bundle for $device_type-$vers ($build) $1..."
     unzip -o -j "$ipsw_p.ipsw" $all_flash/manifest
     mv manifest $FirmwareBundle/
-    local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
-    local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .iv')
-    local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .key')
+    local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
+    local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     unzip -o -j "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
@@ -3131,9 +3131,9 @@ ipsw_bbreplace() {
 
 patch_iboot() {
     device_fw_key_check
-    local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .filename')
-    local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .iv')
-    local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBoot")) | .key')
+    local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .filename')
+    local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .iv')
+    local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .key')
     local rsa="--rsa"
     log "Patch iBoot: $*"
     if [[ $1 == "--logo" ]]; then
@@ -3199,9 +3199,9 @@ ipsw_prepare_ios4multipart() {
     log "Getting $vers restore components"
     comps+=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
     for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" ) path="$all_flash/";;
@@ -3363,9 +3363,9 @@ ipsw_prepare_ios4multipart() {
     device_fw_key_check temp $build
     log "Getting $vers restore components"
     for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" ) path="$all_flash/";;
@@ -3456,9 +3456,9 @@ ipsw_prepare_tethered() {
 
     log "Extract RestoreRamdisk and options.plist"
     device_fw_key_check temp $device_target_build
-    name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .filename')
-    iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .iv')
-    key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image | startswith("RestoreRamdisk")) | .key')
+    name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
+    key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     mv "$ipsw_custom.ipsw" temp.ipsw
     unzip -o -j temp.ipsw $name
     mv $name ramdisk.orig
@@ -3484,16 +3484,16 @@ ipsw_prepare_ios4patches() {
     mkdir -p $all_flash Firmware/dfu
     log "Patch iBSS"
     unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
-    local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .iv')
-    local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBSS")) | .key')
+    local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBSS") | .iv')
+    local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBSS") | .key')
     mv iBSS.${device_model}ap.RELEASE.dfu iBSS.orig
     "$dir/xpwntool" iBSS.orig iBSS.dec -iv $ibss_iv -k $ibss_key
     "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
     "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
     log "Patch iBEC"
     unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
-    local ibec_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .iv')
-    local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("iBEC")) | .key')
+    local ibec_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBEC") | .iv')
+    local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBEC") | .key')
     mv iBEC.${device_model}ap.RELEASE.dfu iBEC.orig
     "$dir/xpwntool" iBEC.orig iBEC.dec -iv $ibec_iv -k $ibec_key
     "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
@@ -3570,7 +3570,7 @@ ipsw_prepare_ios4powder() {
         ipsw_prepare_logos_add
     else
         log "Patch AppleLogo"
-        local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         unzip -o -j temp.ipsw $all_flash/$applelogo_name
         echo "0000010: 3467" | xxd -r - $applelogo_name
         echo "0000020: 3467" | xxd -r - $applelogo_name
@@ -4532,13 +4532,13 @@ device_ramdisk64() {
 
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
-            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
-            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
-            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
+            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
+            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
+            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
         fi
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
@@ -4716,9 +4716,9 @@ device_ramdisk() {
     ipsw_get_url $build_id
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .filename')
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | .key')
+        name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" )
@@ -7192,7 +7192,7 @@ restore_dfuipsw() {
     else
         cp $ipsw_path.ipsw temp.ipsw
         device_fw_key_check
-        local applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("AppleLogo")) | .filename')
+        local applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         local llb="LLB.${device_model}ap.RELEASE.img3"
         local all="Firmware/all_flash"
         if [[ $device_latest_vers == "10"* ]]; then
