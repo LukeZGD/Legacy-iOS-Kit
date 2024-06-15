@@ -36,6 +36,7 @@
 - The latest baseband will be flashed for A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
+- [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase device
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -130,7 +131,7 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite) - dora2ios (used on macOS); LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
-- [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
+- [gaster](https://github.com/verygenericname/gaster) - 0x7ff; verygenericname/Nathan fork
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/LukeeGD/libimobiledevice) - libimobiledevice
