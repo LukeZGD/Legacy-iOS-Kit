@@ -133,14 +133,15 @@
 - [gaster](https://github.com/0x7ff/gaster/) - 0x7ff
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
-- [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice) - libimobiledevice
-- [libirecovery](https://github.com/libimobiledevice/libirecovery) - libimobiledevice
-- [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
-- [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
+- [libimobiledevice](https://github.com/LukeeGD/libimobiledevice) - libimobiledevice
+- [libirecovery](https://github.com/LukeeGD/libirecovery) - libimobiledevice
+- [libideviceactivation](https://github.com/LukeeGD/libideviceactivation) - libimobiledevice
+- [ideviceinstaller](https://github.com/LukeeGD/ideviceinstaller) - libimobiledevice
+- [ifuse](https://github.com/LukeeGD/ifuse) - libimobiledevice
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
 - [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux)
-- [tsschecker](https://github.com/tihmstar/tsschecker) - tihmstar; [1Conan fork](https://github.com/1Conan/tsschecker) v413
+- [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices

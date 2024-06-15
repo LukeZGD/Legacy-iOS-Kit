@@ -168,7 +168,10 @@ set_tool_paths() {
         else
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
+        bspatch="$dir/bspatch"
+        ifuse="$(command -v ifuse)"
         PlistBuddy="$dir/PlistBuddy"
+        sha1sum="$(command -v sha1sum)"
         zenity="$(command -v zenity)"
 
         # live cd/usb check
@@ -264,9 +267,11 @@ set_tool_paths() {
             fi
         fi
         bspatch="$(command -v bspatch)"
+        ifuse="$dir/ifuse"
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
+        zenity="$dir/zenity"
 
         # kill macos daemons
         killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -288,28 +293,17 @@ set_tool_paths() {
         chmod +x $dir/*
     fi
 
-    ideviceenterrecovery="$dir/ideviceenterrecovery"
-    ideviceinfo="$dir/ideviceinfo"
-    iproxy="$dir/iproxy"
-    irecovery+="$dir/irecovery"
-    if [[ $platform != "macos" ]]; then
-        bspatch="$dir/bspatch"
-        sha1sum="$(command -v sha1sum)"
-    fi
-    ideviceactivation="$(command -v ideviceactivation 2>/dev/null)"
-    if [[ -z $ideviceactivation ]]; then
-        ideviceactivation="$dir/ideviceactivation"
-    fi
-    jq="$dir/jq"
-    if [[ $platform != "linux" ]]; then
-        zenity="$dir/zenity"
-    fi
     futurerestore+="$dir/futurerestore"
     gaster+="$dir/gaster"
+    ideviceactivation="$dir/ideviceactivation"
+    ideviceenterrecovery="$dir/ideviceenterrecovery"
+    ideviceinfo="$dir/ideviceinfo"
     idevicerestore+="$dir/idevicerestore"
-    idevicererestore+="$dir/idevicererestore"
+    iproxy="$dir/iproxy"
     ipwnder+="$dir/ipwnder"
+    irecovery+="$dir/irecovery"
     irecovery2+="$dir/irecovery2"
+    jq="$dir/jq"
 
     cp ../resources/ssh_config .
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
@@ -331,29 +325,29 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git ifuse libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
+        sudo dnf install -y ca-certificates git ifuse libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
         sudo dnf group install -y "C Development Tools and Libraries"
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
+        sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
         sudo zypper -n install -t pattern devel_basis
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
@@ -5431,7 +5425,7 @@ menu_main() {
                     [1289]* ) menu_items+=("Sideload IPA");;
                 esac
             fi
-            menu_items+=("Install IPA (AppSync)")
+            menu_items+=("App Management" "Data Management")
         fi
         case $device_type in
             iPad2,[123] ) menu_items+=("FourThree Utility");;
@@ -5445,10 +5439,109 @@ menu_main() {
             "Restore/Downgrade" ) menu_restore;;
             "Jailbreak Device" ) mode="jailbreak";;
             "Save SHSH Blobs" ) menu_shsh;;
-            "Install IPA (AppSync)" | "Sideload IPA" ) menu_ipa "$selected";;
+            "Sideload IPA" ) menu_ipa "$selected";;
+            "App Management" ) menu_appmanage;;
+            "Data Management" ) menu_datamanage;;
             "Other Utilities" ) menu_other;;
             "FourThree Utility" ) menu_fourthree;;
             "Exit" ) mode="exit";;
+        esac
+    done
+}
+
+menu_appmanage() {
+    local menu_items
+    local selected
+    local back
+
+    menu_print_info
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
+        echo
+        print " > Main Menu > App Management"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Install IPA (AppSync)" ) menu_ipa "$selected";;
+            "List User Apps"   ) "$dir/ideviceinstaller" list --user;;
+            "List System Apps" ) "$dir/ideviceinstaller" list --system;;
+            "List All Apps"    ) "$dir/ideviceinstaller" list --all;;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_datamanage() {
+    local menu_items
+    local selected
+    local back
+
+    menu_print_info
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Erase All Content and Settings" "Go Back")
+        print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
+        print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
+        print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
+        print "* Note 3: Limited support for backups. Better use iCloud Backups instead"
+        print "* Note 4: Backups do not include apps. Only some app data and settings"
+        print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
+        echo
+        print " > Main Menu > Data Management"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Go Back" ) back=1;;
+            *"ount"*  ) :;;
+            * ) device_pair;;
+        esac
+        case $selected in
+            "Backup"  ) mode="device_backup_create";;
+            "Restore" ) menu_backup_restore;;
+            "Erase All Content and Settings" ) mode="device_erase";;
+            "Mount Device" ) mkdir ../mount 2>/dev/null; $ifuse ../mount; log "Device (Media) should now be mounted on mount folder";;
+            "Mount Device (Raw File System)" ) mkdir ../mount 2>/dev/null; $ifuse --root ../mount; log "Device (root) should now be mounted on mount folder";;
+            "Unmount Device" ) log "Attempting to umount device from mount folder"; umount ../mount;;
+        esac
+    done
+}
+
+menu_backup_restore() {
+    local menu_items
+    local selected
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_print_info
+        local backupdir="../saved/backups/${device_ecid}_${device_type}"
+        if [[ ! -d $backupdir ]]; then
+            mkdir -p $backupdir
+        fi
+        local backups=($(ls $backupdir))
+        if [[ -z "${backups[*]}" ]]; then
+            print "* No backups (saved/backups)"
+        else
+            print "* Backups list (saved/backups):"
+            for b in "${backups[@]}"; do
+                menu_items+=("$(basename $b)")
+            done
+        fi
+        menu_items+=("Go Back")
+        echo
+        print " > Main Menu > Data Management > Restore"
+        input "Select option to restore:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Go Back" ) back=1;;
+            * ) device_backup="$selected"; mode="device_backup_restore";;
         esac
     done
 }
@@ -7428,6 +7521,38 @@ device_fourthree_app() {
     $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
 }
 
+device_backup_create() {
+    device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
+    mkdir -p $device_backup
+    print "* A backup of your device will be created using idevicebackup2. Please see the notes above."
+    pause
+    pushd "$(dirname $device_backup)"
+    "../../$dir/idevicebackup2" backup --full "$(basename $device_backup)"
+    popd
+}
+
+device_backup_restore() {
+    print "* The selected backup $device_backup will be restored to the device."
+    pause
+    device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
+    pushd "$(dirname $device_backup)"
+    "../../$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
+    popd
+}
+
+device_erase() {
+    print "* You have selected the option to Erase All Content and Settings."
+    print "* As the option says, it will erase all data on the device and reset it to factory settings."
+    print "* By the end of the operation, the device will be back on the setup or activation screen."
+    print "* If you want to proceed, please type the following: Yes, do as I say"
+    read -p "$(input 'Do you want to proceed? ')" opt
+    if [[ $opt != "Yes, do as I say" ]]; then
+        error "Not proceeding."
+    fi
+    log "Proceeding."
+    "$dir/idevicebackup2" erase
+}
+
 main() {
     clear
     print " *** Legacy iOS Kit ***"
@@ -7529,9 +7654,7 @@ main() {
         "restore-latest" ) restore_latest64;;
         "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
         "ssh" ) device_ssh;;
-        "device_fourthree_step2" ) device_fourthree_step2;;
-        "device_fourthree_step3" ) device_fourthree_step3;;
-        "device_fourthree_app" ) device_fourthree_app;;
+        "device"* ) $mode;;
         * ) :;;
     esac
 
