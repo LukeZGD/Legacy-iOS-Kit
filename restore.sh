@@ -4437,20 +4437,29 @@ ipsw_prepare() {
     esac
 }
 
-device_remove4() {
-    local rec
+menu_remove4() {
+    local menu_items
     local selected
-    input "Select option:"
-    select opt in "Disable Exploit" "Enable Exploit" "Go Back"; do
-        selected="$opt"
-        break
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Disable Exploit" "Enable Exploit" "Go Back")
+        menu_print_info
+        print " > Main Menu > Other Utilities > Disable/Enable Exploit"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Disable Exploit" ) rec=0;;
+            "Enable Exploit" ) rec=2;;
+        esac
+        case $selected in
+            "Go Back" ) back=1;;
+            * ) mode="remove4";;
+        esac
     done
-    case $selected in
-        "Disable Exploit" ) rec=0;;
-        "Enable Exploit" ) rec=2;;
-        * ) return;;
-    esac
-    device_ramdisk setnvram $rec
 }
 
 device_send_rdtar() {
@@ -5437,7 +5446,7 @@ menu_main() {
         done
         case $selected in
             "Restore/Downgrade" ) menu_restore;;
-            "Jailbreak Device" ) mode="jailbreak";;
+            "Jailbreak Device" ) mode="device_jailbreak";;
             "Save SHSH Blobs" ) menu_shsh;;
             "Sideload IPA" ) menu_ipa "$selected";;
             "App Management" ) menu_appmanage;;
@@ -5618,9 +5627,9 @@ menu_ipa() {
             "Select IPA" ) menu_ipa_browse;;
             "Install IPA" )
                 if [[ $1 == "Install"* ]]; then
-                    mode="ideviceinstaller"
+                    mode="device_ideviceinstaller"
                 else
-                    mode="altserver_linux"
+                    mode="device_altserver_linux"
                 fi
             ;;
             "Use Dadoum Sideloader" )
@@ -6784,27 +6793,27 @@ menu_other() {
             break
         done
         case $selected in
-            "Hacktivate Device" ) mode="hacktivate";;
-            "Revert Hacktivation" ) mode="reverthacktivate";;
+            "Hacktivate Device" ) mode="device_hacktivate";;
+            "Revert Hacktivation" ) mode="device_reverthacktivate";;
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Enter kDFU Mode" ) mode="kdfu";;
-            "Disable/Enable Exploit" ) mode="remove4";;
-            "SSH Ramdisk" ) mode="ramdisk4";;
+            "Disable/Enable Exploit" ) menu_remove4;;
+            "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
             "(Re-)Install Dependencies" ) install_depends;;
-            "Attempt Activation" ) mode="activate";;
-            "Install alloc8 Exploit" ) mode="alloc8";;
+            "Attempt Activation" ) mode="device_activate";;
+            "Install alloc8 Exploit" ) mode="device_alloc8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "DFU Mode Helper" ) mode="enterdfu";;
-            "Just Boot" ) mode="justboot";;
+            "Just Boot" ) mode="device_justboot";;
             "Get iOS Version" ) mode="getversion";;
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
-            "Connect to SSH" ) mode="ssh";;
+            "Connect to SSH" ) mode="device_ssh";;
             "Pair Device" ) device_pair;;
             "Enable disable-bbupdate flag" )
                 warn "This will enable the --disable-bbupdate flag."
@@ -6890,7 +6899,7 @@ device_alloc8() {
     print "* For more troubleshooting, go to: https://github.com/axi0mX/ipwndfu/blob/master/JAILBREAK-GUIDE.md"
 }
 
-device_jailbreakrd() {
+device_jailbreak() {
     if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
     else
@@ -7627,33 +7636,23 @@ main() {
         ;;
         "save-ota-blobs" ) shsh_save;;
         "kdfu" ) device_enter_mode kDFU;;
-        "remove4" ) device_remove4;;
-        "ramdisk4" ) device_enter_ramdisk;;
         "ramdisknvram" ) device_ramdisk clearnvram;;
         "pwned-ibss" ) device_enter_mode pwnDFU;;
         "save-onboard-blobs" ) shsh_save_onboard;;
         "save-onboard-dump" ) shsh_save_onboard dump;;
         "save-cydia-blobs" ) shsh_save_cydia;;
-        "activate" ) device_activate;;
-        "alloc8" ) device_alloc8;;
-        "jailbreak" ) device_jailbreakrd;;
-        "customipsw" ) restore_customipsw;;
         "enterrecovery" ) device_enter_mode Recovery;;
         "exitrecovery" ) $irecovery -n;;
         "enterdfu" ) device_enter_mode DFU;;
         "dfuipsw" ) restore_dfuipsw;;
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
-        "justboot" ) device_justboot;;
+        "customipsw" ) restore_customipsw;;
         "getversion" ) device_ramdisk getversion;;
         "shutdown" ) "$dir/idevicediagnostics" shutdown;;
         "restart" ) "$dir/idevicediagnostics" restart;;
-        "ideviceinstaller" ) device_ideviceinstaller;;
-        "altserver_linux" ) device_altserver_linux;;
-        "hacktivate" ) device_hacktivate;;
-        "reverthacktivate" ) device_reverthacktivate;;
         "restore-latest" ) restore_latest64;;
         "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
-        "ssh" ) device_ssh;;
+        "remove4" ) device_ramdisk setnvram $rec;;
         "device"* ) $mode;;
         * ) :;;
     esac
