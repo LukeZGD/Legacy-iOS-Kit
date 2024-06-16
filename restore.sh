@@ -103,7 +103,7 @@ set_tool_paths() {
     bspatch, jq, scp, ssh, sha1sum (for macos: shasum -a 1), zenity
 
     these ones "need" sudo for linux arm, not for others:
-    futurerestore, gaster, idevicerestore, idevicererestore, ipwnder, irecovery
+    futurerestore, gaster, idevicerestore, ipwnder, irecovery
 
     tools set here will be executed using:
     $name_of_tool
@@ -216,7 +216,6 @@ set_tool_paths() {
             futurerestore="sudo "
             gaster="sudo "
             idevicerestore="sudo "
-            idevicererestore="sudo "
             ipwnder="sudo "
             irecovery="sudo "
             irecovery2="sudo "
@@ -986,7 +985,7 @@ device_find_all() {
         1227 ) return 1;; # dfu
         1281 ) return 2;; # recovery
         1222 ) return 3;; # wtf
-        12[9a][0123456789abc] ) return 4;; # normal
+        12[9a][0123456789abcdef] ) return 4;; # normal
     esac
 }
 
@@ -7500,6 +7499,10 @@ device_fourthree_step3() {
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
     log "Remounting data partition"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2; mount_hfs /dev/disk0s4 /mnt1/private/var"
+    # idk if copying activation records actually works, probably not
+    log "Copying activation records"
+    local dmp="private/var/root/Library/Lockdown"
+    $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/$dmp; cp -Rv /$dmp/* /mnt1/$dmp"
     log "Installing jailbreak"
     $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/tmp
     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/freeze.tar -C /mnt1"
