@@ -4581,6 +4581,7 @@ device_ramdisk64() {
         if [[ $device_type == "iPad5"* ]]; then
             ver="14"
         fi
+        device_ramdiskver="$ver"
         print "* Version Selection"
         print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
         print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
@@ -4946,22 +4947,21 @@ device_ramdisk() {
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
-        sleep 2
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
     elif (( device_proc < 5 )) && [[ $device_pwnrec != 1 ]]; then
         log "Sending iBSS..."
         $irecovery -f $ramdisk_path/iBSS
-        sleep 2
     fi
+    sleep 2
     if [[ $build_id != "7"* && $build_id != "8"* ]]; then
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
         if [[ $device_pwnrec == 1 ]]; then
             $irecovery -c "go"
-            sleep 3
         fi
     fi
+    sleep 3
     device_find_mode Recovery
     if [[ $1 != "justboot" ]]; then
         log "Sending ramdisk..."
@@ -5244,7 +5244,24 @@ menu_ramdisk() {
             "exit" ) loop=1;;
             "dump-blobs" )
                 local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
+                if [[ $1 == "12"* ]]; then
+                    warn "Dumping blobs may fail on iOS 8 ramdisk."
+                    print "* It is recommended to do this on iOS $device_ramdiskver ramdisk instead."
+                    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                        continue
+                    fi
+                fi
+                log "Attempting to dump blobs"
                 $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+                if [[ ! -s dump.raw ]]; then
+                    log "Failed with rdisk1, trying again with rdisk2..."
+                    $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk2" | dd of=dump.raw bs=256 count=$((0x4000))
+                    if [[ ! -s dump.raw ]]; then
+                        warn "Failed with rdisk2, cannot continue."
+                        continue
+                    fi
+                fi
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 log "Onboard blobs should be dumped to $shsh"
             ;;
@@ -5261,7 +5278,10 @@ menu_ramdisk() {
             "trollstore" )
                 print "* Make sure that your device is on iOS 14 or 15 before continuing."
                 print "* If your device is on iOS 13 or below, TrollStore will NOT work."
-                pause
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    continue
+                fi
                 log "Checking for latest TrollStore"
                 local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version)"
@@ -5294,7 +5314,10 @@ menu_ramdisk() {
                     print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
                 fi
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
-                pause
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    continue
+                fi
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
@@ -5358,8 +5381,8 @@ shsh_save_onboard() {
     $irecovery -f pwnediBEC.dfu
     if [[ $device_pwnrec == 1 ]]; then
         $irecovery -c "go"
-        sleep 3
     fi
+    sleep 3
     device_find_mode Recovery
     log "Dumping raw dump now"
     (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
@@ -6328,7 +6351,7 @@ menu_ipsw() {
                     else
                         warn "Selected SHSH file failed validation, proceed with caution"
                         if (( device_proc >= 7 )); then
-                            print "* If this is an OTA/onboard blob, it should be fine to use for restoring"
+                            print "* If this is an OTA/onboard/factory blob, it may be fine to use for restoring"
                             print "* If the restore does not work here, use futurerestore manually"
                         elif (( device_proc < 5 )); then
                             warn "Validation might be a false negative for A4 and older devices."
