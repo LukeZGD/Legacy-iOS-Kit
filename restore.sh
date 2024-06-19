@@ -331,7 +331,7 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git ifuse libimobiledevice6 libirecovery-common libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git ifuse libimobiledevice6 libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -1780,9 +1780,6 @@ ipsw_nojailbreak_message() {
     if [[ $tohac == 1 ]]; then
         print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
     fi
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        warn "Jailbreak flag detected, jailbreak option enabled by user."
-    fi
 }
 
 ipsw_preference_set() {
@@ -1838,14 +1835,16 @@ ipsw_preference_set() {
         return
     fi
 
-    if [[ $ipsw_fourthree == 1 ]]; then
-        ipsw_jailbreak=1
-    elif [[ $ipsw_isbeta == 1 ]]; then
+    if [[ $ipsw_isbeta == 1 ]]; then
         warn "iOS beta detected, disabling jailbreak option"
         ipsw_canjailbreak=
     fi
 
-    if [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
+    if [[ $ipsw_fourthree == 1 ]]; then
+        ipsw_jailbreak=1
+    elif [[ $ipsw_jailbreak == 1 ]]; then
+        warn "Jailbreak flag detected, jailbreak option enabled by user."
+    elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
@@ -5577,14 +5576,14 @@ menu_datamanage() {
     local back
 
     menu_print_info
+    print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
+    print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
+    print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
+    print "* Note 3: Limited support for backups. Better use iCloud Backups instead"
+    print "* Note 4: Backups do not include apps. Only some app data and settings"
+    print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Erase All Content and Settings" "Go Back")
-        print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
-        print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
-        print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
-        print "* Note 3: Limited support for backups. Better use iCloud Backups instead"
-        print "* Note 4: Backups do not include apps. Only some app data and settings"
-        print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
         echo
         print " > Main Menu > Data Management"
         input "Select an option:"
@@ -5655,6 +5654,10 @@ menu_fourthree() {
         menu_print_info
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
+        if [[ $device_type != "iPad2,1" ]]; then
+            warn "There may be issues for cellular devices (including activation), proceed with caution"
+            print "* Related discussion: https://github.com/LukeZGD/Legacy-iOS-Kit/discussions/509"
+        fi
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
@@ -6841,13 +6844,10 @@ menu_other() {
                             case $device_type in
                                 iPhone1* )
                                     case $device_vers in
-                                        3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device");;
+                                        3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                                     esac
                                 ;;
-                                iPhone[23],1 ) menu_items+=("Hacktivate Device");;
-                            esac
-                            case $device_type in
-                                iPhone1* | iPhone[23],1 ) menu_items+=("Revert Hacktivation");;
+                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                             esac
                         ;;
                     esac
@@ -6942,7 +6942,7 @@ menu_other() {
                 warn "This will enable the --jailbreak flag."
                 print "* This will enable the jailbreak option for the custom IPSW."
                 print "* This is mostly only useful for 3.1.3-4.1, where jailbreak option is disabled in most cases."
-                print "* It is disabled for these versions because of some issues with the custom IPSW jailbreak."
+                print "* It is disabled for those versions because of some issues with the custom IPSW jailbreak."
                 print "* The recommended method is to instead jailbreak after the restore."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
@@ -7001,7 +7001,7 @@ device_jailbreak() {
                 log "Copying freeze.tar to Cydia.tar"
                 cp ../freeze.tar payload/common/Cydia.tar
                 log "Running g1lbertJB..."
-                ../../$dir/gilbertjb
+                "../../$dir/gilbertjb"
                 rm payload/common/Cydia.tar
                 popd >/dev/null
                 return
@@ -7033,8 +7033,8 @@ device_jailbreak() {
             if [[ $device_proc == 5 ]]; then
                 warn "This version ($device_vers) is broken for daibutsu A5(X)."
                 print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
-                print "* For this version, use Home Depot patched with ohd."
-                print "* https://ios.cfw.guide/installing-homedepot/"
+                print "* For this version, use Home Depot patched with ohd and sideload it to your device."
+                print "* https://github.com/LukeZGD/ohd"
                 return
             fi
         ;;
@@ -7370,6 +7370,8 @@ restore_customipsw() {
 
 restore_dfuipsw() {
     # the only change done to the "dfu ipsw" is just applelogo copied and renamed to llb
+    # replacing llb with an invalid img3 to make the restore fail, the device will then fallback to true dfu mode
+    # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
     print "* You are about to restore with a DFU IPSW."
     print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
     print "* All device data will be wiped! Only proceed if you have backed up your data."
