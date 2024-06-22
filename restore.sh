@@ -249,23 +249,39 @@ set_tool_paths() {
         fi
 
         # macos version check
-        if [[ ${platform_ver:0:2} == 10 ]]; then
-            local mac_ver=${platform_ver:3}
-            mac_ver=${mac_ver%.*}
-            if (( mac_ver < 13 )); then
+        mac_majver="${platform_ver:0:2}"
+        if [[ $mac_majver == 10 ]]; then
+            mac_minver=${platform_ver:3}
+            mac_minver=${mac_minver%.*}
+            if (( mac_minver < 11 )); then
                 warn "Your macOS version ($platform_ver) is not supported. Expect features to not work properly."
-                print "* Supported versions are macOS 10.13 and newer. (10.15 and newer recommended)"
+                print "* Supported versions are macOS 10.11 and newer. (10.13/10.15 and newer recommended)"
                 pause
             fi
-            if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_ver < 15 )); then
-                local error_msg="* You need to install curl from MacPorts. (MacPorts is recommended instead of Homebrew)"
+            if (( mac_minver <= 11 )); then
+                mac_lowver=1
+                mac_cocoa=1
+                if [[ -z $(command -v cocoadialog) ]]; then
+                    local error_msg="* You need to install cocoadialog from MacPorts."
+                    error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+                    error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
+                    error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
+                    error "Cannot find cocoadialog, cannot continue." "$error_msg"
+                fi
+            elif [[ $mac_minver == 12 ]]; then
+                mac_lowver=1
+            fi
+            if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_minver < 15 )); then
+                local error_msg="* You need to install curl from MacPorts."
                 error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
                 error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
                 error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
         fi
+
         bspatch="$(command -v bspatch)"
+        cocoadialog="$(command -v cocoadialog)"
         ifuse="$dir/ifuse"
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
@@ -306,7 +322,7 @@ set_tool_paths() {
 
     cp ../resources/ssh_config .
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
-          $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_10.) == 1 ]]; then
+          $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
         echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
     fi
     scp2="scp -F ./ssh_config"
@@ -1054,7 +1070,7 @@ device_dfuhelper() {
         sleep 1
     done
     case $device_type in
-        iPhone1,* | iPad1[12]* ) :;;
+        iPhone1,* | iPad1,1 | iPad1[12]* ) :;;
         iPhone1* | iPad[81]* ) device_dfuhelper2; return;;
     esac
     local top="TOP"
@@ -1462,7 +1478,6 @@ device_pwnerror() {
 
 device_ipwndfu() {
     local tool_pwned=0
-    local mac_ver=0
     local python2=$(command -v python2 2>/dev/null)
     local pyenv=$(command -v pyenv 2>/dev/null)
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
@@ -1470,10 +1485,7 @@ device_ipwndfu() {
     if [[ -z $pyenv && -e "$HOME/.pyenv/bin/pyenv" ]]; then
         pyenv="$HOME/.pyenv/bin/pyenv"
     fi
-    if [[ $platform == "macos" ]]; then
-        mac_ver=$(echo "$platform_ver" | cut -c -2)
-    fi
-    if [[ $platform == "macos" ]] && (( mac_ver < 12 )); then
+    if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
         python2="/usr/bin/python"
     elif [[ -n $python2 && $device_sudoloop == 1 ]]; then
         python2="sudo $python2"
@@ -3480,9 +3492,14 @@ ipsw_prepare_multipatch() {
         log "Adding exploit and partition stuff"
         cp -R ../resources/firmware/src .
         "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
+        # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
+        # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
+        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot__
+        "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot__
     elif [[ $device_target_powder == 1 ]]; then
         local hw="$device_model"
         local base_build="11D257"
@@ -3623,11 +3640,6 @@ ipsw_prepare_ios4powder() {
     fi
     patch_iboot $ExtraArgs2
     tar -rvf src/bin.tar iBoot
-    if [[ $device_type == "iPad1,1" ]]; then
-        cp iBoot iBEC
-        tar -cvf iBoot.tar iBEC
-        ExtraArgs+=" iBoot.tar"
-    fi
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
@@ -3652,12 +3664,27 @@ ipsw_prepare_ios4powder() {
         echo "0000020: 3467" | xxd -r - $applelogo_name
         mv $applelogo_name $all_flash/$applelogo_name
     fi
+    local ramdisk_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    log "Patch RestoreRamdisk"
+    unzip -o -j temp.ipsw $ramdisk_name
+    mv $ramdisk_name ramdisk.orig
+    "$dir/xpwntool" ramdisk.orig ramdisk.dec
+    "$dir/hfsplus" ramdisk.dec grow 30000000
+    # powdersn0w adds reboot4 as sbin/reboot, and orig reboot is moved to sbin/reboot_
+    # these commands will add activate_exploit to sbin/reboot_, and move orig reboot to sbin/reboot__
+    # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
+    "$dir/hfsplus" ramdisk.dec mv sbin/reboot_ sbin/reboot__
+    "$dir/hfsplus" ramdisk.dec add src/activate_exploit sbin/reboot_
+    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot
+    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot_
+    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot__
+    "$dir/xpwntool" ramdisk.dec $ramdisk_name -t ramdisk.orig
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
         cp iBoot $all_flash/iBoot2.${device_model}ap.RELEASE.img3
     fi
-    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/*
+    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/* $ramdisk_name
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -4097,18 +4124,14 @@ restore_idevicerestore() {
 restore_futurerestore() {
     local ExtraArr=()
     local futurerestore2="$futurerestore"
-    local mac_ver=0
     local port=8888
     local opt
 
     if [[ $1 == "--use-pwndfu" ]]; then
         device_fw_key_check
-        if [[ $platform == "macos" ]]; then
-            mac_ver=$(echo "$platform_ver" | cut -c -2)
-        fi
         pushd ../resources >/dev/null
         if [[ $platform == "macos" ]]; then
-            if (( mac_ver >= 12 )); then
+            if (( mac_majver >= 12 )); then
                 opt="/usr/bin/python3 -m http.server -b 127.0.0.1 $port"
             else
                 opt="/usr/bin/python -m SimpleHTTPServer $port"
@@ -4424,8 +4447,11 @@ restore_prepare() {
 
         7 )
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-                # A7 devices 10.3.3
                 shsh_save
+            fi
+            if [[ $restore_usepwndfu64 == 1 ]]; then
+                restore_pwned64
+            elif [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
                 if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
                     iBSS=$iBSSb
                     iBEC=$iBECb
@@ -4436,32 +4462,42 @@ restore_prepare() {
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
             else
-                log "The generator for your SHSH blob is: $shsh_generator"
-                print "* Before continuing, make sure to set the nonce generator of your device!"
-                print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
-                print "* For iOS 11 and 12: https://github.com/futurerestore/futurerestore/#using-dimentio"
-                pause
-                if [[ $device_mode == "Normal" ]]; then
-                    device_enter_mode Recovery
-                fi
-                restore_futurerestore
+                restore_notpwned64
             fi
         ;;
 
         [89] | 10 )
-            if [[ $device_target_vers == "$device_latest_vers" ]]; then
+            if [[ $restore_usepwndfu64 == 1 ]]; then
+                restore_pwned64
+            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
-                return
+            else
+                restore_notpwned64
             fi
-            device_enter_mode pwnDFU
-            if [[ ! -s ../saved/firmwares.json ]]; then
-                download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
-                cp firmwares.json ../saved
-            fi
-            cp ../saved/firmwares.json /tmp
-            restore_futurerestore --use-pwndfu
         ;;
     esac
+}
+
+restore_pwned64() {
+    device_enter_mode pwnDFU
+    if [[ ! -s ../saved/firmwares.json ]]; then
+        download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+        cp firmwares.json ../saved
+    fi
+    cp ../saved/firmwares.json /tmp
+    restore_futurerestore --use-pwndfu
+}
+
+restore_notpwned64() {
+    log "The generator for your SHSH blob is: $shsh_generator"
+    print "* Before continuing, make sure to set the nonce generator of your device!"
+    print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
+    print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#using-dimentio"
+    pause
+    if [[ $device_mode == "Normal" ]]; then
+        device_enter_mode Recovery
+    fi
+    restore_futurerestore
 }
 
 ipsw_prepare() {
@@ -4518,10 +4554,45 @@ ipsw_prepare() {
         7 )
             # A7 devices 10.3.3
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-                ipsw_prepare_1033
+                if [[ $mac_lowver == 1 ]]; then
+                    restore_usepwndfu64=1
+                    return
+                fi
+                restore_usepwndfu64_option
+                if [[ $restore_usepwndfu64 == 1 ]]; then
+                    ipsw_prepare_1033
+                fi
             fi
+            restore_usepwndfu64_option
         ;;
+
+        [89] | 10 ) restore_usepwndfu64_option;;
     esac
+}
+
+restore_usepwndfu64_option() {
+    if [[ $device_target_vers == "$device_latest_vers" ]]; then
+        return
+    fi
+    local opt
+    input "Pwned Restore Option"
+    print "* When this option is enabled, use-pwndfu will be enabled for restoring."
+    if [[ $device_target_other == 1 ]]; then
+        print "* When disabled, user must set the device generator manually before the restore."
+    fi
+    if [[ $device_proc == 7 ]]; then
+        print "* This option is disabled by default (N). Select this option if unsure."
+        read -p "$(input 'Enable this option? (y/N): ')" opt
+    else
+        print "* This option is enabled by default (Y). Select this option if unsure."
+        read -p "$(input 'Enable this option? (Y/n): ')" opt
+    fi
+    if [[ $opt == 'Y' || $opt == 'y' ]]; then
+        log "Pwned restore option enabled."
+        restore_usepwndfu64=1
+    else
+        log "Pwned restore option disabled."
+    fi
 }
 
 menu_remove4() {
@@ -5210,6 +5281,7 @@ menu_ramdisk() {
     echo
 
     while [[ $loop != 1 ]]; do
+        mode=
         print "* SSH Ramdisk Menu"
         while [[ -z $mode ]]; do
             input "Select an option:"
@@ -5263,7 +5335,16 @@ menu_ramdisk() {
                     fi
                 fi
                 "$dir/img4tool" --convert -s $shsh dump.raw
-                log "Onboard blobs should be dumped to $shsh"
+                if [[ -s $shsh ]]; then
+                    log "Onboard blobs should be dumped to $shsh"
+                    continue
+                fi
+                warn "Failed to convert raw dump to SHSH."
+                local raw="../saved/shsh/rawdump_${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).raw"
+                mv dump.raw $raw
+                log "Raw dump saved at: $raw"
+                warn "This raw dump is not usable for restoring, you need to convert it first."
+                print "* If unable to be converted, this dump is likely not usable for restoring."
             ;;
             "iosvers" )
                 device_ramdisk_iosvers
@@ -5327,7 +5408,6 @@ menu_ramdisk() {
                 loop=1
             ;;
         esac
-        mode=
     done
 }
 
@@ -5350,13 +5430,13 @@ shsh_save_onboard64() {
     if [[ ! -s $shsh ]]; then
         warn "Failed to convert raw dump to SHSH."
         if [[ -s dump.raw ]]; then
-            local raw="../saved/shsh/rawdump_$device_ecid-$device_type-$device_target_vers-$(date +%Y-%m-%d-%H%M).raw"
+            local raw="../saved/shsh/rawdump_${device_ecid}-${device_type}-${device_vers}-${device_build}_$(date +%Y-%m-%d-%H%M).raw"
             mv dump.raw $raw
             log "Raw dump saved at: $raw"
             warn "This raw dump is not usable for restoring, you need to convert it first."
             print "* If unable to be converted, this dump is likely not usable for restoring."
         fi
-        error "Saving onboard SHSH blobs failed."
+        error "Saving onboard SHSH blobs failed." "It is recommended to dump onboard SHSH blobs on SSH Ramdisk instead."
     fi
     log "Successfully saved $device_vers blobs: $shsh"
 }
@@ -5786,7 +5866,11 @@ menu_ipa() {
 menu_ipa_browse() {
     local newpath
     input "Select your IPA file(s) in the file selection window."
-    newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
+    if [[ $mac_cocoa == 1 ]]; then
+        newpath="$($cocoadialog fileselect --with-extensions ipa)"
+    else
+        newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
+    fi
     [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
     ipa_path="$newpath"
 }
@@ -6627,7 +6711,11 @@ ipsw_custom_set() {
 menu_logo_browse() {
     local newpath
     input "Select your $1 image file in the file selection window."
-    newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
+    if [[ $mac_cocoa == 1 ]]; then
+        newpath="$($cocoadialog fileselect --with-extensions png)"
+    else
+        newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
+    fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected $1 image file: $newpath"
@@ -6644,7 +6732,11 @@ menu_ipsw_browse() {
     [[ $1 == "base" ]] && text="base"
 
     input "Select your $text IPSW file in the file selection window."
-    newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
+    if [[ $mac_cocoa == 1 ]]; then
+        newpath="$($cocoadialog fileselect --with-extensions ipsw)"
+    else
+        newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
+    fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     newpath="${newpath%?????}"
@@ -6776,7 +6868,11 @@ menu_shsh_browse() {
     [[ $1 == "base" ]] && text="base"
 
     input "Select your $text SHSH file in the file selection window."
-    newpath="$($zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select $text SHSH file")"
+    if [[ $mac_cocoa == 1 ]]; then
+        newpath="$($cocoadialog fileselect)"
+    else
+        newpath="$($zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select $text SHSH file")"
+    fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected SHSH file: $newpath"
@@ -6804,7 +6900,11 @@ menu_shsh_browse() {
 menu_shshdump_browse() {
     local newpath
     input "Select your raw dump file in the file selection window."
-    newpath="$($zenity --file-selection --file-filter='Raw Dump | *.raw' --title="Select Raw Dump")"
+    if [[ $mac_cocoa == 1 ]]; then
+        newpath="$($cocoadialog fileselect --with-extensions raw)"
+    else
+        newpath="$($zenity --file-selection --file-filter='Raw Dump | *.raw' --title="Select Raw Dump")"
+    fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected raw dump file: $newpath"
