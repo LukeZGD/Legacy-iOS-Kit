@@ -3465,6 +3465,7 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     else
         cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
@@ -4165,7 +4166,10 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
-    elif [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    elif [[ $device_proc == 7 && $device_target_other != 1 &&
+            $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
+        futurerestore2+="_new"
+    else
         futurerestore2="../saved/futurerestore_$platform"
         ExtraArr=("--latest-sep")
         case $device_type in
@@ -4199,8 +4203,6 @@ restore_futurerestore() {
             chmod +x $futurerestore2
             echo "$fr_latest" > ${futurerestore2}_version
         fi
-    else
-        futurerestore2+="_new"
     fi
     if [[ -n "$1" ]]; then
         # custom arg, either --use-pwndfu or --skip-blob
