@@ -3302,7 +3302,7 @@ ipsw_prepare_ios4multipart() {
     log "Patch reboot"
     "$dir/hfsplus" ramdisk.dec untar ../resources/firmware/src/bin.tar
     echo "#!/bin/bash" > reboot
-    echo "nvram auto-boot=1; nvram boot-partition=2" >> reboot
+    echo "nvram -c; nvram auto-boot=1; nvram boot-partition=2" >> reboot
     if [[ $device_type == "iPhone3,3" ]]; then
         echo "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg" >> reboot
     fi
@@ -3504,7 +3504,10 @@ ipsw_prepare_multipatch() {
     if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         log "Adding exploit and partition stuff"
         cp -R ../resources/firmware/src .
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
+        rm src/bin.tar
+        mv src/bin4.tar src/bin.tar
+        tar -rvf src/bin.tar iBoot
+        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
         # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
         # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot__
@@ -3656,6 +3659,11 @@ ipsw_prepare_ios4powder() {
     fi
     patch_iboot $ExtraArgs2
     tar -rvf src/bin.tar iBoot
+    if [[ $device_type == "iPad1,1" ]]; then
+        cp iBoot iBEC
+        tar -cvf iBoot.tar iBEC
+        ExtraArgs+=" iBoot.tar"
+    fi
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
