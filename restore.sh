@@ -3273,11 +3273,11 @@ ipsw_prepare_ios4multipart() {
     log "Restore Ramdisk"
     local ramdisk_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     mv RestoreRamdisk.dec ramdisk.dec
-    "$dir/hfsplus" ramdisk.dec grow 18000000
+    "$dir/hfsplus" ramdisk.dec grow 30000000
 
-    log "Dummy RootFS"
     local rootfs_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
     touch $ipsw_custom_part2/$rootfs_name
+    log "Dummy RootFS: $rootfs_name"
 
     log "Modify options.plist"
     local options_plist="options.$device_model.plist"
@@ -3298,6 +3298,18 @@ ipsw_prepare_ios4multipart() {
 
     log "Patch ASR"
     ipsw_patch_file ramdisk.dec usr/sbin asr asr.patch
+
+    log "Patch reboot"
+    "$dir/hfsplus" ramdisk.dec untar ../resources/firmware/src/bin.tar
+    echo "#!/bin/bash" > reboot
+    echo "nvram auto-boot=1; nvram boot-partition=2" >> reboot
+    if [[ $device_type == "iPhone3,3" ]]; then
+        echo "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg" >> reboot
+    fi
+    echo "/sbin/reboot_" >> reboot
+    "$dir/hfsplus" ramdisk.dec mv sbin/reboot sbin/reboot_
+    "$dir/hfsplus" ramdisk.dec add reboot sbin/reboot
+    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
@@ -3496,7 +3508,10 @@ ipsw_prepare_multipatch() {
         # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
         # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot__
-        "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_
+        case $device_target_vers in
+            4.3* ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_;; # auto-boot=1
+            * ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit2 sbin/reboot_;;  # auto-boot=0
+        esac
         "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
