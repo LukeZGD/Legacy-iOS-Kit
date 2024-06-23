@@ -1319,10 +1319,11 @@ device_enter_mode() {
 
             if [[ $device_proc == 5 ]]; then
                 print "* DFU mode for A5 device - Make sure that your device is in PWNED DFU mode."
-                print "* You need to have an Arduino and USB Host Shield to proceed for PWNED DFU mode."
+                print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
+                print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, select N and restart your device in normal mode."
-                read -p "$(input 'Is your device in PWNED DFU mode using synackuk checkm8-a5? (y/N): ')" opt
+                read -p "$(input 'Is your device in PWNED DFU mode using checkm8-a5? (y/N): ')" opt
                 if [[ $opt != "Y" && $opt != "y" ]]; then
                     local error_msg=$'\n* Please put the device in normal mode and jailbroken before proceeding.'
                     error_msg+=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
@@ -4404,10 +4405,13 @@ restore_prepare() {
                     ;;
                     * ) restore_idevicerestore;;
                 esac
-                if [[ $device_target_vers == "4.3"* ]] &&
+                if [[ $device_target_vers == "4.3"* && $device_target_powder == 1 ]] &&
                    [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-                    log "The device may enter recovery mode after the restore"
-                    print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
+                    log "Do not disconnect your device yet"
+                    device_find_mode Recovery 50
+                    log "Attempting to exit recovery mode"
+                    $irecovery -n
+                    log "Done, your device should boot now"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
