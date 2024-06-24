@@ -3274,7 +3274,7 @@ ipsw_prepare_ios4multipart() {
     log "Restore Ramdisk"
     local ramdisk_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     mv RestoreRamdisk.dec ramdisk.dec
-    "$dir/hfsplus" ramdisk.dec grow 30000000
+    "$dir/hfsplus" ramdisk.dec grow 18000000
 
     local rootfs_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
     touch $ipsw_custom_part2/$rootfs_name
@@ -3299,18 +3299,6 @@ ipsw_prepare_ios4multipart() {
 
     log "Patch ASR"
     ipsw_patch_file ramdisk.dec usr/sbin asr asr.patch
-
-    log "Patch reboot"
-    "$dir/hfsplus" ramdisk.dec untar ../resources/firmware/src/bin.tar
-    echo "#!/bin/bash" > reboot
-    echo "nvram -c; nvram auto-boot=1; nvram boot-partition=2" >> reboot
-    if [[ $device_type == "iPhone3,3" ]]; then
-        echo "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg" >> reboot
-    fi
-    echo "/sbin/reboot_" >> reboot
-    "$dir/hfsplus" ramdisk.dec mv sbin/reboot sbin/reboot_
-    "$dir/hfsplus" ramdisk.dec add reboot sbin/reboot
-    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
@@ -3369,59 +3357,29 @@ ipsw_prepare_ios4multipart() {
     popd >/dev/null
 
     # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
-    case $device_target_vers in
-        4.2* ) ipsw_prepare_32bit $iboot;;
-        *    ) ipsw_prepare_jailbreak $iboot;;
-    esac
-
-    ipsw_prepare_ios4multipart_patch=1
-    ipsw_prepare_multipatch
-}
-
-ipsw_prepare_multipatch() {
-    local vers
-    local build
-    local options_plist
-    local saved_path
-    local url
-    local ramdisk_name
-    local name
-    local iv
-    local key
-    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
-
-    log "Starting multipatch"
+    #if [[ $device_type == "iPhone3,3" ]]; then
+    #    ipsw_prepare_32bit $iboot
+    #    ipsw_prepare_ios4multipart_patch=1
+    #    ipsw_prepare_multipatch
+    #    return
+    #fi
+    ipsw_prepare_jailbreak $iboot
     mv "$ipsw_custom.ipsw" temp.ipsw
     rm asr* iBSS* iBEC* ramdisk* *.dmg 2>/dev/null
-    options_plist="options.$device_model.plist"
+    options_plist="options"
     if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
-        :
-    elif [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-        options_plist="options.plist"
+        options_plist+=".$device_model"
     fi
+    options_plist+=".plist"
 
     vers="4.2.1"
     build="8C148"
-    if [[ $ipsw_isbeta == 1 ]]; then
-        :
-    elif [[ $device_type == "iPad1,1" || $device_type == "iPhone3,3" ]] ||
-         [[ $device_type == "iPod3,1" && $device_target_vers == "3"* ]]; then
+    if [[ $device_type == "iPad1,1" ]] || [[ $device_type == "iPod3,1" && $device_target_vers == "3"* ]]; then
         vers="$device_target_vers"
         build="$device_target_build"
     fi
-    case $device_target_vers in
-        4.3* ) vers="4.3.5"; build="8L1";;
-        5.0* ) vers="5.0.1"; build="9A405";;
-        5* ) vers="5.1.1"; build="9B206";;
-        6* ) vers="6.1.3"; build="10B329";;
-        7* ) vers="7.1.2"; build="11D257";;
-        8* ) vers="8.4.1"; build="12H321";;
-        9* ) vers="9.3.5"; build="13G36";;
-    esac
     saved_path="../saved/$device_type/$build"
-    ipsw_get_url $build
-    url="$ipsw_url"
-    device_fw_key_check
+    url="$(cat $device_fw_dir/$build/url)"
     ramdisk_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
 
     mkdir -p $saved_path Downgrade Firmware/dfu 2>/dev/null
@@ -3461,86 +3419,44 @@ ipsw_prepare_multipatch() {
         esac
         if [[ $getcomp == "iB"* ]]; then
             log "Patch $getcomp"
-            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
+            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1 pio-error=0"
             "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
             zip -r0 temp.ipsw ${path}$name
         fi
     done
 
     log "Grow ramdisk"
-    "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
+    "$dir/hfsplus" RestoreRamdisk.dec grow 18000000
 
     log "Patch ASR"
-    if [[ $ipsw_prepare_usepowder == 1 ]]; then
-        unzip -o -j temp.ipsw $ramdisk_name
-        mv $ramdisk_name ramdisk2.orig
-        "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-        "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
-    else
-        cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
-        ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
-    fi
+    cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
+    ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
 
     log "Extract options.plist from $device_target_vers IPSW"
-    if [[ ! -s ramdisk2.dec ]]; then
-        unzip -o -j temp.ipsw $ramdisk_name
-        mv $ramdisk_name ramdisk2.orig
-        "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-    fi
+    unzip -o -j temp.ipsw $ramdisk_name
+    mv $ramdisk_name ramdisk2.orig
+    "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
     "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
+
+    if [[ $device_type == "iPad1,1" && $device_target_vers == "3.2"* ]]; then
+        options_plist="options.k48.plist"
+        rm $options_plist
+        mv options.plist $options_plist
+    fi
 
     log "Modify options.plist"
     "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
-    if [[ $ipsw_prepare_ios4multipart_patch == 1 ]]; then
-        cat $options_plist | sed '$d' | sed '$d' > options2.plist
-        echo "<key>FlashNOR</key><false/></dict></plist>" >> options2.plist
-        cat options2.plist
-        "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
-    else
-        "$dir/hfsplus" RestoreRamdisk.dec add $options_plist usr/local/share/restore/$options_plist
-    fi
-    if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-        log "Adding exploit and partition stuff"
-        cp -R ../resources/firmware/src .
-        rm src/bin.tar
-        mv src/bin4.tar src/bin.tar
-        tar -rvf src/bin.tar iBoot
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
-        # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
-        # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot__
-        case $device_target_vers in
-            4.3* ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_;; # auto-boot=1
-            * ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit2 sbin/reboot_;;  # auto-boot=0
-        esac
-        "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot__
-    elif [[ $device_target_powder == 1 ]]; then
-        local hw="$device_model"
-        local base_build="11D257"
-        case $device_type in
-            iPhone5,[12] ) hw="iphone5";;
-            iPhone5,[34] ) hw="iphone5b";;
-            iPad3,[456] )  hw="ipad3b";;
-        esac
-        case $device_base_build in
-            "11A"* | "11B"* ) base_build="11B554a";;
-            "9"* ) base_build="9B206";;
-        esac
-        local exploit="src/target/$hw/$base_build/exploit"
-        local partition="src/target/$hw/$base_build/partition"
-        log "Adding exploit and partition stuff"
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
-        "$dir/hfsplus" RestoreRamdisk.dec add $partition sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
-    fi
+    cat $options_plist | sed '$d' | sed '$d' > options2.plist
+    echo "<key>FlashNOR</key><false/></dict></plist>" >> options2.plist
+    cat options2.plist
+    "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
+
+    log "Adding exploit and partition stuff"
+    cp -R ../resources/firmware/src .
+    "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
+    "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
+    "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
+    "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" RestoreRamdisk.dec $ramdisk_name -t RestoreRamdisk.orig
@@ -3689,27 +3605,12 @@ ipsw_prepare_ios4powder() {
         echo "0000020: 3467" | xxd -r - $applelogo_name
         mv $applelogo_name $all_flash/$applelogo_name
     fi
-    local ramdisk_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
-    log "Patch RestoreRamdisk"
-    unzip -o -j temp.ipsw $ramdisk_name
-    mv $ramdisk_name ramdisk.orig
-    "$dir/xpwntool" ramdisk.orig ramdisk.dec
-    "$dir/hfsplus" ramdisk.dec grow 30000000
-    # powdersn0w adds reboot4 as sbin/reboot, and orig reboot is moved to sbin/reboot_
-    # these commands will add activate_exploit to sbin/reboot_, and move orig reboot to sbin/reboot__
-    # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
-    "$dir/hfsplus" ramdisk.dec mv sbin/reboot_ sbin/reboot__
-    "$dir/hfsplus" ramdisk.dec add src/activate_exploit sbin/reboot_
-    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot
-    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot_
-    "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot__
-    "$dir/xpwntool" ramdisk.dec $ramdisk_name -t ramdisk.orig
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
         cp iBoot $all_flash/iBoot2.${device_model}ap.RELEASE.img3
     fi
-    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/* $ramdisk_name
+    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/*
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -4407,11 +4308,8 @@ restore_prepare() {
                 esac
                 if [[ $device_target_vers == "4.3"* && $device_target_powder == 1 ]] &&
                    [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-                    log "Do not disconnect your device yet"
-                    device_find_mode Recovery 50
-                    log "Attempting to exit recovery mode"
-                    $irecovery -n
-                    log "Done, your device should boot now"
+                    log "The device may enter recovery mode after the restore"
+                    print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
@@ -4557,9 +4455,9 @@ ipsw_prepare() {
             elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_custom
             fi
-            if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
-                ipsw_prepare_multipatch
-            fi
+            #if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
+            #    ipsw_prepare_multipatch
+            #fi
         ;;
 
         [56] )
@@ -4575,8 +4473,8 @@ ipsw_prepare() {
             fi
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
-            elif [[ $ipsw_isbeta == 1 ]]; then
-                ipsw_prepare_multipatch
+            #elif [[ $ipsw_isbeta == 1 ]]; then
+            #    ipsw_prepare_multipatch
             fi
         ;;
 
