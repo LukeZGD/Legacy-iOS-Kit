@@ -3192,8 +3192,13 @@ ipsw_prepare_ios4multipart() {
     local JBFiles=()
     ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
     local all_flash2="$ipsw_custom_part2/$all_flash"
-    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 --433 -b"
+    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4"
     local iboot
+    case $device_target_vers in
+        4.2.9 | 4.2.10 ) :;;
+        * ) ExtraArgs2+=" --433";;
+    esac
+    ExtraArgs2+=" -b"
 
     if [[ -e "../$ipsw_custom_part2.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSWs. Skipping IPSW creation."
@@ -3321,7 +3326,7 @@ ipsw_prepare_ios4multipart() {
         iboot="iboot"
     else
         log "Add $device_target_vers iBoot to all_flash"
-        mv iBoot $all_flash2/iBoot2.img3
+        cp iBoot $all_flash2/iBoot2.img3
         echo "iBoot2.img3" >> $all_flash2/manifest
     fi
 
@@ -3459,7 +3464,7 @@ ipsw_prepare_multipatch() {
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
 
     log "Patch ASR"
-    if [[ $ipsw_prepare_usepowder == 1 ]]; then
+    if [[ $ipsw_prepare_usepowder == 1 && $ipsw_isbeta != 1 ]]; then
         unzip -o -j temp.ipsw $ramdisk_name
         mv $ramdisk_name ramdisk2.orig
         rm RestoreRamdisk.dec
