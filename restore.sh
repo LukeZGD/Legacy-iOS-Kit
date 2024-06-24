@@ -3321,8 +3321,8 @@ ipsw_prepare_ios4multipart() {
         iboot="iboot"
     else
         log "Add $device_target_vers iBoot to all_flash"
-        mv iBoot $all_flash2/iBoot4.img3
-        echo "iBoot4.img3" >> $all_flash2/manifest
+        mv iBoot $all_flash2/iBoot2.img3
+        echo "iBoot2.img3" >> $all_flash2/manifest
     fi
 
     log "Add APTicket to all_flash"
@@ -3357,112 +3357,13 @@ ipsw_prepare_ios4multipart() {
     popd >/dev/null
 
     # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
-    if [[ $device_type == "iPhone3,3" ]]; then
-        ipsw_prepare_32bit $iboot
-        ipsw_prepare_ios4multipart_patch=1
-        ipsw_prepare_multipatch
-        return
-    fi
-    ipsw_prepare_jailbreak $iboot
-    mv "$ipsw_custom.ipsw" temp.ipsw
-    rm asr* iBSS* iBEC* ramdisk* *.dmg 2>/dev/null
-    options_plist="options"
-    if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
-        options_plist+=".$device_model"
-    fi
-    options_plist+=".plist"
+    case $device_target_vers in
+        4.2* ) ipsw_prepare_32bit $iboot;;
+        *    ) ipsw_prepare_jailbreak $iboot;;
+    esac
 
-    vers="4.2.1"
-    build="8C148"
-    if [[ $device_type == "iPad1,1" ]] || [[ $device_type == "iPod3,1" && $device_target_vers == "3"* ]]; then
-        vers="$device_target_vers"
-        build="$device_target_build"
-    fi
-    saved_path="../saved/$device_type/$build"
-    url="$(cat $device_fw_dir/$build/url)"
-    ramdisk_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
-
-    mkdir -p $saved_path Downgrade Firmware/dfu 2>/dev/null
-    device_fw_key_check temp $build
-    log "Getting $vers restore components"
-    for getcomp in "${comps[@]}"; do
-        name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
-        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
-        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-        case $getcomp in
-            "iBSS" | "iBEC" ) path="Firmware/dfu/";;
-            "DeviceTree" ) path="$all_flash/";;
-            * ) path="";;
-        esac
-        log "$getcomp"
-        if [[ $vers == "$device_target_vers" ]]; then
-            unzip -o -j "$ipsw_path.ipsw" ${path}$name
-        elif [[ -e $saved_path/$name ]]; then
-            cp $saved_path/$name .
-        else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
-            cp $name $saved_path/
-        fi
-        case $getcomp in
-            "DeviceTree" )
-                mv $name Downgrade/RestoreDeviceTree
-                zip -r0 temp.ipsw Downgrade/RestoreDeviceTree
-            ;;
-            "Kernelcache" )
-                mv $name Downgrade/RestoreKernelCache
-                zip -r0 temp.ipsw Downgrade/RestoreKernelCache
-            ;;
-            * )
-                mv $name $getcomp.orig
-                "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
-            ;;
-        esac
-        if [[ $getcomp == "iB"* ]]; then
-            log "Patch $getcomp"
-            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1 pio-error=0"
-            "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
-            zip -r0 temp.ipsw ${path}$name
-        fi
-    done
-
-    log "Grow ramdisk"
-    "$dir/hfsplus" RestoreRamdisk.dec grow 18000000
-
-    log "Patch ASR"
-    cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
-    ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
-
-    log "Extract options.plist from $device_target_vers IPSW"
-    unzip -o -j temp.ipsw $ramdisk_name
-    mv $ramdisk_name ramdisk2.orig
-    "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
-
-    if [[ $device_type == "iPad1,1" && $device_target_vers == "3.2"* ]]; then
-        options_plist="options.k48.plist"
-        rm $options_plist
-        mv options.plist $options_plist
-    fi
-
-    log "Modify options.plist"
-    "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
-    cat $options_plist | sed '$d' | sed '$d' > options2.plist
-    echo "<key>FlashNOR</key><false/></dict></plist>" >> options2.plist
-    cat options2.plist
-    "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
-
-    log "Adding exploit and partition stuff"
-    cp -R ../resources/firmware/src .
-    "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
-    "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
-    "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
-    "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-
-    log "Repack Restore Ramdisk"
-    "$dir/xpwntool" RestoreRamdisk.dec $ramdisk_name -t RestoreRamdisk.orig
-    log "Add Restore Ramdisk to IPSW"
-    zip -r0 temp.ipsw $ramdisk_name
-    mv temp.ipsw "$ipsw_custom.ipsw"
+    ipsw_prepare_ios4multipart_patch=1
+    ipsw_prepare_multipatch
 }
 
 ipsw_prepare_multipatch() {
@@ -3560,6 +3461,7 @@ ipsw_prepare_multipatch() {
     log "Patch ASR"
     if [[ $ipsw_prepare_usepowder == 1 ]]; then
         unzip -o -j temp.ipsw $ramdisk_name
+        mv $ramdisk_name ramdisk2.orig
         rm RestoreRamdisk.dec
         "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
         cp ramdisk2.dec RestoreRamdisk.dec
@@ -3590,21 +3492,21 @@ ipsw_prepare_multipatch() {
     if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         log "Adding exploit and partition stuff"
         cp -R ../resources/firmware/src .
-        rm src/bin.tar
-        mv src/bin4.tar src/bin.tar
-        tar -rvf src/bin.tar iBoot
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
-        # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
-        # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot__
-        case $device_target_vers in
-            4.3* ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_;; # auto-boot=1
-            * ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit2 sbin/reboot_;;  # auto-boot=0
-        esac
+        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
+        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot__
+        if [[ $device_type != "iPhone3,1" ]]; then
+            "$dir/hfsplus" RestoreRamdisk.dec add iBoot iBoot
+            # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
+            # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
+            "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot_ sbin/reboot__
+            case $device_target_vers in
+                4.3* ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_;; # auto-boot=1
+                * ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit2 sbin/reboot_;;  # auto-boot=0
+            esac
+            "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
+        fi
     elif [[ $device_target_powder == 1 ]]; then
         local hw="$device_model"
         local base_build="11D257"
@@ -3774,12 +3676,26 @@ ipsw_prepare_ios4powder() {
         echo "0000020: 3467" | xxd -r - $applelogo_name
         mv $applelogo_name $all_flash/$applelogo_name
     fi
+    if [[ $device_type != "iPhone3,1" ]]; then
+        local ramdisk_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+        log "Patch RestoreRamdisk"
+        unzip -o -j temp.ipsw $ramdisk_name
+        mv $ramdisk_name ramdisk.orig
+        "$dir/xpwntool" ramdisk.orig ramdisk.dec
+        # powdersn0w adds reboot4 as sbin/reboot, and orig reboot is moved to sbin/reboot_
+        # these commands will add activate_exploit to sbin/reboot_, and move orig reboot to sbin/reboot__
+        # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
+        "$dir/hfsplus" ramdisk.dec mv sbin/reboot_ sbin/reboot__
+        "$dir/hfsplus" ramdisk.dec add src/activate_exploit sbin/reboot_
+        "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot_
+        "$dir/xpwntool" ramdisk.dec $ramdisk_name -t ramdisk.orig
+    fi
 
     log "Add all to custom IPSW"
     if [[ $device_type != "iPad1,1" ]]; then
         cp iBoot $all_flash/iBoot2.${device_model}ap.RELEASE.img3
     fi
-    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/*
+    zip -r0 temp.ipsw $all_flash/* Firmware/dfu/* $ramdisk_name
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -4380,6 +4296,7 @@ restore_prepare_1033() {
         return
     fi
     if [[ $device_proc == 7 ]]; then
+        log "gaster reset"
         $gaster reset
     fi
     sleep 1
@@ -4399,6 +4316,7 @@ restore_prepare_1033() {
         ((attempt++))
     done
     if [[ $device_proc == 10 ]]; then
+        log "irecovery -c go"
         $irecovery -c "go"
         sleep 3
     fi
@@ -4475,10 +4393,17 @@ restore_prepare() {
                     ;;
                     * ) restore_idevicerestore;;
                 esac
-                if [[ $device_target_vers == "4"* && $device_target_powder == 1 ]] &&
-                   [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" || $device_type == "iPhone3,3" ]]; then
+                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $device_target_powder == 1 ]]; then
                     log "The device may enter recovery mode after the restore"
                     print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
+                fi
+                if [[ $device_target_vers == "4.3"* && $device_target_powder == 1 ]] &&
+                   [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
+                    log "Do not disconnect your device yet"
+                    device_find_mode Recovery 50
+                    log "Attempting to exit recovery mode"
+                    $irecovery -n
+                    log "Done, your device should boot now"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
@@ -4655,11 +4580,12 @@ ipsw_prepare() {
                     return
                 fi
                 restore_usepwndfu64_option
-                if [[ $restore_usepwndfu64 == 1 ]]; then
+                if [[ $restore_usepwndfu64 != 1 ]]; then
                     ipsw_prepare_1033
                 fi
+            else
+                restore_usepwndfu64_option
             fi
-            restore_usepwndfu64_option
         ;;
 
         [89] | 10 ) restore_usepwndfu64_option;;
@@ -4679,15 +4605,21 @@ restore_usepwndfu64_option() {
     if [[ $device_proc == 7 ]]; then
         print "* This option is disabled by default (N). Select this option if unsure."
         read -p "$(input 'Enable this option? (y/N): ')" opt
+        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+            log "Pwned restore option enabled by user."
+            restore_usepwndfu64=1
+        else
+            log "Pwned restore option disabled."
+        fi
     else
         print "* This option is enabled by default (Y). Select this option if unsure."
         read -p "$(input 'Enable this option? (Y/n): ')" opt
-    fi
-    if [[ $opt == 'Y' || $opt == 'y' ]]; then
-        log "Pwned restore option enabled."
-        restore_usepwndfu64=1
-    else
-        log "Pwned restore option disabled."
+        if [[ $opt == 'N' || $opt == 'n' ]]; then
+            log "Pwned restore option disabled by user."
+        else
+            log "Pwned restore option enabled."
+            restore_usepwndfu64=1
+        fi
     fi
 }
 
@@ -7561,11 +7493,11 @@ restore_customipsw() {
         elif [[ $device_type == "iPod2,1" ]]; then
             print "* You may also use this option for downgrading the device to 3.0 and lower for old bootrom models."
         else
-            warn "* Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
+            warn "Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
         fi
     fi
     if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
-        warn "* Restoring to 2.x might not work on newer macOS versions."
+        warn "Restoring to 2.x might not work on newer macOS versions."
     fi
     if [[ $device_proc == 1 ]]; then
         echo
