@@ -4731,9 +4731,9 @@ device_ramdisk64() {
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
-            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
-            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
-            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
+            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
+            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
+            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith ("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
         fi
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
@@ -4767,7 +4767,7 @@ device_ramdisk64() {
                 "RestoreRamdisk" ) name="048-08497-242.dmg";;
             esac
             if [[ $device_type == "iPhone8,1" || $device_type == "iPhone8,2" ]] && [[ $getcomp == "Kernelcache" ]]; then
-                name="kernelcache.release.$device_model"
+                name="kernelcache.release.${device_model:0:3}"
             fi
             if [[ $build_id == "18C66" ]]; then
                 case $getcomp in
