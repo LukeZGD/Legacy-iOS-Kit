@@ -521,6 +521,161 @@ device_entry() {
     fi
 }
 
+device_get_name() {
+    device_name=$device_type
+    case $device_type in
+        "iPhone1,1") device_name="iPhone 2G";;
+        "iPhone1,2") device_name="iPhone 3G";;
+        "iPhone2,1") device_name="iPhone 3GS";;
+        "iPhone3,1") device_name="iPhone 4 (GSM)";;
+        "iPhone3,2") device_name="iPhone 4 (GSM, Rev A)";;
+        "iPhone3,3") device_name="iPhone 4 (CDMA)";;
+        "iPhone4,1") device_name="iPhone 4S";;
+        "iPhone5,1") device_name="iPhone 5 (GSM)";;
+        "iPhone5,2") device_name="iPhone 5 (Global)";;
+        "iPhone5,3") device_name="iPhone 5c (GSM)";;
+        "iPhone5,4") device_name="iPhone 5c (Global)";;
+        "iPhone6,1") device_name="iPhone 5s (GSM)";;
+        "iPhone6,2") device_name="iPhone 5s (Global)";;
+        "iPhone7,1") device_name="iPhone 6 Plus";;
+        "iPhone7,2") device_name="iPhone 6";;
+        "iPhone8,1") device_name="iPhone 6s";;
+        "iPhone8,2") device_name="iPhone 6s Plus";;
+        "iPhone8,4") device_name="iPhone SE (1st Generation)";;
+        "iPhone9,1") device_name="iPhone 7 (Global)";;
+        "iPhone9,2") device_name="iPhone 7 Plus (Global)";;
+        "iPhone9,3") device_name="iPhone 7 (GSM)";;
+        "iPhone9,4") device_name="iPhone 7 Plus (GSM)";;
+        "iPhone10,1") device_name="iPhone 8 (Global)";;
+        "iPhone10,2") device_name="iPhone 8 Plus (Global)";;
+        "iPhone10,3") device_name="iPhone X (Global)";;
+        "iPhone10,4") device_name="iPhone 8 (GSM)";;
+        "iPhone10,5") device_name="iPhone 8 Plus (GSM)";;
+        "iPhone10,6") device_name="iPhone X (GSM)";;
+        "iPhone11,2") device_name="iPhone XS";;
+        "iPhone11,4") device_name="iPhone XS Max (China)";;
+        "iPhone11,6") device_name="iPhone XS Max";;
+        "iPhone11,8") device_name="iPhone XR";;
+        "iPhone12,1") device_name="iPhone 11";;
+        "iPhone12,3") device_name="iPhone 11 Pro";;
+        "iPhone12,5") device_name="iPhone 11 Pro Max";;
+        "iPhone12,8") device_name="iPhone SE (2nd Generation)";;
+        "iPhone13,1") device_name="iPhone 12 mini";;
+        "iPhone13,2") device_name="iPhone 12";;
+        "iPhone13,3") device_name="iPhone 12 Pro";;
+        "iPhone13,4") device_name="iPhone 12 Pro Max";;
+        "iPhone14,2") device_name="iPhone 13 Pro";;
+        "iPhone14,3") device_name="iPhone 13 Pro Max";;
+        "iPhone14,4") device_name="iPhone 13 mini";;
+        "iPhone14,5") device_name="iPhone 13";;
+        "iPhone14,6") device_name="iPhone SE (3rd Generation)";;
+        "iPhone14,7") device_name="iPhone 14";;
+        "iPhone14,8") device_name="iPhone 14 Plus";;
+        "iPhone15,2") device_name="iPhone 14 Pro";;
+        "iPhone15,3") device_name="iPhone 14 Pro Max";;
+        "iPhone15,4") device_name="iPhone 15";;
+        "iPhone15,5") device_name="iPhone 15 Plus";;
+        "iPhone16,1") device_name="iPhone 15 Pro";;
+        "iPhone16,2") device_name="iPhone 15 Pro Max";;
+        "iPad1,1") device_name="iPad (1st Generation)";;
+        "iPad2,1") device_name="iPad 2 (Wifi)";;
+        "iPad2,2") device_name="iPad 2 (GSM)";;
+        "iPad2,3") device_name="iPad 2 (CDMA)";;
+        "iPad2,4") device_name="iPad 2 (Wifi, Rev A)";;
+        "iPad2,5") device_name="iPad mini (Wifi)";;
+        "iPad2,6") device_name="iPad mini (GSM)";;
+        "iPad2,7") device_name="iPad mini (Global)";;
+        "iPad3,1") device_name="iPad 3 (Wifi)";;
+        "iPad3,2") device_name="iPad 3 (CDMA)";;
+        "iPad3,3") device_name="iPad 3 (GSM)";;
+        "iPad3,4") device_name="iPad 4 (Wifi)";;
+        "iPad3,5") device_name="iPad 4 (GSM)";;
+        "iPad3,6") device_name="iPad 4 (Global)";;
+        "iPad4,1") device_name="iPad Air (Wifi)";;
+        "iPad4,2") device_name="iPad Air (Cellular)";;
+        "iPad4,3") device_name="iPad Air (China)";;
+        "iPad4,4") device_name="iPad mini 2 (Wifi)";;
+        "iPad4,5") device_name="iPad mini 2 (Cellular)";;
+        "iPad4,6") device_name="iPad mini 2 (China)";;
+        "iPad4,7") device_name="iPad mini 3 (Wifi)";;
+        "iPad4,8") device_name="iPad mini 3 (Cellular)";;
+        "iPad4,9") device_name="iPad mini 3 (China)";;
+        "iPad5,1") device_name="iPad mini 4 (Wifi)";;
+        "iPad5,2") device_name="iPad mini 4 (Cellular)";;
+        "iPad5,3") device_name="iPad Air 2 (Wifi)";;
+        "iPad5,4") device_name="iPad Air 2 (Cellular)";;
+        "iPad6,3") device_name="iPad Pro 9.7\" (Wifi)";;
+        "iPad6,4") device_name="iPad Pro 9.7\" (Cellular)";;
+        "iPad6,7") device_name="iPad Pro 12.9\" (Wifi)";;
+        "iPad6,8") device_name="iPad Pro 12.9\" (Cellular)";;
+        "iPad6,11") device_name="iPad 5 (Wifi)";;
+        "iPad6,12") device_name="iPad 5 (Cellular)";;
+        "iPad7,1") device_name="iPad Pro 12.9\" (2nd Generation, Wifi)";;
+        "iPad7,2") device_name="iPad Pro 12.9\" (2nd Generation, Cellular)";;
+        "iPad7,3") device_name="iPad Pro 10.5\" (Wifi)";;
+        "iPad7,4") device_name="iPad Pro 10.5\" (Cellular)";;
+        "iPad7,5") device_name="iPad 6 (Wifi)";;
+        "iPad7,6") device_name="iPad 6 (Cellular)";;
+        "iPad7,11") device_name="iPad 7 (Wifi)";;
+        "iPad7,12") device_name="iPad 7 (Cellular)";;
+        "iPad8,1") device_name="iPad Pro 11\" (Wifi)";;
+        "iPad8,2") device_name="iPad Pro 11\" (Wifi, 6GB RAM)";;
+        "iPad8,3") device_name="iPad Pro 11\" (Cellular)";;
+        "iPad8,4") device_name="iPad Pro 11\" (Cellular, 6GB RAM)";;
+        "iPad8,5") device_name="iPad Pro 12.9\" (3rd Generation, Wifi)";;
+        "iPad8,6") device_name="iPad Pro 12.9\" (3rd Generation, Wifi, 6GB RAM)";;
+        "iPad8,7") device_name="iPad Pro 12.9\" (3rd Generation, Cellular)";;
+        "iPad8,8") device_name="iPad Pro 12.9\" (3rd Generation, Cellular, 6GB RAM)";;
+        "iPad8,9") device_name="iPad Pro 11\" (2nd Generation, Wifi)";;
+        "iPad8,10") device_name="iPad Pro 11\" (2nd Generation, Cellular)";;
+        "iPad8,11") device_name="iPad Pro 12.9\" (4th Generation, Wifi)";;
+        "iPad8,12") device_name="iPad Pro 12.9\" (4th Generation, Cellular)";;
+        "iPad11,1") device_name="iPad mini 5 (Wifi)";;
+        "iPad11,2") device_name="iPad mini 5 (Cellular)";;
+        "iPad11,3") device_name="iPad Air 3 (Wifi)";;
+        "iPad11,4") device_name="iPad Air 3 (Cellular)";;
+        "iPad11,6") device_name="iPad 8 (Wifi)";;
+        "iPad11,7") device_name="iPad 8 (Cellular)";;
+        "iPad12,1") device_name="iPad 9 (Wifi)";;
+        "iPad12,2") device_name="iPad 9 (Cellular)";;
+        "iPad13,1") device_name="iPad Air 4 (Wifi)";;
+        "iPad13,2") device_name="iPad Air 4 (Cellular)";;
+        "iPad13,4") device_name="iPad Pro 11\" (3rd Generation, Wifi)";;
+        "iPad13,5") device_name="iPad Pro 11\" (3rd Generation, Wifi, 16GB RAM)";;
+        "iPad13,6") device_name="iPad Pro 11\" (3rd Generation, Cellular)";;
+        "iPad13,7") device_name="iPad Pro 11\" (3rd Generation, Cellular, 16GB RAM)";;
+        "iPad13,8") device_name="iPad Pro 12.9\" (5th Generation, Wifi)";;
+        "iPad13,9") device_name="iPad Pro 12.9\" (5th Generation, Wifi, 16GB RAM)";;
+        "iPad13,10") device_name="iPad Pro 12.9\" (5th Generation, Cellular)";;
+        "iPad13,11") device_name="iPad Pro 12.9\" (5th Generation, Cellular, 16GB RAM)";;
+        "iPad13,16") device_name="iPad Air 5 (Wifi)";;
+        "iPad13,17") device_name="iPad Air 5 (Cellular)";;
+        "iPad13,18") device_name="iPad 10 (Wifi)";;
+        "iPad13,19") device_name="iPad 10 (Cellular)";;
+        "iPad14,1") device_name="iPad mini 6 (Wifi)";;
+        "iPad14,2") device_name="iPad mini 6 (Cellular)";;
+        "iPad14,3") device_name="iPad Pro 11\" (4th Generation, Wifi)";;
+        "iPad14,4") device_name="iPad Pro 11\" (4th Generation, Cellular)";;
+        "iPad14,5") device_name="iPad Pro 12.9\" (6th Generation, Wifi)";;
+        "iPad14,6") device_name="iPad Pro 12.9\" (6th Generation, Cellular)";;
+        "iPad14,8") device_name="iPad Air 11\" (M2, Wifi)";;
+        "iPad14,9") device_name="iPad Air 11\" (M2, Cellular)";;
+        "iPad14,10") device_name="iPad Air 13\" (M2, Wifi)";;
+        "iPad14,11") device_name="iPad Air 13\" (M2, Cellular)";;
+        "iPad16,3") device_name="iPad Pro 11\" (M4, Wifi)";;
+        "iPad16,4") device_name="iPad Pro 11\" (M4, Cellular)";;
+        "iPad16,5") device_name="iPad Pro 12.9\" (M4, Wifi)";;
+        "iPad16,6") device_name="iPad Pro 12.9\" (M4, Cellular)";;
+        "iPod1,1") device_name="iPod touch";;
+        "iPod2,1") device_name="iPod touch 2";;
+        "iPod3,1") device_name="iPod touch 3";;
+        "iPod4,1") device_name="iPod touch 4";;
+        "iPod5,1") device_name="iPod touch 5";;
+        "iPod7,1") device_name="iPod touch 6";;
+        "iPod9,1") device_name="iPod touch 7";;
+    esac
+}
+
 device_manufacturing() {
     if [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]] || [[ $device_argmode == "none" ]]; then
         return
@@ -784,8 +939,9 @@ device_get_info() {
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
     esac
+    device_get_name
     if (( device_proc > 10 )); then
-        print "* Device: $device_type (${device_model}ap) in $device_mode mode"
+        print "* Device: $device_name (${device_type}, ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
         echo
