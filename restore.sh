@@ -4191,7 +4191,7 @@ restore_futurerestore() {
             iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 ) ExtraArr+=("--latest-baseband");;
             * ) ExtraArr+=("--no-baseband");;
         esac
-        if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+        if [[ $device_target_vers == "10"* ]]; then
             ExtraArr+=("-k" "-g" "14G60")
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
