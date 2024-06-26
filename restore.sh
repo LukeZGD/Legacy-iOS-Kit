@@ -5759,7 +5759,7 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     echo
-    print "* Device: $device_type (${device_model}ap) in $device_mode mode"
+    print "* Device: $device_name (${device_type}, ${device_model}ap) in $device_mode mode"
     device_manufacturing
     if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
