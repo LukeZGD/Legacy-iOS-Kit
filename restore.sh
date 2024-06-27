@@ -259,7 +259,6 @@ set_tool_paths() {
                 pause
             fi
             if (( mac_minver <= 11 )); then
-                mac_lowver=1
                 mac_cocoa=1
                 if [[ -z $(command -v cocoadialog) ]]; then
                     local error_msg="* You need to install cocoadialog from MacPorts."
@@ -268,8 +267,6 @@ set_tool_paths() {
                     error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
                     error "Cannot find cocoadialog, cannot continue." "$error_msg"
                 fi
-            elif [[ $mac_minver == 12 ]]; then
-                mac_lowver=1
             fi
             if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_minver < 15 )); then
                 local error_msg="* You need to install curl from MacPorts."
@@ -3621,13 +3618,18 @@ ipsw_prepare_multipatch() {
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
 
     log "Patch ASR"
-    if [[ $ipsw_prepare_usepowder == 1 && $ipsw_isbeta != 1 ]]; then
+    if [[ $ipsw_prepare_usepowder == 1 ]]; then
         unzip -o -j temp.ipsw $ramdisk_name
         mv $ramdisk_name ramdisk2.orig
-        rm RestoreRamdisk.dec
         "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-        cp ramdisk2.dec RestoreRamdisk.dec
-        "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
+        #rm RestoreRamdisk.dec
+        #cp ramdisk2.dec RestoreRamdisk.dec
+        #"$dir/hfsplus" RestoreRamdisk.dec grow 30000000
+        rm -f asr
+        "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     else
         cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
@@ -4714,8 +4716,8 @@ ipsw_prepare() {
             elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_custom
             fi
-            if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
-                : ipsw_prepare_multipatch
+            if [[ $ipsw_isbeta == 1 && $ipsw_isbeta_needspatch == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
+                ipsw_prepare_multipatch
             fi
         ;;
 
@@ -4740,7 +4742,7 @@ ipsw_prepare() {
         7 )
             # A7 devices 10.3.3
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-                if [[ $mac_lowver == 1 ]]; then
+                if [[ $mac_cocoa == 1 ]]; then
                     restore_usepwndfu64=1
                     return
                 fi
