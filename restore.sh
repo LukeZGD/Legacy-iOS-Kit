@@ -568,7 +568,7 @@ device_get_name() {
         "iPhone14,3") device_name="iPhone 13 Pro Max";;
         "iPhone14,4") device_name="iPhone 13 mini";;
         "iPhone14,5") device_name="iPhone 13";;
-        "iPhone14,6") device_name="iPhone SE 2023";;
+        "iPhone14,6") device_name="iPhone SE 2022";;
         "iPhone14,7") device_name="iPhone 14";;
         "iPhone14,8") device_name="iPhone 14 Plus";;
         "iPhone15,2") device_name="iPhone 14 Pro";;
@@ -578,94 +578,94 @@ device_get_name() {
         "iPhone16,1") device_name="iPhone 15 Pro";;
         "iPhone16,2") device_name="iPhone 15 Pro Max";;
         "iPad1,1") device_name="iPad 1";;
-        "iPad2,1") device_name="iPad 2 (Wifi)";;
+        "iPad2,1") device_name="iPad 2 (Wi-Fi)";;
         "iPad2,2") device_name="iPad 2 (GSM)";;
         "iPad2,3") device_name="iPad 2 (CDMA)";;
-        "iPad2,4") device_name="iPad 2 (Wifi, Rev A)";;
-        "iPad2,5") device_name="iPad mini 1 (Wifi)";;
+        "iPad2,4") device_name="iPad 2 (Wi-Fi, Rev A)";;
+        "iPad2,5") device_name="iPad mini 1 (Wi-Fi)";;
         "iPad2,6") device_name="iPad mini 1 (GSM)";;
         "iPad2,7") device_name="iPad mini 1 (Global)";;
-        "iPad3,1") device_name="iPad 3 (Wifi)";;
+        "iPad3,1") device_name="iPad 3 (Wi-Fi)";;
         "iPad3,2") device_name="iPad 3 (CDMA)";;
         "iPad3,3") device_name="iPad 3 (GSM)";;
-        "iPad3,4") device_name="iPad 4 (Wifi)";;
+        "iPad3,4") device_name="iPad 4 (Wi-Fi)";;
         "iPad3,5") device_name="iPad 4 (GSM)";;
         "iPad3,6") device_name="iPad 4 (Global)";;
-        "iPad4,1") device_name="iPad Air 1 (Wifi)";;
+        "iPad4,1") device_name="iPad Air 1 (Wi-Fi)";;
         "iPad4,2") device_name="iPad Air 1 (Cellular)";;
         "iPad4,3") device_name="iPad Air 1 (China)";;
-        "iPad4,4") device_name="iPad mini 2 (Wifi)";;
+        "iPad4,4") device_name="iPad mini 2 (Wi-Fi)";;
         "iPad4,5") device_name="iPad mini 2 (Cellular)";;
         "iPad4,6") device_name="iPad mini 2 (China)";;
-        "iPad4,7") device_name="iPad mini 3 (Wifi)";;
+        "iPad4,7") device_name="iPad mini 3 (Wi-Fi)";;
         "iPad4,8") device_name="iPad mini 3 (Cellular)";;
         "iPad4,9") device_name="iPad mini 3 (China)";;
-        "iPad5,1") device_name="iPad mini 4 (Wifi)";;
+        "iPad5,1") device_name="iPad mini 4 (Wi-Fi)";;
         "iPad5,2") device_name="iPad mini 4 (Cellular)";;
-        "iPad5,3") device_name="iPad Air 2 (Wifi)";;
+        "iPad5,3") device_name="iPad Air 2 (Wi-Fi)";;
         "iPad5,4") device_name="iPad Air 2 (Cellular)";;
-        "iPad6,3") device_name="iPad Pro 9.7\" (Wifi)";;
+        "iPad6,3") device_name="iPad Pro 9.7\" (Wi-Fi)";;
         "iPad6,4") device_name="iPad Pro 9.7\" (Cellular)";;
-        "iPad6,7") device_name="iPad Pro 12.9\" (Wifi)";;
+        "iPad6,7") device_name="iPad Pro 12.9\" (Wi-Fi)";;
         "iPad6,8") device_name="iPad Pro 12.9\" (Cellular)";;
-        "iPad6,11") device_name="iPad 5 (Wifi)";;
+        "iPad6,11") device_name="iPad 5 (Wi-Fi)";;
         "iPad6,12") device_name="iPad 5 (Cellular)";;
-        "iPad7,1") device_name="iPad Pro 12.9\" 2G (Wifi)";;
-        "iPad7,2") device_name="iPad Pro 12.9\" 2G (Cellular)";;
-        "iPad7,3") device_name="iPad Pro 10.5\" (Wifi)";;
+        "iPad7,1") device_name="iPad Pro 12.9\" (2nd gen, Wi-Fi)";;
+        "iPad7,2") device_name="iPad Pro 12.9\" (2nd gen, Cellular)";;
+        "iPad7,3") device_name="iPad Pro 10.5\" (Wi-Fi)";;
         "iPad7,4") device_name="iPad Pro 10.5\" (Cellular)";;
-        "iPad7,5") device_name="iPad 6 (Wifi)";;
+        "iPad7,5") device_name="iPad 6 (Wi-Fi)";;
         "iPad7,6") device_name="iPad 6 (Cellular)";;
-        "iPad7,11") device_name="iPad 7 (Wifi)";;
+        "iPad7,11") device_name="iPad 7 (Wi-Fi)";;
         "iPad7,12") device_name="iPad 7 (Cellular)";;
-        "iPad8,1") device_name="iPad Pro 11\" (Wifi)";;
-        "iPad8,2") device_name="iPad Pro 11\" (Wifi, 6GB RAM)";;
+        "iPad8,1") device_name="iPad Pro 11\" (Wi-Fi)";;
+        "iPad8,2") device_name="iPad Pro 11\" (Wi-Fi, 6GB RAM)";;
         "iPad8,3") device_name="iPad Pro 11\" (Cellular)";;
         "iPad8,4") device_name="iPad Pro 11\" (Cellular, 6GB RAM)";;
-        "iPad8,5") device_name="iPad Pro 12.9\" 3G (Wifi)";;
-        "iPad8,6") device_name="iPad Pro 12.9\" 3G (Wifi, 6GB RAM)";;
-        "iPad8,7") device_name="iPad Pro 12.9\" 3G (Cellular)";;
-        "iPad8,8") device_name="iPad Pro 12.9\" 3G (Cellular, 6GB RAM)";;
-        "iPad8,9") device_name="iPad Pro 11\" 2G (Wifi)";;
-        "iPad8,10") device_name="iPad Pro 11\" 2G (Cellular)";;
-        "iPad8,11") device_name="iPad Pro 12.9\" 4G (Wifi)";;
-        "iPad8,12") device_name="iPad Pro 12.9\" 4G (Cellular)";;
-        "iPad11,1") device_name="iPad mini 5 (Wifi)";;
+        "iPad8,5") device_name="iPad Pro 12.9\" (3rd gen, Wi-Fi)";;
+        "iPad8,6") device_name="iPad Pro 12.9\" (3rd gen, Wi-Fi, 6GB RAM)";;
+        "iPad8,7") device_name="iPad Pro 12.9\" (3rd gen, Cellular)";;
+        "iPad8,8") device_name="iPad Pro 12.9\" (3rd gen, Cellular, 6GB RAM)";;
+        "iPad8,9") device_name="iPad Pro 11\" (2nd gen, Wi-Fi)";;
+        "iPad8,10") device_name="iPad Pro 11\" (2nd gen, Cellular)";;
+        "iPad8,11") device_name="iPad Pro 12.9\" (4th gen, Wi-Fi)";;
+        "iPad8,12") device_name="iPad Pro 12.9\" (4th gen, Cellular)";;
+        "iPad11,1") device_name="iPad mini 5 (Wi-Fi)";;
         "iPad11,2") device_name="iPad mini 5 (Cellular)";;
-        "iPad11,3") device_name="iPad Air 3 (Wifi)";;
+        "iPad11,3") device_name="iPad Air 3 (Wi-Fi)";;
         "iPad11,4") device_name="iPad Air 3 (Cellular)";;
-        "iPad11,6") device_name="iPad 8 (Wifi)";;
+        "iPad11,6") device_name="iPad 8 (Wi-Fi)";;
         "iPad11,7") device_name="iPad 8 (Cellular)";;
-        "iPad12,1") device_name="iPad 9 (Wifi)";;
+        "iPad12,1") device_name="iPad 9 (Wi-Fi)";;
         "iPad12,2") device_name="iPad 9 (Cellular)";;
-        "iPad13,1") device_name="iPad Air 4 (Wifi)";;
+        "iPad13,1") device_name="iPad Air 4 (Wi-Fi)";;
         "iPad13,2") device_name="iPad Air 4 (Cellular)";;
-        "iPad13,4") device_name="iPad Pro 11\" 3G (Wifi)";;
-        "iPad13,5") device_name="iPad Pro 11\" 3G (Wifi, 16GB RAM)";;
-        "iPad13,6") device_name="iPad Pro 11\" 3G (Cellular)";;
-        "iPad13,7") device_name="iPad Pro 11\" 3G (Cellular, 16GB RAM)";;
-        "iPad13,8") device_name="iPad Pro 12.9\" 5G (Wifi)";;
-        "iPad13,9") device_name="iPad Pro 12.9\" 5G (Wifi, 16GB RAM)";;
-        "iPad13,10") device_name="iPad Pro 12.9\" 5G (Cellular)";;
-        "iPad13,11") device_name="iPad Pro 12.9\" 5G (Cellular, 16GB RAM)";;
-        "iPad13,16") device_name="iPad Air 5 (Wifi)";;
+        "iPad13,4") device_name="iPad Pro 11\" (3rd gen, Wi-Fi)";;
+        "iPad13,5") device_name="iPad Pro 11\" (3rd gen, Wi-Fi, 16GB RAM)";;
+        "iPad13,6") device_name="iPad Pro 11\" (3rd gen, Cellular)";;
+        "iPad13,7") device_name="iPad Pro 11\" (3rd gen, Cellular, 16GB RAM)";;
+        "iPad13,8") device_name="iPad Pro 12.9\" (5th gen, Wi-Fi)";;
+        "iPad13,9") device_name="iPad Pro 12.9\" (5th gen, Wi-Fi, 16GB RAM)";;
+        "iPad13,10") device_name="iPad Pro 12.9\" (5th gen, Cellular)";;
+        "iPad13,11") device_name="iPad Pro 12.9\" (5th gen, Cellular, 16GB RAM)";;
+        "iPad13,16") device_name="iPad Air 5 (Wi-Fi)";;
         "iPad13,17") device_name="iPad Air 5 (Cellular)";;
-        "iPad13,18") device_name="iPad 10 (Wifi)";;
+        "iPad13,18") device_name="iPad 10 (Wi-Fi)";;
         "iPad13,19") device_name="iPad 10 (Cellular)";;
-        "iPad14,1") device_name="iPad mini 6 (Wifi)";;
+        "iPad14,1") device_name="iPad mini 6 (Wi-Fi)";;
         "iPad14,2") device_name="iPad mini 6 (Cellular)";;
-        "iPad14,3") device_name="iPad Pro 11\" 4G (Wifi)";;
-        "iPad14,4") device_name="iPad Pro 11\" 4G (Cellular)";;
-        "iPad14,5") device_name="iPad Pro 12.9\" 6G (Wifi)";;
-        "iPad14,6") device_name="iPad Pro 12.9\" 5G (Cellular)";;
-        "iPad14,8") device_name="iPad Air 11\" M2 (Wifi)";;
-        "iPad14,9") device_name="iPad Air 11\" M2 (Cellular)";;
-        "iPad14,10") device_name="iPad Air 13\" M2 (Wifi)";;
-        "iPad14,11") device_name="iPad Air 13\" M2 (Cellular)";;
-        "iPad16,3") device_name="iPad Pro 11\" M2 (Wifi)";;
-        "iPad16,4") device_name="iPad Pro 11\" M2 (Cellular)";;
-        "iPad16,5") device_name="iPad Pro 12.9\" M4 (Wifi)";;
-        "iPad16,6") device_name="iPad Pro 12.9\" M4 (Cellular)";;
+        "iPad14,3") device_name="iPad Pro 11\" (4th gen, Wi-Fi)";;
+        "iPad14,4") device_name="iPad Pro 11\" (4th gen, Cellular)";;
+        "iPad14,5") device_name="iPad Pro 12.9\" (6th gen, Wi-Fi)";;
+        "iPad14,6") device_name="iPad Pro 12.9\" (6th gen, Cellular)";;
+        "iPad14,8") device_name="iPad Air 11\" (M2, Wi-Fi)";;
+        "iPad14,9") device_name="iPad Air 11\" (M2, Cellular)";;
+        "iPad14,10") device_name="iPad Air 13\" (M2, Wi-Fi)";;
+        "iPad14,11") device_name="iPad Air 13\" (M2, Cellular)";;
+        "iPad16,3") device_name="iPad Pro 11\" (M2, Wi-Fi)";;
+        "iPad16,4") device_name="iPad Pro 11\" (M2, Cellular)";;
+        "iPad16,5") device_name="iPad Pro 12.9\" (M4, Wi-Fi)";;
+        "iPad16,6") device_name="iPad Pro 12.9\" (M4, Cellular)";;
         "iPod1,1") device_name="iPod touch";;
         "iPod2,1") device_name="iPod touch 2";;
         "iPod3,1") device_name="iPod touch 3";;
@@ -3538,15 +3538,17 @@ ipsw_prepare_multipatch() {
     local iv
     local key
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
+    local ticket="--ticket"
 
     log "Starting multipatch"
     mv "$ipsw_custom.ipsw" temp.ipsw
     rm asr* iBSS* iBEC* ramdisk* *.dmg 2>/dev/null
     options_plist="options.$device_model.plist"
     if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
-        :
+        ticket=
     elif [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         options_plist="options.plist"
+        ticket=
     fi
 
     vers="4.2.1"
@@ -3560,7 +3562,6 @@ ipsw_prepare_multipatch() {
     fi
     case $device_target_vers in
         4.3* ) vers="4.3.5"; build="8L1";;
-        5.0* ) vers="5.0.1"; build="9A405";;
         5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
         7* ) vers="7.1.2"; build="11D257";;
@@ -3749,7 +3750,7 @@ ipsw_prepare_ios4patches() {
     local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBSS") | .key')
     mv iBSS.${device_model}ap.RELEASE.dfu iBSS.orig
     "$dir/xpwntool" iBSS.orig iBSS.dec -iv $ibss_iv -k $ibss_key
-    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
     "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
     log "Patch iBEC"
     unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
@@ -3757,7 +3758,7 @@ ipsw_prepare_ios4patches() {
     local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBEC") | .key')
     mv iBEC.${device_model}ap.RELEASE.dfu iBEC.orig
     "$dir/xpwntool" iBEC.orig iBEC.dec -iv $ibec_iv -k $ibec_key
-    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
+    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
     "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
 }
 
@@ -4714,7 +4715,7 @@ ipsw_prepare() {
                 ipsw_prepare_custom
             fi
             if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
-                ipsw_prepare_multipatch
+                : ipsw_prepare_multipatch
             fi
         ;;
 
@@ -4732,7 +4733,7 @@ ipsw_prepare() {
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
             elif [[ $ipsw_isbeta == 1 ]]; then
-                ipsw_prepare_multipatch
+                : ipsw_prepare_multipatch
             fi
         ;;
 
