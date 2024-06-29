@@ -81,6 +81,7 @@ List of options:
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
+    --gasgauge-patch          Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (powdersn0w only)
     --jailbreak               Enable jailbreak option
@@ -938,7 +939,7 @@ device_get_info() {
     esac
     device_get_name
     if (( device_proc > 10 )); then
-        print "* Device: $device_name (${device_type}, ${device_model}ap) in $device_mode mode"
+        print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
         echo
@@ -995,17 +996,22 @@ device_get_info() {
             device_use_build="14G60"
         ;;
     esac
-    local latestver
     case $device_type in
         iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
         ;;
-        iPad[56]* | iPhone[89]* | iPhone10* | iPod9,1 )
-            log "Getting latest iOS version for $device_type"
-            latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
-            device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
-            device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+        iPad5* | iPhone[89]* | iPod9,1 )
+            device_latest_vers="15.8.2"
+            device_latest_build="19H384"
+        ;;
+        iPad6* | iPhone10* )
+            device_latest_vers="16.7.8"
+            device_latest_build="20H343"
+            #log "Getting latest iOS version for $device_type"
+            #local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+            #device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+            #device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -1494,6 +1500,7 @@ device_enter_mode() {
                 log "Placing device to pwnDFU mode using gaster"
                 $gaster pwn
                 tool_pwned=$?
+                log "gaster reset"
                 $gaster reset
             elif [[ $device_type == "iPod2,1" ]]; then
                 # touch 2 uses ipwndfu
@@ -1797,8 +1804,8 @@ device_fw_key_check() {
         log "Getting firmware keys for $device_type-$build"
         mkdir -p "$keys_path" 2>/dev/null
         local try=("https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/raw/master/$device_type/$build/index.html"
-                   "https://api.m1sta.xyz/wikiproxy/$device_type/$build"
-                   "http://127.0.0.1:8888/firmware/$device_type/$build")
+                   "http://127.0.0.1:8888/firmware/$device_type/$build"
+                   "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
             curl -L $i -o index.html
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
@@ -1828,7 +1835,7 @@ ipsw_get_url() {
     ipsw_url=
     log "Checking URL in $device_fw_dir/$build_id/url"
     if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
-        rm "$device_fw_dir/$build_id/url"
+        rm -f "$device_fw_dir/$build_id/url"
         url=
     fi
     if [[ -z $url ]]; then
@@ -2385,12 +2392,11 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
                 6* ) JBFiles+=("evasi0n6-untether.tar");;
-                4.2.1 ) JBFiles[0]="fstab_old.tar";;
-                4.1 | 4.0* | 3.1.3 )
-                    JBFiles[0]="fstab_old.tar"
-                    JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar")
-                ;;
+                4.1 | 4.0* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
                 5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+            esac
+            case $device_target_vers in
+                [34]* ) JBFiles[0]="fstab_old.tar"
             esac
             for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
@@ -3535,17 +3541,17 @@ ipsw_prepare_multipatch() {
     local iv
     local key
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
-    local ticket="--ticket"
+    local use_ticket=1
 
     log "Starting multipatch"
     mv "$ipsw_custom.ipsw" temp.ipsw
     rm asr* iBSS* iBEC* ramdisk* *.dmg 2>/dev/null
     options_plist="options.$device_model.plist"
     if [[ $device_type == "iPad1,1" && $device_target_vers == "4"* ]]; then
-        ticket=
+        use_ticket=
     elif [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         options_plist="options.plist"
-        ticket=
+        use_ticket=
     fi
 
     vers="4.2.1"
@@ -3561,10 +3567,12 @@ ipsw_prepare_multipatch() {
         4.3* ) vers="4.3.5"; build="8L1";;
         5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
-        7* ) vers="7.1.2"; build="11D257";;
-        8* ) vers="8.4.1"; build="12H321";;
-        9* ) vers="9.3.5"; build="13G36";;
     esac
+    case $device_target_vers in
+            7* ) vers="7.1.2"; build="11D257";;
+            8* ) vers="8.4.1"; build="12H321";;
+            9* ) vers="9.3.5"; build="13G36";;
+        esac
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
     url="$ipsw_url"
@@ -3594,11 +3602,11 @@ ipsw_prepare_multipatch() {
         fi
         case $getcomp in
             "DeviceTree" )
-                mv $name Downgrade/RestoreDeviceTree
+                "$dir/xpwntool" $name Downgrade/RestoreDeviceTree -iv $iv -k $key -decrypt
                 zip -r0 temp.ipsw Downgrade/RestoreDeviceTree
             ;;
             "Kernelcache" )
-                mv $name Downgrade/RestoreKernelCache
+                "$dir/xpwntool" $name Downgrade/RestoreKernelCache -iv $iv -k $key -decrypt
                 zip -r0 temp.ipsw Downgrade/RestoreKernelCache
             ;;
             * )
@@ -3607,10 +3615,15 @@ ipsw_prepare_multipatch() {
             ;;
         esac
         if [[ $getcomp == "iB"* ]]; then
+            local ticket=
+            if [[ $getcomp == "iBEC" && $use_ticket == 1 ]]; then
+                ticket="--ticket"
+            fi
             log "Patch $getcomp"
-            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
+            "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug $ticket -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
-            zip -r0 temp.ipsw ${path}$name
+            cp ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu 2>/dev/null
+            zip -r0 temp.ipsw ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu
         fi
     done
 
@@ -3622,14 +3635,12 @@ ipsw_prepare_multipatch() {
         unzip -o -j temp.ipsw $ramdisk_name
         mv $ramdisk_name ramdisk2.orig
         "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-        #rm RestoreRamdisk.dec
-        #cp ramdisk2.dec RestoreRamdisk.dec
-        #"$dir/hfsplus" RestoreRamdisk.dec grow 30000000
         rm -f asr
         "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 usr/sbin/asr
     else
         cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
@@ -3660,17 +3671,7 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add src/target/$device_model/reboot4 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        if [[ $device_type != "iPhone3,1" ]]; then
-            "$dir/hfsplus" RestoreRamdisk.dec add iBoot iBoot
-            # reboot chain: reboot4 as reboot, activate_exploit as reboot_, original reboot as reboot__
-            # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
-            "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot_ sbin/reboot__
-            case $device_target_vers in
-                4.3* ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit sbin/reboot_;; # auto-boot=1
-                * ) "$dir/hfsplus" RestoreRamdisk.dec add src/activate_exploit2 sbin/reboot_;;  # auto-boot=0
-            esac
-            "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot_
-        fi
+        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
     elif [[ $device_target_powder == 1 ]]; then
         local hw="$device_model"
         local base_build="11D257"
@@ -3690,7 +3691,14 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add $partition sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
+        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
+    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
+        "$dir/hfsplus" RestoreRamdisk.dec untar bin.tar
+        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
+        "$dir/hfsplus" RestoreRamdisk.dec add reboot.sh sbin/reboot
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
+        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
     fi
 
     log "Repack Restore Ramdisk"
@@ -3744,24 +3752,25 @@ ipsw_prepare_tethered() {
 }
 
 ipsw_prepare_ios4patches() {
+    local comps=("iBSS" "iBEC")
+    local iv
+    local key
+    local name
+    local path="Firmware/dfu/"
     log "Applying iOS 4 patches"
-    mkdir -p $all_flash Firmware/dfu
-    log "Patch iBSS"
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu
-    local ibss_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBSS") | .iv')
-    local ibss_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBSS") | .key')
-    mv iBSS.${device_model}ap.RELEASE.dfu iBSS.orig
-    "$dir/xpwntool" iBSS.orig iBSS.dec -iv $ibss_iv -k $ibss_key
-    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBSS.patched Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
-    log "Patch iBEC"
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu
-    local ibec_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBEC") | .iv')
-    local ibec_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBEC") | .key')
-    mv iBEC.${device_model}ap.RELEASE.dfu iBEC.orig
-    "$dir/xpwntool" iBEC.orig iBEC.dec -iv $ibec_iv -k $ibec_key
-    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
+    mkdir -p $all_flash $path
+    for getcomp in "${comps[@]}"; do
+        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+        name="$getcomp.${device_model}ap.RELEASE.dfu"
+        log "Patch $getcomp"
+        unzip -o -j "$ipsw_path.ipsw" ${path}$name
+        mv $name $getcomp.orig
+        "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
+        "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
+        "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
+        zip -r0 temp.ipsw ${path}$name
+    done
 }
 
 ipsw_prepare_ios4powder() {
@@ -3776,7 +3785,7 @@ ipsw_prepare_ios4powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar" "fstab_rw.tar" "freeze.tar" "cydiasubstrate.tar")
+        JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar" "fstab_old.tar" "freeze.tar" "cydiasubstrate.tar")
         for i in {0..3}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
@@ -3839,20 +3848,6 @@ ipsw_prepare_ios4powder() {
         echo "0000010: 3467" | xxd -r - $applelogo_name
         echo "0000020: 3467" | xxd -r - $applelogo_name
         mv $applelogo_name $all_flash/$applelogo_name
-    fi
-    if [[ $device_type != "iPhone3,1" ]]; then
-        local ramdisk_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
-        log "Patch RestoreRamdisk"
-        unzip -o -j temp.ipsw $ramdisk_name
-        mv $ramdisk_name ramdisk.orig
-        "$dir/xpwntool" ramdisk.orig ramdisk.dec
-        # powdersn0w adds reboot4 as sbin/reboot, and orig reboot is moved to sbin/reboot_
-        # these commands will add activate_exploit to sbin/reboot_, and move orig reboot to sbin/reboot__
-        # thanks to testingthings (@throwaway167074) this ios 4 powder nvram fix implementation, https://gist.github.com/LukeZGD/da484f6deb02edefd6689c6bf921d5d4
-        "$dir/hfsplus" ramdisk.dec mv sbin/reboot_ sbin/reboot__
-        "$dir/hfsplus" ramdisk.dec add src/activate_exploit sbin/reboot_
-        "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot_
-        "$dir/xpwntool" ramdisk.dec $ramdisk_name -t ramdisk.orig
     fi
 
     log "Add all to custom IPSW"
@@ -4345,13 +4340,14 @@ restore_futurerestore() {
         futurerestore2+="_new"
     else
         futurerestore2="../saved/futurerestore_$platform"
-        ExtraArr=("--latest-sep")
-        case $device_type in
-            iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 ) ExtraArr+=("--latest-baseband");;
-            * ) ExtraArr+=("--no-baseband");;
-        esac
         if [[ $device_target_vers == "10"* ]]; then
-            ExtraArr+=("-k" "-g" "14G60")
+            export FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD=1 # required since custom-latest-ota is broken
+        else
+            ExtraArr=("--latest-sep")
+            case $device_type in
+                iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 ) ExtraArr+=("--latest-baseband");;
+                * ) ExtraArr+=("--no-baseband");;
+            esac
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
@@ -4561,16 +4557,9 @@ restore_prepare() {
                     * ) restore_idevicerestore;;
                 esac
                 if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $device_target_powder == 1 ]]; then
+                    echo
                     log "The device may enter recovery mode after the restore"
                     print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
-                fi
-                if [[ $device_target_vers == "4.3"* && $device_target_powder == 1 ]] &&
-                   [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-                    log "Do not disconnect your device yet"
-                    device_find_mode Recovery 50
-                    log "Attempting to exit recovery mode"
-                    $irecovery -n
-                    log "Done, your device should boot now"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
@@ -4673,6 +4662,10 @@ restore_pwned64() {
         cp firmwares.json ../saved
     fi
     cp ../saved/firmwares.json /tmp
+    if [[ $device_proc == 7 ]]; then
+        log "gaster reset"
+        $gaster reset
+    fi
     restore_futurerestore --use-pwndfu
 }
 
@@ -4716,7 +4709,7 @@ ipsw_prepare() {
             elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_custom
             fi
-            if [[ $ipsw_isbeta == 1 && $ipsw_isbeta_needspatch == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]]; then
+            if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_multipatch
             fi
         ;;
@@ -4734,8 +4727,8 @@ ipsw_prepare() {
             fi
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
-            elif [[ $ipsw_isbeta == 1 ]]; then
-                : ipsw_prepare_multipatch
+            elif [[ $ipsw_isbeta == 1 || $ipsw_gasgauge_patch == 1 ]]; then
+                ipsw_prepare_multipatch
             fi
         ;;
 
@@ -5162,6 +5155,7 @@ device_ramdisk() {
                     "$dir/hfsplus" Ramdisk.raw mv usr/local/bin/restored_external usr/local/bin/restored_external_o
                     "$dir/hfsplus" Ramdisk.raw add restored_external usr/local/bin/restored_external
                     "$dir/hfsplus" Ramdisk.raw chmod 755 usr/local/bin/restored_external
+                    "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/local/bin/restored_external
                 ;;
             esac
             "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
@@ -5562,7 +5556,7 @@ menu_ramdisk() {
                 local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version)"
                 if [[ $current != "$latest" ]]; then
-                    rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
+                    rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                 fi
                 if [[ -s ../saved/TrollStore.tar && -s ../saved/PersistenceHelper_Embedded ]]; then
                     cp ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded .
@@ -5762,7 +5756,7 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver) $live_cdusb_str"
     echo
-    print "* Device: $device_name (${device_type}, ${device_model}ap) in $device_mode mode"
+    print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
     if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
@@ -5777,6 +5771,12 @@ menu_print_info() {
         warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
     elif [[ $device_skipibss == 1 ]]; then
         warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
+    fi
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        warn "Jailbreak flag detected. Jailbreak option enabled."
+    fi
+    if [[ $ipsw_gasgauge_patch ]]; then
+        warn "gasgauge-patch flag detected. multipatch enabled."
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -6018,7 +6018,7 @@ menu_ipa() {
                 if [[ $1 == "Install"* ]]; then
                     mode="device_ideviceinstaller"
                 else
-                    mode="device_altserver_linux"
+                    mode="device_altserver"
                 fi
             ;;
             "Use Dadoum Sideloader" )
@@ -6041,7 +6041,7 @@ menu_ipa() {
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/Sideloader_version)"
                 if [[ $current != "$latest" ]]; then
-                    rm ../saved/$sideloader
+                    rm -f ../saved/$sideloader
                 fi
                 if [[ ! -e ../saved/$sideloader ]]; then
                     download_file https://github.com/Dadoum/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
@@ -7106,121 +7106,31 @@ menu_shshdump_browse() {
     shsh_path="$newpath"
 }
 
-menu_other() {
+menu_flags() {
     local menu_items
     local selected
     local back
 
-    ipsw_path=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
-        if [[ $device_mode != "none" && $device_proc != 1 ]]; then
-            if (( device_proc < 7 )); then
-                if [[ $device_mode == "Normal" ]]; then
-                    menu_items+=("Enter kDFU Mode")
-                    case $device_proc in
-                        6 ) menu_items+=("Send Pwned iBSS");;
-                        4 ) menu_items+=("Enter pwnDFU Mode");;
-                    esac
-                else
-                    case $device_proc in
-                        [56] ) menu_items+=("Send Pwned iBSS");;
-                        *    ) menu_items+=("Enter pwnDFU Mode");;
-                    esac
-                    menu_items+=("Get iOS Version")
-                fi
-                menu_items+=("Clear NVRAM")
-                case $device_type in
-                    iPhone* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
-                esac
-                if [[ $device_mode != "Normal" ]]; then
-                    menu_items+=("Activation Records")
-                fi
-                if [[ $device_type != "iPod2,1" ]]; then
-                    menu_items+=("Just Boot")
-                fi
-            elif (( device_proc <= 10 )); then
-                menu_items+=("Enter pwnDFU Mode")
-            fi
-            if [[ $device_mode == "Normal" ]]; then
-                menu_items+=("Activation Records")
-            fi
-            case $device_type in
-                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
-                iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
-            esac
-            if (( device_proc < 11 )) && [[ $device_latest_vers != "16"* ]]; then
-                menu_items+=("SSH Ramdisk")
-            fi
+        case $device_type in
+            iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Enable disable-bbupdate flag");;
+        esac
+        if [[ $device_proc != 1 ]]; then
+            menu_items+=("Enable activation-records flag")
         fi
-        if [[ $device_mode != "none" ]]; then
-            case $device_mode in
-                "Normal" )
-                    menu_items+=("Attempt Activation")
-                    case $device_vers in
-                        3.1* | [456]* )
-                            case $device_type in
-                                iPhone1* )
-                                    case $device_vers in
-                                        3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
-                                    esac
-                                ;;
-                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
-                            esac
-                        ;;
-                    esac
-                    menu_items+=("Pair Device" "Shutdown Device" "Restart Device" "Enter Recovery Mode" "Connect to SSH")
-                ;;
-                "Recovery" ) menu_items+=("Exit Recovery Mode");;
-            esac
-            if [[ $device_mode != "DFU" ]]; then
-                menu_items+=("DFU Mode Helper")
-            fi
+        if (( device_proc >= 5 )); then
+            menu_items+=("Enable skip-ibss flag")
         fi
-        if (( device_proc < 7 )); then
-            menu_items+=("Create Custom IPSW")
-            case $device_type in
-                iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Enable disable-bbupdate flag");;
-            esac
-            if [[ $device_proc != 1 ]]; then
-                menu_items+=("Enable activation-records flag")
-            fi
-            if (( device_proc >= 5 )); then
-                menu_items+=("Enable skip-ibss flag")
-            fi
-            menu_items+=("Enable jailbreak flag")
-        fi
-        menu_items+=("(Re-)Install Dependencies" "Go Back")
+        menu_items+=("Enable jailbreak flag" "Enable gasgauge-patch flag" "Go Back")
         menu_print_info
-        print " > Main Menu > Other Utilities"
+        print " > Main Menu > Other Utilities > Enable Flags"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
             selected="$opt"
             break
         done
         case $selected in
-            "Hacktivate Device" ) mode="device_hacktivate";;
-            "Revert Hacktivation" ) mode="device_reverthacktivate";;
-            "Create Custom IPSW" ) menu_restore ipsw;;
-            "Enter kDFU Mode" ) mode="kdfu";;
-            "Disable/Enable Exploit" ) menu_remove4;;
-            "SSH Ramdisk" ) mode="device_enter_ramdisk";;
-            "Clear NVRAM" ) mode="ramdisknvram";;
-            "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
-            "(Re-)Install Dependencies" ) install_depends;;
-            "Attempt Activation" ) mode="device_activate";;
-            "Install alloc8 Exploit" ) mode="device_alloc8";;
-            "Dump Baseband" ) mode="baseband";;
-            "Activation Records" ) mode="actrec";;
-            "Enter Recovery Mode" ) mode="enterrecovery";;
-            "Exit Recovery Mode" ) mode="exitrecovery";;
-            "DFU Mode Helper" ) mode="enterdfu";;
-            "Just Boot" ) mode="device_justboot";;
-            "Get iOS Version" ) mode="getversion";;
-            "Shutdown Device" ) mode="shutdown";;
-            "Restart Device" ) mode="restart";;
-            "Connect to SSH" ) mode="device_ssh";;
-            "Pair Device" ) device_pair;;
             "Enable disable-bbupdate flag" )
                 warn "This will enable the --disable-bbupdate flag."
                 print "* This will disable baseband update for custom IPSWs."
@@ -7270,6 +7180,144 @@ menu_other() {
                     back=1
                 fi
             ;;
+            "Enable gasgauge-patch flag" )
+                warn "This will enable the --gasgauge-patch flag."
+                print "* This will enable \"multipatch\" for the custom IPSW."
+                print "* This is especially useful for iPhone 4S devices that have issues restoring due to battery replacement."
+                print "* This issue is called \"gas gauge\" error, also known as error 29 in iTunes."
+                print "* By enabling this, firmware components for 6.1.3 or lower will be used for restoring to get past the error."
+                local opt
+                read -p "$(input 'Do you want to enable the gasgauge-patch flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    ipsw_gasgauge_patch=1
+                    back=1
+                fi
+            ;;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_power() {
+    local menu_items
+    local selected
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
+        menu_print_info
+        print " > Main Menu > Other Utilities > Power Options"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Shutdown Device" ) mode="shutdown";;
+            "Restart Device" ) mode="restart";;
+            "Enter Recovery Mode" ) mode="enterrecovery";;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_other() {
+    local menu_items
+    local selected
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=()
+        if [[ $device_mode != "none" && $device_proc != 1 ]] && (( device_proc < 7 )); then
+            case $device_mode in
+                "Normal" ) menu_items+=("Enter kDFU Mode");;
+                * ) menu_items+=("Get iOS Version");;
+            esac
+            case $device_proc in
+                [56] ) menu_items+=("Send Pwned iBSS");;
+                *    ) menu_items+=("Enter pwnDFU Mode");;
+            esac
+            menu_items+=("Clear NVRAM" "Activation Records")
+            case $device_type in
+                iPhone* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
+            esac
+            if [[ $device_type != "iPod2,1" ]]; then
+                menu_items+=("Just Boot")
+            fi
+            case $device_type in
+                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
+                iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
+            esac
+        fi
+        if [[ $device_mode != "none" ]]; then
+            if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+                menu_items+=("Enter pwnDFU Mode")
+                if [[ $device_mode == "Normal" ]]; then
+                    menu_items+=("Activation Records")
+                fi
+            fi
+            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* ]]; then
+                menu_items+=("SSH Ramdisk")
+            fi
+            case $device_mode in
+                "Normal" )
+                    menu_items+=("Attempt Activation")
+                    case $device_vers in
+                        3.1* | [456]* )
+                            case $device_type in
+                                iPhone1* )
+                                    case $device_vers in
+                                        3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                                    esac
+                                ;;
+                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                            esac
+                        ;;
+                    esac
+                    menu_items+=("Pair Device" "Connect to SSH" "Power Options")
+                ;;
+                "Recovery" ) menu_items+=("Exit Recovery Mode");;
+            esac
+            if [[ $device_mode != "DFU" ]]; then
+                menu_items+=("DFU Mode Helper")
+            fi
+        fi
+        if (( device_proc < 7 )); then
+            menu_items+=("Create Custom IPSW")
+            if [[ $device_proc != 1 ]]; then
+                menu_items+=("Enable Flags")
+            fi
+        fi
+        menu_items+=("(Re-)Install Dependencies" "Go Back")
+        menu_print_info
+        print " > Main Menu > Other Utilities"
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Hacktivate Device" ) mode="device_hacktivate";;
+            "Revert Hacktivation" ) mode="device_reverthacktivate";;
+            "Create Custom IPSW" ) menu_restore ipsw;;
+            "Enter kDFU Mode" ) mode="kdfu";;
+            "Disable/Enable Exploit" ) menu_remove4;;
+            "SSH Ramdisk" ) mode="device_enter_ramdisk";;
+            "Clear NVRAM" ) mode="ramdisknvram";;
+            "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
+            "(Re-)Install Dependencies" ) install_depends;;
+            "Attempt Activation" ) mode="device_activate";;
+            "Install alloc8 Exploit" ) mode="device_alloc8";;
+            "Dump Baseband" ) mode="baseband";;
+            "Activation Records" ) mode="actrec";;
+            "Exit Recovery Mode" ) mode="exitrecovery";;
+            "DFU Mode Helper" ) mode="enterdfu";;
+            "Just Boot" ) mode="device_justboot";;
+            "Get iOS Version" ) mode="getversion";;
+            "Connect to SSH" ) mode="device_ssh";;
+            "Pair Device" ) device_pair;;
+            "Power Options" ) menu_power;;
+            "Enable Flags" ) menu_flags;;
             "Go Back" ) back=1;;
         esac
     done
@@ -7288,6 +7336,7 @@ device_pair() {
 device_ssh() {
     print "* Note: This is for connecting via SSH to devices that are already jailbroken and have OpenSSH installed."
     print "* If this is not what you want, you might be looking for the \"SSH Ramdisk\" option instead."
+    echo
     device_ssh_message
     device_iproxy
     device_sshpass
@@ -7616,9 +7665,11 @@ device_hacktivate() {
         fi
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
-    print "* Make sure that your device is restored with the jailbreak option enabled."
-    print "* Or jailbroken using Legacy iOS Kit's \"Jailbreak Device\" option."
-    print "* This will use SSH to patch lockdownd on your device for hacktivation."
+    print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
+    print "* If this is not what you want, you might be looking for the \"Restore/Downgrade\" option instead."
+    print "* From there, enable both \"Jailbreak Option\" and \"Hacktivate Option.\""
+    echo
+    print "* Hacktivate Device: This will use SSH to patch lockdownd on your device."
     print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
     pause
     device_iproxy
@@ -7664,7 +7715,7 @@ restore_customipsw() {
         fi
     fi
     if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
-        warn "Restoring to 2.x might not work on newer macOS versions."
+        warn "Restoring to 2.x might not work on newer macOS versions. Try installing usbmuxd from Homebrew or MacPorts"
     fi
     if [[ $device_proc == 1 ]]; then
         echo
@@ -7780,25 +7831,32 @@ device_ideviceinstaller() {
     done
 }
 
-device_altserver_linux() {
+device_altserver() {
     local altserver="../saved/anisette-server-$platform"
     local anisette="../saved/AltServer-$platform"
     local arch="$platform_arch"
-    case $arch in
-        "armhf" ) arch="armv7";;
-        "arm64" ) arch="aarch64";;
-    esac
     if [[ $platform == "linux" ]]; then
-        altserver+="_$arch"
-        anisette+="_$arch"
+        case $arch in
+            "armhf" ) arch="armv7";;
+            "arm64" ) arch="aarch64";;
+        esac
     fi
+    altserver+="_$arch"
+    anisette+="_$arch"
     if [[ ! -e $altserver ]]; then
         download_file https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
         mv AltServer-$arch $altserver
     fi
+    log "Checking for latest anisette-server"
+    local latest="$(curl https://api.github.com/repos/LukeZGD/Provision/releases/latest | $jq -r ".tag_name")"
+    local current="$(cat ../saved/anisette-server_version)"
+    if [[ $current != "$latest" ]]; then
+        rm -f ../saved/anisette-server-$arch
+    fi
     if [[ ! -e $anisette ]]; then
-        download_file https://github.com/Dadoum/Provision/releases/download/2.2.0/anisette-server-$arch anisette-server-$arch
+        download_file https://github.com/LukeZGD/Provision/releases/download/$latest/anisette-server-$arch anisette-server-$arch
         mv anisette-server-$arch $anisette
+        echo "$latest" > ../saved/anisette-server_version
     fi
     chmod +x $altserver $anisette
     log "Running Anisette"
@@ -7811,7 +7869,7 @@ device_altserver_linux() {
         sleep 1
     done
     export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
-    altserver_linux="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
+    altserver="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
     device_pair
     log "Enter Apple ID details to continue."
     print "* Your Apple ID and password will only be sent to Apple servers."
@@ -7826,7 +7884,7 @@ device_altserver_linux() {
     echo
     log "Running AltServer-Linux with given Apple ID details..."
     pushd ../saved >/dev/null
-    $altserver_linux -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
+    $altserver -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
     popd >/dev/null
 }
 
@@ -8094,6 +8152,7 @@ for i in "$@"; do
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--skip-ibss" ) device_skipibss=1;;
         "--pwned-recovery" ) device_pwnrec=1;;
+        "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
     esac
 done
 
