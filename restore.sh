@@ -3568,11 +3568,19 @@ ipsw_prepare_multipatch() {
         5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
     esac
-    case $device_target_vers in
+    if [[ $ipsw_gasgauge_patch == 1 ]]; then
+        local ver2="${device_target_vers:0:1}"
+        if (( ver2 >= 7 )); then
+            vers="6.1.3"
+            build="10B329"
+        fi
+    else
+        case $device_target_vers in
             7* ) vers="7.1.2"; build="11D257";;
             8* ) vers="8.4.1"; build="12H321";;
             9* ) vers="9.3.5"; build="13G36";;
         esac
+    fi
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
     url="$ipsw_url"
