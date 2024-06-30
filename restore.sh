@@ -323,6 +323,9 @@ set_tool_paths() {
           $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
         echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
     fi
+    if [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
+        cat ssh_config | sed 's,Add,#Add,g' | sed 's,HostKeyA,#HostKeyA,g' > ssh_config
+    fi
     scp2="scp -F ./ssh_config"
     ssh2="ssh -F ./ssh_config"
 }
@@ -1540,7 +1543,7 @@ device_enter_mode() {
                         esac
                     done
                 else
-                    # the linux checkm8 section. success rates are absolute garbage here
+                    # the linux checkm8 section for a6/a7. success rates are absolute garbage here
                     # A6 linux uses ipwndfu, A7 linux uses gaster
                     log "Please read the message below:"
                     print "* Unfortunately, success rates for checkm8 are very low on Linux."
@@ -1559,14 +1562,19 @@ device_enter_mode() {
                         tool_pwned=$?
                     fi
                 fi
-            elif (( device_proc > 5 )) && [[ $(uname -m) != "x86_64" ]]; then
-                # A6/A7 asi mac uses ipwnder_lite
+            elif [[ $(uname -m) != "x86_64" || $device_proc != 7 ]]; then
+                # A4/A6/A7 asi mac uses ipwnder_lite
+                # A4/A6 mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                opt="${ipwnder}2 -p"
+                opt="$ipwnder"
+                case $device_proc in
+                    6 ) opt+="2 -p";;
+                    4 ) opt+=" -d";;
+                esac
                 $opt
                 tool_pwned=$?
             else
-                # A4/A6/A7 mac uses ipwnder32/ipwnder_lite
+                # A7 intel mac uses ipwnder32/ipwnder_lite
                 local selection=("ipwnder32" "ipwnder_lite")
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
@@ -1576,25 +1584,18 @@ device_enter_mode() {
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
                         "ipwnder32" ) opt="$ipwnder32 -p"; break;;
-                        * )
-                            opt="$ipwnder"
-                            if (( device_proc > 5 )); then
-                                opt+="2 -p"
-                            fi
-                            break
-                        ;;
+                        * ) opt="${ipwnder}2 -p"; break;;
                     esac
                 done
-                if (( device_proc > 5 )); then
-                    log "Please read the message below:"
-                    print "* If you have an older Mac with Core 2 Duo, success rates for checkm8 are low."
-                    print "* Pwning using another Mac or iOS device using iPwnder Lite are available options if needed."
-                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-                    print "* Troubleshooting links:"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
-                    print "* If pwning gets stuck, you can press Ctrl+C to cancel."
-                fi
+                echo
+                log "Please read the message below:"
+                print "* If you have an older Mac with Core 2 Duo, success rates for A7 checkm8 are very low."
+                print "* Pwning using another Mac or iOS device using iPwnder Lite are better options if needed."
+                print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+                print "* Troubleshooting links:"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
+                echo
                 log "Placing device to pwnDFU mode using $opt"
                 $opt
                 tool_pwned=$?
@@ -3432,7 +3433,9 @@ ipsw_prepare_ios4multipart() {
         cp BuildManifest.plist $saved_path/
     fi
     cp ../resources/patch/old/$device_type/$vers/* .
-    patch BuildManifest.plist < BuildManifest.patch
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
     cp BuildManifest.plist $ipsw_custom_part2/
 
     log "Restore Ramdisk"
@@ -5185,7 +5188,7 @@ device_ramdisk() {
             if [[ $1 == "justboot" ]]; then
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v pio-error=0"
             else
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             fi
             "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
         fi
