@@ -322,8 +322,7 @@ set_tool_paths() {
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
           $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
         echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
-    fi
-    if [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
+    elif [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
         cat ssh_config | sed 's,Add,#Add,g' | sed 's,HostKeyA,#HostKeyA,g' > ssh_config
     fi
     scp2="scp -F ./ssh_config"
@@ -3570,19 +3569,13 @@ ipsw_prepare_multipatch() {
         4.3* ) vers="4.3.5"; build="8L1";;
         5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
+        7* ) vers="7.1.2"; build="11D257";;
+        8* ) vers="8.4.1"; build="12H321";;
+        9* ) vers="9.3.5"; build="13G36";;
     esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
-        local ver2="${device_target_vers:0:1}"
-        if (( ver2 >= 7 )); then
-            vers="6.1.3"
-            build="10B329"
-        fi
-    else
-        case $device_target_vers in
-            7* ) vers="7.1.2"; build="11D257";;
-            8* ) vers="8.4.1"; build="12H321";;
-            9* ) vers="9.3.5"; build="13G36";;
-        esac
+        vers="6.1.3"
+        build="10B329"
     fi
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
@@ -6881,6 +6874,9 @@ ipsw_custom_set() {
         if [[ $device_type == "iPhone"* || $device_type == "iPad"* ]] && (( device_proc > 4 )); then
             ipsw_custom+="B"
         fi
+    fi
+    if [[ $ipsw_gasgauge_patch == 1 ]]; then
+        ipsw_custom+="G"
     fi
     if [[ $ipsw_hacktivate == 1 ]]; then
         ipsw_custom+="H"
