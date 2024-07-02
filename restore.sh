@@ -1567,8 +1567,8 @@ device_enter_mode() {
                 log "Placing device to pwnDFU mode using ipwnder_lite"
                 opt="$ipwnder"
                 case $device_proc in
-                    6 ) opt+="2 -p";;
                     4 ) opt+=" -d";;
+                    * ) opt+="2 -p";;
                 esac
                 $opt
                 tool_pwned=$?
