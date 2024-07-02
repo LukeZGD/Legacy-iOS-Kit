@@ -1342,7 +1342,7 @@ device_enter_mode() {
             print "  - After installing these requirements, lock your device."
             print "2. You will be prompted to enter the root password of your iOS device."
             print "  - The default root password is: alpine"
-            print "  - Your input will not be visible, but it is still being entered."
+            print "  - Your password input will not be visible, but it is still being entered."
             print "3. On entering kDFU mode, the device will disconnect."
             print "  - Proceed to unplug and replug the device when prompted."
             print "  - Alternatively, press the TOP or HOME button."
@@ -5568,7 +5568,7 @@ menu_ramdisk() {
                 fi
                 log "Checking for latest TrollStore"
                 local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
-                local current="$(cat ../saved/TrollStore_version)"
+                local current="$(cat ../saved/TrollStore_version 2>/dev/null)"
                 if [[ $current != "$latest" ]]; then
                     rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                 fi
@@ -6053,7 +6053,7 @@ menu_ipa() {
                 fi
                 log "Checking for latest Sideloader"
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
-                local current="$(cat ../saved/Sideloader_version)"
+                local current="$(cat ../saved/Sideloader_version 2>/dev/null)"
                 if [[ $current != "$latest" ]]; then
                     rm -f ../saved/$sideloader
                 fi
@@ -6281,7 +6281,11 @@ menu_restore() {
         fi
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
-                menu_items+=("Other (powdersn0w 7.x blobs)");;
+                local text2="7.1.x"
+                case $device_type in
+                    iPhone5,[1234] ) text2="7.x";;
+                esac
+                menu_items+=("Other (powdersn0w $text2 blobs)");;
             iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPad1,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
@@ -6324,6 +6328,12 @@ menu_restore() {
                 echo
             fi
         fi
+        case $device_type in
+            iPad2,4      ) print "* iPad2,4 does not support 6.1.3 downgrades, you need blobs for 6.1.3 or 7.1.x"; echo;;
+            iPhone5,[34] ) print "* iPhone 5C does not support 8.4.1 downgrades, you need blobs for 8.4.1 or 7.x"; echo;;
+            iPhone3,2    ) print "* iPhone3,2 does not support downgrades with powdersn0w"; echo;;
+            iPod4,1      ) print "* iPod touch 4 does not support any untethered downgrades without blobs"; echo;;
+        esac
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -7350,6 +7360,7 @@ device_pair() {
     if [[ $? != 0 ]]; then
         log "Press \"Trust\" on the device before pressing Enter/Return."
         pause
+        log "Attempting idevicepair"
     fi
     "$dir/idevicepair" pair
 }
@@ -7853,26 +7864,29 @@ device_ideviceinstaller() {
 }
 
 device_altserver() {
-    local altserver="../saved/anisette-server-$platform"
-    local anisette="../saved/AltServer-$platform"
+    local altserver="../saved/AltServer-$platform"
+    local sha1="4bca48e9cda0517cc965250a797f97d5e8cc2de6"
+    local anisette="../saved/anisette-server-$platform"
     local arch="$platform_arch"
-    if [[ $platform == "linux" ]]; then
-        case $arch in
-            "armhf" ) arch="armv7";;
-            "arm64" ) arch="aarch64";;
-        esac
-    fi
+    case $arch in
+        "armhf" ) arch="armv7"; sha1="20e9ea770dbedb5c3c20f8b966be977efa2fa4cc";;
+        "arm64" ) arch="aarch64"; sha1="535926e5a14dc8f59f3f99197ca4122c7af8dfaf";;
+    esac
     altserver+="_$arch"
     anisette+="_$arch"
+    if [[ $($sha1sum $altserver) != "$sha1" ]]; then
+        rm -f $altserver
+    fi
     if [[ ! -e $altserver ]]; then
         download_file https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
         mv AltServer-$arch $altserver
     fi
     log "Checking for latest anisette-server"
     local latest="$(curl https://api.github.com/repos/LukeZGD/Provision/releases/latest | $jq -r ".tag_name")"
-    local current="$(cat ../saved/anisette-server_version)"
+    local current="$(cat ../saved/anisette-server_version 2>/dev/null)"
+    echo $latest
     if [[ $current != "$latest" ]]; then
-        rm -f ../saved/anisette-server-$arch
+        rm -f $anisette
     fi
     if [[ ! -e $anisette ]]; then
         download_file https://github.com/LukeZGD/Provision/releases/download/$latest/anisette-server-$arch anisette-server-$arch
@@ -7899,6 +7913,7 @@ device_altserver() {
     while [[ -z $apple_id ]]; do
         read -p "$(input 'Apple ID: ')" apple_id
     done
+    print "* Your password input will not be visible, but it is still being entered."
     while [[ -z $apple_pass ]]; do
         read -s -p "$(input 'Password: ')" apple_pass
     done
