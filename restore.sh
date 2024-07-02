@@ -323,7 +323,7 @@ set_tool_paths() {
           $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
         echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
     elif [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
-        cat ssh_config | sed 's,Add,#Add,g' | sed 's,HostKeyA,#HostKeyA,g' > ssh_config
+        cat ../resources/ssh_config | sed "s,Add,#Add,g" | sed "s,HostKeyA,#HostKeyA,g" > ssh_config
     fi
     scp2="scp -F ./ssh_config"
     ssh2="ssh -F ./ssh_config"
@@ -701,9 +701,9 @@ device_manufacturing() {
         return
     fi
     case $device_newbr in
-        0 ) print "* This $device_type is an old bootrom model";;
-        1 ) print "* This $device_type is a new bootrom model";;
-        2 ) print "* This $device_type bootrom model cannot be determined. Enter DFU mode to get bootrom model";;
+        0 ) print "* This $device_name is an old bootrom model";;
+        1 ) print "* This $device_name is a new bootrom model";;
+        2 ) print "* This $device_name bootrom model cannot be determined. Enter DFU mode to get bootrom model";;
     esac
     if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
         print "* Cannot check for manufacturing date in DFU mode"
@@ -1965,14 +1965,14 @@ ipsw_preference_set() {
     case $device_latest_vers in
         [76543]* ) ipsw_canjailbreak=1;;
     esac
-    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
     elif [[ $device_target_vers != "$device_latest_vers" ]]; then
         ipsw_canjailbreak=
     fi
 
     case $device_target_vers in
-        9.3.[4321] | 9.[321]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_proc in
                 1 ) ipsw_canjailbreak=1;;
@@ -2017,7 +2017,7 @@ ipsw_preference_set() {
         ipsw_jailbreak=1
     elif [[ $ipsw_jailbreak == 1 ]]; then
         warn "Jailbreak flag detected, jailbreak option enabled by user."
-    elif [[ -z $ipsw_jailbreak && $ipsw_canjailbreak == 1 ]]; then
+    elif [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
@@ -2062,9 +2062,13 @@ ipsw_preference_set() {
             esac
         ;;
     esac
-    if [[ $ipsw_jailbreak == 1 || $device_type == "$device_disable_bbupdate" ||
-          $device_target_powder == 1 || $device_target_tethered == 1 ||
-          $ipsw_canmemory == 1 ]] && [[ -z $ipsw_memory ]]; then
+    if [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
+          $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ||
+          $device_type == "$device_disable_bbupdate" ]]; then
+        ipsw_canmemory=1
+    fi
+
+    if [[ $ipsw_canmemory == 1 && -z $ipsw_memory ]]; then
         input "Memory Option for creating custom IPSW"
         print "* When this option is enabled, system RAM will be used for the IPSW creation process."
         print "* I recommend to enable this option to speed up creating the custom IPSW."
@@ -3055,7 +3059,7 @@ ipsw_prepare_32bit() {
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) nskip=1;;
     esac
-    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* ]]; then
+    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]]; then
         nskip=1
     fi
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $nskip != 1 ]]; then
@@ -3219,7 +3223,7 @@ ipsw_bbreplace() {
     local sbl_latest
     local bbfw="Print BuildIdentities:0:Manifest:BasebandFirmware"
     local ubid
-    if [[ $device_use_bb == 0 ]] || (( device_proc < 5 )); then
+    if [[ $device_use_bb == 0 || $device_target_vers == "$device_latest_vers" ]] || (( device_proc < 5 )); then
         return
     fi
 
@@ -3569,13 +3573,19 @@ ipsw_prepare_multipatch() {
         4.3* ) vers="4.3.5"; build="8L1";;
         5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
-        7* ) vers="7.1.2"; build="11D257";;
-        8* ) vers="8.4.1"; build="12H321";;
-        9* ) vers="9.3.5"; build="13G36";;
     esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
-        vers="6.1.3"
-        build="10B329"
+        local ver2="${device_target_vers:0:1}"
+        if (( ver2 >= 7 )); then
+            vers="6.1.3"
+            build="10B329"
+        fi
+    else
+        case $device_target_vers in
+            7* ) vers="7.1.2"; build="11D257";;
+            8* ) vers="8.4.1"; build="12H321";;
+            9* ) vers="9.3.5"; build="13G36";;
+        esac
     fi
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
@@ -4610,7 +4620,7 @@ restore_prepare() {
             elif [[ $device_target_other != 1 && $device_target_powder != 1 ]]; then
                 shsh_save
             fi
-            if [[ $device_target_vers == "$device_latest_vers" ]]; then
+            if [[ $device_target_vers == "$device_latest_vers" && $ipsw_gasgauge_patch != 1 ]]; then
                 restore_latest
             else
                 if [[ $device_proc == 6 && $platform == "macos" ]]; then
@@ -4726,7 +4736,7 @@ ipsw_prepare() {
                 ipsw_prepare_powder
             elif [[ $ipsw_jailbreak == 1 && $device_target_other != 1 ]]; then
                 ipsw_prepare_jailbreak
-            elif [[ $device_target_vers != "$device_latest_vers" ]]; then
+            elif [[ $device_target_vers != "$device_latest_vers" || $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_32bit
             fi
             if [[ $ipsw_fourthree == 1 ]]; then
@@ -7129,7 +7139,11 @@ menu_flags() {
         if (( device_proc >= 5 )); then
             menu_items+=("Enable skip-ibss flag")
         fi
-        menu_items+=("Enable jailbreak flag" "Enable gasgauge-patch flag" "Go Back")
+        menu_items+=("Enable jailbreak flag")
+        if [[ $device_proc != 6 ]]; then
+            menu_items+=("Enable gasgauge-patch flag")
+        fi
+        menu_items+=("Go Back")
         menu_print_info
         print " > Main Menu > Other Utilities > Enable Flags"
         input "Select an option:"
