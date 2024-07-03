@@ -1502,6 +1502,7 @@ device_enter_mode() {
             if (( device_proc > 7 )); then
                 # A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
+                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
                 $gaster pwn
                 tool_pwned=$?
                 log "gaster reset"
@@ -1511,7 +1512,7 @@ device_enter_mode() {
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif [[ $device_proc == 4 ]]; then
-                # A4 uses ipwndfu/ipwnder
+                # A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection
                 if [[ $platform == "linux" ]]; then
                     selection=("ipwndfu" "ipwnder (SHAtter)" "ipwnder (limera1n)")
@@ -1520,68 +1521,42 @@ device_enter_mode() {
                 fi
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ipwndfu by default (1). Select this option if unsure."
+                print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
                 print "* If the first option does not work, try the other option(s)."
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
+                    log "Placing device to pwnDFU mode using $opt2"
                     case $opt2 in
-                        "ipwndfu" )
-                            device_ipwndfu pwn
-                            tool_pwned=$?
-                            break
-                        ;;
-                        "ipwnder (SHAtter)" )
-                            $ipwnder -s
-                            tool_pwned=$?
-                            break
-                        ;;
-                        "ipwnder (limera1n)" )
-                            $ipwnder -p
-                            tool_pwned=$?
-                            break
-                        ;;
-                        "ipwnder" )
-                            $ipwnder -d
-                            tool_pwned=$?
-                            break
-                        ;;
+                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
+                        "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
+                        "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
+                        "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
-                if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
-                    # 3gs/touch 3 linux uses ipwnder
-                    log "Placing device to pwnDFU mode using ipwnder"
-                    $ipwnder -p
+                # the linux checkm8 section for a6/a7. success rates are absolute garbage here
+                # A6 linux uses ipwndfu, A7 linux uses gaster
+                log "Please read the message below:"
+                warn "Unfortunately, success rates for checkm8 are very low on Linux."
+                print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
+                print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+                print "* Troubleshooting links:"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
+                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
+                if [[ $device_proc == 7 ]]; then
+                    log "Placing device to pwnDFU mode using gaster"
+                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
+                    $gaster pwn
                     tool_pwned=$?
                 else
-                    # the linux checkm8 section for a6/a7. success rates are absolute garbage here
-                    # A6 linux uses ipwndfu, A7 linux uses gaster
-                    log "Please read the message below:"
-                    warn "Unfortunately, success rates for checkm8 are very low on Linux."
-                    print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
-                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-                    print "* Troubleshooting links:"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
-                    print "* If pwning gets stuck, you can press Ctrl+C to cancel."
-                    if [[ $device_proc == 7 ]]; then
-                        log "Placing device to pwnDFU mode using gaster"
-                        $gaster pwn
-                        tool_pwned=$?
-                    else
-                        device_ipwndfu pwn
-                        tool_pwned=$?
-                    fi
+                    device_ipwndfu pwn
+                    tool_pwned=$?
                 fi
-            elif [[ $(uname -m) != "x86_64" || $device_proc != 7 ]]; then
-                # A4/A6/A7 asi mac uses ipwnder_lite
-                # A4/A6 mac uses ipwnder_lite
+            elif [[ $(uname -m) != "x86_64" || $device_proc == 6 ]]; then
+                # A6/A7 asi mac uses ipwnder_lite
+                # A6 mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                opt="$ipwnder"
-                case $device_proc in
-                    4 ) opt+=" -d";;
-                    * ) opt+="2 -p";;
-                esac
+                opt="${ipwnder}2 -p"
                 $opt
                 tool_pwned=$?
             else
