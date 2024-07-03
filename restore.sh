@@ -1561,19 +1561,14 @@ device_enter_mode() {
                         tool_pwned=$?
                     fi
                 fi
-            elif [[ $(uname -m) != "x86_64" || $device_proc != 7 ]]; then
-                # A4/A6/A7 asi mac uses ipwnder_lite
-                # A4/A6 mac uses ipwnder_lite
+            elif (( device_proc >= 6 )) && [[ $(uname -m) != "x86_64" || $device_proc == 6 ]]; then
+                # A6 mac/A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                opt="$ipwnder"
-                case $device_proc in
-                    4 ) opt+=" -d";;
-                    * ) opt+="2 -p";;
-                esac
+                opt="${ipwnder}2 -p"
                 $opt
                 tool_pwned=$?
             else
-                # A7 intel mac uses ipwnder32/ipwnder_lite
+                # A4 mac/A7 intel mac uses ipwnder32/ipwnder_lite
                 local selection=("ipwnder32" "ipwnder_lite")
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
@@ -1583,7 +1578,14 @@ device_enter_mode() {
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
                         "ipwnder32" ) opt="$ipwnder32 -p"; break;;
-                        * ) opt="${ipwnder}2 -p"; break;;
+                        * )
+                            opt="$ipwnder"
+                            case $device_proc in
+                                4 ) opt+=" -d";;
+                                * ) opt+="2 -p";;
+                            esac
+                            break
+                        ;;
                     esac
                 done
                 echo
@@ -5568,7 +5570,8 @@ menu_ramdisk() {
                 fi
                 log "Checking for latest TrollStore"
                 local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
-                local current="$(cat ../saved/TrollStore_version 2>/dev/null)"
+                local current="$(cat ../saved/TrollStore_version 2>/dev/null || echo "none")"
+                log "Latest version: $latest, current version: $current"
                 if [[ $current != "$latest" ]]; then
                     rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                 fi
@@ -6053,7 +6056,8 @@ menu_ipa() {
                 fi
                 log "Checking for latest Sideloader"
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
-                local current="$(cat ../saved/Sideloader_version 2>/dev/null)"
+                local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
+                log "Latest version: $latest, current version: $current"
                 if [[ $current != "$latest" ]]; then
                     rm -f ../saved/$sideloader
                 fi
@@ -7883,8 +7887,8 @@ device_altserver() {
     fi
     log "Checking for latest anisette-server"
     local latest="$(curl https://api.github.com/repos/LukeZGD/Provision/releases/latest | $jq -r ".tag_name")"
-    local current="$(cat ../saved/anisette-server_version 2>/dev/null)"
-    echo $latest
+    local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
+    log "Latest version: $latest, current version: $current"
     if [[ $current != "$latest" ]]; then
         rm -f $anisette
     fi
