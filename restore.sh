@@ -1482,6 +1482,7 @@ device_enter_mode() {
                 print "* DFU mode for A5 device - Make sure that your device is in PWNED DFU mode."
                 print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
                 print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
+                print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, select N and restart your device in normal mode."
                 read -p "$(input 'Is your device in PWNED DFU mode using checkm8-a5? (y/N): ')" opt
@@ -1492,6 +1493,7 @@ device_enter_mode() {
                     error "32-bit A5 device is not in PWNED DFU mode." "$error_msg"
                 fi
                 device_ipwndfu send_ibss
+                print "* If you get \"Pipe error\" that means your device failed to enter pwned DFU mode."
                 return
             fi
 
@@ -1508,44 +1510,54 @@ device_enter_mode() {
                 # touch 2 uses ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
+            elif [[ $device_proc == 4 ]]; then
+                # A4 uses ipwndfu/ipwnder
+                local selection
+                if [[ $platform == "linux" ]]; then
+                    selection=("ipwndfu" "ipwnder (SHAtter)" "ipwnder (limera1n)")
+                else
+                    selection=("ipwnder" "ipwndfu")
+                fi
+                input "PwnDFU Tool Option"
+                print "* Select tool to be used for entering pwned DFU mode."
+                print "* This option is set to ipwndfu by default (1). Select this option if unsure."
+                print "* If the first option does not work, try the other option(s)."
+                input "Select your option:"
+                select opt2 in "${selection[@]}"; do
+                    case $opt2 in
+                        "ipwndfu" )
+                            device_ipwndfu pwn
+                            tool_pwned=$?
+                            break
+                        ;;
+                        "ipwnder (SHAtter)" )
+                            $ipwnder -s
+                            tool_pwned=$?
+                            break
+                        ;;
+                        "ipwnder (limera1n)" )
+                            $ipwnder -p
+                            tool_pwned=$?
+                            break
+                        ;;
+                        "ipwnder" )
+                            $ipwnder -d
+                            tool_pwned=$?
+                            break
+                        ;;
+                    esac
+                done
             elif [[ $platform == "linux" ]]; then
                 if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                     # 3gs/touch 3 linux uses ipwnder
                     log "Placing device to pwnDFU mode using ipwnder"
                     $ipwnder -p
                     tool_pwned=$?
-                elif [[ $device_proc == 4 ]]; then
-                    # A4 linux uses ipwndfu/ipwnder
-                    local selection=("ipwndfu" "ipwnder (SHAtter)" "ipwnder (limera1n)")
-                    input "PwnDFU Tool Option"
-                    print "* Select tool to be used for entering pwned DFU mode."
-                    print "* This option is set to ipwndfu by default (1). Select this option if unsure."
-                    print "* If the first option does not work, try the other option(s)."
-                    input "Select your option:"
-                    select opt2 in "${selection[@]}"; do
-                        case $opt2 in
-                            "ipwndfu" )
-                                device_ipwndfu pwn
-                                tool_pwned=$?
-                                break
-                            ;;
-                            "ipwnder (SHAtter)" )
-                                $ipwnder -s
-                                tool_pwned=$?
-                                break
-                            ;;
-                            "ipwnder (limera1n)" )
-                                $ipwnder -p
-                                tool_pwned=$?
-                                break
-                            ;;
-                        esac
-                    done
                 else
                     # the linux checkm8 section for a6/a7. success rates are absolute garbage here
                     # A6 linux uses ipwndfu, A7 linux uses gaster
                     log "Please read the message below:"
-                    print "* Unfortunately, success rates for checkm8 are very low on Linux."
+                    warn "Unfortunately, success rates for checkm8 are very low on Linux."
                     print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
                     print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
                     print "* Troubleshooting links:"
@@ -1561,14 +1573,19 @@ device_enter_mode() {
                         tool_pwned=$?
                     fi
                 fi
-            elif (( device_proc >= 6 )) && [[ $(uname -m) != "x86_64" || $device_proc == 6 ]]; then
-                # A6 mac/A7 asi mac uses ipwnder_lite
+            elif [[ $(uname -m) != "x86_64" || $device_proc != 7 ]]; then
+                # A4/A6/A7 asi mac uses ipwnder_lite
+                # A4/A6 mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                opt="${ipwnder}2 -p"
+                opt="$ipwnder"
+                case $device_proc in
+                    4 ) opt+=" -d";;
+                    * ) opt+="2 -p";;
+                esac
                 $opt
                 tool_pwned=$?
             else
-                # A4 mac/A7 intel mac uses ipwnder32/ipwnder_lite
+                # A7 intel mac uses ipwnder32/ipwnder_lite
                 local selection=("ipwnder32" "ipwnder_lite")
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
@@ -1578,19 +1595,12 @@ device_enter_mode() {
                 select opt2 in "${selection[@]}"; do
                     case $opt2 in
                         "ipwnder32" ) opt="$ipwnder32 -p"; break;;
-                        * )
-                            opt="$ipwnder"
-                            case $device_proc in
-                                4 ) opt+=" -d";;
-                                * ) opt+="2 -p";;
-                            esac
-                            break
-                        ;;
+                        * ) opt="${ipwnder}2 -p"; break;;
                     esac
                 done
                 echo
                 log "Please read the message below:"
-                print "* If you have an older Mac with Core 2 Duo, success rates for A7 checkm8 are very low."
+                warn "If you have an older Mac with Core 2 Duo, success rates for A7 checkm8 are very low."
                 print "* Pwning using another Mac or iOS device using iPwnder Lite are better options if needed."
                 print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
                 print "* Troubleshooting links:"
@@ -2025,7 +2035,7 @@ ipsw_preference_set() {
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
         print "* This option is enabled by default (Y). Select this option if unsure."
         if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
-            warn "This will be a semi-tethered jailbreak. Arduino is required to boot to a jailbroken state."
+            warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
             print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
         fi
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
@@ -7412,7 +7422,7 @@ device_jailbreak() {
         esac
     fi
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
-        warn "This will be a semi-tethered jailbreak. Arduino is required to boot to a jailbroken state."
+        warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
         print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
         pause
     fi
