@@ -7736,7 +7736,9 @@ restore_customipsw() {
         fi
     fi
     if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
-        warn "Restoring to 2.x might not work on newer macOS versions. Try installing usbmuxd from Homebrew or MacPorts"
+        echo
+        warn "Restoring to 2.x might not work on newer macOS versions."
+        print "* Try installing usbmuxd from MacPorts, and run 'sudo usbmuxd -pf' in another Terminal window"
     fi
     if [[ $device_proc == 1 ]]; then
         echo
@@ -8092,7 +8094,7 @@ main() {
     version_check
 
     if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" ||
-          -z $zenity || ! $(command -v curl) || ! $(command -v xxd) ]]; then
+          -z $zenity || ! $(command -v curl) || ! $(command -v xxd) || ! $(command -v git) ]]; then
         install_depends
     fi
 
