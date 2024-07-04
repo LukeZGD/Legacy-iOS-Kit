@@ -3571,7 +3571,7 @@ ipsw_prepare_multipatch() {
         case $device_target_vers in
             7* ) vers="7.1.2"; build="11D257";;
             8* ) vers="8.4.1"; build="12H321";;
-            9* ) vers="9.3.5"; build="13G36";;
+            9* ) return;;
         esac
     fi
     saved_path="../saved/$device_type/$build"
