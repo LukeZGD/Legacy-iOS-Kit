@@ -3571,7 +3571,7 @@ ipsw_prepare_multipatch() {
         case $device_target_vers in
             7* ) vers="7.1.2"; build="11D257";;
             8* ) vers="8.4.1"; build="12H321";;
-            9* ) return;;
+            9* ) vers="9.3.5"; build="13G36";;
         esac
     fi
     saved_path="../saved/$device_type/$build"
@@ -4728,7 +4728,7 @@ ipsw_prepare() {
             fi
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
-            elif [[ $ipsw_isbeta == 1 || $ipsw_gasgauge_patch == 1 ]]; then
+            elif [[ $ipsw_isbeta == 1 && $device_target_vers != "9"* ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_multipatch
             fi
         ;;
