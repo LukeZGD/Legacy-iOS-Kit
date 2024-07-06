@@ -7377,7 +7377,7 @@ device_ssh() {
     print "* For accessing data, note the following:"
     print "* Host: sftp://127.0.0.1 | User: root | Password: <your password> (default is alpine) | Port: $ssh_port"
     $ssh -p $ssh_port root@127.0.0.1
-    if [[ $! != 0 ]]; then
+    if [[ $? != 0 ]]; then
         log "Failed to connect to SSH as root. Connecting to device SSH as mobile..."
         print "* Host: sftp://127.0.0.1 | User: mobile | Password: <your password> | Port: $ssh_port"
         $ssh -p $ssh_port mobile@127.0.0.1
