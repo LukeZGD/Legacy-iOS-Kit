@@ -151,7 +151,7 @@ set_tool_paths() {
                 *"sid" | "kali"* ) debian_ver="sid";;
                 * ) debian_ver="$(echo "$debian_ver" | cut -c -2)";;
             esac
-        elif [[ $ID == "fedora" || $ID == "nobara" || $ID_LIKE == "fedora" ]]; then
+        elif [[ $ID == "fedora" || $ID_LIKE == "fedora" || $ID == "nobara" ]]; then
             fedora_ver=$VERSION_ID
         fi
 
@@ -187,10 +187,11 @@ set_tool_paths() {
                     live_cdusb_str+=" - Persistent storage"
                 else
                     warn "Detected Legacy iOS Kit running on temporary storage."
-                    print "* You may run out of space and get errors during the downgrade process."
+                    print "* You may run out of space and get errors during the restore process."
                     print "* Please move Legacy iOS Kit to a drive that is NOT used for the live USB."
                     print "* This may mean using another external HDD/flash drive to store Legacy iOS Kit on."
                     print "* To use one USB drive only, create the live USB using Rufus with Persistent Storage enabled."
+                    sleep 5
                     pause
                     live_cdusb_str+=" - Temporary storage"
                 fi
@@ -300,7 +301,7 @@ set_tool_paths() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo chmod +x $dir/*
         if [[ $? != 0 ]]; then
-            error "Failed to set up execute permissions, cannot continue. Try to move Legacy iOS Kit somewhere else."
+            error "Failed to set up execute permissions of binaries, cannot continue. Try to move Legacy iOS Kit somewhere else."
         fi
     else
         chmod +x $dir/*
@@ -308,11 +309,8 @@ set_tool_paths() {
 
     futurerestore+="$dir/futurerestore"
     gaster+="$dir/gaster"
-    ideviceactivation="$dir/ideviceactivation"
-    ideviceenterrecovery="$dir/ideviceenterrecovery"
     ideviceinfo="$dir/ideviceinfo"
     idevicerestore+="$dir/idevicerestore"
-    iproxy="$dir/iproxy"
     ipwnder+="$dir/ipwnder"
     irecovery+="$dir/irecovery"
     irecovery2+="$dir/irecovery2"
@@ -376,6 +374,7 @@ install_depends() {
             log "Installing Rosetta 2"
             softwareupdate --install-rosetta
         fi
+        print "* Make sure to install requirements from Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
@@ -1142,7 +1141,7 @@ device_iproxy() {
     if [[ -n $1 ]]; then
         port=$1
     fi
-    $iproxy $ssh_port $port >/dev/null &
+    "$dir/iproxy" $ssh_port $port >/dev/null &
     iproxy_pid=$!
     sleep 1
 }
@@ -1303,7 +1302,7 @@ device_enter_mode() {
                     exit
                 fi
                 log "Entering recovery mode..."
-                $ideviceenterrecovery "$device_udid" >/dev/null
+                "$dir/ideviceenterrecovery" "$device_udid" >/dev/null
                 device_find_mode Recovery 50
             fi
         ;;
@@ -1998,19 +1997,20 @@ ipsw_preference_set() {
     if [[ $ipsw_isbeta == 1 ]]; then
         case $device_target_vers in
             8* )
-                if [[ $device_target_build == "12A4265u" || $device_target_build == "12A4297e" || $device_target_powder != 1 ]]; then
+                if [[ $device_target_build == "12A4265u" || $device_target_build == "12A4297e" ]]; then
                     warn "iOS beta detected. Disabling jailbreak option"
                     ipsw_canjailbreak=
-                elif [[ $ipsw_canjailbreak == 1 ]]; then
-                    warn "iOS beta detected. Jailbreak option might not work properly"
                 fi
             ;;
-            [76]* ) warn "iOS beta detected. Jailbreak option might not work properly";;
+            [76]* ) :;;
             * )
                 warn "iOS beta detected. Disabling jailbreak option"
                 ipsw_canjailbreak=
             ;;
         esac
+        if [[ $ipsw_canjailbreak == 1 ]]; then
+            warn "iOS beta detected. Jailbreak option might not work properly"
+        fi
     fi
 
     if [[ $ipsw_fourthree == 1 ]]; then
@@ -7674,11 +7674,11 @@ device_activate() {
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
         fi
     fi
-    $ideviceactivation activate
+    "$dir/ideviceactivation" activate
     case $device_type in
         iPod[123],1 )
             if (( device_det <= 3 )); then
-                $ideviceactivation itunes
+                "$dir/ideviceactivation" itunes
             fi
         ;;
     esac
@@ -7696,11 +7696,7 @@ device_hacktivate() {
             6.1   ) build="10B141";;
         esac
         log "Checking ideviceactivation status..."
-        local check=$($ideviceactivation activate 2>&1 | grep -c "SIM Required")
-        if [[ $check != 1 ]]; then
-            warn "The SIM Required message did not show up at ideviceactivation, cannot continue."
-            return
-        fi
+        "$dir/ideviceactivation" activate
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
     print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
