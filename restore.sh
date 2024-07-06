@@ -1989,15 +1989,28 @@ ipsw_preference_set() {
 
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
-            9* ) ipsw_canjailbreak=1;;
+            [98]* ) ipsw_canjailbreak=1;;
         esac
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
         return
     fi
 
     if [[ $ipsw_isbeta == 1 ]]; then
-        warn "iOS beta detected, disabling jailbreak option"
-        ipsw_canjailbreak=
+        case $device_target_vers in
+            8* )
+                if [[ $device_target_build == "12A4265u" || $device_target_build == "12A4297e" || $device_target_powder != 1 ]]; then
+                    warn "iOS beta detected. Disabling jailbreak option"
+                    ipsw_canjailbreak=
+                elif [[ $ipsw_canjailbreak == 1 ]]; then
+                    warn "iOS beta detected. Jailbreak option might not work properly"
+                fi
+            ;;
+            [76]* ) warn "iOS beta detected. Jailbreak option might not work properly";;
+            * )
+                warn "iOS beta detected. Disabling jailbreak option"
+                ipsw_canjailbreak=
+            ;;
+        esac
     fi
 
     if [[ $ipsw_fourthree == 1 ]]; then
@@ -5853,7 +5866,6 @@ menu_appmanage() {
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
-        echo
         print " > Main Menu > App Management"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -5883,7 +5895,7 @@ menu_datamanage() {
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Erase All Content and Settings" "Go Back")
+        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Connect to SSH" "Erase All Content and Settings" "Go Back")
         echo
         print " > Main Menu > Data Management"
         input "Select an option:"
@@ -5903,6 +5915,7 @@ menu_datamanage() {
             "Mount Device" ) mkdir ../mount 2>/dev/null; $ifuse ../mount; log "Device (Media) should now be mounted on mount folder";;
             "Mount Device (Raw File System)" ) mkdir ../mount 2>/dev/null; $ifuse --root ../mount; log "Device (root) should now be mounted on mount folder";;
             "Unmount Device" ) log "Attempting to umount device from mount folder"; umount ../mount;;
+            "Connect to SSH" ) mode="device_ssh";;
         esac
     done
 }
@@ -7294,7 +7307,7 @@ menu_other() {
                             esac
                         ;;
                     esac
-                    menu_items+=("Pair Device" "Connect to SSH" "Power Options")
+                    menu_items+=("Pair Device" "Power Options")
                 ;;
                 "Recovery" ) menu_items+=("Exit Recovery Mode");;
             esac
@@ -7334,7 +7347,6 @@ menu_other() {
             "DFU Mode Helper" ) mode="enterdfu";;
             "Just Boot" ) mode="device_justboot";;
             "Get iOS Version" ) mode="getversion";;
-            "Connect to SSH" ) mode="device_ssh";;
             "Pair Device" ) device_pair;;
             "Power Options" ) menu_power;;
             "Enable Flags" ) menu_flags;;
@@ -7363,8 +7375,13 @@ device_ssh() {
     device_sshpass
     log "Connecting to device SSH..."
     print "* For accessing data, note the following:"
-    print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
+    print "* Host: sftp://127.0.0.1 | User: root | Password: <your password> (default is alpine) | Port: $ssh_port"
     $ssh -p $ssh_port root@127.0.0.1
+    if [[ $! != 0 ]]; then
+        log "Failed to connect to SSH as root. Connecting to device SSH as mobile..."
+        print "* Host: sftp://127.0.0.1 | User: mobile | Password: <your password> | Port: $ssh_port"
+        $ssh -p $ssh_port mobile@127.0.0.1
+    fi
 }
 
 device_alloc8() {
@@ -7459,8 +7476,8 @@ device_ssh_message() {
         print "* Repo: https://lukezgd.github.io/repo"
     fi
     print "* Only proceed if you have these requirements installed using Cydia/Zebra/Sileo."
-    print "* You will be prompted to enter the root password of your iOS device."
-    print "* The default root password is: alpine"
+    print "* You will be prompted to enter the root/mobile password of your iOS device."
+    print "* The default password is: alpine"
 }
 
 device_dump() {
@@ -7865,7 +7882,7 @@ device_altserver() {
     esac
     altserver+="_$arch"
     anisette+="_$arch"
-    if [[ $($sha1sum $altserver) != "$sha1" ]]; then
+    if [[ $($sha1sum $altserver 2>/dev/null | awk '{print $1}') != "$sha1" ]]; then
         rm -f $altserver
     fi
     if [[ ! -e $altserver ]]; then
