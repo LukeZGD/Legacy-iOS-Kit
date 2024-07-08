@@ -1512,11 +1512,12 @@ device_enter_mode() {
                 tool_pwned=$?
             elif [[ $device_proc == 4 ]]; then
                 # A4/3gs/touch 3 uses ipwndfu/ipwnder
-                local selection
+                local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
-                    selection=("ipwndfu" "ipwnder (SHAtter)" "ipwnder (limera1n)")
-                else
-                    selection=("ipwnder" "ipwndfu")
+                    selection=("ipwndfu" "ipwnder (limera1n)")
+                    if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" ]]; then
+                        selection+=("ipwnder (SHAtter)")
+                    fi
                 fi
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
@@ -1691,10 +1692,17 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1
         rm -rf ../saved/ipwndfu-*
     fi
-    if [[ -d /opt/local/lib ]]; then
-        ln -sf /opt/local/lib ~/lib
-    elif [[ -d /opt/homebrew/lib ]]; then
-        ln -sf /opt/homebrew/lib ~/lib
+    if [[ $platform == "macos" ]]; then
+        if [[ -e ~/lib && -e ~/lib.bak ]]; then
+            rm -rf ~/lib
+        elif [[ -e ~/lib ]]; then
+            mv ~/lib ~/lib.bak
+        fi
+        if [[ -d /opt/homebrew/lib ]]; then
+            ln -sf /opt/homebrew/lib ~/lib
+        elif [[ -d /opt/local/lib ]]; then
+            ln -sf /opt/local/lib ~/lib
+        fi
     fi
 
     pushd ../saved/ipwndfu/ >/dev/null
