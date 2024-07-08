@@ -1552,9 +1552,13 @@ device_enter_mode() {
                     device_ipwndfu pwn
                     tool_pwned=$?
                 fi
-            elif [[ $(uname -m) != "x86_64" || $device_proc == 6 ]]; then
-                # A6/A7 asi mac uses ipwnder_lite
+            elif [[ $device_proc == 6 ]]; then
                 # A6 mac uses ipwnder_lite
+                log "Placing device to pwnDFU mode using ipwnder_lite"
+                $ipwnder -d
+                tool_pwned=$?
+            elif [[ $platform_arch == "arm64" ]]; then
+                # A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
                 opt="${ipwnder}2 -p"
                 $opt
@@ -1591,9 +1595,6 @@ device_enter_mode() {
             # tool_pwned is error code of pwning tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
-            fi
-            if [[ $opt == "${ipwnder}2 -p" && $device_proc == 6 ]]; then
-                ${ipwnder}2 --upload-iboot
             fi
             if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
                 return
@@ -4472,14 +4473,14 @@ restore_latest() {
     fi
 }
 
-restore_prepare_1033() {
-    device_enter_mode pwnDFU
+restore_prepare_pwnrec64() {
     local attempt=1
-
     if [[ $device_pwnrec == 1 ]]; then
         warn "Pwned recovery flag detected, skipping pwnREC mode procedure. Proceed with caution"
         return
     fi
+
+    device_enter_mode pwnDFU
     if [[ $device_proc == 7 ]]; then
         log "gaster reset"
         $gaster reset
@@ -4655,7 +4656,7 @@ restore_prepare() {
                     iBSS=$iBSSb
                     iBEC=$iBECb
                 fi
-                restore_prepare_1033
+                restore_prepare_pwnrec64
                 shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
                 restore_futurerestore --skip-blob
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -5017,7 +5018,7 @@ device_ramdisk64() {
     mv $ramdisk_path/iBEC.img4 $ramdisk_path/iBEC.im4p
     iBSS="$ramdisk_path/iBSS"
     iBEC="$ramdisk_path/iBEC"
-    restore_prepare_1033
+    restore_prepare_pwnrec64
 
     log "Booting, please wait..."
     $irecovery -f $ramdisk_path/RestoreRamdisk.img4
