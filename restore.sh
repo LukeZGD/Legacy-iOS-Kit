@@ -170,7 +170,6 @@ set_tool_paths() {
             error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
         bspatch="$dir/bspatch"
-        ifuse="$(command -v ifuse)"
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
         zenity="$(command -v zenity)"
@@ -281,7 +280,6 @@ set_tool_paths() {
 
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
-        ifuse="$dir/ifuse"
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
@@ -311,6 +309,7 @@ set_tool_paths() {
     gaster+="$dir/gaster"
     ideviceinfo="$dir/ideviceinfo"
     idevicerestore+="$dir/idevicerestore"
+    ifuse="$(command -v ifuse)"
     ipwnder+="$dir/ipwnder"
     irecovery+="$dir/irecovery"
     irecovery2+="$dir/irecovery2"
@@ -5903,6 +5902,9 @@ menu_datamanage() {
     print "* Note 3: Limited support for backups. Better use iCloud Backups instead"
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
+    if [[ -z $ifuse ]]; then
+        warn "ifuse not installed. Mount Device will not work. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
+    fi
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Connect to SSH" "Erase All Content and Settings" "Go Back")
         echo
