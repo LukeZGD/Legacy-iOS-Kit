@@ -80,6 +80,7 @@ List of options:
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
+    --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --gasgauge-patch          Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
@@ -2460,7 +2461,7 @@ ipsw_prepare_jailbreak() {
     ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -3098,7 +3099,7 @@ ipsw_prepare_32bit() {
     ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -3898,7 +3899,7 @@ ipsw_prepare_powder() {
     fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -5783,8 +5784,12 @@ menu_print_info() {
     device_manufacturing
     if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
-        print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
-        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+        if [[ $device_deadbb == 1 ]]; then
+            warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate"
+        else
+            print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
+            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+        fi
     fi
     if [[ $device_actrec == 1 ]]; then
         warn "Activation records flag detected. Proceed with caution"
@@ -6906,6 +6911,9 @@ ipsw_custom_set() {
         device_use_bb=0
         if [[ $device_type == "iPhone"* || $device_type == "iPad"* ]] && (( device_proc > 4 )); then
             ipsw_custom+="B"
+        fi
+        if [[ $device_deadbb == 1 ]]; then
+            ipsw_custom+="D"
         fi
     fi
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
@@ -8204,6 +8212,7 @@ for i in "$@"; do
         "--skip-ibss" ) device_skipibss=1;;
         "--pwned-recovery" ) device_pwnrec=1;;
         "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
+        "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
     esac
 done
 
