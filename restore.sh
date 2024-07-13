@@ -1492,7 +1492,6 @@ device_enter_mode() {
                     error "32-bit A5 device is not in PWNED DFU mode." "$error_msg"
                 fi
                 device_ipwndfu send_ibss
-                print "* If you get \"Pipe error\" that means your device failed to enter pwned DFU mode."
                 return
             fi
 
@@ -1723,6 +1722,7 @@ device_ipwndfu() {
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
             fi
             print "* ipwndfu should have \"done!\" as output."
+            print "* If you get \"Pipe error\" that means your device failed to enter pwned DFU mode."
         ;;
 
         "pwn" )
