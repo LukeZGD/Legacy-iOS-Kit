@@ -1466,11 +1466,21 @@ device_enter_mode() {
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
-            elif [[ $irec_pwned == 1 && $device_proc == 7 ]]; then
-                if [[ $platform != "macos" ]]; then
-                    device_ipwndfu rmsigchks
-                fi
-                return
+            elif [[ $irec_pwned == 1 ]]; then
+                case $device_proc in
+                    4 ) return;;
+                    7 )
+                        if [[ $platform != "macos" ]]; then
+                            device_ipwndfu rmsigchks
+                        fi
+                        return
+                    ;;
+                    [89] | 10 )
+                        log "gaster reset"
+                        $gaster reset
+                        return
+                    ;;
+                esac
             fi
 
             if [[ $device_proc == 5 ]]; then
@@ -1555,8 +1565,7 @@ device_enter_mode() {
             elif [[ $platform_arch == "arm64" ]]; then
                 # A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
-                opt="${ipwnder}2 -p"
-                $opt
+                ${ipwnder}2 -p
                 tool_pwned=$?
             else
                 # A7 intel mac uses ipwnder32/ipwnder_lite
