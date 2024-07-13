@@ -28,14 +28,14 @@ jobs:
         run: |
           mkdir saved
           pushd resources
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/65a5509e3bd1261345508d2fda232b3a9c23c9d0.zip -o ipwndfu.zip
+          curl -L https://github.com/LukeZGD/ipwndfu/archive/5eed2615dff4e70d93fe1663e789913c5503fb84.zip -o ipwndfu.zip
           curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
           unzip keys.zip -d .
           unzip ipwndfu.zip -d .
           cp -r Legacy-iOS-Kit-Keys-master/* firmware
           mv ipwndfu*/ ../saved/ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
-          echo "15bf5344f2c3fa7495d5b919145bb73cd42b6a1d" > ../saved/ipwndfu/sha1
+          echo "18ff669572c2211791f2fe928c9698be0a033eca" > ../saved/ipwndfu/sha1
           popd
 
       - name: Move linux binaries

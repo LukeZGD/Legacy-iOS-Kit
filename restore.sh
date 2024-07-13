@@ -1456,14 +1456,10 @@ device_enter_mode() {
             elif [[ $device_pwnrec == 1 ]]; then
                 warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
                 return
-            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" && $device_boot4 != 1 &&
-                    $device_proc != 4 ]] && (( device_proc < 7 )); then
+            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
+                    $device_boot4 != 1 && $device_proc == 5 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                if [[ $device_proc == 5 ]]; then
-                    print "* Select N if this is not the case. (pwned using checkm8-a5)"
-                else
-                    print "* Select N to place device to pwned DFU mode using ipwndfu/ipwnder."
-                fi
+                print "* Select N if this is not the case. (pwned using checkm8-a5)"
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
                 read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
                 if [[ $opt == "Y" || $opt == "y" ]]; then
@@ -1592,7 +1588,9 @@ device_enter_mode() {
             irec_pwned=$($irecovery -q | grep -c "PWND")
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwning tool, must be 0
-            if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
+            if [[ $tool_pwned == 2 ]]; then
+                return
+            elif [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
             if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
@@ -1682,8 +1680,8 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_comm="65a5509e3bd1261345508d2fda232b3a9c23c9d0"
-    local ipwndfu_sha1="15bf5344f2c3fa7495d5b919145bb73cd42b6a1d"
+    local ipwndfu_comm="5eed2615dff4e70d93fe1663e789913c5503fb84"
+    local ipwndfu_sha1="18ff669572c2211791f2fe928c9698be0a033eca"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
@@ -1729,7 +1727,7 @@ device_ipwndfu() {
             log "Placing device to pwnDFU Mode using ipwndfu"
             $python2 ipwndfu -p
             tool_pwned=$?
-            if [[ $tool_pwned != 0 ]]; then
+            if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
                 device_pwnerror
             fi
         ;;
