@@ -1444,20 +1444,20 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
 
-            if [[ $device_proc == 1 ]]; then
+            if [[ $device_skip_ibss == 1 ]]; then
+                warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
+                return
+            elif [[ $device_pwnrec == 1 ]]; then
+                warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
+                return
+            elif [[ $device_proc == 1 ]]; then
                 device_enter_mode DFU
                 return
             fi
             if [[ $device_mode == "DFU" ]]; then
                 irec_pwned=$($irecovery -q | grep -c "PWND")
             fi
-            if [[ $device_skipibss == 1 ]]; then
-                warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
-                return
-            elif [[ $device_pwnrec == 1 ]]; then
-                warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
-                return
-            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
+            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
                     $device_boot4 != 1 && $device_proc == 5 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N if this is not the case. (pwned using checkm8-a5)"
@@ -4963,9 +4963,6 @@ device_ramdisk64() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-        if [[ -z $name ]]; then
-            error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
-        fi
         if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
             name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
             iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
@@ -5897,7 +5894,7 @@ menu_print_info() {
     fi
     if [[ $device_pwnrec == 1 ]]; then
         warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
-    elif [[ $device_skipibss == 1 ]]; then
+    elif [[ $device_skip_ibss == 1 ]]; then
         warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
     fi
     if [[ $ipsw_jailbreak == 1 ]]; then
@@ -7318,7 +7315,7 @@ menu_flags() {
                 local opt
                 read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
-                    device_skipibss=1
+                    device_skip_ibss=1
                     back=1
                 fi
             ;;
@@ -8327,7 +8324,7 @@ for i in "$@"; do
         "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
         "--activation-records" ) device_actrec=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
-        "--skip-ibss" ) device_skipibss=1;;
+        "--skip-ibss" ) device_skip_ibss=1;;
         "--pwned-recovery" ) device_pwnrec=1;;
         "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
