@@ -89,6 +89,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode
     --skip-ibss               Assume that pwned iBSS has already been sent to device
+    --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.1 and lower
 
     * Default IPSW path: <script location>/name_of_ipswfile.ipsw
     * Default SHSH path: <script location>/saved/shsh/name_of_blobfile.shsh(2)
@@ -338,7 +339,7 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Syu --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
@@ -1642,14 +1643,18 @@ device_ipwndfu() {
     fi
     if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
         python2="/usr/bin/python"
+        log "Using macOS system python2"
+        print "* You may also install python2 from pyenv if something is wrong with system python2"
+        print "* Install pyenv by running: curl https://pyenv.run | bash"
+        print "* Install python2 from pyenv by running: pyenv install 2.7.18"
     elif [[ -n $python2 && $device_sudoloop == 1 ]]; then
         python2="sudo $python2"
     elif [[ -z $python2 && ! -e $pyenv2 ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
-        print "* You may install python2 from pyenv by running: pyenv install 2.7.18"
+        print "* Install python2 from pyenv by running: pyenv install 2.7.18"
         if [[ -z $pyenv ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
-            print "* You may install pyenv by running: curl https://pyenv.run | bash"
+            print "* Install pyenv by running: curl https://pyenv.run | bash"
             log "Installing pyenv"
             curl https://pyenv.run | bash
             pyenv="$HOME/.pyenv/bin/pyenv"
@@ -1670,7 +1675,7 @@ device_ipwndfu() {
         fi
     fi
     if [[ -e $pyenv2 ]]; then
-        log "python2 from pyenv detected"
+        log "python2 from pyenv detected, this will be used"
         python2=
         if [[ $device_sudoloop == 1 ]]; then
             python2="sudo "
@@ -1728,8 +1733,7 @@ device_ipwndfu() {
                 error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
             fi
-            print "* ipwndfu should have \"done!\" as output."
-            print "* If you get \"Pipe error\" that means your device failed to enter pwned DFU mode."
+            print "* ipwndfu should have \"done!\" as output. If not, sending iBEC will fail."
         ;;
 
         "pwn" )
@@ -2625,6 +2629,9 @@ ipsw_prepare_keys() {
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+    if [[ -z $name ]]; then
+        error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
+    fi
 
     case $comp in
         "iBSS" | "iBEC" )
@@ -2691,6 +2698,9 @@ ipsw_prepare_paths() {
         fw_key="$device_fw_key_base"
     fi
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+    if [[ -z $name ]]; then
+        error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
+    fi
     local str="<key>$comp</key><dict><key>File</key><string>$all_flash/"
     local str2
     local logostuff
@@ -2855,6 +2865,9 @@ ipsw_prepare_bundle() {
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
+    if [[ -z $ramdisk_name ]]; then
+        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
+    fi
     unzip -o -j "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
@@ -2878,10 +2891,15 @@ ipsw_prepare_bundle() {
         RootSize=$(cat options.$device_model.plist | grep -i SystemPartitionSize -A 1 | grep -oPm1 "(?<=<integer>)[^<]+")
     fi
     RootSize=$((RootSize+30))
+    local rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
+    local rootfs_key="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')"
+    if [[ -z $rootfs_name ]]; then
+        error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
+    fi
     echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' > $NewPlist
     echo "<key>Filename</key><string>$ipsw_p.ipsw</string>" >> $NewPlist
-    echo "<key>RootFilesystem</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')</string>" >> $NewPlist
-    echo "<key>RootFilesystemKey</key><string>$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')</string>" >> $NewPlist
+    echo "<key>RootFilesystem</key><string>$rootfs_name</string>" >> $NewPlist
+    echo "<key>RootFilesystemKey</key><string>$rootfs_key</string>" >> $NewPlist
     echo "<key>RootFilesystemSize</key><integer>$RootSize</integer>" >> $NewPlist
     printf "<key>RamdiskOptionsPath</key><string>/usr/local/share/restore/options" >> $NewPlist
     if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]] ||
@@ -3334,6 +3352,9 @@ patch_iboot() {
     local iboot_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .filename')
     local iboot_iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .iv')
     local iboot_key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "iBoot") | .key')
+    if [[ -z $iboot_name ]]; then
+        error "Issue with firmware keys: Failed getting iBoot. Check The Apple Wiki or your wikiproxy"
+    fi
     local rsa="--rsa"
     log "Patch iBoot: $*"
     if [[ $1 == "--logo" ]]; then
@@ -3587,7 +3608,8 @@ ipsw_prepare_multipatch() {
     fi
     case $device_target_vers in
         4.3* ) vers="4.3.5"; build="8L1";;
-        5* ) vers="5.1.1"; build="9B206";;
+        5.0* ) vers="5.0.1"; build="9A405";;
+        5.1* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
     esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
@@ -3608,6 +3630,9 @@ ipsw_prepare_multipatch() {
     url="$ipsw_url"
     device_fw_key_check
     ramdisk_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    if [[ -z $ramdisk_name ]]; then
+        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
+    fi
 
     mkdir -p $saved_path Downgrade Firmware/dfu 2>/dev/null
     device_fw_key_check temp $build
@@ -3657,14 +3682,24 @@ ipsw_prepare_multipatch() {
         fi
     done
 
+    log "Extracting ramdisk from IPSW"
+    unzip -o -j temp.ipsw $ramdisk_name
+    mv $ramdisk_name ramdisk2.orig
+    "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
+
+    log "Checking"
+    "$dir/hfsplus" ramdisk2.dec extract multipatched
+    if [[ -s multipatched ]]; then
+        log "Already multipatched"
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
+    fi
+
     log "Grow ramdisk"
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
 
     log "Patch ASR"
     if [[ $ipsw_prepare_usepowder == 1 ]]; then
-        unzip -o -j temp.ipsw $ramdisk_name
-        mv $ramdisk_name ramdisk2.orig
-        "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
         rm -f asr
         "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
@@ -3677,11 +3712,6 @@ ipsw_prepare_multipatch() {
     fi
 
     log "Extract options.plist from $device_target_vers IPSW"
-    if [[ ! -s ramdisk2.dec ]]; then
-        unzip -o -j temp.ipsw $ramdisk_name
-        mv $ramdisk_name ramdisk2.orig
-        "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-    fi
     "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
 
     log "Modify options.plist"
@@ -3730,6 +3760,9 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
     fi
+
+    echo "multipatched" > multipatched
+    "$dir/hfsplus" RestoreRamdisk.dec add multipatched multipatched
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" RestoreRamdisk.dec $ramdisk_name -t RestoreRamdisk.orig
@@ -4464,6 +4497,9 @@ restore_latest() {
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
     opt=$?
+    if [[ $2 == "first" ]]; then
+        return $opt
+    fi
     if [[ $1 == "custom" ]]; then
         log "Restoring done! Read the message below if any error has occurred:"
         print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
@@ -4571,11 +4607,13 @@ restore_prepare() {
                 esac
                 case $device_target_vers in
                     "3"* | "4.0"* | "4.1" | "4.2"* )
-                        restore_idevicerestore first
-                        log "Do not disconnect your device, not done yet"
-                        print "* Please put the device in DFU mode after it reboots!"
-                        sleep 10
-                        device_mode=
+                        if [[ $ipsw_skip_first != 1 ]]; then
+                            restore_idevicerestore first
+                            log "Do not disconnect your device, not done yet"
+                            print "* Please put the device in DFU mode after it reboots!"
+                            sleep 10
+                            device_mode=
+                        fi
                         log "Finding device in Recovery/DFU mode..."
                         until [[ -n $device_mode ]]; do
                             device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
@@ -4618,10 +4656,15 @@ restore_prepare() {
                 fi
             else
                 device_enter_mode pwnDFU
-                restore_latest custom
                 if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
+                    restore_latest custom first
                     print "* Proceed to install the alloc8 exploit for the device to boot:"
                     print " -> Go to: Other Utilities -> Install alloc8 Exploit"
+                    log "Do not disconnect your device, not done yet"
+                    device_find_mode DFU 50
+                    device_alloc8
+                else
+                    restore_latest custom
                 fi
             fi
         ;;
@@ -4757,8 +4800,11 @@ ipsw_prepare() {
             fi
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
-            elif [[ $ipsw_isbeta == 1 && $device_target_vers != "9"* ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
-                ipsw_prepare_multipatch
+            elif [[ $ipsw_isbeta == 1 || $ipsw_gasgauge_patch == 1 ]]; then
+                case $device_target_vers in
+                    [59] ) :;;
+                    * ) ipsw_prepare_multipatch;;
+                esac
             fi
         ;;
 
@@ -4865,7 +4911,9 @@ device_ramdisk64() {
         build_id="18C66"
     fi
 
-    if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
+    if [[ $1 == "jailbreak" ]]; then
+        ios8=1
+    elif (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
         local ver="12"
         if [[ $device_type == "iPad5"* ]]; then
             ver="14"
@@ -4915,6 +4963,9 @@ device_ramdisk64() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+        if [[ -z $name ]]; then
+            error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
+        fi
         if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
             name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
             iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
@@ -5048,6 +5099,41 @@ device_ramdisk64() {
     fi
     device_sshpass alpine
 
+    if [[ $1 == "jailbreak" ]]; then
+        local vers
+        local build
+        local untether
+        device_find_mode Restore 25
+        sleep 3
+        $ssh -p $ssh_port root@127.0.0.1 &
+        ssh_pid=$!
+        sleep 1
+        kill $ssh_pid
+        killall ssh
+        device_ramdisk_iosvers
+        vers="$device_vers"
+        build="$device_build"
+        case $device_vers in
+            7.0* ) untether="evasi0n7-untether.tar";;
+            7.1* ) untether="panguaxe.tar";;
+            * )
+                warn "iOS $vers is not supported for jailbreaking with SSHRD."
+                $ssh -p $ssh_port root@127.0.0.1 "reboot"
+                return
+            ;;
+        esac
+        log "Nice, iOS $vers is compatible."
+        device_send_rdtar $untether
+        device_send_rdtar fstab7.tar
+        log "Mounting data partition"
+        $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s2 /mnt1/private/var"
+        device_send_rdtar freeze.tar data
+        log "Rebooting"
+        $ssh -p $ssh_port root@127.0.0.1 "reboot"
+        log "Cool, done and jailbroken (hopefully)"
+        return
+    fi
+
     print "* Mount filesystems with this command (for iOS 11 and newer):"
     print "    /usr/bin/mount_filesystems"
     print "* Mount filesystems with this command (for iOS 10.3.x):"
@@ -5099,6 +5185,9 @@ device_ramdisk() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+        if [[ -z $name ]]; then
+            error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
+        fi
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" )
@@ -5451,7 +5540,11 @@ device_ramdisk_iosvers() {
     device_vers=
     device_build=
     log "Mounting root filesystem"
-    $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
+    if [[ $device_proc == 7 ]]; then
+        $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1"
+    else
+        $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
+    fi
     sleep 1
     log "Getting iOS version"
     $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
@@ -5812,6 +5905,10 @@ menu_print_info() {
     fi
     if [[ $ipsw_gasgauge_patch ]]; then
         warn "gasgauge-patch flag detected. multipatch enabled."
+        print "* This supports up to iOS 8.4.1 only. iOS 9 will not work"
+    fi
+    if [[ $ipsw_skip_first ]]; then
+        warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.1 and lower"
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -5839,7 +5936,7 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-            if (( device_proc < 7 )) && [[ $device_proc != 1 ]]; then
+            if (( device_proc < 8 )) && [[ $device_proc != 1 ]]; then
                 menu_items+=("Jailbreak Device")
             fi
         fi
@@ -6845,16 +6942,16 @@ ipsw_print_warnings() {
     case $device_type in
         "iPhone3,1" )
             if [[ $device_target_vers == "4.2.1" ]]; then
-                warn "iOS 4.2.1 for iPhone3,1 will fail to boot after the restore."
+                warn "iOS 4.2.1 for iPhone3,1 might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select another version instead."
             fi
         ;;
         "iPod4,1" )
             if [[ $device_target_vers == "4.2.1" ]]; then
-                warn "iOS 4.2.1 for iPod4,1 may fail to boot after the restore/jailbreak."
+                warn "iOS 4.2.1 for iPod4,1 might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select another version instead."
             elif [[ $device_target_build == "8B118" ]]; then
-                warn "iOS 4.1 (8B118) for iPod4,1 may fail to boot after the restore/jailbreak."
+                warn "iOS 4.1 (8B118) for iPod4,1 might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select 8B117 or another version instead."
             fi
         ;;
@@ -7415,7 +7512,8 @@ device_alloc8() {
     device_ipwndfu alloc8
     log "Done!"
     print "* This may take several tries. If it fails, unplug and replug your device, then run the script again"
-    print "* For more troubleshooting, go to: https://github.com/axi0mX/ipwndfu/blob/master/JAILBREAK-GUIDE.md"
+    print "* To retry if needed, go to: Other Utilities -> Install alloc8 Exploit"
+    print "* Success rate of installing alloc8 is also higher on Linux than on macOS"
 }
 
 device_jailbreak() {
@@ -7487,10 +7585,23 @@ device_jailbreak() {
             return
         ;;
     esac
+    if [[ $device_proc == 7 ]]; then
+        warn "This feature of jailbreaking iOS 7 for A7 devices via ramdisk is experimental and untested."
+        print "* Proceed at your own risk."
+        if [[ $device_vers != "7"* ]]; then
+            print "* Legacy iOS Kit only supports jailbreaking iOS 7 for A7 devices."
+            print "* For jailbreaking newer versions, go to https://ios.cfw.guide"
+            return
+        fi
+    fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
     pause
+    if [[ $device_proc == 7 ]]; then
+        device_ramdisk64 jailbreak
+        return
+    fi
     device_ramdisk jailbreak
 }
 
@@ -8220,6 +8331,7 @@ for i in "$@"; do
         "--pwned-recovery" ) device_pwnrec=1;;
         "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
+        "--skip-first" ) ipsw_skip_first=1;;
     esac
 done
 
