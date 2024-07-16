@@ -5458,7 +5458,7 @@ device_ramdisk() {
             $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.1 | 4.0* )
+                4.1 | 4.0* | 3.2* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -5483,6 +5483,7 @@ device_ramdisk() {
                 5* ) device_send_rdtar g1lbertJB.tar;;
                 4.2.1 | 4.1 | 4.0* | 3* )
                     untether="${device_type}_${build}.tar"
+                    log "fstab"
                     if [[ $device_type == "iPod2,1" ]]; then
                         $scp -P $ssh_port $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
                     else
@@ -5563,21 +5564,7 @@ device_ramdisk() {
                     iPad1,1 | iPod3,1 )
                         device_ramdisk_iosvers
                         if [[ $device_vers == "3"* ]]; then
-                            log "iOS 3.x detected, running exploit commands"
-                            local offset="$($ssh -p $ssh_port root@127.0.0.1 "echo -e 'p\nq\n' | fdisk -e /dev/rdisk0" | grep AF | grep 63)"
-                            offset="${offset##*-}"
-                            offset="$(echo ${offset%]*} | tr -d ' ')"
-                            local size=$((offset-8))
-                            offset=$((size+64))
-                            log "Got offset $offset. Will resize partition 1 to $size"
-                            $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 1\n\n\n\n$size\ne 3\nAF\n\n${offset}\n16\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
-                            echo
-                            log "Writing exploit ramdisk"
-                            $scp -P $ssh_port ../resources/firmware/src/target/$device_model/9B206/exploit root@127.0.0.1:/
-                            $ssh -p $ssh_port root@127.0.0.1 "dd of=/dev/rdisk0s3 if=/exploit bs=64k count=1"
-                        fi
-                        if [[ $device_type == "iPad1,1" ]]; then
-                            $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
+                            device_ramdisk_ios3exploit
                         fi
                     ;;
                 esac
@@ -5593,6 +5580,46 @@ device_ramdisk() {
     print "* Mount filesystems with this command:"
     print "    mount.sh"
     menu_ramdisk
+}
+
+device_ramdisk_ios3exploit() {
+    log "iOS 3.x detected, running exploit commands"
+    local offset="$($ssh -p $ssh_port root@127.0.0.1 "echo -e 'p\nq\n' | fdisk -e /dev/rdisk0" | grep AF | head -1)"
+    offset="${offset##*-}"
+    offset="$(echo ${offset%]*} | tr -d ' ')"
+    offset=$((offset+64))
+    log "Got offset $offset"
+    $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 3\nAF\n\n${offset}\n8\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
+    echo
+    log "Writing exploit ramdisk"
+    $scp -P $ssh_port ../resources/firmware/src/target/$device_model/9B206/exploit root@127.0.0.1:/
+    $ssh -p $ssh_port root@127.0.0.1 "dd of=/dev/rdisk0s3 if=/exploit bs=64k count=1"
+    if [[ $device_type == "iPad1,1" ]]; then
+        $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
+    fi
+    case $device_vers in
+        3.1.3 | 3.2* ) read -p "$(input "Do you also want to jailbreak it now? (Y/n) ")" opt;;
+        * ) opt='n';;
+    esac
+    if [[ $opt != 'N' && $opt != 'n' ]]; then
+        untether="greenpois0n/${device_type}_${device_build}.tar"
+        log "Sending $untether"
+        $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
+        log "Extracting $untether"
+        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+        log "Mounting data partition"
+        $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+        log "fstab"
+        $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
+        device_send_rdtar cydiasubstrate.tar
+        device_send_rdtar cydiahttpatch.tar
+        if [[ $device_vers == "3.1.3" || $device_vers == "3.2" ]]; then
+            device_send_rdtar freeze.tar data
+            if [[ $ipsw_openssh == 1 ]]; then
+                device_send_rdtar sshdeb.tar
+            fi
+        fi
+    fi
 }
 
 device_ramdisk_iosvers() {
@@ -6481,8 +6508,7 @@ menu_restore() {
                 menu_items+=("Other (Tethered)")
             fi
             case $device_type in
-                iPhone3,[23] | iPad1,1 | iPod[34],1 )
-                    menu_items+=("Other (Tethered)");;
+                iPhone3,[23] | iPod4,1 ) menu_items+=("Other (Tethered)");;
             esac
             if (( device_proc < 7 )); then
                 menu_items+=("DFU IPSW")
@@ -6781,9 +6807,10 @@ menu_ipsw() {
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
                     8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
+                    7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead.";;
                     8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It will not restore/boot properly";;
                     8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
-                    7*  ) warn "3.x support is experimental. It may not restore/boot properly";;
+                    7*  ) warn "Not all 3.x versions will work. It may not restore/boot properly";;
                 esac
                 ipsw_cancustomlogo2=
                 case $device_target_vers in
