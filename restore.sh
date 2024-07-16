@@ -1468,6 +1468,7 @@ device_enter_mode() {
                     return
                 fi
             elif [[ $irec_pwned == 1 ]]; then
+                log "Device seems to be already in pwned DFU mode"
                 case $device_proc in
                     4 ) return;;
                     7 )
@@ -3522,7 +3523,9 @@ ipsw_prepare_ios4multipart() {
         ExtraArgs3+=" -v"
     fi
     patch_iboot $ExtraArgs2 "$ExtraArgs3"
-    if [[ $device_type == "iPad1,1" ]]; then
+    if [[ $device_type == "iPad1,1" && $device_target_vers == "3"* ]]; then
+        cp iBoot ../saved/iPad1,1/iBoot3_$device_ecid
+    elif [[ $device_type == "iPad1,1" ]]; then
         cp iBoot iBEC
         tar -cvf iBoot.tar iBEC
         iboot="iboot"
@@ -3630,6 +3633,7 @@ ipsw_prepare_multipatch() {
     url="$ipsw_url"
     device_fw_key_check
     ramdisk_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    rootfs_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
     if [[ -z $ramdisk_name ]]; then
         error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
@@ -3711,20 +3715,27 @@ ipsw_prepare_multipatch() {
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
     fi
 
-    log "Extract options.plist from $device_target_vers IPSW"
-    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
+    if [[ $device_target_vers == "3.2"* ]]; then
+        log "3.2 options.plist"
+        cp ../resources/firmware/src/target/k48/options.plist $options_plist
+    else
+        log "Extract options.plist from $device_target_vers IPSW"
+        "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
+    fi
 
     log "Modify options.plist"
     "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
-    if [[ $ipsw_prepare_ios4multipart_patch == 1 ]]; then
+    if [[ $ipsw_prepare_ios4multipart_patch == 1 || $device_target_tethered == 1 ]]; then
         cat $options_plist | sed '$d' | sed '$d' > options2.plist
-        echo "<key>FlashNOR</key><false/></dict></plist>" >> options2.plist
+        printf "<key>FlashNOR</key><false/></dict>\n</plist>\n" >> options2.plist
         cat options2.plist
         "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
     else
         "$dir/hfsplus" RestoreRamdisk.dec add $options_plist usr/local/share/restore/$options_plist
     fi
-    if [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    if [[ $device_target_vers == "3"* ]]; then
+        :
+    elif [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
         log "Adding exploit and partition stuff"
         cp -R ../resources/firmware/src .
         "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
@@ -3768,6 +3779,34 @@ ipsw_prepare_multipatch() {
     "$dir/xpwntool" RestoreRamdisk.dec $ramdisk_name -t RestoreRamdisk.orig
     log "Add Restore Ramdisk to IPSW"
     zip -r0 temp.ipsw $ramdisk_name
+
+    # 3.2 fs workaround
+    if [[ $device_target_vers == "3.2"* ]]; then
+        local ipsw_name="iPad1,1_${device_target_vers}_${device_target_build}_FS"
+        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS.ipsw"
+        local sha1E="123d8717b1accbf43c03d2fbd6e82aa5ca3533c9"
+        if [[ $device_target_vers == "3.2.1" ]]; then
+            sha1E="e1b2652aee400115b0b83c97628f90c3953e7eaf"
+        elif [[ $device_target_vers == "3.2" ]]; then
+            sha1E="5763a6f9d5ead3675535c6f7037192e8611206bc"
+        fi
+        if [[ ! -s ../$ipsw_name.ipsw ]]; then
+            log "Downloading FS IPSW..."
+            curl -L "$ipsw_url" -o temp2.ipsw
+            log "Getting SHA1 hash for FS IPSW..."
+            local sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
+            if [[ $sha1L != "$sha1E" ]]; then
+                error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
+                "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
+            fi
+            mv temp2.ipsw ../iPad1,1_${device_target_vers}_${device_target_build}_FS.ipsw
+        fi
+        log "Extract RootFS from FS IPSW"
+        unzip -o -j ../iPad1,1_${device_target_vers}_${device_target_build}_FS.ipsw $rootfs_name
+        log "Add RootFS to IPSW"
+        zip -r0 temp.ipsw $rootfs_name
+    fi
+
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -3803,7 +3842,7 @@ ipsw_prepare_tethered() {
     log "Modify options.plist"
     "$dir/hfsplus" ramdisk.dec rm usr/local/share/restore/$options_plist
     cat $options_plist | sed '$d' | sed '$d' > options2.plist
-    echo "<key>FlashNOR</key><false/></dict></plist>" >> options2.plist
+    printf "<key>FlashNOR</key><false/></dict>\n</plist>\n" >> options2.plist
     cat options2.plist
     "$dir/hfsplus" ramdisk.dec add options2.plist usr/local/share/restore/$options_plist
 
@@ -4312,8 +4351,7 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
-         [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 && $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -4782,7 +4820,9 @@ ipsw_prepare() {
             elif [[ $device_target_vers != "$device_latest_vers" ]]; then
                 ipsw_prepare_custom
             fi
-            if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
+            if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
+               [[ $device_target_vers == "3.2"* && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
+               [[ $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_multipatch
             fi
         ;;
@@ -5285,7 +5325,7 @@ device_ramdisk() {
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
+        if [[ $build_id == "8"* && $device_type != "iPad"* ]]; then
             :
         else
             log "Patch iBEC"
@@ -5319,7 +5359,7 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
 
-    if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
+    if [[ $device_type == "iPad1,1" && $build_id == "8"* ]]; then
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
@@ -5516,6 +5556,28 @@ device_ramdisk() {
                             $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
                         else
                             $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
+                        fi
+                    ;;
+                esac
+                case $device_type in
+                    iPad1,1 | iPod3,1 )
+                        device_ramdisk_iosvers
+                        if [[ $device_vers == "3"* ]]; then
+                            log "iOS 3.x detected, running exploit commands"
+                            local offset="$($ssh -p $ssh_port root@127.0.0.1 "echo -e 'p\nq\n' | fdisk -e /dev/rdisk0" | grep AF | grep 63)"
+                            offset="${offset##*-}"
+                            offset="$(echo ${offset%]*} | tr -d ' ')"
+                            local size=$((offset-8))
+                            offset=$((size+64))
+                            log "Got offset $offset. Will resize partition 1 to $size"
+                            $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 1\n\n\n\n$size\ne 3\nAF\n\n${offset}\n16\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
+                            echo
+                            log "Writing exploit ramdisk"
+                            $scp -P $ssh_port ../resources/firmware/src/target/$device_model/9B206/exploit root@127.0.0.1:/
+                            $ssh -p $ssh_port root@127.0.0.1 "dd of=/dev/rdisk0s3 if=/exploit bs=64k count=1"
+                        fi
+                        if [[ $device_type == "iPad1,1" ]]; then
+                            $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
                         fi
                     ;;
                 esac
@@ -6717,13 +6779,12 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
-                if [[ $device_type == "iPhone3"* ]]; then
-                    case $device_target_build in
-                        8[CE]* ) warn "Selected target version is not supported. It will not restore/boot properly";;
-                    esac
-                elif [[ $device_target_build == "7"* ]]; then
-                    warn "Selected target version is not supported. It will not restore/boot properly"
-                fi
+                case $device_target_build in
+                    8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
+                    8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It will not restore/boot properly";;
+                    8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
+                    7*  ) warn "3.x support is experimental. It may not restore/boot properly";;
+                esac
                 ipsw_cancustomlogo2=
                 case $device_target_vers in
                     [456]* ) ipsw_cancustomlogo2=1;;
