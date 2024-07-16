@@ -2698,7 +2698,7 @@ ipsw_prepare_paths() {
         fw_key="$device_fw_key_base"
     fi
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
-    if [[ -z $name ]]; then
+    if [[ -z $name && $getcomp != "manifest" ]]; then
         error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
     fi
     local str="<key>$comp</key><dict><key>File</key><string>$all_flash/"
