@@ -6827,8 +6827,8 @@ menu_ipsw() {
                     iPad2,4 | iPad3,[123]      ) lo=5.1; hi=9.3.5;;
                     iPhone5,[12] | iPad3,[456] ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
-                    iPad1,1 ) lo=4.2.1; hi=5.1;;
-                    iPod3,1 ) lo=4.0; hi=5.1;;
+                    iPad1,1 ) lo=3.2; hi=5.1;;
+                    iPod3,1 ) lo=3.1.1; hi=5.1;;
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
             fi
