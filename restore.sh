@@ -7921,6 +7921,8 @@ device_hacktivate() {
         esac
         log "Checking ideviceactivation status..."
         "$dir/ideviceactivation" activate
+    elif [[ $device_type == "iPod3,1" ]]; then
+        type="iPhone2,1"
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
     print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
