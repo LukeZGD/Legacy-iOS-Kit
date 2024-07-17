@@ -7511,7 +7511,7 @@ menu_other() {
                                         3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                                     esac
                                 ;;
-                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                                iPhone[23],1 | iPod3,1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                             esac
                         ;;
                     esac
@@ -7894,6 +7894,8 @@ device_activate() {
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
         if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
+        elif [[ $device_type == "iPod3,1" ]]; then
+            print "* For iPod3,1 on 3.x, try going to \"Hacktivate Device\" if device does not activate"
         fi
     fi
     "$dir/ideviceactivation" activate
