@@ -3566,6 +3566,10 @@ ipsw_prepare_ios4multipart() {
     zip -r0 ../../$ipsw_custom_part2.ipsw *
     popd >/dev/null
 
+    if [[ $ipsw_skip_first == 1 ]]; then
+        return
+    fi
+
     # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
     case $device_target_vers in
         4.2* ) ipsw_prepare_32bit $iboot;;
@@ -7360,9 +7364,10 @@ menu_flags() {
             menu_items+=("Enable skip-ibss flag")
         fi
         menu_items+=("Enable jailbreak flag")
-        if [[ $device_proc != 6 ]]; then
-            menu_items+=("Enable gasgauge-patch flag")
-        fi
+        case $device_type in
+            iPhone4,1 ) menu_items+=("Enable gasgauge-patch flag");;
+            iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Enable skip-first flag");;
+        esac
         menu_items+=("Go Back")
         menu_print_info
         print " > Main Menu > Other Utilities > Enable Flags"
@@ -7431,6 +7436,17 @@ menu_flags() {
                 read -p "$(input 'Do you want to enable the gasgauge-patch flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
                     ipsw_gasgauge_patch=1
+                    back=1
+                fi
+            ;;
+            "Enable skip-first flag" )
+                warn "This will enable the --skip-first flag."
+                print "* This will skip first restore and flash NOR IPSW only for powdersn0w 4.2.1 and lower."
+                print "* Do not enable this if you do not know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    ipsw_skip_first=1
                     back=1
                 fi
             ;;
