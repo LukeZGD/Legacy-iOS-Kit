@@ -103,7 +103,7 @@
 - Restoring **tethered** to any version is supported on the following devices:
     - iPhone 4 (3,2 and 3,3), 4S, 5, 5C
     - iPad 2, 3, 4, mini 1
-    - iPod touch 4, 5
+    - iPod touch 3, 4, 5
 - Restoring and jailbreaking to other unsigned versions without blobs is supported on the following devices and target version range:
     - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
     - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
