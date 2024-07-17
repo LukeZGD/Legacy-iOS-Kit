@@ -5601,6 +5601,8 @@ device_ramdisk_ios3exploit() {
     if [[ $device_type == "iPad1,1" ]]; then
         $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
     fi
+    log "fstab"
+    $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
     case $device_vers in
         3.1.3 | 3.2* ) read -p "$(input "Do you also want to jailbreak it now? (Y/n) ")" opt;;
         * ) opt='n';;
@@ -5613,8 +5615,6 @@ device_ramdisk_ios3exploit() {
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
         log "Mounting data partition"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
-        log "fstab"
-        $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
         device_send_rdtar cydiasubstrate.tar
         device_send_rdtar cydiahttpatch.tar
         if [[ $device_vers == "3.1.3" || $device_vers == "3.2" ]]; then
