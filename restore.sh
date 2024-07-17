@@ -5598,10 +5598,9 @@ device_ramdisk_ios3exploit() {
         $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
     fi
     case $device_vers in
-        3.1.3 | 3.2* ) read -p "$(input "Do you also want to jailbreak it now? (Y/n) ")" opt;;
-        * ) opt='n';;
+        3.1.3 | 3.2* ) opt='y';;
     esac
-    if [[ $opt != 'N' && $opt != 'n' ]]; then
+    if [[ $opt == 'y' ]]; then
         untether="${device_type}_${device_build}.tar"
         log "Sending $untether"
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
@@ -5618,6 +5617,18 @@ device_ramdisk_ios3exploit() {
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
             fi
+        fi
+        if [[ $device_vers == "3.1.3" ]]; then
+            log "Getting lockdownd from device"
+            $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/libexec/lockdownd .
+            log "Patching lockdownd"
+            local patch="../resources/firmware/FirmwareBundles/Down_iPhone2,1_3.1.3_7E18.bundle/lockdownd.patch"
+            $bspatch lockdownd lockdownd.patched "$patch"
+            log "Renaming original lockdownd"
+            $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/usr/libexec/lockdownd.orig ]] && mv /mnt1/usr/libexec/lockdownd /mnt1/usr/libexec/lockdownd.orig"
+            log "Copying patched lockdownd to device"
+            $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/mnt1/usr/libexec/lockdownd
+            $ssh -p $ssh_port root@127.0.0.1 "chmod +x /mnt1/usr/libexec/lockdownd"
         fi
     fi
 }
