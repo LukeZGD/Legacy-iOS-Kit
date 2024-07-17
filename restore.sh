@@ -5602,9 +5602,9 @@ device_ramdisk_ios3exploit() {
         * ) opt='n';;
     esac
     if [[ $opt != 'N' && $opt != 'n' ]]; then
-        untether="greenpois0n/${device_type}_${device_build}.tar"
+        untether="${device_type}_${device_build}.tar"
         log "Sending $untether"
-        $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
+        $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
         log "Extracting $untether"
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
         log "Mounting data partition"
