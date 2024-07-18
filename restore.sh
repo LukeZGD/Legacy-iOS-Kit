@@ -3785,14 +3785,17 @@ ipsw_prepare_multipatch() {
     zip -r0 temp.ipsw $ramdisk_name
 
     # 3.2 fs workaround
-    if [[ $device_target_vers == "3.2"* ]]; then
-        local ipsw_name="iPad1,1_${device_target_vers}_${device_target_build}_FS"
+    if [[ $device_target_vers == "3.2"* || $device_target_vers == "3.1.3" ]]; then
+        local ipsw_name="${device_type}_${device_target_vers}_${device_target_build}_FS"
         ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS.ipsw"
         local sha1E="123d8717b1accbf43c03d2fbd6e82aa5ca3533c9"
         if [[ $device_target_vers == "3.2.1" ]]; then
             sha1E="e1b2652aee400115b0b83c97628f90c3953e7eaf"
         elif [[ $device_target_vers == "3.2" ]]; then
             sha1E="5763a6f9d5ead3675535c6f7037192e8611206bc"
+        elif [[ $device_target_vers == "3.1.3" ]]; then
+            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod3.1_${device_target_vers}_${device_target_build}_FS.ipsw"
+            sha1E="86944ca72b78057799253a1387de4940145d1797"
         fi
         if [[ ! -s ../$ipsw_name.ipsw ]]; then
             log "Downloading FS IPSW..."
@@ -3803,10 +3806,10 @@ ipsw_prepare_multipatch() {
                 error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
                 "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
             fi
-            mv temp2.ipsw ../iPad1,1_${device_target_vers}_${device_target_build}_FS.ipsw
+            mv temp2.ipsw ../$ipsw_name.ipsw
         fi
         log "Extract RootFS from FS IPSW"
-        unzip -o -j ../iPad1,1_${device_target_vers}_${device_target_build}_FS.ipsw $rootfs_name
+        unzip -o -j ../$ipsw_name.ipsw $rootfs_name
         log "Add RootFS to IPSW"
         zip -r0 temp.ipsw $rootfs_name
     fi
@@ -4355,7 +4358,8 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 && $device_target_vers == "4"* ]]; then
+    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
+         [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -5329,7 +5333,7 @@ device_ramdisk() {
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
-        if [[ $build_id == "8"* && $device_type != "iPad"* ]]; then
+        if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
             :
         else
             log "Patch iBEC"
@@ -5363,7 +5367,7 @@ device_ramdisk() {
         device_enter_mode kDFU
     fi
 
-    if [[ $device_type == "iPad1,1" && $build_id == "8"* ]]; then
+    if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
@@ -5604,10 +5608,9 @@ device_ramdisk_ios3exploit() {
     log "fstab"
     $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
     case $device_vers in
-        3.1.3 | 3.2* ) read -p "$(input "Do you also want to jailbreak it now? (Y/n) ")" opt;;
-        * ) opt='n';;
+        3.1.3 | 3.2* ) opt='y';;
     esac
-    if [[ $opt != 'N' && $opt != 'n' ]]; then
+    if [[ $opt == 'y' ]]; then
         untether="${device_type}_${device_build}.tar"
         log "Sending $untether"
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
@@ -5617,11 +5620,11 @@ device_ramdisk_ios3exploit() {
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
         device_send_rdtar cydiasubstrate.tar
         device_send_rdtar cydiahttpatch.tar
-        if [[ $device_vers == "3.1.3" || $device_vers == "3.2" ]]; then
+        if [[ $device_vers == "3.2" ]]; then
             device_send_rdtar freeze.tar data
-            if [[ $ipsw_openssh == 1 ]]; then
-                device_send_rdtar sshdeb.tar
-            fi
+        fi
+        if [[ $ipsw_openssh == 1 ]]; then
+            device_send_rdtar sshdeb.tar
         fi
     fi
 }
