@@ -89,7 +89,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode
     --skip-ibss               Assume that pwned iBSS has already been sent to device
-    --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.1 and lower
+    --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
 
     * Default IPSW path: <script location>/name_of_ipswfile.ipsw
     * Default SHSH path: <script location>/saved/shsh/name_of_blobfile.shsh(2)
@@ -1695,8 +1695,8 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_comm="5eed2615dff4e70d93fe1663e789913c5503fb84"
-    local ipwndfu_sha1="18ff669572c2211791f2fe928c9698be0a033eca"
+    local ipwndfu_comm="d0f9b0faae98d042e17fbb47cedf342e983a6bb8"
+    local ipwndfu_sha1="8732b15c7262d68d2c5dd8cdbe0f6efb217d0240"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
@@ -2106,7 +2106,17 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $device_target_powder == 1 && -z $ipsw_verbose ]]; then
+    if [[ $device_target_powder == 1 ]]; then
+        ipsw_canverbose=1
+    elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]]; then
+        case $device_target_vers in
+            6.1.6 | 4.1 ) log "3GS verbose boot is not supported on 6.1.6 and 4.1";;
+            [65]* ) log "3GS verbose boot is currently supported on iOS 4 and lower only";;
+            * ) ipsw_canverbose=1;;
+        esac
+    fi
+
+    if [[ $ipsw_canverbose == 1 && -z $ipsw_verbose ]]; then
         input "Verbose Boot Option"
         print "* When this option is enabled, the device will have verbose boot on restore."
         print "* This option is enabled by default (Y). Select this option if unsure."
@@ -3373,9 +3383,10 @@ patch_iboot() {
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
         return
+    elif [[ $device_type != "iPhone2,1" ]]; then
+        echo "0000010: 626F" | xxd -r - iBoot
+        echo "0000020: 626F" | xxd -r - iBoot
     fi
-    echo "0000010: 626F" | xxd -r - iBoot
-    echo "0000020: 626F" | xxd -r - iBoot
     "$dir/xpwntool" iBoot.pwned $iboot_name -t iBoot -iv $iboot_iv -k $iboot_key
 }
 
@@ -3785,7 +3796,7 @@ ipsw_prepare_multipatch() {
     zip -r0 temp.ipsw $ramdisk_name
 
     # 3.2 fs workaround
-    if [[ $device_target_vers == "3.2"* || $device_target_vers == "3.1.3" ]]; then
+    if [[ $device_target_vers == "3.2"* ]]; then
         local ipsw_name="${device_type}_${device_target_vers}_${device_target_build}_FS"
         ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS.ipsw"
         local sha1E="123d8717b1accbf43c03d2fbd6e82aa5ca3533c9"
@@ -4247,7 +4258,22 @@ ipsw_prepare_custom() {
     else # 3GS
         case $device_target_vers in
             6.1.6 | 4.1 ) :;;
-            * ) ipsw_prepare_patchcomp LLB;;
+            * )
+                ipsw_prepare_patchcomp LLB
+                local ExtraArgs3="pio-error=0"
+                if [[ $device_target_vers == "3"* ]]; then
+                    ExtraArgs3+=" amfi=0xff cs_enforcement_disable=1"
+                fi
+                if [[ $ipsw_verbose == 1 ]]; then
+                    ExtraArgs3+=" -v"
+                fi
+                local path="Firmware/all_flash/all_flash.${device_model}ap.production"
+                local name="iBoot.${device_model}ap.RELEASE.img3"
+                patch_iboot -b "$ExtraArgs3"
+                mkdir -p $path
+                mv $name $path/$name
+                zip -r0 "$ipsw_custom.ipsw" $path/$name
+            ;;
         esac
     fi
 }
@@ -5440,14 +5466,14 @@ device_ramdisk() {
                 return
             fi
             case $vers in
-                9.3.[1234] | 9.3 ) untether="untetherhomedepot.tar";;
+                9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
                 8* )         untether="daibutsu/untether.tar";;
                 7.1* )       untether="panguaxe.tar";;
                 7* )         untether="evasi0n7-untether.tar";;
-                6.1.[3456] ) untether="p0sixspwn.tar";;
+                6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
-                4.2.1 | 4.1 | 4.0* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.2.1 | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
                 5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
@@ -5466,7 +5492,7 @@ device_ramdisk() {
             $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.1 | 4.0* | 3.2* )
+                4.[10]* | 3.2* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -5489,10 +5515,10 @@ device_ramdisk() {
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
-                4.2.1 | 4.1 | 4.0* | 3* )
+                4.2.1 | 4.[10]* | 3* )
                     untether="${device_type}_${build}.tar"
                     log "fstab"
-                    if [[ $device_type == "iPod2,1" ]]; then
+                    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
                         $scp -P $ssh_port $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
                     else
                         $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
@@ -5501,7 +5527,7 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                8* | 4.1 | 4.0* | 3* ) :;;
+                8* | 4.[10]* | 3* ) :;;
                 * )
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -5620,7 +5646,7 @@ device_ramdisk_ios3exploit() {
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
         device_send_rdtar cydiasubstrate.tar
         device_send_rdtar cydiahttpatch.tar
-        if [[ $device_vers == "3.2" ]]; then
+        if [[ $device_vers == "3.1.3" || $device_vers == "3.2" ]]; then
             device_send_rdtar freeze.tar data
         fi
         if [[ $ipsw_openssh == 1 ]]; then
@@ -6001,7 +6027,7 @@ menu_print_info() {
         print "* This supports up to iOS 8.4.1 only. iOS 9 will not work"
     fi
     if [[ $ipsw_skip_first ]]; then
-        warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.1 and lower"
+        warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -6709,7 +6735,7 @@ menu_ipsw() {
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
                 case $device_latest_vers in
-                    "6.1.6" | "4.2.1" | "3.1.3" ) ipsw_canhacktivate=1;;
+                    [643]* ) ipsw_canhacktivate=1;;
                 esac
             ;;
             [6543]* )
@@ -6814,10 +6840,11 @@ menu_ipsw() {
                 print "* Target Version: $device_target_vers-$device_target_build"
                 case $device_target_build in
                     8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
-                    7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead.";;
+                    #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
                     8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It will not restore/boot properly";;
                     8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
-                    7*  ) warn "Not all 3.x versions will work. It may not restore/boot properly";;
+                    7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
+                    7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will be stuck at the activation screen";;
                 esac
                 ipsw_cancustomlogo2=
                 case $device_target_vers in
@@ -6835,7 +6862,7 @@ menu_ipsw() {
                     iPhone5,[12] | iPad3,[456] ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
-                    iPod3,1 ) lo=3.1.1; hi=5.1;;
+                    iPod3,1 ) lo=4.0; hi=5.1;;
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
             fi
@@ -7530,7 +7557,7 @@ menu_other() {
                                         3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                                     esac
                                 ;;
-                                iPhone[23],1 | iPod3,1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                             esac
                         ;;
                     esac
@@ -7913,8 +7940,6 @@ device_activate() {
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
         if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
-        elif [[ $device_type == "iPod3,1" ]]; then
-            print "* For iPod3,1 on 3.x, try going to \"Hacktivate Device\" if device does not activate"
         fi
     fi
     "$dir/ideviceactivation" activate
@@ -7940,8 +7965,6 @@ device_hacktivate() {
         esac
         log "Checking ideviceactivation status..."
         "$dir/ideviceactivation" activate
-    elif [[ $device_type == "iPod3,1" ]]; then
-        type="iPhone2,1"
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
     print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
