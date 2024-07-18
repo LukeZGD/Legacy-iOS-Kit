@@ -1697,12 +1697,13 @@ device_ipwndfu() {
     device_enter_mode DFU
     local ipwndfu_comm="d0f9b0faae98d042e17fbb47cedf342e983a6bb8"
     local ipwndfu_sha1="8732b15c7262d68d2c5dd8cdbe0f6efb217d0240"
-    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1) != "$ipwndfu_sha1" ]]; then
+    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
         unzip -q ipwndfu.zip -d ../saved
-        mv ../saved/ipwndfu-*/* ../saved/ipwndfu
-        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1
+        rm -rf ../saved/ipwndfu
+        mv ../saved/ipwndfu-* ../saved/ipwndfu
+        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
     fi
     if [[ $platform == "macos" ]]; then
