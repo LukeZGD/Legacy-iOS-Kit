@@ -3805,9 +3805,6 @@ ipsw_prepare_multipatch() {
             sha1E="e1b2652aee400115b0b83c97628f90c3953e7eaf"
         elif [[ $device_target_vers == "3.2" ]]; then
             sha1E="5763a6f9d5ead3675535c6f7037192e8611206bc"
-        elif [[ $device_target_vers == "3.1.3" ]]; then
-            ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPod3.1_${device_target_vers}_${device_target_build}_FS.ipsw"
-            sha1E="86944ca72b78057799253a1387de4940145d1797"
         fi
         if [[ ! -s ../$ipsw_name.ipsw ]]; then
             log "Downloading FS IPSW..."
@@ -5171,41 +5168,6 @@ device_ramdisk64() {
     fi
     device_sshpass alpine
 
-    if [[ $1 == "jailbreak" ]]; then
-        local vers
-        local build
-        local untether
-        device_find_mode Restore 25
-        sleep 3
-        $ssh -p $ssh_port root@127.0.0.1 &
-        ssh_pid=$!
-        sleep 1
-        kill $ssh_pid
-        killall ssh
-        device_ramdisk_iosvers
-        vers="$device_vers"
-        build="$device_build"
-        case $device_vers in
-            7.0* ) untether="evasi0n7-untether.tar";;
-            7.1* ) untether="panguaxe.tar";;
-            * )
-                warn "iOS $vers is not supported for jailbreaking with SSHRD."
-                $ssh -p $ssh_port root@127.0.0.1 "reboot"
-                return
-            ;;
-        esac
-        log "Nice, iOS $vers is compatible."
-        device_send_rdtar $untether
-        device_send_rdtar fstab7.tar
-        log "Mounting data partition"
-        $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s2 /mnt1/private/var"
-        device_send_rdtar freeze.tar data
-        log "Rebooting"
-        $ssh -p $ssh_port root@127.0.0.1 "reboot"
-        log "Cool, done and jailbroken (hopefully)"
-        return
-    fi
-
     print "* Mount filesystems with this command (for iOS 11 and newer):"
     print "    /usr/bin/mount_filesystems"
     print "* Mount filesystems with this command (for iOS 10.3.x):"
@@ -5587,15 +5549,13 @@ device_ramdisk() {
                     iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
                     iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
                     iPhone5*  )
-                        read -p "$(input "Select Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
+                        read -p "$(input "Select base version: Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
                         if [[ $opt != 'N' && $opt != 'n' ]]; then
                             $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
                         else
                             $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
                         fi
                     ;;
-                esac
-                case $device_type in
                     iPad1,1 | iPod3,1 )
                         device_ramdisk_iosvers
                         if [[ $device_vers == "3"* ]]; then
@@ -5660,11 +5620,7 @@ device_ramdisk_iosvers() {
     device_vers=
     device_build=
     log "Mounting root filesystem"
-    if [[ $device_proc == 7 ]]; then
-        $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s1s1"
-    else
-        $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
-    fi
+    $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
     sleep 1
     log "Getting iOS version"
     $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
@@ -6056,7 +6012,7 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-            if (( device_proc < 8 )) && [[ $device_proc != 1 ]]; then
+            if (( device_proc < 7 )) && [[ $device_proc != 1 ]]; then
                 menu_items+=("Jailbreak Device")
             fi
         fi
@@ -6527,7 +6483,8 @@ menu_restore() {
                 case $device_type in
                     iPhone5,[1234] ) text2="7.x";;
                 esac
-                menu_items+=("Other (powdersn0w $text2 blobs)");;
+                menu_items+=("Other (powdersn0w $text2 blobs)")
+            ;;
             iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPad1,1 | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
@@ -7717,23 +7674,10 @@ device_jailbreak() {
             return
         ;;
     esac
-    if [[ $device_proc == 7 ]]; then
-        warn "This feature of jailbreaking iOS 7 for A7 devices via ramdisk is experimental and untested."
-        print "* Proceed at your own risk."
-        if [[ $device_vers != "7"* ]]; then
-            print "* Legacy iOS Kit only supports jailbreaking iOS 7 for A7 devices."
-            print "* For jailbreaking newer versions, go to https://ios.cfw.guide"
-            return
-        fi
-    fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
     pause
-    if [[ $device_proc == 7 ]]; then
-        device_ramdisk64 jailbreak
-        return
-    fi
     device_ramdisk jailbreak
 }
 
