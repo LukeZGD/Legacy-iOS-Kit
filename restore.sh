@@ -1806,6 +1806,14 @@ device_fw_key_check() {
             log "Existing firmware keys are not valid. Deleting"
             rm "$keys_path/index.html"
         fi
+        case $build in
+            1[23]* )
+                if [[ $(cat "$keys_path/index.html" | sed "s|DeviceTree.${device_model}ap||g" | grep -c "${device_model}ap") != 0 ]]; then
+                    log "Existing firmware keys seem to have incorrect filenames. Deleting"
+                    rm "$keys_path/index.html"
+                fi
+            ;;
+        esac
     fi
 
     if [[ ! -e "$keys_path/index.html" ]]; then
