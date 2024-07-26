@@ -2649,7 +2649,7 @@ ipsw_prepare_keys() {
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-    if [[ -z $name ]]; then
+    if [[ -z $name && $device_proc != 1 ]]; then
         error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
     fi
 
@@ -6020,7 +6020,7 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-            if (( device_proc < 7 )) && [[ $device_proc != 1 ]]; then
+            if (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
             fi
         fi
@@ -7614,7 +7614,11 @@ device_alloc8() {
 }
 
 device_jailbreak() {
-    if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
+    if [[ $device_proc == 1 ]]; then
+        print "* The \"Jailbreak Device\" option is not supported for this device."
+        print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.1 or 3.1.3, then enable the jailbreak option."
+        return
+    elif [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
     else
         case $device_vers in
