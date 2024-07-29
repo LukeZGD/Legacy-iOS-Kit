@@ -6028,13 +6028,10 @@ menu_main() {
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
-            # remove linux check here on later sideloader update
-            if [[ $platform == "linux" ]]; then
-                case $device_vers in
-                    [12].*  ) :;;
-                    [1289]* ) menu_items+=("Sideload IPA");;
-                esac
-            fi
+            case $device_vers in
+                [12].*  ) :;;
+                [1289]* ) menu_items+=("Sideload IPA");;
+            esac
             menu_items+=("App Management" "Data Management")
         fi
         case $device_type in
@@ -6205,7 +6202,7 @@ menu_ipa() {
         if [[ $1 == "Install"* ]]; then
             print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
         else
-            print "* Sideload IPA is for iOS 9 and newer."
+            print "* Sideload IPA is for iOS 9 and newer only."
             print "* Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
@@ -6213,6 +6210,13 @@ menu_ipa() {
             if [[ $platform == "macos" ]]; then
                 menu_items=()
             fi
+        fi
+        if [[ $platform == "macos" ]]; then
+            echo
+            warn "Sideload IPA is currently not supported on macOS."
+            print "* Use Sideloadly or AltServer instead for now."
+            pause
+            back=1
         fi
         echo
         if [[ -n $ipa_path ]]; then
@@ -7639,26 +7643,19 @@ device_jailbreak() {
             ;;
         esac
     fi
+    log "Checking if your device and version is supported..."
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
         warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
         print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
         pause
+    elif [[ $device_proc == 5 ]]; then
+        print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
+    elif [[ $device_proc == 6 && $platform == "linux" ]]; then
+        print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     fi
-    case $device_vers in
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
-        3.1* )
-            if [[ $device_type != "iPhone2,1" ]]; then
-                warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-                print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
-                return
-            fi
-        ;;
-        * )
-            warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-            print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
-            return
-        ;;
-    esac
+    print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
+    print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
+    echo
     case $device_vers in
         8.2 | 8.[10]* )
             if [[ $device_proc == 5 ]]; then
@@ -7670,9 +7667,8 @@ device_jailbreak() {
             fi
         ;;
         9.0* )
-            print "* For this version, use Pangu9, or download openpwnage and sideload it to your device."
+            print "* For this version, use Pangu9 on older macOS to jailbreak your device."
             print "* https://ios.cfw.guide/installing-pangu9/"
-            print "* https://github.com/0xilis/openpwnage"
             return
         ;;
         9.3.[56] )
@@ -7684,6 +7680,19 @@ device_jailbreak() {
             print "* For this version, download kok3shiX or socket and sideload it to your device."
             print "* https://kok3shidoll.github.io/download/kokeshi/kokeshiX_v1.0_alpha_2.ipa"
             print "* https://github.com/staturnzz/socket"
+            return
+        ;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
+        3.1* )
+            if [[ $device_type != "iPhone2,1" ]]; then
+                warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+                print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+                return
+            fi
+        ;;
+        * )
+            warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+            print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
             return
         ;;
     esac
