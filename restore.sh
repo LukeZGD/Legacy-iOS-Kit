@@ -1004,12 +1004,12 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5* | iPhone[89]* | iPod9,1 )
-            device_latest_vers="15.8.2"
-            device_latest_build="19H384"
+            device_latest_vers="15.8.3"
+            device_latest_build="19H386"
         ;;
         iPad6* | iPhone10* )
-            device_latest_vers="16.7.8"
-            device_latest_build="20H343"
+            device_latest_vers="16.7.9"
+            device_latest_build="20H348"
             #log "Getting latest iOS version for $device_type"
             #local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
             #device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
@@ -6171,6 +6171,7 @@ menu_fourthree() {
         menu_print_info
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
+        print "* Read the README here: https://github.com/LukeZGD/FourThree-iPad2"
         if [[ $device_type != "iPad2,1" ]]; then
             warn "There may be issues for cellular devices (including activation), proceed with caution"
             print "* Related discussion: https://github.com/LukeZGD/Legacy-iOS-Kit/discussions/509"
