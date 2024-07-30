@@ -6202,21 +6202,19 @@ menu_ipa() {
         if [[ $1 == "Install"* ]]; then
             print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
         else
-            print "* Sideload IPA is for iOS 9 and newer only."
-            print "* Sideloading will require an Apple ID."
+            print "* Sideload IPA is for iOS 9 and newer only. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
+            print "* If you have AppSync installed, go to App Management -> Install IPA (AppSync) instead."
             if [[ $platform == "macos" ]]; then
-                menu_items=()
+                echo
+                warn "\"Sideload IPA\" is currently not supported on macOS."
+                print "* Use Sideloadly or AltServer instead for now."
+                print "* You also might be looking for the \"Install IPA (AppSync)\" option instead."
+                pause
+                back=1
             fi
-        fi
-        if [[ $platform == "macos" ]]; then
-            echo
-            warn "Sideload IPA is currently not supported on macOS."
-            print "* Use Sideloadly or AltServer instead for now."
-            pause
-            back=1
         fi
         echo
         if [[ -n $ipa_path ]]; then
