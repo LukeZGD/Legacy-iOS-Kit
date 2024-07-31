@@ -1239,7 +1239,7 @@ device_dfuhelper() {
     case $device_type in
         iPhone7* | iPhone8,[12] | iPhone9* ) top="SIDE";;
     esac
-    if [[ $device_type == "iPhone9"* ]]; then
+    if [[ $device_type == "iPhone9"* || $device_type == "iPod9,1" ]]; then
         home="VOL DOWN"
     fi
     echo -e "\n$(print "* Hold $top and $home buttons.")"
@@ -7651,7 +7651,25 @@ device_jailbreak() {
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     fi
-    print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
+    if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
+        case $device_vers in
+            7.1* )
+                print "* For this version, Pangu on Windows/Mac can also be used instead of this option."
+                print "* https://ios.cfw.guide/installing-pangu7/"
+            ;;
+            7.0* )
+                print "* For this version, evasi0n7 on Windows/Mac can also be used instead of this option."
+                print "* https://ios.cfw.guide/installing-evasi0n7/"
+            ;;
+            6.1.[3456] )
+                print "* For this version, p0sixspwn on Windows/Mac can also be used instead of this option."
+                print "* https://ios.cfw.guide/installing-p0sixspwn/"
+            ;;
+            10* | 9* )
+                print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
+            ;;
+        esac
+    fi
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
     echo
     case $device_vers in
@@ -7694,7 +7712,7 @@ device_jailbreak() {
             return
         ;;
     esac
-    print "* By selecting Jailbreak Device, your device will be jailbroken using SSH Ramdisk."
+    print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
     pause
