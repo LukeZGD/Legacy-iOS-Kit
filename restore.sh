@@ -7512,7 +7512,7 @@ menu_other() {
                     menu_items+=("Activation Records")
                 fi
             fi
-            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* ]]; then
+            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_proc != 1 ]]; then
                 menu_items+=("SSH Ramdisk")
             fi
             case $device_mode in
@@ -7788,13 +7788,12 @@ device_dump() {
         device_dumprd
         $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=0; reboot_bak"
         log "Done, device should reboot to recovery mode now"
+        log "Just exit recovery mode if needed: Other Utilities -> Exit Recovery Mode"
         if [[ $mode != "baseband" && $mode != "actrec" ]]; then
             log "Put your device back in kDFU/pwnDFU mode to proceed"
             device_find_mode Recovery
             device_enter_mode DFU
             device_enter_mode pwnDFU
-        else
-            log "Just exit recovery mode if needed: Other Utilities -> Exit Recovery Mode"
         fi
     fi
     kill $iproxy_pid
@@ -7834,7 +7833,7 @@ device_dumpbb() {
             $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
             if [[ ! -s baseband.tar ]]; then
                 error "Dumping baseband tar failed. Please run the script again" \
-                "If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
+                "* If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
             fi
             tar -xvf baseband.tar -C .
             rm baseband.tar
@@ -7921,8 +7920,10 @@ device_activate() {
     log "Attempting to activate device with ideviceactivation"
     if (( device_proc <= 4 )) && [[ $device_type == "iPhone"* ]]; then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        if [[ $device_type == "iPhone1"* || $device_type == "iPhone2,1" ]]; then
+        if [[ $device_type == "iPhone2,1" ]]; then
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
+        elif [[ $device_type == "iPhone1"* ]]; then
+            print "* For hacktivation, go to \"Restore/Downgrade\" instead."
         fi
     fi
     "$dir/ideviceactivation" activate
