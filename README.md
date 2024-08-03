@@ -104,13 +104,17 @@
     - iPhone 4 (3,2 and 3,3), 4S, 5, 5C
     - iPad 2, 3, 4, mini 1
     - iPod touch 3, 4, 5
-- Restoring and jailbreaking to other unsigned versions without blobs is supported on the following devices and target version range:
-    - iPhone 3GS - iOS 3.0 to 6.1.3 (all versions)
-    - iPod touch 2 - iOS 2.1.1 to 4.1 (all versions)
-    - iPhone 2G, 3G, iPod touch 1 - all versions
-- For 2G, 3G, and touch 1, supported jailbreak versions are only 3.1.3, as well as 4.1 and 4.2.1 for the 3G
+- Restoring to other unsigned versions without blobs is supported on the following devices and target version range:
+    - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported for restoring
     - Lowest downgradable version is 2.0. Going to 1.x does not work
-- For 3GS and touch 2, 2.x and 3.0.x are not supported for jailbreaking. 3.1 and newer only
+    - For jailbreaking support, see below
+- Jailbreaking for older devices and versions support:
+    - iPhone 2G and touch 1 - Only 3.1.3 is supported for jailbreaking
+    - iPhone 3G - Only 4.1 and 3.1.3 are supported for jailbreaking
+    - iPod touch 2 - Only 4.2.1, 4.1, and 3.1.3 are supported for jailbreaking
+    - iPhone 3GS - All versions are supported for jailbreaking
+    - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
+
 
 ## Supported OS versions/distros
 
@@ -174,7 +178,7 @@
 - [UntetherHomeDepot](https://www.theapplewiki.com/wiki/UntetherHomeDepot)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
 - Some patches from [PwnageTool](https://www.theapplewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theapplewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theapplewiki.com/wiki/redsn0w)
-- Some patches made using patchers from [Bundle-Creation](https://github.com/Merculous/Bundle-Creation)
+- Many patches for the 3GS are made using patchers by Merculous (including [Bundle-Creation](https://github.com/Merculous/Bundle-Creation))
 - SSH Ramdisk tars from Ralph0045's [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and msftguy's [ssh-rd](https://github.com/msftguy/ssh-rd)
 - 64-bit SSH Ramdisk stuff is based on Nathan's [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+), and exploit3dguy's iram tar from [iarchive.app](https://web.archive.org/web/20240324134204/https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
     - [img4lib](https://github.com/xerub/img4lib) - xerub

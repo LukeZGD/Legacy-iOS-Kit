@@ -84,7 +84,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --gasgauge-patch          Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
-    --ipsw-verbose            Enable verbose boot option (powdersn0w only)
+    --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode
@@ -2005,9 +2005,9 @@ ipsw_preference_set() {
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
             3.1.3 ) :;;
-            3.1* )
+            3.[10]* )
                 ipsw_canjailbreak=1
-                warn "Jailbreak option might have issues on versions below 3.1.3. I recommend selecting 3.1.3 or newer instead"
+                warn "Jailbreak and hacktivate options might have issues on versions below 3.1.3."
             ;;
         esac
     else
@@ -2121,6 +2121,7 @@ ipsw_preference_set() {
         case $device_target_vers in
             6.1.6 | 4.1 ) log "3GS verbose boot is not supported on 6.1.6 and 4.1";;
             [65]* ) log "3GS verbose boot is currently supported on iOS 4 and lower only";;
+            3.0* ) :;;
             * ) ipsw_canverbose=1;;
         esac
     fi
@@ -2458,7 +2459,7 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                     fi
                 ;;
-                3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
+                3.0* | 3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
                 * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
             esac
             case $device_target_vers in
@@ -3024,7 +3025,7 @@ ipsw_prepare_bundle() {
                 [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
                 * ) ipsw_prepare_keys KernelCache $1;;
             esac
-        elif [[ $device_proc != 1 ]]; then
+        elif [[ $device_proc != 1 && $device_target_vers != "3.0"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
         fi
         ipsw_prepare_keys RestoreRamdisk $1
@@ -4264,6 +4265,14 @@ ipsw_prepare_custom() {
     else # 3GS
         case $device_target_vers in
             6.1.6 | 4.1 ) :;;
+            3.0* )
+                ipsw_prepare_patchcomp LLB
+                log "Patch Kernelcache"
+                unzip -o -j "$ipsw_path.ipsw" kernelcache.release.s5l8920x
+                mv kernelcache.release.s5l8920x kernelcache.orig
+                $bspatch kernelcache.orig kernelcache.release.s5l8920x ../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_target_vers}_${device_target_build}.bundle/kernelcache.release.patch
+                zip -r0 "$ipsw_custom.ipsw" kernelcache.release.s5l8920x
+            ;;
             * )
                 ipsw_prepare_patchcomp LLB
                 local ExtraArgs3="pio-error=0"
@@ -6023,6 +6032,9 @@ menu_main() {
             if (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
             fi
+            case $device_type in
+                iPad2,[123] ) menu_items+=("FourThree Utility");;
+            esac
         fi
         if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
             menu_items+=("Save SHSH Blobs")
@@ -6034,9 +6046,6 @@ menu_main() {
             esac
             menu_items+=("App Management" "Data Management")
         fi
-        case $device_type in
-            iPad2,[123] ) menu_items+=("FourThree Utility");;
-        esac
         menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -6169,10 +6178,6 @@ menu_fourthree() {
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
         print "* Read the README here: https://github.com/LukeZGD/FourThree-iPad2"
-        if [[ $device_type != "iPad2,1" ]]; then
-            warn "There may be issues for cellular devices (including activation), proceed with caution"
-            print "* Related discussion: https://github.com/LukeZGD/Legacy-iOS-Kit/discussions/509"
-        fi
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
@@ -6474,10 +6479,8 @@ menu_restore() {
                 menu_items+=("5.1.1" "4.3.3" "4.1" "3.1.3" "More versions");;
             iPod3,1 )
                 menu_items+=("4.1");;
-            iPhone1,2 )
+            iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3");;
-            iPod2,1 )
-                menu_items+=("4.1" "3.1.3" "More versions");;
         esac
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 )
@@ -6620,8 +6623,8 @@ menu_restore_more() {
         case $device_type in
             iPhone2,1 )
                 menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-                menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3")
-                menu_items+=("4.2.1" "4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0")
+                menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3" "4.2.1")
+                menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
             ;;
             iPod2,1 ) menu_items+=("4.0.2" "4.0" "3.1.2" "3.1.1");;
         esac
@@ -6707,7 +6710,7 @@ menu_ipsw() {
                     [643]* ) ipsw_canhacktivate=1;;
                 esac
             ;;
-            [6543]* )
+            [654]* | 3.1* )
                 device_target_vers="$1"
                 ipsw_canhacktivate=1
                 if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
@@ -7440,7 +7443,7 @@ menu_flags() {
             ;;
             "Enable skip-first flag" )
                 warn "This will enable the --skip-first flag."
-                print "* This will skip first restore and flash NOR IPSW only for powdersn0w 4.2.1 and lower."
+                print "* This will skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
                 read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
@@ -7527,6 +7530,11 @@ menu_other() {
                                     esac
                                 ;;
                                 iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                                iPad2* )
+                                    case $device_vers in
+                                        4.3* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                                    esac
+                                ;;
                             esac
                         ;;
                     esac
@@ -7699,7 +7707,7 @@ device_jailbreak() {
             return
         ;;
         9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
-        3.1* )
+        3.[10]* )
             if [[ $device_type != "iPhone2,1" ]]; then
                 warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
                 print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
@@ -8254,6 +8262,16 @@ device_fourthree_step3() {
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2; mount_hfs /dev/disk0s3 /mnt1; mount_hfs /dev/disk0s4 /mnt2; mv /mnt1/private/var/* /mnt2"
     log "Fixing fstab"
     $ssh -p $ssh_port root@127.0.0.1 "echo '/dev/disk0s3 / hfs rw 0 1' | tee /mnt1/private/etc/fstab; echo '/dev/disk0s4 /private/var hfs rw 0 2' | tee -a /mnt1/private/etc/fstab"
+    log "Getting lockdownd"
+    $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/libexec/lockdownd .
+    local patch="../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_base_vers}_${device_base_build}.bundle/lockdownd.patch"
+    log "Patching lockdownd"
+    $bspatch lockdownd lockdownd.patched "$patch"
+    log "Renaming original lockdownd"
+    $ssh -p $ssh_port root@127.0.0.1 "mv /mnt1/usr/libexec/lockdownd /mnt1/usr/libexec/lockdownd.orig"
+    log "Copying patched lockdownd to device"
+    $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/mnt1/usr/libexec/lockdownd
+    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /mnt1/usr/libexec/lockdownd"
     log "Fixing system keybag"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
     log "Remounting data partition"
