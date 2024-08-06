@@ -20,6 +20,6 @@ resources/powdersn0w/
 resources/ramdisk/
 saved/
 sudoloop
-tmp/
+tmp*/
 version.xml
 *.DS_Store

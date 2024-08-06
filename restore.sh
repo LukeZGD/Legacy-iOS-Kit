@@ -36,20 +36,23 @@ pause() {
 clean() {
     kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
     popd &>/dev/null
-    rm -rf "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/" 2>/dev/null
-    if [[ $platform == "macos" ]]; then
+    rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
+    if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 ]]; then
         killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
     fi
 }
 
 clean_sudo() {
     clean
-    sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp/"
+    sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/"
     sudo kill $sudoloop_pid
 }
 
 clean_usbmuxd() {
     clean_sudo
+    if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
+        return
+    fi
     sudo killall usbmuxd 2>/dev/null
     if [[ $(command -v systemctl 2>/dev/null) ]]; then
         sleep 1
@@ -228,13 +231,15 @@ set_tool_paths() {
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
             if [[ -z $device_disable_usbmuxd ]]; then
+                trap "clean_usbmuxd" EXIT
+            fi
+            if [[ -z $device_disable_usbmuxd && $othertmp == 0 ]]; then
                 if [[ $(command -v systemctl 2>/dev/null) ]]; then
                     sudo systemctl stop usbmuxd
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
                 sudo -b $dir/usbmuxd -pf 2>/dev/null
-                trap "clean_usbmuxd" EXIT
             fi
         fi
 
@@ -399,7 +404,7 @@ install_depends() {
 version_update_check() {
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
-    pushd "$(dirname "$0")/tmp" >/dev/null
+    pushd "$(dirname "$0")/tmp$$" >/dev/null
     version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
     git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
     popd >/dev/null
@@ -426,7 +431,7 @@ version_update() {
     else
         req=".assets[] | select (.name|test(\"${platform}\")) | .browser_download_url"
     fi
-    pushd "$(dirname "$0")/tmp" >/dev/null
+    pushd "$(dirname "$0")/tmp$$" >/dev/null
     url="$(echo "$github_api" | $jq -r "$req")"
     log "Downloading: $url"
     curl -L $url -o latest.zip
@@ -435,14 +440,14 @@ version_update() {
     fi
     popd >/dev/null
     log "Updating..."
-    cp resources/firstrun tmp 2>/dev/null
+    cp resources/firstrun tmp$$ 2>/dev/null
     rm -r bin/ LICENSE README.md restore.sh
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf resources/
     fi
     rm -r resources/ 2>/dev/null
-    unzip -q tmp/latest.zip -d .
-    cp tmp/firstrun resources 2>/dev/null
+    unzip -q tmp$$/latest.zip -d .
+    cp tmp$$/firstrun resources 2>/dev/null
     log "Done! Please run the script again"
     exit
 }
@@ -2459,7 +2464,7 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                     fi
                 ;;
-                3.0* | 3.1 | 3.1.[12] ) JBFiles[0]="$jelbrek/fstab_old.tar";;
+                3.0* | 3.1 | 3.1.[12] ) :;;
                 * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
             esac
             case $device_target_vers in
@@ -8521,8 +8526,9 @@ trap "clean" EXIT
 trap "exit 1" INT TERM
 
 clean
-mkdir "$(dirname "$0")/tmp"
-pushd "$(dirname "$0")/tmp" >/dev/null
+othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
+mkdir "$(dirname "$0")/tmp$$"
+pushd "$(dirname "$0")/tmp$$" >/dev/null
 
 if [[ $no_color != 1 ]]; then
     TERM=xterm-256color # fix colors for msys2 terminal
