@@ -8210,6 +8210,13 @@ device_fourthree_step2() {
     fi
     print "* Make sure that the device is already restored with Step 1: Restore before proceeding."
     pause
+    device_iproxy
+    device_sshpass alpine
+    device_fourthree_check 2
+    if [[ $? == 2 ]]; then
+        warn "Step 2 has already been completed. Cannot continue."
+        return
+    fi
     print "* How much GB do you want to allocate/leave to the 6.1.3 data partition?"
     print "* The rest of the space will be allocated to the 4.3.x system."
     print "* If unsure, set it to 3 (this means 3 GB for 6.1.3, the rest for 4.3.x)."
@@ -8219,8 +8226,6 @@ device_fourthree_step2() {
     done
     log "iOS 6.1.3 Data Partition Size: $size GB"
     size=$((size*1024*1024*1024))
-    device_iproxy
-    device_sshpass alpine
     log "Sending package files"
     $scp -P $ssh_port $jelbrek/dualbootstuff.tar root@127.0.0.1:/tmp
     log "Installing packages"
@@ -8247,6 +8252,11 @@ device_fourthree_step3() {
     local saved_path="../saved/$device_type/$device_base_build"
     device_iproxy
     device_sshpass alpine
+    device_fourthree_check 3
+    if [[ $? == 0 ]]; then
+        warn "Step 3 has already been completed. Cannot continue."
+        return
+    fi
     log "Creating filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt1 /mnt2"
     $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_hfs -s -v System -J -b 8192 -n a=8192,c=8192,e=8192 /dev/disk0s3"
@@ -8303,11 +8313,50 @@ device_fourthree_app() {
         print "* The default root password is: alpine"
         device_sshpass
     fi
+    device_fourthree_check
     log "Installing FourThree app"
     $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 FourThree boot.sh /usr/bin/runasroot"
     log "Running uicache"
     $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
+}
+
+device_fourthree_check() {
+    local opt=$1
+    local check
+    log "Checking if Step 1 is complete"
+    check="$($ssh -p $ssh_port root@127.0.0.1 "ls /dev/disk0s2s1")"
+    if [[ $check != "/dev/disk0s2s1" ]]; then
+        error "Cannot find /dev/disk0s2s1. Something went wrong with Step 1" \
+        "* Redo the FourThree process from Step 1"
+    fi
+    if [[ $opt == 1 ]]; then
+        return 1
+    fi
+    log "Checking if Step 2 is complete"
+    check="$($ssh -p $ssh_port root@127.0.0.1 "ls /dev/disk0s3")"
+    if [[ $check != "/dev/disk0s3" ]]; then
+        if [[ $opt == 2 ]]; then
+            return 1
+        fi
+        error "Cannot find /dev/disk0s3. Something went wrong with Step 2" \
+        "* Redo the FourThree process from Step 2"
+    fi
+    if [[ $opt == 2 ]]; then
+        return 2
+    fi
+    log "Checking if Step 3 is complete"
+    local kcb="/System/Library/Caches/com.apple.kernelcaches/kernelcachb"
+    local kc="$($ssh -p $ssh_port root@127.0.0.1 "ls $kcb")"
+    local llb="$($ssh -p $ssh_port root@127.0.0.1 "ls /LLB")"
+    if [[ $kc != "$kcb" || $llb != "/LLB" ]]; then
+        if [[ $opt == 3 ]]; then
+            return 2
+        fi
+        error "Cannot find Kernelcache/LLB. Something went wrong with Step 3" \
+        "* Redo the FourThree process from Step 3"
+    fi
+    return 0
 }
 
 device_backup_create() {
