@@ -105,14 +105,15 @@
     - iPad 2, 3, 4, mini 1
     - iPod touch 3, 4, 5
 - Restoring to other unsigned versions without blobs is supported on the following devices and target version range:
-    - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported for restoring
+    - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
 - Jailbreaking for older devices and versions support:
-    - iPhone 2G and touch 1 - Only 3.1.3 is supported for jailbreaking
-    - iPhone 3G - Only 4.1 and 3.1.3 are supported for jailbreaking
-    - iPod touch 2 - Only 4.2.1, 4.1, and 3.1.3 are supported for jailbreaking
-    - iPhone 3GS - All versions are supported for jailbreaking
+    - iPhone 2G and touch 1 - Only 3.1.3 is supported
+    - iPhone 3G - Only 4.1 and 3.1.3 are supported
+    - iPod touch 2 - Only 4.2.1, 4.1, and 3.1.3 are supported
+    - iPhone 3GS - All versions are supported
+    - Other devices - All versions from 3.1.3 to 9.3.4 are supported, with some exceptions (9.0.x is not supported, A5(X) 8.0-8.2 is not supported)
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
 
 

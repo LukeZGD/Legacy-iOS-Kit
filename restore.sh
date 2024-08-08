@@ -94,8 +94,8 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --skip-ibss               Assume that pwned iBSS has already been sent to device
     --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
 
-    * Default IPSW path: <script location>/name_of_ipswfile.ipsw
-    * Default SHSH path: <script location>/saved/shsh/name_of_blobfile.shsh(2)
+    * Default IPSW path: <script location>/<name of IPSW file>.ipsw
+    * Default SHSH path: <script location>/saved/shsh/<name of SHSH file>.shsh(2)
     '
 }
 
@@ -1013,8 +1013,8 @@ device_get_info() {
             device_latest_build="19H386"
         ;;
         iPad6* | iPhone10* )
-            device_latest_vers="16.7.9"
-            device_latest_build="20H348"
+            device_latest_vers="16.7.10"
+            device_latest_build="20H350"
             #log "Getting latest iOS version for $device_type"
             #local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
             #device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
@@ -1040,6 +1040,8 @@ device_get_info() {
             device_use_bb="Mav7Mav8-7.60.00.Release.bbfw"
             device_use_bb_sha1="f397724367f6bed459cf8f3d523553c13e8ae12c"
         ;;
+        iPad1,1 | iPhone[123],* ) device_use_bb2=1;;
+        iPad[23],[23] ) device_use_bb2=2;;
     esac
     case $device_type in
         iPad4,[235689] | iPhone6,[12] ) # MDM9615 12.4-latest
@@ -2010,10 +2012,7 @@ ipsw_preference_set() {
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
             3.1.3 ) :;;
-            3.[10]* )
-                ipsw_canjailbreak=1
-                warn "Jailbreak and hacktivate options might have issues on versions below 3.1.3."
-            ;;
+            3.[10]* ) ipsw_nojailbreak_message;;
         esac
     else
         case $device_target_vers in
@@ -2076,6 +2075,7 @@ ipsw_preference_set() {
         input "Hacktivate Option"
         print "* When this option is enabled, your device will be activated on restore."
         print "* Enable this option if you have no valid SIM card to activate the phone."
+        print "* Disable this option if you have a working SIM card and want cellular data."
         print "* This option is disabled by default (N). Select this option if unsure."
         read -p "$(input 'Enable this option? (y/N): ')" ipsw_hacktivate
         if [[ $ipsw_hacktivate == 'Y' || $ipsw_hacktivate == 'y' ]]; then
@@ -5980,14 +5980,17 @@ menu_print_info() {
     echo
     print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
-    if [[ -n $device_disable_bbupdate && $device_type == "iPhone"* ]]; then
+    if [[ -n $device_disable_bbupdate && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
             warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate"
         else
-            print "* For iPhones, current baseband will be dumped and stitched to custom IPSW"
-            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+            print "* Current device baseband will be dumped and stitched to custom IPSW"
+            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (tethered or with SHSH), powdersn0w"
+            warn "Note that stitching baseband does not always work! There is a chance of non-working baseband after the restore"
         fi
+    elif [[ -n $device_disable_bbupdate ]]; then
+        warn "Disable bbupdate flag detected, but this flag is not supported for this device"
     fi
     if [[ $device_actrec == 1 ]]; then
         warn "Activation records flag detected. Proceed with caution"
@@ -6016,7 +6019,9 @@ menu_print_info() {
     if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
     fi
-    print "* ECID: $device_ecid"
+    if [[ $device_proc != 1 ]]; then
+        print "* ECID: $device_ecid"
+    fi
     if [[ -n $device_pwnd ]]; then
         print "* Pwned: $device_pwnd"
     fi
@@ -6493,7 +6498,7 @@ menu_restore() {
         esac
         if (( device_proc > 10 )); then
             menu_items+=("Latest iOS")
-        else
+        elif [[ $device_type != "iPhone1,2" ]]; then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
@@ -6533,11 +6538,11 @@ menu_restore() {
         fi
         if [[ -z $1 ]]; then
             if [[ $device_proc == 1 ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to any other iOS version (2.0 to 3.1.2)"
+                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.0 to 3.1.2)"
                 echo
             fi
             if [[ $device_type == "iPod2,1" ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to any other iOS version (2.1.1 to 3.0)"
+                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.1.1 to 3.0)"
                 echo
             fi
             if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
@@ -6821,7 +6826,7 @@ menu_ipsw() {
                     8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It will not restore/boot properly";;
                     8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
                     7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
-                    7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will be stuck at the activation screen";;
+                    7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
                 esac
                 ipsw_cancustomlogo2=
                 case $device_target_vers in
@@ -7003,14 +7008,29 @@ menu_ipsw() {
         fi
         menu_items+=("Go Back")
 
-        if (( device_proc > 6 )); then
-            :
-        elif (( device_proc > 4 )) && [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
+        if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] &&
+           (( device_proc > 4 )) && (( device_proc < 7 )); then
             print "* This restore will use $device_use_vers baseband"
             echo
-        elif [[ $device_target_vers == "$device_latest_vers" && $device_use_bb != 0 ]]; then
-            print "* This restore will use $device_use_vers baseband if the jailbreak option is disabled"
-            echo
+        elif [[ $device_use_bb2 == 1 ]]; then
+            if [[ $device_target_vers == "$device_latest_vers" ]]; then
+                print "* This restore will attempt $device_use_vers baseband if the jailbreak option is disabled"
+                echo
+            elif [[ $device_proc == 1 || $device_target_vers == "4.1" ]] && [[ $device_type != "iPhone3"* ]]; then
+                print "* This restore will have baseband update disabled if the jailbreak option is enabled"
+                echo
+            else
+                print "* This restore will have baseband update disabled"
+                echo
+            fi
+        elif [[ $device_use_bb2 == 2 ]]; then
+            if [[ $device_target_vers == "$device_latest_vers" ]]; then
+                print "* This restore will use $device_use_vers baseband"
+                echo
+            else
+                print "* This restore will have baseband update disabled"
+                echo
+            fi
         fi
 
         print "$nav"
@@ -7107,11 +7127,9 @@ ipsw_custom_set() {
     if [[ $device_actrec == 1 ]]; then
         ipsw_custom+="A"
     fi
-    if [[ $device_type == "$device_disable_bbupdate" ]]; then
+    if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc > 4 )); then
         device_use_bb=0
-        if [[ $device_type == "iPhone"* || $device_type == "iPad"* ]] && (( device_proc > 4 )); then
-            ipsw_custom+="B"
-        fi
+        ipsw_custom+="B"
         if [[ $device_deadbb == 1 ]]; then
             ipsw_custom+="D"
         fi
@@ -7422,9 +7440,9 @@ menu_flags() {
             "Enable jailbreak flag" )
                 warn "This will enable the --jailbreak flag."
                 print "* This will enable the jailbreak option for the custom IPSW."
-                print "* This is mostly only useful for 3.1.3-4.1, where jailbreak option is disabled in most cases."
-                print "* It is disabled for those versions because of some issues with the custom IPSW jailbreak."
-                print "* The recommended method is to instead jailbreak after the restore."
+                print "* This is only useful for 4.1 and lower, where jailbreak option is disabled in most cases."
+                print "* It is disabled for those versions by default because of issues with the custom IPSW jailbreak."
+                print "* The recommended method is to jailbreak after the restore instead."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
                 read -p "$(input 'Do you want to enable the jailbreak flag? (y/N): ')" opt
@@ -7626,7 +7644,11 @@ device_alloc8() {
     log "Done!"
     print "* This may take several tries. If it fails, unplug and replug your device, then run the script again"
     print "* To retry if needed, go to: Other Utilities -> Install alloc8 Exploit"
-    print "* Success rate of installing alloc8 is also higher on Linux than on macOS"
+    if [[ $platform == "macos" ]]; then
+        warn "Installing alloc8 is known to have issues on macOS according to some issue reports."
+        print "* Success rate of installing alloc8 is higher on Linux than on macOS."
+        print "* It is recommended to do the alloc8 install on Linux instead."
+    fi
 }
 
 device_jailbreak() {
@@ -8000,23 +8022,18 @@ device_reverthacktivate() {
 
 restore_customipsw() {
     print "* You are about to restore with a custom IPSW."
-    if [[ $device_proc == 1 ]]; then
-        print "* This option is for restoring with other IPSWs for downgrading and/or jailbreaking the device."
+    print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
+    if [[ $device_newbr == 1 ]]; then
+        warn "Your device is a new bootrom model and some custom IPSWs might not be compatible."
+        print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
     else
-        print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
-        if [[ $device_newbr == 1 ]]; then
-            warn "Your device is a new bootrom model and some custom IPSWs might not be compatible."
-            print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
-        elif [[ $device_type == "iPod2,1" ]]; then
-            print "* You may also use this option for downgrading the device to 3.0 and lower for old bootrom models."
-        else
-            warn "Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
-        fi
+        warn "Do NOT use this option for powdersn0w or jailbreak IPSWs with Legacy iOS Kit!"
     fi
     if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         echo
         warn "Restoring to 2.x might not work on newer macOS versions."
         print "* Try installing usbmuxd from MacPorts, and run 'sudo usbmuxd -pf' in another Terminal window"
+        print "* Another option is to just do 2.x restores on Linux instead."
     fi
     if [[ $device_proc == 1 ]]; then
         echo
@@ -8197,6 +8214,7 @@ restore_latest64() {
     local idevicerestore2="${idevicerestore}2"
     local opt="-l"
     local opt2
+    warn "Restoring to iOS 18 or newer is not supported."
     print "* Restore/Update Selection"
     print "* Restore will do factory reset and update the device, all data will be cleared"
     print "* Update will only update the device to the latest version"
