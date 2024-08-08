@@ -7014,7 +7014,7 @@ menu_ipsw() {
             echo
         elif [[ $device_use_bb2 == 1 ]]; then
             if [[ $device_target_vers == "$device_latest_vers" ]]; then
-                print "* This restore will attempt $device_use_vers baseband if the jailbreak option is disabled"
+                print "* This restore will use $device_use_vers baseband if the jailbreak option is disabled"
                 echo
             elif [[ $device_proc == 1 || $device_target_vers == "4.1" ]] && [[ $device_type != "iPhone3"* ]]; then
                 print "* This restore will have baseband update disabled if the jailbreak option is enabled"
@@ -7664,6 +7664,9 @@ device_jailbreak() {
                 print "* Your device on iOS $device_vers will be jailbroken using g1lbertJB."
                 print "* No data will be lost, but please back up your data just in case."
                 print "* Ignore the \"Error Code 1\" and \"Error Code 102\" errors, this is normal and part of the jailbreaking process."
+                if [[ $device_proc == 4 ]]; then
+                    print "* Note: If the process fails somewhere, you can just enter DFU mode and attempt jailbreaking again from there."
+                fi
                 pause
                 pushd ../resources/jailbreak/g1lbertJB >/dev/null
                 log "Copying freeze.tar to Cydia.tar"
