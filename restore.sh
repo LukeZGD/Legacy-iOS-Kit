@@ -853,6 +853,7 @@ device_get_info() {
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
     device_model="${device_model%??}" # remove "ap" from the end
     if [[ -z $device_type && -n $device_model ]]; then
+        # device_model fallback
         case $device_model in
             k48  ) device_type="iPad1,1";;
             k93  ) device_type="iPad2,1";;
@@ -1750,6 +1751,7 @@ device_ipwndfu() {
             $python2 ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
+                popd >/dev/null
                 device_pwnerror
             fi
         ;;
@@ -5073,19 +5075,8 @@ device_ramdisk64() {
         fi
         if [[ -z $name ]]; then
             local hwmodel
-            case $device_type in
-                iPhone6*    ) hwmodel="iphone6";;
-                iPhone7*    ) hwmodel="iphone7";;
-                iPhone8,4   ) hwmodel="iphone8b";;
-                iPhone8*    ) hwmodel="iphone8";;
-                iPhone9*    ) hwmodel="iphone9";;
-                iPad4,[123] ) hwmodel="ipad4";;
-                iPad4,[456] ) hwmodel="ipad4b";;
-                iPad4,[789] ) hwmodel="ipad4bm";;
-                iPad5,[12]  ) hwmodel="ipad5";;
-                iPad5,[34]  ) hwmodel="ipad5b";;
-                *           ) hwmodel="$device_model";;
-            esac
+            ipsw_hwmodel_set
+            hwmodel="$ipsw_hwmodel"
             case $getcomp in
                 "iBSS" | "iBEC"  ) name="$getcomp.$hwmodel.RELEASE.im4p";;
                 "DeviceTree"     ) name="$getcomp.${device_model}ap.im4p";;
@@ -6665,6 +6656,55 @@ menu_restore_more() {
     done
 }
 
+ipsw_latest_set() {
+    local newpath
+    case $device_type in
+        iPad3,[456]    ) newpath="iPad_32bit";;
+        iPad4,[123456] ) newpath="iPad_64bit";;
+        iPad6,[34]     ) newpath="iPadPro_9.7";;
+        iPad6,[78]     ) newpath="iPadPro_12.9";;
+        iPad6,1[12]    ) newpath="iPad_64bit_TouchID_ASTC";;
+        iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
+        iPhone10,[36]  ) newpath="iPhone10,3,iPhone10,6";;
+        iPod[79],1     ) newpath="iPodtouch";;
+        iPad4,[789] | iPad5*     ) newpath="iPad_64bit_TouchID";;
+        iPhone6,[12] | iPhone8,4 ) newpath="iPhone_4.0_64bit";;
+        iPhone7,1 | iPhone8,2    ) newpath="iPhone_5.5";;
+        iPhone7,2 | iPhone8,1    ) newpath="iPhone_4.7";;
+        iPhone9,[13] | iPhone10,[14] ) newpath="iPhone_4.7_P3";;
+        iPhone9,[24] | iPhone10,[25] ) newpath="iPhone_5.5_P3";;
+        * ) newpath="${device_type}";;
+    esac
+    newpath+="_${device_target_vers}_${device_target_build}"
+    ipsw_custom_set $newpath
+    ipsw_dfuipsw="../${newpath}_DFUIPSW"
+    newpath+="_Restore"
+    ipsw_latest_path="$newpath"
+}
+
+ipsw_hwmodel_set() {
+    local hwmodel
+    case $device_type in
+        iPhone5,[12] ) hwmodel="iphone5";;
+        iPhone5,[34] ) hwmodel="iphone5b";;
+        iPad3,[456] ) hwmodel="ipad3b";;
+        iPhone6*    ) hwmodel="iphone6";;
+        iPhone7*    ) hwmodel="iphone7";;
+        iPhone8,4   ) hwmodel="iphone8b";;
+        iPhone8*    ) hwmodel="iphone8";;
+        iPhone9*    ) hwmodel="iphone9";;
+        iPad4,[123] ) hwmodel="ipad4";;
+        iPad4,[456] ) hwmodel="ipad4b";;
+        iPad4,[789] ) hwmodel="ipad4bm";;
+        iPad5,[12]  ) hwmodel="ipad5";;
+        iPad5,[34]  ) hwmodel="ipad5b";;
+        iPad6,[34]  ) hwmodel="ipad6b";;
+        iPad6,[78]  ) hwmodel="ipad6d";;
+        *           ) hwmodel="$device_model";;
+    esac
+    ipsw_hwmodel="$hwmodel"
+}
+
 menu_ipsw() {
     local menu_items
     local selected
@@ -6768,23 +6808,8 @@ menu_ipsw() {
             "3.0"   ) device_target_build="7A341";;
         esac
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
-            case $device_type in
-                iPad3,[456]    ) newpath="iPad_32bit";;
-                iPad4,[123456] ) newpath="iPad_64bit";;
-                iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
-                iPod[79],1     ) newpath="iPodtouch";;
-                iPhone9,[13]   ) newpath="iPhone_4.7_P3";;
-                iPhone9,[24]   ) newpath="iPhone_5.5_P3";;
-                iPad4,[789] | iPad5*     ) newpath="iPad_64bit_TouchID";;
-                iPhone6,[12] | iPhone8,4 ) newpath="iPhone_4.0_64bit";;
-                iPhone7,1 | iPhone8,2    ) newpath="iPhone_5.5";;
-                iPhone7,2 | iPhone8,1    ) newpath="iPhone_4.7";;
-                * ) newpath="${device_type}";;
-            esac
-            newpath+="_${device_target_vers}_${device_target_build}"
-            ipsw_custom_set $newpath
-            newpath+="_Restore"
-
+            ipsw_latest_set
+            newpath="$ipsw_latest_path"
         else
             case $device_type in
                 iPad4,[12345] ) newpath="iPad_64bit";;
@@ -7299,6 +7324,9 @@ menu_ipsw_browse() {
         *"powdersn0w"* )
             if [[ $device_target_build == "14"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
+                case $device_type in
+                    iPhone5,[12] ) print "* If you want untethered iOS 10, use p0insettia plus: https://github.com/LukeZGD/p0insettia-plus";;
+                esac
                 pause
                 return
             elif [[ $device_target_build == "$device_base_build" ]]; then
@@ -8060,8 +8088,10 @@ restore_customipsw() {
 
 restore_dfuipsw() {
     # the only change done to the "dfu ipsw" is just applelogo copied and renamed to llb
-    # replacing llb with an invalid img3 to make the restore fail, the device will then fallback to true dfu mode
+    # replacing llb with an invalid img3/im4p to make the restore fail, the device will then fallback to true dfu mode
     # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
+    # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
+    # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
     print "* You are about to restore with a DFU IPSW."
     print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
     print "* All device data will be wiped! Only proceed if you have backed up your data."
@@ -8069,15 +8099,8 @@ restore_dfuipsw() {
     pause
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
-    local ipsw_p="../"
-    case $device_type in
-        iPhone5,[1234] ) ipsw_p+="iPhone_4.0_32bit";;
-        iPad3,[456] ) ipsw_p+="iPad_32bit";;
-        * ) ipsw_p+="${device_type}";;
-    esac
-    ipsw_p+="_${device_target_vers}_${device_target_build}"
-    local ipsw_dfuipsw="${ipsw_p}_DFUIPSW"
-    ipsw_path="${ipsw_p}_Restore"
+    ipsw_latest_set
+    ipsw_path="../$ipsw_latest_path"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
         ipsw_verify "$ipsw_path" "$device_target_build"
     elif [[ ! -e "$ipsw_path.ipsw" ]]; then
@@ -8087,22 +8110,33 @@ restore_dfuipsw() {
         log "Found existing DFU IPSW. Skipping IPSW creation."
     else
         cp $ipsw_path.ipsw temp.ipsw
-        device_fw_key_check
-        local applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
-        local llb="LLB.${device_model}ap.RELEASE.img3"
+        local llb="${device_model}ap"
         local all="Firmware/all_flash"
-        if [[ $device_latest_vers == "10"* ]]; then
+        local applelogo
+        if (( device_proc >= 6 )); then
+            ipsw_hwmodel_set
+            case $device_type in
+                iPhone9,[13] ) llb="d10";;
+                iPhone9,[24] ) llb="d11";;
+                iPhone[78]* | iPad6,1* ) llb="$device_model";;
+                * ) llb="$ipsw_hwmodel"
+            esac
             case $device_type in
                 iPhone5,[1234] ) applelogo="applelogo@2x~iphone.s5l8950x.img3";;
                 iPad3,[456] ) applelogo="applelogo@2x~ipad.s5l8955x.img3";;
-            esac
-            case $device_type in
-                iPhone5,[12] ) llb="LLB.iphone5.RELEASE.img3";;
-                iPhone5,[34] ) llb="LLB.iphone5b.RELEASE.img3";;
-                iPad3,[456] ) llb="LLB.ipad3b.RELEASE.img3";;
+                iPhone* ) applelogo="applelogo@2x~iphone.im4p";;
+                iPad* ) applelogo="applelogo@2x~ipad.im4p";;
             esac
         else
             all="$all_flash"
+            device_fw_key_check
+            applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
+        fi
+        llb="LLB.$llb.RELEASE"
+        if (( device_proc >= 7 )); then
+            llb+=".im4p"
+        else
+            llb+=".img3"
         fi
         mkdir -p $all
         unzip -o -j temp.ipsw $all/$applelogo -d .
