@@ -107,10 +107,10 @@
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
-- Jailbreaking for older devices and versions support:
-    - iPhone 2G and touch 1 - Only 3.1.3 is supported
-    - iPhone 3G - Only 4.1 and 3.1.3 are supported
-    - iPod touch 2 - Only 4.2.1, 4.1, and 3.1.3 are supported
+- Jailbreaking for 32-bit devices and versions support:
+    - iPhone 2G and touch 1 - 3.1.3 only
+    - iPhone 3G - 4.1 and 3.1.3
+    - iPod touch 2 - 4.2.1, 4.1, and 3.1.3
     - iPhone 3GS - All versions are supported (all release versions from 3.0 to 6.1.6)
     - Other devices - All versions from 3.1.3 to 9.3.4 are supported, with some exceptions
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)

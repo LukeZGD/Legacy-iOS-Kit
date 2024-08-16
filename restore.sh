@@ -2020,8 +2020,7 @@ ipsw_preference_set() {
         esac
     else
         case $device_target_vers in
-            4.2.1 ) :;;
-            4.[210]* ) ipsw_nojailbreak_message;;
+            4.[10]* ) ipsw_nojailbreak_message;;
         esac
     fi
 
@@ -2451,7 +2450,7 @@ ipsw_prepare_jailbreak() {
                 5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
             case $device_target_vers in
-                [34]* ) JBFiles[0]="fstab_old.tar"
+                [43]* ) JBFiles[0]="fstab_old.tar"
             esac
             for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
@@ -2463,7 +2462,7 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=
                     fi
                 ;;
-                4.2.1 )
+                4.2.[8761] )
                     if [[ $device_type != "iPhone1,2" ]]; then
                         ExtraArgs+=" -punchd"
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
@@ -2483,7 +2482,7 @@ ipsw_prepare_jailbreak() {
             fi
             if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
                 case $device_target_vers in
-                    4.2.1 ) :;;
+                    4.2.[8761] ) :;;
                     5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
                 esac
             fi
@@ -3205,7 +3204,7 @@ ipsw_prepare_32bit() {
         fi
         if [[ $device_target_tethered == 1 ]]; then
             case $device_target_vers in
-                4.2.1 ) :;;
+                4.2.[8761] ) :;;
                 5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
         fi
