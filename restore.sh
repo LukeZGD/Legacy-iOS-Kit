@@ -422,6 +422,7 @@ version_update() {
         print "* If this fails for some reason, run: git reset --hard"
         print "* To clean more files if needed, run: git clean -df"
         git pull
+        pushd "$(dirname "$0")/tmp$$" >/dev/null
         log "Done! Please run the script again"
         exit
     elif (( $(ls bin | wc -l) > 1 )); then
@@ -448,6 +449,7 @@ version_update() {
     rm -r resources/ 2>/dev/null
     unzip -q tmp$$/latest.zip -d .
     cp tmp$$/firstrun resources 2>/dev/null
+    pushd "$(dirname "$0")/tmp$$" >/dev/null
     log "Done! Please run the script again"
     exit
 }
@@ -1997,7 +1999,7 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.3* | 4.2.1 ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_proc in
                 1 ) ipsw_canjailbreak=1;;
@@ -2018,7 +2020,8 @@ ipsw_preference_set() {
         esac
     else
         case $device_target_vers in
-            4.[10]* ) ipsw_nojailbreak_message;;
+            4.2.1 ) :;;
+            4.[210]* ) ipsw_nojailbreak_message;;
         esac
     fi
 
@@ -5449,7 +5452,7 @@ device_ramdisk() {
                 7* )         untether="evasi0n7-untether.tar";;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
-                4.2.1 | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
                 5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
@@ -5486,12 +5489,12 @@ device_ramdisk() {
                 9* | 8* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;;
                 6* ) device_send_rdtar fstab_rw.tar;;
-                4.2.1 ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
+                4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
                 5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
-                4.2.1 | 4.[10]* | 3* )
+                4.2.[8761] | 4.[10]* | 3* )
                     untether="${device_type}_${build}.tar"
                     log "fstab"
                     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
@@ -7081,9 +7084,9 @@ menu_ipsw() {
 
 ipsw_print_warnings() {
     case $device_type in
-        "iPhone3,1" )
-            if [[ $device_target_vers == "4.2.1" ]]; then
-                warn "iOS 4.2.1 for iPhone3,1 might fail to boot after the restore/jailbreak."
+        "iPhone3"* )
+            if [[ $device_target_vers == "4.2"* ]]; then
+                warn "iOS 4.2.x for $device_type might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select another version instead."
             fi
         ;;
@@ -7621,7 +7624,7 @@ menu_other() {
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
             "(Re-)Install Dependencies" ) install_depends;;
-            "Attempt Activation" ) mode="device_activate";;
+            "Attempt Activation" ) device_activate;;
             "Install alloc8 Exploit" ) mode="device_alloc8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
@@ -7764,7 +7767,7 @@ device_jailbreak() {
             print "* https://github.com/staturnzz/socket"
             return
         ;;
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | [87654]* | 3.2* | 3.1.3 ) :;;
+        9.3.[1234] | 9.3 | 9.2* | 9.1 | [8765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
         3.[10]* )
             if [[ $device_type != "iPhone2,1" ]]; then
                 warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
@@ -8001,6 +8004,7 @@ device_activate() {
         ;;
     esac
     print "* If it returns an error, just try again."
+    pause
 }
 
 device_hacktivate() {
