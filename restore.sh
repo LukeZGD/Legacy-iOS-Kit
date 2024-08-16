@@ -6851,7 +6851,7 @@ menu_ipsw() {
                 case $device_target_build in
                     8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
                     #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
-                    8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It will not restore/boot properly";;
+                    8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
                     8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
                     7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
                     7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
@@ -7717,6 +7717,7 @@ device_jailbreak() {
         pause
     elif [[ $device_proc == 5 ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
+        print "* Especially since this method may require the usage of checkm8-a5."
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     fi
@@ -7781,6 +7782,11 @@ device_jailbreak() {
             return
         ;;
     esac
+    if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
+        warn "The \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
+        print "* This applies to all 3.x versions for the 3GS, they require usage of the \"Restore/Downgrade\" option first."
+        echo
+    fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."

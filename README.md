@@ -17,7 +17,7 @@
 - Restore to other iOS versions with iOS 7 blobs (powdersn0w)
 - Tethered downgrades/restores to other iOS versions for A5/A6 and other devices
 - Jailbreak all 32-bit iOS devices on (almost) any iOS version
-    - Available on iOS versions 3.1 to 9.3.4 with some exceptions
+    - Available on iOS versions 3.0 to 9.3.4 with some exceptions
 - Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - [FourThree Utility](https://github.com/LukeZGD/FourThree-iPad2) - Dualboot iOS 4.3.x for the iPad 2
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
@@ -111,7 +111,7 @@
     - iPhone 2G and touch 1 - Only 3.1.3 is supported
     - iPhone 3G - Only 4.1 and 3.1.3 are supported
     - iPod touch 2 - Only 4.2.1, 4.1, and 3.1.3 are supported
-    - iPhone 3GS - All versions are supported
+    - iPhone 3GS - All versions are supported (all release versions from 3.0 to 6.1.6)
     - Other devices - All versions from 3.1.3 to 9.3.4 are supported, with some exceptions
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
 
