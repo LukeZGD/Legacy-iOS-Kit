@@ -1999,7 +1999,7 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.3* | 4.2.1 ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.3* | 4.2.[8761] ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_proc in
                 1 ) ipsw_canjailbreak=1;;
@@ -2245,7 +2245,7 @@ ipsw_verify() {
     local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
         *[bcdefgkmpquv] )
-            # beta ipsw, skip verification
+            log "Beta IPSW detected, skip verification"
             if [[ $build_id == "$device_base_build" ]]; then
                 device_base_sha1="$IPSWSHA1L"
             else
@@ -2349,11 +2349,10 @@ ipsw_prepare_1033() {
         $bspatch $iBSSb.orig $iBSSb.im4p ../resources/patch/$iBSSb.patch
         $bspatch $iBECb.orig $iBECb.im4p ../resources/patch/$iBECb.patch
     fi
-    if [[ $device_type == "iPad4,4" || $device_type == "iPad4,5" ]]; then
-        cp $iBSSb.im4p $iBECb.im4p ../saved/$device_type
-    else
-        cp $iBSS.im4p $iBEC.im4p ../saved/$device_type
-    fi
+    case $device_type in
+        iPad4,[45] ) cp $iBSSb.im4p $iBECb.im4p ../saved/$device_type;;
+        * ) cp $iBSS.im4p $iBEC.im4p ../saved/$device_type;;
+    esac
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
 }
 
@@ -2381,14 +2380,16 @@ ipsw_prepare_logos_convert() {
         if [[ ! -s logo.img3 ]]; then
             error "Converting custom logo failed. Check your image"
         fi
-        if [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
-            log "log4"
-            echo "0000010: 3467" | xxd -r - logo.img3
-            echo "0000020: 3467" | xxd -r - logo.img3
-        elif [[ $device_target_powder == 1 ]]; then
-            log "logb"
-            echo "0000010: 6267" | xxd -r - logo.img3
-            echo "0000020: 6267" | xxd -r - logo.img3
+        if [[ $device_target_powder == 1 ]]; then
+            if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+                log "log4"
+                echo "0000010: 3467" | xxd -r - logo.img3
+                echo "0000020: 3467" | xxd -r - logo.img3
+            else
+                log "logb"
+                echo "0000010: 6267" | xxd -r - logo.img3
+                echo "0000020: 6267" | xxd -r - logo.img3
+            fi
         fi
         mkdir -p $all_flash 2>/dev/null
         mv logo.img3 $all_flash/$name
@@ -7279,11 +7280,6 @@ menu_ipsw_browse() {
         "iOS 10.3.3" ) versionc="10.3.3";;
         "iOS 8.4.1" ) versionc="8.4.1";;
         "iOS 6.1.3" ) versionc="6.1.3";;
-        "5.1.1" ) versionc="5.1.1";;
-        "5.0.1" ) versionc="5.0.1";;
-        "4.3.3" ) versionc="4.3.3";;
-        "4.1" ) versionc="4.1";;
-        "3.1.3" ) versionc="3.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
             local check_vers="7.1"
@@ -7320,6 +7316,9 @@ menu_ipsw_browse() {
                 return
             fi
             ipsw_verify "$newpath" "$device_base_build"
+            if [[ $? != 0 ]]; then
+                return
+            fi
             ipsw_base_path="$newpath"
             return
         ;;
@@ -7336,9 +7335,13 @@ menu_ipsw_browse() {
                 pause
                 return
             fi
+            versionc="powder"
         ;;
+        [6543]* ) versionc="$1";;
     esac
-    if [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
+    if [[ $versionc == "powder" ]]; then
+        :
+    elif [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
         log "Selected IPSW ($device_target_vers) does not match target version ($versionc)."
         pause
         return
