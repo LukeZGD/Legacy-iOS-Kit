@@ -239,7 +239,7 @@ set_tool_paths() {
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
-                sudo -b $dir/usbmuxd -pf 2>/dev/null
+                sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
             fi
         fi
 
@@ -333,6 +333,12 @@ set_tool_paths() {
     ssh2="ssh -F ./ssh_config"
 }
 
+prepare_udev_rules() {
+    local owner="$1"
+    local group="$2"
+    echo "ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"122[27]|128[0-3]|1338\", OWNER=\"$owner\", GROUP=\"$group\", MODE=\"0660\" TAG+=\"uaccess\"" >> 39-libirecovery.rules
+}
+
 install_depends() {
     log "Installing dependencies..."
     rm -f "../resources/firstrun"
@@ -341,10 +347,12 @@ install_depends() {
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
         print "* Enter your user password when prompted"
         pause
+        prepare_udev_rules usbmux plugdev
     fi
 
     if [[ $distro == "arch" ]]; then
         sudo pacman -Syu --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
+        prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
@@ -360,10 +368,12 @@ install_depends() {
         sudo dnf install -y ca-certificates git ifuse libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
         sudo dnf group install -y "C Development Tools and Libraries"
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
+        prepare_udev_rules root usbmuxd
 
     elif [[ $distro == "opensuse" ]]; then
         sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
         sudo zypper -n install -t pattern devel_basis
+        prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
@@ -385,11 +395,11 @@ install_depends() {
 
     echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" ]]; then
-        # from linux_fix script by Cryptiiiic
+        # from linux_fix and libirecovery-rules by Cryptiiiic
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
         fi
-        echo "QUNUSU9OPT0iYWRkIiwgU1VCU1lTVEVNPT0idXNiIiwgQVRUUntpZFZlbmRvcn09PSIwNWFjIiwgQVRUUntpZFByb2R1Y3R9PT0iMTIyWzI3XXwxMjhbMC0zXSIsIE9XTkVSPSJyb290IiwgR1JPVVA9InVzYm11eGQiLCBNT0RFPSIwNjYwIiwgVEFHKz0idWFjY2VzcyIKCkFDVElPTj09ImFkZCIsIFNVQlNZU1RFTT09InVzYiIsIEFUVFJ7aWRWZW5kb3J9PT0iMDVhYyIsIEFUVFJ7aWRQcm9kdWN0fT09IjEzMzgiLCBPV05FUj0icm9vdCIsIEdST1VQPSJ1c2JtdXhkIiwgTU9ERT0iMDY2MCIsIFRBRys9InVhY2Nlc3MiCgoK" | base64 -d | sudo tee /etc/udev/rules.d/39-libirecovery.rules >/dev/null 2>/dev/null
+        sudo cp 39-libirecovery.rules /etc/udev/rules.d/39-libirecovery.rules
         sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
         sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
         sudo udevadm control --reload-rules
@@ -785,8 +795,15 @@ device_get_info() {
 
     if [[ -z $device_mode ]]; then
         local error_msg=$'* Make sure to trust this computer by selecting "Trust" at the pop-up.'
-        [[ $platform == "macos" ]] && error_msg+=$'\n* Make sure to have the initial setup dependencies installed before retrying.'
-        [[ $platform != "linux" ]] && error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
+        if [[ $platform == "macos" ]]; then
+            error_msg+=$'\n* Make sure to have the initial setup dependencies installed before retrying.'
+            error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
+            error_msg+=$'\n* You may also try running this command if needed: sudo killall -STOP -c usbd'
+        else
+            error_msg+=$'\n* If your device in normal mode is not being detected, this is likely a usbmuxd issue.'
+            error_msg+=$'\n* Try restarting your PC and/or use different USB ports/cables.'
+            error_msg+=$'\n* You may also try again in a live USB.'
+        fi
         error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
@@ -6950,8 +6967,7 @@ menu_ipsw() {
                 print "* Select Target IPSW to continue"
             fi
             warn "This is a tethered downgrade. Not recommended unless you know what you are doing."
-            print "* Tethered downgrade: you need to use Legacy iOS Kit every time to boot the device."
-            print "* Booting can be done by going to: Other Utilities -> Just Boot"
+            print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-Downgrade and read the \"Other (Tethered)\" section"
             if [[ -n $ipsw_path ]]; then
                 menu_items+=("$start")
             fi
