@@ -6507,10 +6507,12 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        if (( device_proc > 10 )); then
-            menu_items+=("Latest iOS")
-        elif [[ $device_type != "iPhone1,2" ]]; then
-            menu_items+=("Latest iOS ($device_latest_vers)")
+        if [[ $platform != "macos" ]]; then
+            if (( device_proc > 10 )); then
+                menu_items+=("Latest iOS")
+            elif [[ $device_type != "iPhone1,2" ]]; then
+                menu_items+=("Latest iOS ($device_latest_vers)")
+            fi
         fi
         case $device_type in
             iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
@@ -6567,6 +6569,10 @@ menu_restore() {
             iPhone3,2    ) print "* iPhone3,2 does not support downgrades with powdersn0w"; echo;;
             iPod4,1      ) print "* iPod touch 4 does not support any untethered downgrades without blobs"; echo;;
         esac
+        if [[ $platform == "macos" ]] && (( device_proc >= 7 )); then
+            print "* Note: Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
+            echo
+        fi
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -8279,7 +8285,7 @@ restore_latest64() {
     local idevicerestore2="${idevicerestore}2"
     local opt="-l"
     local opt2
-    warn "Restoring to iOS 18 or newer is not supported."
+    warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
     print "* Restore/Update Selection"
     print "* Restore will do factory reset and update the device, all data will be cleared"
     print "* Update will only update the device to the latest version"
