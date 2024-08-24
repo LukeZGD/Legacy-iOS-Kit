@@ -1722,8 +1722,8 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_comm="d0f9b0faae98d042e17fbb47cedf342e983a6bb8"
-    local ipwndfu_sha1="8732b15c7262d68d2c5dd8cdbe0f6efb217d0240"
+    local ipwndfu_comm="1d22fd01b0daf52bbcf1ce730022d4212d87f967"
+    local ipwndfu_sha1="11e989557a7c4b75d70be14ac0ebfc2f9ec80791"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
@@ -6786,9 +6786,11 @@ menu_ipsw() {
                     [643]* ) ipsw_canhacktivate=1;;
                 esac
             ;;
-            [654]* | 3.1* )
+            [6543]* )
                 device_target_vers="$1"
-                ipsw_canhacktivate=1
+                if [[ $device_target_vers != "3.0"* ]]; then
+                    ipsw_canhacktivate=1
+                fi
                 if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
                     ipsw_cancustomlogo=1
                 fi
