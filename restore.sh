@@ -4532,14 +4532,15 @@ restore_futurerestore() {
             return
         fi
         log "Checking for futurerestore updates..."
-        local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
+        #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
+        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916"
         local fr_current="$(cat ${futurerestore2}_version 2>/dev/null)"
         if [[ $fr_latest != "$fr_current" ]]; then
             log "futurerestore nightly update detected, downloading."
             rm $futurerestore2
         fi
         if [[ ! -e $futurerestore2 ]]; then
-            local url="https://nightly.link/futurerestore/futurerestore/workflows/ci/main/"
+            local url="https://nightly.link/futurerestore/futurerestore/actions/runs/9901660300/"
             local file="futurerestore-"
             case $platform in
                 "macos" ) file+="macOS-RELEASE.zip";;
