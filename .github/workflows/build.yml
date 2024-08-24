@@ -35,7 +35,7 @@ jobs:
           cp -r Legacy-iOS-Kit-Keys-master/* firmware
           mv ipwndfu*/ ../saved/ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
-          echo "11e989557a7c4b75d70be14ac0ebfc2f9ec80791" > ../saved/ipwndfu/sha1check
+          echo "30f0802078ab6ff83d6b918e13f09a652a96d6dc" > ../saved/ipwndfu/sha1check
           popd
 
       - name: Move linux binaries

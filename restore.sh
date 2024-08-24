@@ -1723,7 +1723,7 @@ device_ipwndfu() {
 
     device_enter_mode DFU
     local ipwndfu_comm="1d22fd01b0daf52bbcf1ce730022d4212d87f967"
-    local ipwndfu_sha1="11e989557a7c4b75d70be14ac0ebfc2f9ec80791"
+    local ipwndfu_sha1="30f0802078ab6ff83d6b918e13f09a652a96d6dc"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
