@@ -8675,6 +8675,7 @@ if [[ $othertmp != 0 ]]; then
     pause
 fi
 
+othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 mkdir "$(dirname "$0")/tmp$$"
 pushd "$(dirname "$0")/tmp$$" >/dev/null
 
