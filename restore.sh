@@ -242,7 +242,11 @@ set_tool_paths() {
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
+                log "Running usbmuxd"
                 sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+            elif [[ $othertmp != 0 ]]; then
+                log "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
+                log "Not running usbmuxd"
             fi
         fi
 
@@ -774,6 +778,9 @@ device_get_info() {
         log "Finding device in Normal mode..."
         if [[ $platform == "linux" ]]; then
             print "* If it gets stuck here, try to restart your PC"
+            if [[ $othertmp != 0 ]]; then
+                print "* If it fails to detect devices, try to delete all \"tmp\" folders in your Legacy iOS Kit folder"
+            fi
         fi
     fi
 
@@ -2525,7 +2532,7 @@ ipsw_prepare_jailbreak() {
     ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -3177,7 +3184,7 @@ ipsw_prepare_32bit() {
     ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -4035,7 +4042,7 @@ ipsw_prepare_powder() {
     fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_type == "iPhone"* && $device_deadbb != 1 ]]; then
+    elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
@@ -8650,8 +8657,6 @@ trap "exit 1" INT TERM
 
 clean
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
-mkdir "$(dirname "$0")/tmp$$"
-pushd "$(dirname "$0")/tmp$$" >/dev/null
 
 if [[ $no_color != 1 ]]; then
     TERM=xterm-256color # fix colors for msys2 terminal
@@ -8661,6 +8666,17 @@ if [[ $no_color != 1 ]]; then
     color_Y=$(tput setaf 208)
     color_N=$(tput sgr0)
 fi
+
+if [[ $othertmp != 0 ]]; then
+    log "Detected existing tmp folder(s)."
+    print "* There might be other Legacy iOS Kit instance(s) running, or residual tmp folder(s) not deleted."
+    print "* Running multiple instances is not fully supported and can cause unexpected behavior."
+    print "* It is recommended to only use a single instance and/or delete all existing \"tmp\" folders in your Legacy iOS Kit folder before continuing."
+    pause
+fi
+
+mkdir "$(dirname "$0")/tmp$$"
+pushd "$(dirname "$0")/tmp$$" >/dev/null
 
 main
 
