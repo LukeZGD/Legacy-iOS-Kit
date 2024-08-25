@@ -94,6 +94,9 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --skip-ibss               Assume that pwned iBSS has already been sent to device
     --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
 
+For 64-bit checkm8 devices compatible with pwned restores:
+    --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
+
     * Default IPSW path: <script location>/<name of IPSW file>.ipsw
     * Default SHSH path: <script location>/saved/shsh/<name of SHSH file>.shsh(2)
     '
@@ -1330,6 +1333,8 @@ device_enter_mode() {
                     exit
                 fi
                 log "Entering recovery mode..."
+                print "* If the device does not enter recovery mode automatically:"
+                print "* Press Ctrl+C to cancel for now and try putting the device in DFU/Recovery mode manually"
                 "$dir/ideviceenterrecovery" "$device_udid" >/dev/null
                 device_find_mode Recovery 50
             fi
@@ -4420,7 +4425,7 @@ restore_idevicerestore() {
 
     mkdir shsh 2>/dev/null
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
-    if [[ $device_use_bb == 0 ]]; then
+    if [[ $device_use_bb == 0 || -n $device_disable_bbupdate ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
     fi
     ipsw_extract custom
@@ -4533,7 +4538,7 @@ restore_futurerestore() {
         fi
         log "Checking for futurerestore updates..."
         #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
-        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916"
+        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916-"
         local fr_current="$(cat ${futurerestore2}_version 2>/dev/null)"
         if [[ $fr_latest != "$fr_current" ]]; then
             log "futurerestore nightly update detected, downloading."
@@ -4551,6 +4556,7 @@ restore_futurerestore() {
             unzip -q "$file" -d .
             tar -xJvf futurerestore*.xz
             mv futurerestore $futurerestore2
+            perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
             chmod +x $futurerestore2
             echo "$fr_latest" > ${futurerestore2}_version
         fi
@@ -4558,6 +4564,9 @@ restore_futurerestore() {
     if [[ -n "$1" ]]; then
         # custom arg, either --use-pwndfu or --skip-blob
         ExtraArr+=("$1")
+    fi
+    if [[ -n "$2" ]]; then
+        ExtraArr+=("$2")
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArr+=("-d")
@@ -4854,7 +4863,12 @@ restore_pwned64() {
         log "gaster reset"
         $gaster reset
     fi
-    restore_futurerestore --use-pwndfu
+    local opt
+    if [[ $device_proc == 7 && $device_target_other != 1 &&
+          $device_target_vers == "10.3.3" ]] || [[ $restore_useskipblob == 1 ]]; then
+        opt="--skip-blob"
+    fi
+    restore_futurerestore --use-pwndfu $opt
 }
 
 restore_notpwned64() {
@@ -4947,6 +4961,10 @@ ipsw_prepare() {
 
 restore_usepwndfu64_option() {
     if [[ $device_target_vers == "$device_latest_vers" ]]; then
+        return
+    elif [[ $restore_useskipblob == 1 ]]; then
+        log "skip-blob flag detected, pwned restore option enabled."
+        restore_usepwndfu64=1
         return
     fi
     local opt
@@ -6932,7 +6950,7 @@ menu_ipsw() {
                         warn "Selected SHSH file failed validation, proceed with caution"
                         if (( device_proc >= 7 )); then
                             print "* If this is an OTA/onboard/factory blob, it may be fine to use for restoring"
-                            print "* If the restore does not work here, use futurerestore manually"
+                            print "* If the restore does not work, try enabling the skip-blob flag"
                         elif (( device_proc < 5 )); then
                             warn "Validation might be a false negative for A4 and older devices."
                         fi
@@ -7181,7 +7199,6 @@ ipsw_custom_set() {
         ipsw_custom+="A"
     fi
     if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc > 4 )); then
-        device_use_bb=0
         ipsw_custom+="B"
         if [[ $device_deadbb == 1 ]]; then
             ipsw_custom+="D"
@@ -7440,13 +7457,14 @@ menu_flags() {
         case $device_type in
             iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Enable disable-bbupdate flag");;
         esac
-        if [[ $device_proc != 1 ]]; then
-            menu_items+=("Enable activation-records flag")
+        if (( device_proc >= 7 )); then
+            menu_items+=("Enable skip-blob flag")
+        else
+            menu_items+=("Enable activation-records flag" "Enable jailbreak flag")
+            if (( device_proc >= 5 )); then
+                menu_items+=("Enable skip-ibss flag")
+            fi
         fi
-        if (( device_proc >= 5 )); then
-            menu_items+=("Enable skip-ibss flag")
-        fi
-        menu_items+=("Enable jailbreak flag")
         case $device_type in
             iPhone4,1 ) menu_items+=("Enable gasgauge-patch flag");;
             iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Enable skip-first flag");;
@@ -7530,6 +7548,18 @@ menu_flags() {
                 read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
                 if [[ $opt == 'y' || $opt == 'Y' ]]; then
                     ipsw_skip_first=1
+                    back=1
+                fi
+            ;;
+            "Enable skip-blob flag" )
+                warn "This will enable the --skip-blob flag."
+                print "* This will enable the skip blob flag of futurerestore."
+                print "* This can be used to skip blob verification for OTA/onboard/factory SHSH blobs."
+                print "* Do not enable this if you do not know what you are doing."
+                local opt
+                read -p "$(input 'Do you want to enable the skip-blob flag? (y/N): ')" opt
+                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                    restore_useskipblob=1
                     back=1
                 fi
             ;;
@@ -7629,9 +7659,9 @@ menu_other() {
         fi
         if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
-            if [[ $device_proc != 1 ]]; then
-                menu_items+=("Enable Flags")
-            fi
+        fi
+        if [[ $device_proc != 1 ]] && (( device_proc < 11 )); then
+            menu_items+=("Enable Flags")
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         menu_print_info
@@ -8611,6 +8641,7 @@ for i in "$@"; do
         "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
         "--skip-first" ) ipsw_skip_first=1;;
+        "--skip-blob" ) restore_useskipblob=1;;
     esac
 done
 
