@@ -4970,7 +4970,12 @@ restore_usepwndfu64_option() {
     if [[ $device_target_vers == "$device_latest_vers" ]]; then
         return
     elif [[ $restore_useskipblob == 1 ]]; then
-        log "skip-blob flag detected, pwned restore option enabled."
+        log "skip-blob flag detected, Pwned Restore Option enabled."
+        restore_usepwndfu64=1
+        return
+    elif [[ $device_mode == "DFU" && $device_target_other == 1 ]]; then
+        log "Device is in DFU mode, Pwned Restore Option enabled."
+        print "* If you want to disable Pwned Restore Option, place the device in Normal/Recovery mode"
         restore_usepwndfu64=1
         return
     fi
@@ -5061,7 +5066,7 @@ device_ramdisk64() {
             ver="14"
         fi
         device_ramdiskver="$ver"
-        print "* Version Selection"
+        input "Version Select Option"
         print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
         print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
         print "* If not sure, just press Enter/Return. This will select the default version."
@@ -6955,10 +6960,7 @@ menu_ipsw() {
                         print "* Selected SHSH file is validated"
                     else
                         warn "Selected SHSH file failed validation, proceed with caution"
-                        if (( device_proc >= 7 )); then
-                            print "* If this is an OTA/onboard/factory blob, it may be fine to use for restoring"
-                            print "* If the restore does not work, try enabling the skip-blob flag"
-                        elif (( device_proc < 5 )); then
+                        if (( device_proc < 5 )); then
                             warn "Validation might be a false negative for A4 and older devices."
                         fi
                         echo
@@ -7030,8 +7032,15 @@ menu_ipsw() {
                 if [[ $shsh_validate == 0 ]]; then
                     print "* Selected SHSH file is validated"
                 else
-                    warn "Selected SHSH file failed validation"
+                    warn "Selected SHSH file failed validation, proceed with caution"
+                    if (( device_proc >= 7 )); then
+                        print "* If this is an OTA/onboard/factory blob, it may be fine to use for restoring"
+                    elif (( device_proc < 5 )); then
+                        warn "Validation might be a false negative for A4 and older devices."
+                    fi
+                    echo
                 fi
+                print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
                 echo
 
             elif [[ $2 != "ipsw" ]]; then
@@ -8326,7 +8335,7 @@ restore_latest64() {
     local opt="-l"
     local opt2
     warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
-    print "* Restore/Update Selection"
+    input "Restore/Update Select Option"
     print "* Restore will do factory reset and update the device, all data will be cleared"
     print "* Update will only update the device to the latest version"
     read -p "$(input "Select Y to Restore, select N to Update (Y/n) ")" opt2
