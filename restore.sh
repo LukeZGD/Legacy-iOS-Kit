@@ -228,6 +228,7 @@ set_tool_paths() {
             ipwnder="sudo "
             irecovery="sudo "
             irecovery2="sudo "
+            irecovery3="sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
                 log "Running on platform: $platform ($platform_ver)"
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
@@ -327,6 +328,7 @@ set_tool_paths() {
     ipwnder+="$dir/ipwnder"
     irecovery+="$dir/irecovery"
     irecovery2+="$dir/irecovery2"
+    irecovery3+="../$dir/irecovery"
     jq="$dir/jq"
 
     cp ../resources/ssh_config .
@@ -353,12 +355,18 @@ install_depends() {
     if [[ $platform == "linux" ]]; then
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
         print "* Enter your user password when prompted"
+        if [[ $distro != "debian" ]]; then
+            echo
+            warn "Before continuing, make sure that your system is fully updated first!"
+            echo "${color_Y}* This operation can result in a partial upgrade and may cause breakage if your system is not updated${color_N}"
+            echo
+        fi
         pause
         prepare_udev_rules usbmux plugdev
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Syu --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
@@ -1494,10 +1502,10 @@ device_enter_mode() {
                 return
             fi
             if [[ $device_mode == "DFU" ]]; then
-                irec_pwned=$($irecovery -q | grep -c "PWND")
+                device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
             fi
             if [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                    $device_boot4 != 1 && $device_proc == 5 ]]; then
+                  $device_boot4 != 1 && $device_proc == 5 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N if this is not the case. (pwned using checkm8-a5)"
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
@@ -1506,8 +1514,9 @@ device_enter_mode() {
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
-            elif [[ $irec_pwned == 1 ]]; then
+            elif [[ -n $device_pwnd ]]; then
                 log "Device seems to be already in pwned DFU mode"
+                print "* Pwned: $device_pwnd"
                 case $device_proc in
                     4 ) return;;
                     7 )
@@ -1536,6 +1545,7 @@ device_enter_mode() {
                     local error_msg=$'\n* Please put the device in normal mode and jailbroken before proceeding.'
                     error_msg+=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
                     error_msg+=$'\n* For usage of kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
+                    error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-a5x-pwndfu-mode-with-arduino-and-usb-host-shield'
                     error "32-bit A5 device is not in PWNED DFU mode." "$error_msg"
                 fi
                 device_ipwndfu send_ibss
@@ -1580,16 +1590,17 @@ device_enter_mode() {
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
-                # the linux checkm8 section for a6/a7. success rates are absolute garbage here
+                # the linux checkm8 section for a6/a7
                 # A6 linux uses ipwndfu, A7 linux uses gaster
-                log "Please read the message below:"
-                warn "Unfortunately, success rates for checkm8 are very low on Linux."
-                print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
-                print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-                print "* Troubleshooting links:"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
                 if [[ $device_proc == 7 ]]; then
+                    # a7 linux, success rates are absolute garbage here
+                    log "Please read the message below:"
+                    warn "Unfortunately, success rates for A7 checkm8 are very low on Linux."
+                    print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
+                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
+                    print "* Troubleshooting links:"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
+                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
                     log "Placing device to pwnDFU mode using gaster"
                     print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
                     $gaster pwn
@@ -1656,13 +1667,13 @@ device_enter_mode() {
 
 device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
-    if [[ $platform == "linux" && $device_proc != 4 ]]; then
+    if [[ $platform == "linux" && $device_proc == 7 ]]; then
         error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
         error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
-    elif [[ $platform == "linux" && $device_proc == 4 ]]; then
-        error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD CPU.'
+    elif [[ $platform == "linux" ]]; then
+        error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
         error_msg+=$'\n* Pwning using an Intel PC or another device may be better options.'
-    elif [[ $platform == "macos" ]]; then
+    elif [[ $platform == "macos" && $device_proc == 4 ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
@@ -1782,8 +1793,25 @@ device_ipwndfu() {
             $python2 ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
-                popd >/dev/null
-                device_pwnerror
+                if [[ $device_proc == 6 && $tool_pwned != 2 ]]; then
+                    log "You may see the langid error above. This is normal, let's try to make it work"
+                    log "Please read the message below:"
+                    print "* Quickly unplug and replug the device 2 times at least"
+                    print "* After doing this, continue by pressing Enter/Return"
+                    pause
+                    log "Checking for device"
+                    device_pwnd="$($irecovery3 -q | grep "PWND" | cut -c 7-)"
+                    if [[ -n $device_pwnd ]]; then
+                        log "Success!"
+                        print "* Pwned: $device_pwnd"
+                    else
+                        popd >/dev/null
+                        device_pwnerror
+                    fi
+                else
+                    popd >/dev/null
+                    device_pwnerror
+                fi
             fi
         ;;
 
@@ -7040,7 +7068,9 @@ menu_ipsw() {
                     fi
                     echo
                 fi
-                print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
+                if (( device_proc >= 7 )); then
+                    print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
+                fi
                 echo
 
             elif [[ $2 != "ipsw" ]]; then
@@ -7069,7 +7099,8 @@ menu_ipsw() {
 
         if [[ $ipsw_cancustomlogo2 == 1 ]]; then
             print "* You can select your own custom Apple logo image. This is optional and an experimental option"
-            print "* Note that the images must be in PNG format, and up to 320x480 resolution only"
+            print "* Note: The images must be in PNG format, and up to 320x480 resolution only"
+            print "* Note 2: The custom images might not work, current support is spotty"
             if [[ -n $ipsw_customlogo ]]; then
                 print "* Custom Apple logo: $ipsw_customlogo"
             else
@@ -7078,8 +7109,9 @@ menu_ipsw() {
             menu_items+=("Select Apple Logo")
             echo
         elif [[ $ipsw_cancustomlogo == 1 ]]; then
-            print "* You can select your own custom logo and recovery image. This is optional"
-            print "* Note that the images must be in PNG format, and up to 320x480 resolution only"
+            print "* You can select your own custom logo and recovery image. This is optional and an experimental option"
+            print "* Note: The images must be in PNG format, and up to 320x480 resolution only"
+            print "* Note 2: The custom images might not work, current support is spotty"
             if [[ -n $ipsw_customlogo ]]; then
                 print "* Custom Apple logo: $ipsw_customlogo"
             else
