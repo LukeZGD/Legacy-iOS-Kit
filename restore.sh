@@ -8719,6 +8719,7 @@ fi
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 mkdir "$(dirname "$0")/tmp$$"
 pushd "$(dirname "$0")/tmp$$" >/dev/null
+mkdir ../saved 2>/dev/null
 
 main
 
