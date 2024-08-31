@@ -471,7 +471,7 @@ version_update() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf resources/
     fi
-    rm -r resources/ 2>/dev/null
+    rm -r resources/ saved/ipwndfu/ 2>/dev/null
     unzip -q tmp$$/latest.zip -d .
     cp tmp$$/firstrun resources 2>/dev/null
     pushd "$(dirname "$0")/tmp$$" >/dev/null
