@@ -1590,25 +1590,9 @@ device_enter_mode() {
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
-                # the linux checkm8 section for a6/a7
-                # A6 linux uses ipwndfu, A7 linux uses gaster
-                if [[ $device_proc == 7 ]]; then
-                    # a7 linux, success rates are absolute garbage here
-                    log "Please read the message below:"
-                    warn "Unfortunately, success rates for A7 checkm8 are very low on Linux."
-                    print "* Pwning using a Mac or another iOS device using iPwnder Lite are better options."
-                    print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-                    print "* Troubleshooting links:"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
-                    print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
-                    log "Placing device to pwnDFU mode using gaster"
-                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
-                    $gaster pwn
-                    tool_pwned=$?
-                else
-                    device_ipwndfu pwn
-                    tool_pwned=$?
-                fi
+                # A6/A7 linux uses ipwndfu
+                device_ipwndfu pwn
+                tool_pwned=$?
             elif [[ $device_proc == 6 ]]; then
                 # A6 mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
@@ -1624,7 +1608,7 @@ device_enter_mode() {
                 local selection=("ipwnder32" "ipwnder_lite")
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ipwnder32 by default (1). Select this option if unsure."
+                print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
                 print "* If the first option does not work, try many times and/or try the other option(s)."
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
@@ -1667,12 +1651,10 @@ device_enter_mode() {
 
 device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
-    if [[ $platform == "linux" && $device_proc == 7 ]]; then
-        error_msg+=$'\n* Unfortunately, success rates for checkm8 are very low on Linux.'
-        error_msg+=$'\n* Pwning using a Mac or another iOS device using iPwnder Lite are better options.'
-    elif [[ $platform == "linux" ]]; then
+    if [[ $platform == "linux" ]]; then
         error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
-        error_msg+=$'\n* Pwning using an Intel PC or another device may be better options.'
+        error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
+        error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
     elif [[ $platform == "macos" && $device_proc == 4 ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     fi
@@ -1793,8 +1775,9 @@ device_ipwndfu() {
             $python2 ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
-                if [[ $device_proc == 6 && $tool_pwned != 2 ]]; then
+                if (( device_proc >= 6 )) && [[ $tool_pwned != 2 ]]; then
                     log "You may see the langid error above. This is normal, let's try to make it work"
+                    print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
                     log "Please read the message below:"
                     print "* Quickly unplug and replug the device 2 times at least"
                     print "* After doing this, continue by pressing Enter/Return"
