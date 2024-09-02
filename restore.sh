@@ -1630,6 +1630,7 @@ device_enter_mode() {
                 $opt
                 tool_pwned=$?
             fi
+            log "Checking for device"
             irec_pwned=$($irecovery -q | grep -c "PWND")
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwning tool, must be 0
@@ -1692,8 +1693,8 @@ device_ipwndfu() {
             curl https://pyenv.run | bash
             pyenv="$HOME/.pyenv/bin/pyenv"
             if [[ ! -e $pyenv ]]; then
-                error "Cannot detect python2 from pyenv, its installation may have failed." \
-                "* Also try installing pyenv and python2 manually before retrying."
+                error "Cannot detect pyenv, its installation may have failed." \
+                "* Try installing pyenv manually before retrying."
             fi
         fi
         log "Installing python2 using pyenv"
@@ -1779,7 +1780,7 @@ device_ipwndfu() {
                     log "You may see the langid error above. This is normal, let's try to make it work"
                     print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
                     log "Please read the message below:"
-                    print "* Quickly unplug and replug the device 2 times at least"
+                    print "* Unplug and replug the device 2 times"
                     print "* After doing this, continue by pressing Enter/Return"
                     pause
                     log "Checking for device"
@@ -5855,6 +5856,8 @@ menu_ramdisk() {
             "erase78" )
                 warn "This will do a \"Erase All Content and Settings\" procedure for iOS 7 and 8 devices."
                 print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
+                print "* If you want to, you may also do this process manually by running the commands in the tutorial."
+                print "* For iOS 8 devices, also remove this file if you will be doing it manually: /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
                 if (( device_proc >= 7 )); then
                     print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
                 fi
@@ -6549,10 +6552,14 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        if [[ $platform != "macos" ]]; then
+        if [[ $device_type == "iPhone1,2" ]]; then
+            : # dont show 4.2.1 option for 3g
+        elif (( device_proc < 7 )); then
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        elif [[ $platform == "linux" ]]; then
             if (( device_proc > 10 )); then
                 menu_items+=("Latest iOS")
-            elif [[ $device_type != "iPhone1,2" ]]; then
+            else
                 menu_items+=("Latest iOS ($device_latest_vers)")
             fi
         fi
