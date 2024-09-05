@@ -180,6 +180,7 @@ set_tool_paths() {
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
+        tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
 
         # live cd/usb check
@@ -262,6 +263,7 @@ set_tool_paths() {
         platform_arch="$(uname -m)"
         if [[ $platform_arch != "x86_64" ]]; then
             platform_arch="arm64"
+            #dir+="/arm64"
         fi
 
         # macos version check
@@ -298,7 +300,8 @@ set_tool_paths() {
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
-        zenity="$dir/zenity"
+        tsschecker="../bin/macos/tsschecker"
+        zenity="../bin/macos/zenity"
 
         # kill macos daemons
         killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -1539,14 +1542,22 @@ device_enter_mode() {
                 print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
                 print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
-                print "* If you do not know what you are doing, select N and restart your device in normal mode."
-                read -p "$(input 'Is your device in PWNED DFU mode using checkm8-a5? (y/N): ')" opt
-                if [[ $opt != "Y" && $opt != "y" ]]; then
-                    local error_msg=$'\n* Please put the device in normal mode and jailbroken before proceeding.'
-                    error_msg+=$'\n* Exit DFU mode by holding the TOP and HOME buttons for about 15 seconds.'
-                    error_msg+=$'\n* For usage of kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
+                print "* If you do not know what you are doing, restart your device in normal mode."
+                echo
+                log "Checking for device"
+                device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+                if [[ -n $device_pwnd ]]; then
+                    log "Found device in pwned DFU mode."
+                    print "* Pwned: $device_pwnd"
+                else
+                    local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU, and retry.'
+                    if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
+                        error_msg+=$'\n* As much as possible, use kDFU mode instead: put the device in normal mode and jailbroken.'
+                    fi
+                    error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
+                    error_msg+=$'\n* For more info about kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
                     error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-a5x-pwndfu-mode-with-arduino-and-usb-host-shield'
-                    error "32-bit A5 device is not in PWNED DFU mode." "$error_msg"
+                    error "32-bit A5 device is NOT in PWNED DFU mode. Already pwned iBSS mode?" "$error_msg"
                 fi
                 device_ipwndfu send_ibss
                 return
@@ -1630,13 +1641,14 @@ device_enter_mode() {
                 $opt
                 tool_pwned=$?
             fi
+            if [[ $tool_pwned == 2 ]]; then
+                return
+            fi
             log "Checking for device"
             irec_pwned=$($irecovery -q | grep -c "PWND")
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwning tool, must be 0
-            if [[ $tool_pwned == 2 ]]; then
-                return
-            elif [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
+            if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
             if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
@@ -1656,6 +1668,9 @@ device_pwnerror() {
         error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
         error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
+        if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
+            error_msg+=$'\n* As much as possible, use kDFU mode instead: put the device in normal mode and jailbroken.'
+        fi
     elif [[ $platform == "macos" && $device_proc == 4 ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     fi
@@ -2241,8 +2256,8 @@ shsh_save() {
     else
         ExtraArgs+="-g 0x1111111111111111"
     fi
-    log "Running tsschecker with command: $dir/tsschecker $ExtraArgs"
-    "$dir/tsschecker" $ExtraArgs
+    log "Running tsschecker with command: $tsschecker $ExtraArgs"
+    $tsschecker $ExtraArgs
     shsh_path="$(ls $shsh_check)"
     if [[ -z "$shsh_path" ]]; then
         error "Saving $version blobs failed. Please run the script again" \
@@ -5879,15 +5894,16 @@ menu_ramdisk() {
 }
 
 shsh_save_onboard64() {
-    log "Proceeding to dump onboard blobs on normal mode"
     print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
-    print "* You can use SSH Ramdisk option to dump onboard blobs: Other Utilities -> SSH Ramdisk"
+    print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Other Utilities -> SSH Ramdisk"
     print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+    echo
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
         print "* Use the SSH Ramdisk option instead."
         return
     fi
+    log "Proceeding to dump onboard blobs on normal mode"
     device_ssh_message
     device_iproxy
     device_sshpass
@@ -6005,7 +6021,7 @@ shsh_save_cydia() {
             continue
         fi
         printf "\n%s " "$build"
-        "$dir/tsschecker" -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
+        $tsschecker -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
             printf "saved"
             mv $(ls *$build*) ../saved/shsh/$device_ecid-$device_type-$build.shsh
@@ -6672,11 +6688,9 @@ menu_ipsw_downloader() {
         done
         case $selected in
             "Enter Build Version" )
-                vers=
                 print "* Enter the build version of the IPSW you want to download."
-                until [[ -n $vers ]]; do
-                    read -p "$(input 'Enter build version (eg. 10B329): ')" vers
-                done
+                device_enter_build
+                vers="$device_rd_build"
             ;;
             "Start Download" )
                 device_target_build="$vers"
@@ -7783,7 +7797,10 @@ device_jailbreak() {
         print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.1 or 3.1.3, then enable the jailbreak option."
         return
     elif [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
-        read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
+        device_vers=
+        while [[ -z $device_vers ]]; do
+            read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
+        done
     else
         case $device_vers in
             5* | 6.0* | 6.1 | 6.1.[12] )
@@ -7878,8 +7895,8 @@ device_jailbreak() {
         ;;
     esac
     if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
-        warn "The \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
-        print "* This applies to all 3.x versions for the 3GS, they require usage of the \"Restore/Downgrade\" option first."
+        warn "For 3.x versions on the 3GS, the \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
+        print "* This applies to all 3.x versions on the 3GS only. They require usage of the \"Restore/Downgrade\" option first."
         echo
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
@@ -8260,9 +8277,29 @@ restore_dfuipsw() {
     log "Restoring done! Device should now be in DFU mode"
 }
 
+device_enter_build() {
+    while true; do
+        device_rd_build=
+        read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
+        case $device_rd_build in
+            *[A-Z]* )
+                if [[ $device_rd_build != *.* ]]; then
+                    break
+                fi
+            ;;
+            "" )
+                if [[ $1 != "required" ]]; then
+                    break
+                fi
+            ;;
+        esac
+        log "Build version input is not valid. Please try again"
+    done
+}
+
 device_justboot() {
     print "* You are about to do a tethered boot."
-    read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
+    device_enter_build required
     device_ramdisk justboot
 }
 
@@ -8277,7 +8314,7 @@ device_enter_ramdisk() {
     elif (( device_proc >= 5 )); then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
         print "* If not sure, just press Enter/Return. This will select the default version."
-        read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
+        device_enter_build
     fi
     device_ramdisk $1
 }
@@ -8546,7 +8583,7 @@ device_backup_restore() {
 device_erase() {
     print "* You have selected the option to Erase All Content and Settings."
     print "* As the option says, it will erase all data on the device and reset it to factory settings."
-    print "* By the end of the operation, the device will be back on the setup or activation screen."
+    print "* By the end of the operation, the device will be back on the setup screen."
     print "* If you want to proceed, please type the following: Yes, do as I say"
     read -p "$(input 'Do you want to proceed? ')" opt
     if [[ $opt != "Yes, do as I say" ]]; then
