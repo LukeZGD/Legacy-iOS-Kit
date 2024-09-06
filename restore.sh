@@ -24,7 +24,7 @@ warn() {
 error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
     print "* Legacy iOS Kit $version_current ($git_hash)"
-    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
+    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     exit 1
 }
 
@@ -175,7 +175,7 @@ set_tool_paths() {
         elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
             distro="gentoo"
         else
-            error "Your distro ($platform_ver) is not detected/supported. See the repo README for supported OS versions/distros"
+            error "Your distro ($platform_ver - $platform_arch) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
@@ -231,7 +231,7 @@ set_tool_paths() {
             irecovery2="sudo "
             irecovery3="sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
-                log "Running on platform: $platform ($platform_ver)"
+                log "Running on platform: $platform ($platform_ver - $platform_arch)"
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
@@ -251,6 +251,7 @@ set_tool_paths() {
                 log "Not running usbmuxd"
             fi
         fi
+        gaster+="$dir/gaster"
 
     elif [[ $(uname -m) == "iP"* ]]; then
         error "Running Legacy iOS Kit on iOS is not supported (yet)" "* Supported platforms: Linux, macOS"
@@ -261,9 +262,8 @@ set_tool_paths() {
         dir="../bin/macos"
 
         platform_arch="$(uname -m)"
-        if [[ $platform_arch != "x86_64" ]]; then
-            platform_arch="arm64"
-            #dir+="/arm64"
+        if [[ $platform_arch == "arm64" ]]; then
+            dir+="/arm64"
         fi
 
         # macos version check
@@ -272,7 +272,7 @@ set_tool_paths() {
             mac_minver=${platform_ver:3}
             mac_minver=${mac_minver%.*}
             if (( mac_minver < 11 )); then
-                warn "Your macOS version ($platform_ver) is not supported. Expect features to not work properly."
+                warn "Your macOS version ($platform_ver - $platform_arch) is not supported. Expect features to not work properly."
                 print "* Supported versions are macOS 10.11 and newer. (10.13/10.15 and newer recommended)"
                 pause
             fi
@@ -297,6 +297,7 @@ set_tool_paths() {
 
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
+        gaster+="../bin/macos/gaster"
         ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
@@ -309,7 +310,7 @@ set_tool_paths() {
     else
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
-    log "Running on platform: $platform ($platform_ver)"
+    log "Running on platform: $platform ($platform_ver - $platform_arch)"
     if [[ ! -d $dir ]]; then
         error "Failed to find bin directory ($dir), cannot continue." \
         "* Re-download Legacy iOS Kit from releases (or do a git clone/reset)"
@@ -324,7 +325,6 @@ set_tool_paths() {
     fi
 
     futurerestore+="$dir/futurerestore"
-    gaster+="$dir/gaster"
     ideviceinfo="$dir/ideviceinfo"
     idevicerestore+="$dir/idevicerestore"
     ifuse="$(command -v ifuse)"
@@ -404,10 +404,6 @@ install_depends() {
         chown -R $USER:staff $dir
         log "Installing Xcode Command Line Tools"
         xcode-select --install
-        if [[ $platform_arch == "arm64" ]]; then
-            log "Installing Rosetta 2"
-            softwareupdate --install-rosetta
-        fi
         print "* Make sure to install requirements from Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
     fi
 
@@ -430,9 +426,15 @@ install_depends() {
 }
 
 version_update_check() {
+    pushd "$(dirname "$0")/tmp$$" >/dev/null
+    if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
+        print "* Legacy iOS Kit will be installing setting up permissions of tools"
+        print "* Enter your user password when prompted"
+        pause
+        sudo xattr -cr $dir
+    fi
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
-    pushd "$(dirname "$0")/tmp$$" >/dev/null
     version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
     git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
     popd >/dev/null
@@ -3182,6 +3184,8 @@ ipsw_prepare_32bit() {
     esac
     if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]]; then
         nskip=1
+    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        nskip=1
     fi
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $nskip != 1 ]]; then
         ipsw_prepare_jailbreak
@@ -5005,6 +5009,9 @@ restore_usepwndfu64_option() {
         print "* If you want to disable Pwned Restore Option, place the device in Normal/Recovery mode"
         restore_usepwndfu64=1
         return
+    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        restore_usepwndfu64=1
+        return
     fi
     local opt
     input "Pwned Restore Option"
@@ -6048,7 +6055,7 @@ menu_print_info() {
     if [[ $git_hash_latest != "$git_hash" ]]; then
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
-    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
+    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     echo
     print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
@@ -8691,7 +8698,7 @@ main() {
     echo
     print "* Save the terminal output now if needed."
     print "* Legacy iOS Kit $version_current ($git_hash)"
-    print "* Platform: $platform ($platform_ver) $live_cdusb_str"
+    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     echo
 }
 
