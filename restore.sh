@@ -2297,6 +2297,7 @@ ipsw_verify() {
     local build_id="$2"
     local cutver
     local device
+    local type
     local IPSWSHA1
     local IPSWSHA1E=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
@@ -2321,6 +2322,14 @@ ipsw_verify() {
         11* ) cutver=7;;
         12* ) cutver=8;;
         13* ) cutver=9;;
+    esac
+    if [[ -n $cutver ]]; then
+        type="$device_type"
+    else
+        ipsw_latest_set
+        type="$device_type2"
+    fi
+    case $build_id in
         14* ) cutver=10;;
         15* ) cutver=11;;
         16* ) cutver=12;;
@@ -2343,7 +2352,7 @@ ipsw_verify() {
     fi
 
     log "Getting SHA1 hash from The Apple Wiki..."
-    IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${device_type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+    IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
@@ -2718,6 +2727,11 @@ ipsw_prepare_keys() {
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+    if [[ $device_target_build == "14"* && $getcomp == "iBSS" ]]; then
+        name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "iBSS" -A1 | sed "s/^.*keypage-ibss\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | sed "s/<\/p>//" | tr -d '\n')"
+    elif [[ $device_target_build == "14"* && $getcomp == "iBEC" ]]; then
+        name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "iBEC" -A1 | sed "s/^.*keypage-ibec\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | sed "s/<\/p>//" | tr -d '\n')"
+    fi
     if [[ -z $name && $device_proc != 1 ]]; then
         error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
     fi
@@ -2954,6 +2968,21 @@ ipsw_prepare_bundle() {
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
+    if [[ $device_target_build == "14"* ]]; then
+        case $device_target_build in
+            14A* ) ipsw_codename="Whitetail";;
+            14B* ) ipsw_codename="Butler";;
+            14C* ) ipsw_codename="Corry";;
+            14D* ) ipsw_codename="Dubois";;
+            14E* ) ipsw_codename="Erie";;
+            14F* ) ipsw_codename="Franklin";;
+            14G* ) ipsw_codename="Greensburg";;
+        esac
+        if [[ $ipsw_isbeta == 1 ]]; then
+            ipsw_codename+="Seed"
+        fi
+        ramdisk_name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "Restore Ramdisk" -A1 | sed "s/^.*keypage-restoreramdisk\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | tr -d '\n')"
+    fi
     if [[ -z $ramdisk_name ]]; then
         error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
@@ -2982,6 +3011,9 @@ ipsw_prepare_bundle() {
     RootSize=$((RootSize+30))
     local rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
     local rootfs_key="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')"
+    if [[ $device_target_build == "14"* ]]; then
+        rootfs_name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "Root" -A1 | sed "s/^.*keypage-rootfs\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | tr -d '\n')"
+    fi
     if [[ -z $rootfs_name ]]; then
         error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
     fi
@@ -3073,6 +3105,11 @@ ipsw_prepare_bundle() {
         ipsw_prepare_keys RestoreKernelCache $1
         ipsw_prepare_keys RestoreRamdisk $1
         echo "</dict>" >> $NewPlist
+    elif [[ $device_target_build == "14"* ]]; then
+        echo "<key>Firmware</key><dict>" >> $NewPlist
+        ipsw_prepare_keys iBSS
+        ipsw_prepare_keys iBEC
+        ipsw_prepare_keys RestoreRamdisk
     else
         if [[ $ipsw_prepare_usepowder == 1 ]]; then
             echo "<key>Firmware</key><dict>" >> $NewPlist
@@ -4569,6 +4606,7 @@ restore_futurerestore() {
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
+        ExtraArr+=("--no-rsep")
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
             warn "futurerestore nightly is not supported on $platform_arch, cannot continue. x86_64 only."
@@ -4576,7 +4614,7 @@ restore_futurerestore() {
         fi
         log "Checking for futurerestore updates..."
         #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
-        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916-"
+        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916--"
         local fr_current="$(cat ${futurerestore2}_version 2>/dev/null)"
         if [[ $fr_latest != "$fr_current" ]]; then
             log "futurerestore nightly update detected, downloading."
@@ -4596,6 +4634,14 @@ restore_futurerestore() {
             mv futurerestore $futurerestore2
             perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
             chmod +x $futurerestore2
+            if [[ $platform == "macos" ]]; then
+                if [[ ! -e ../saved/ldid_$platform ]]; then
+                    download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_$platform_arch ldid
+                    chmod +x ldid
+                    mv ldid ../saved/ldid_$platform
+                fi
+                ../saved/ldid_$platform -S $futurerestore2
+            fi
             echo "$fr_latest" > ${futurerestore2}_version
         fi
     fi
@@ -6771,6 +6817,7 @@ ipsw_latest_set() {
         iPhone9,[24] | iPhone10,[25] ) newpath="iPhone_5.5_P3";;
         * ) newpath="${device_type}";;
     esac
+    device_type2="$newpath"
     newpath+="_${device_target_vers}_${device_target_build}"
     ipsw_custom_set $newpath
     ipsw_dfuipsw="../${newpath}_DFUIPSW"
