@@ -4635,12 +4635,13 @@ restore_futurerestore() {
             perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
             chmod +x $futurerestore2
             if [[ $platform == "macos" ]]; then
-                if [[ ! -e ../saved/ldid_$platform ]]; then
+                ldid="../saved/ldid_${platform}_${platform_arch}"
+                if [[ ! -e $ldid ]]; then
                     download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_$platform_arch ldid
                     chmod +x ldid
-                    mv ldid ../saved/ldid_$platform
+                    mv ldid $ldid
                 fi
-                ../saved/ldid_$platform -S $futurerestore2
+                $ldid -S $futurerestore2
             fi
             echo "$fr_latest" > ${futurerestore2}_version
         fi
@@ -5023,23 +5024,12 @@ ipsw_prepare() {
             fi
         ;;
 
-        7 )
-            # A7 devices 10.3.3
-            if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
-                if [[ $mac_cocoa == 1 ]]; then
-                    restore_usepwndfu64=1
-                    return
-                fi
-                restore_usepwndfu64_option
-                if [[ $restore_usepwndfu64 != 1 ]]; then
-                    ipsw_prepare_1033
-                fi
-            else
-                restore_usepwndfu64_option
+        [789] | 10 )
+            restore_usepwndfu64_option
+            if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
+                 ipsw_prepare_1033
             fi
         ;;
-
-        [89] | 10 ) restore_usepwndfu64_option;;
     esac
 }
 
@@ -6350,10 +6340,10 @@ menu_ipa() {
             if [[ $platform == "macos" ]]; then
                 echo
                 warn "\"Sideload IPA\" is currently not supported on macOS."
-                print "* Use Sideloadly or AltServer instead for now."
+                print "* Use Sideloadly or AltServer instead for this."
                 print "* You also might be looking for the \"Install IPA (AppSync)\" option instead."
                 pause
-                back=1
+                break
             fi
         fi
         echo
@@ -6689,6 +6679,11 @@ menu_restore() {
         esac
         if [[ $platform == "macos" ]] && (( device_proc >= 7 )); then
             print "* Note: Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
+            if [[ $mac_cocoa == 1 ]]; then
+                warn "Restoring 64-bit devices is broken on OS X 10.11 El Capitan. Use macOS 10.12 Sierra or newer for this."
+                pause
+                break
+            fi
             echo
         fi
         input "Select an option:"
