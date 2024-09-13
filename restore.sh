@@ -398,13 +398,11 @@ install_depends() {
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
-        print "* Enter your user password when prompted"
-        pause
-        sudo xattr -cr $dir
-        chown -R $USER:staff $dir
+        xattr -cr ../bin/macos
         log "Installing Xcode Command Line Tools"
         xcode-select --install
         print "* Make sure to install requirements from Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
+        pause
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
@@ -428,10 +426,7 @@ install_depends() {
 version_update_check() {
     pushd "$(dirname "$0")/tmp$$" >/dev/null
     if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
-        print "* Legacy iOS Kit will be installing setting up permissions of tools"
-        print "* Enter your user password when prompted"
-        pause
-        sudo xattr -cr $dir
+        xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
@@ -2151,6 +2146,15 @@ ipsw_preference_set() {
     fi
 
     case $device_type in
+        iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
+    esac
+    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]]; then
+        ipsw_nskip=1
+    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        ipsw_nskip=1
+    fi
+
+    case $device_type in
         iPhone2,1 | iPod2,1 ) ipsw_canmemory=1;;
         iPad[23],[23] ) ipsw_canmemory=1;;
         iPhone3,1 | iPad1,1 | iPad2* | iPod[34],1 )
@@ -2159,8 +2163,9 @@ ipsw_preference_set() {
             esac
         ;;
     esac
+
     if [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
-          $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ||
+          $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
           $device_type == "$device_disable_bbupdate" ]]; then
         ipsw_canmemory=1
     fi
@@ -3215,22 +3220,13 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
-    local nskip
-    case $device_type in
-        iPad[23],[23] | "$device_disable_bbupdate" ) nskip=1;;
-    esac
-    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]]; then
-        nskip=1
-    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        nskip=1
-    fi
-    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $nskip != 1 ]]; then
+    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $ipsw_nskip != 1 ]]; then
         ipsw_prepare_jailbreak
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $nskip == 1 ]]; then
+    elif [[ $ipsw_nskip == 1 ]]; then
         :
     elif [[ $ipsw_jailbreak != 1 && $device_target_build != "9A406" && # 9a406 needs custom ipsw
             $device_proc != 4 && $device_actrec != 1 && $device_target_tethered != 1 ]]; then
@@ -4621,7 +4617,7 @@ restore_futurerestore() {
             rm $futurerestore2
         fi
         if [[ ! -e $futurerestore2 ]]; then
-            local url="https://nightly.link/futurerestore/futurerestore/actions/runs/9901660300/"
+            local url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/"
             local file="futurerestore-"
             case $platform in
                 "macos" ) file+="macOS-RELEASE.zip";;
