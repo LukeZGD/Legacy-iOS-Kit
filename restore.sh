@@ -1489,6 +1489,7 @@ device_enter_mode() {
         "pwnDFU" )
             local irec_pwned
             local tool_pwned
+            local tool_ipwndfu
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -1573,8 +1574,8 @@ device_enter_mode() {
                 # touch 2 uses ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            elif [[ $device_proc == 4 ]]; then
-                # A4/3gs/touch 3 uses ipwndfu/ipwnder
+            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
+                # A6 intel mac/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
                     selection=("ipwndfu" "ipwnder (limera1n)")
@@ -1590,7 +1591,7 @@ device_enter_mode() {
                 select opt2 in "${selection[@]}"; do
                     log "Placing device to pwnDFU mode using $opt2"
                     case $opt2 in
-                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
+                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; tool_ipwndfu=1; break;;
                         "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
                         "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
                         "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
@@ -1646,6 +1647,10 @@ device_enter_mode() {
             # tool_pwned is error code of pwning tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
+            fi
+            if [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" && $tool_ipwndfu == 1 ]]; then
+                device_ipwndfu send_ibss
+                return
             fi
             if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
                 return
