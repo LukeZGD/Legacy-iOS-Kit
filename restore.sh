@@ -816,12 +816,11 @@ device_get_info() {
         if [[ $platform == "macos" ]]; then
             error_msg+=$'\n* Make sure to have the initial setup dependencies installed before retrying.'
             error_msg+=$'\n* Double-check if the device is being detected by iTunes/Finder.'
-            error_msg+=$'\n* You may also try running this command if needed: sudo killall -STOP -c usbd'
         else
             error_msg+=$'\n* If your device in normal mode is not being detected, this is likely a usbmuxd issue.'
-            error_msg+=$'\n* Try restarting your PC and/or use different USB ports/cables.'
             error_msg+=$'\n* You may also try again in a live USB.'
         fi
+        error_msg+=$'\n* Try restarting your PC/Mac as well as using different USB ports/cables.'
         error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
@@ -1570,7 +1569,7 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_type == "iPod2,1" ]]; then
+            elif [[ $device_type == "iPod2,1" || $2 == "alloc8" ]]; then
                 # touch 2 uses ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
@@ -1751,16 +1750,16 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
     fi
-    if [[ $platform == "macos" ]]; then
+    if [[ $platform == "macos" && ! -e ~/lib/libusb-1.0.dylib ]]; then
         if [[ -e ~/lib && -e ~/lib.bak ]]; then
             rm -rf ~/lib
         elif [[ -e ~/lib ]]; then
             mv ~/lib ~/lib.bak
         fi
-        if [[ -d /opt/homebrew/lib ]]; then
-            ln -sf /opt/homebrew/lib ~/lib
-        elif [[ -d /opt/local/lib ]]; then
+        if [[ -e /opt/local/lib/libusb-1.0.dylib ]]; then
             ln -sf /opt/local/lib ~/lib
+        elif [[ -e /opt/homebrew/lib/libusb-1.0.dylib ]]; then
+            ln -sf /opt/homebrew/lib ~/lib
         fi
     fi
 
@@ -2148,9 +2147,8 @@ ipsw_preference_set() {
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
     esac
-    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]]; then
-        ipsw_nskip=1
-    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]] ||
+       [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         ipsw_nskip=1
     fi
 
@@ -7824,16 +7822,13 @@ device_ssh() {
 }
 
 device_alloc8() {
-    device_enter_mode pwnDFU
+    device_enter_mode pwnDFU alloc8
     device_ipwndfu alloc8
     log "Done!"
-    print "* This may take several tries. If it fails, unplug and replug your device, then run the script again"
-    print "* To retry if needed, go to: Other Utilities -> Install alloc8 Exploit"
-    if [[ $platform == "macos" ]]; then
-        warn "Installing alloc8 is known to have issues on macOS according to some issue reports."
-        print "* Success rate of installing alloc8 is higher on Linux than on macOS."
-        print "* It is recommended to do the alloc8 install on Linux instead."
-    fi
+    print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
+    print "* If it fails, try to unplug and replug your device then run the script again."
+    print "* You may also need to force restart the device and re-enter DFU mode before retrying."
+    print "* To retry, just go back to: Other Utilities -> Install alloc8 Exploit"
 }
 
 device_jailbreak() {
@@ -8232,6 +8227,7 @@ restore_customipsw() {
         warn "Restoring to 2.x might not work on newer macOS versions."
         print "* Try installing usbmuxd from MacPorts, and run 'sudo usbmuxd -pf' in another Terminal window"
         print "* Another option is to just do 2.x restores on Linux instead."
+        print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#restoring-to-iphoneosios-2x-on-macos"
     fi
     if [[ $device_proc == 1 ]]; then
         echo
