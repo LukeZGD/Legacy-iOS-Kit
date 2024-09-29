@@ -23,6 +23,8 @@ warn() {
 
 error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
+    echo
+    print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
     print "* Legacy iOS Kit $version_current ($git_hash)"
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     exit 1
@@ -73,9 +75,11 @@ Usage: ./restore.sh [Options]
 
 List of options:
     --debug                   For script debugging (set -x and debug mode)
+    --dfuhelper               Launch to DFU Mode Helper only
     --disable-sudoloop        Disable running tools as root for Linux
     --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
+    --exit-recovery           Attempt to exit recovery mode
     --help                    Display this help message
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
@@ -90,9 +94,9 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
     --memory                  Enable memory option for creating IPSW
-    --pwned-recovery          Assume that device is in pwned recovery mode
-    --skip-ibss               Assume that pwned iBSS has already been sent to device
+    --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
     --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
+    --skip-ibss               Assume that pwned iBSS has already been sent to the device
 
 For 64-bit checkm8 devices compatible with pwned restores:
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
@@ -851,6 +855,10 @@ device_get_info() {
             device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
             [[ -z $device_vers ]] && device_vers="Unknown"
             device_serial="$($irecovery -q | grep "SRNM" | cut -c 7- | cut -c 3- | cut -c -3)"
+            device_get_name
+            print "* Device: $device_name (${device_type} - ${device_model}) in $device_mode mode"
+            print "* iOS Version: $device_vers"
+            print "* ECID: $device_ecid"
             device_manufacturing
             if [[ $device_type == "iPod2,1" && $device_newbr != 2 ]]; then
                 device_newbr="$($irecovery -q | grep -c '240.5.1')"
@@ -1194,7 +1202,7 @@ device_iproxy() {
 device_find_all() {
     # find device stuff from palera1n legacy
     local opt
-    if [[ $1 == "norec" ]]; then
+    if [[ $1 == "norec" || $platform == "macos" ]]; then
         return
     fi
     if [[ $platform == "macos" ]]; then
@@ -1216,9 +1224,9 @@ device_dfuhelper2() {
         top="TOP"
     fi
     echo
-    print "* Press the VOL UP button."
+    print "* Press the VOL UP button now."
     sleep 1
-    print "* Press the VOL DOWN button."
+    print "* Press the VOL DOWN button now."
     sleep 1
     print "* Press and hold the $top button."
     for i in {10..01}; do
@@ -1252,12 +1260,16 @@ device_dfuhelper() {
     if [[ $1 == "norec" ]]; then
         rec=
     fi
-    print "* Get ready to enter DFU mode."
+    if [[ $device_mode == "DFU" ]]; then
+        log "Device is already in DFU mode"
+        return
+    fi
+    print "* DFU Mode Helper - Get ready to enter DFU mode."
     print "* If you already know how to enter DFU mode, you may do so right now before continuing."
     read -p "$(input "Select Y to continue, N to exit $rec(Y/n) ")" opt
     if [[ $opt == 'N' || $opt == 'n' ]]; then
         if [[ -z $1 ]]; then
-            log "Exiting recovery mode."
+            log "Attempting to exit Recovery mode."
             $irecovery -n
         fi
         exit
@@ -1270,7 +1282,7 @@ device_dfuhelper() {
         return
     fi
     print "* Get ready..."
-    for i in {02..01}; do
+    for i in {03..01}; do
         echo -n "$i "
         sleep 1
     done
@@ -1287,17 +1299,24 @@ device_dfuhelper() {
         home="VOL DOWN"
     fi
     echo -e "\n$(print "* Hold $top and $home buttons.")"
-    for i in {10..01}; do
-        echo -n "$i "
-        device_find_all $1
-        opt=$?
-        if [[ $opt == 1 ]]; then
-            echo -e "\n$(log 'Found device in DFU mode.')"
-            device_mode="DFU"
-            return
-        fi
-        sleep 1
-    done
+    if [[ $device_proc == 1 ]]; then
+        for i in {10..01}; do
+            echo -n "$i "
+            sleep 1
+        done
+    else
+        for i in {08..01}; do
+            echo -n "$i "
+            device_find_all $1
+            opt=$?
+            if [[ $opt == 1 ]]; then
+                echo -e "\n$(log 'Found device in DFU mode.')"
+                device_mode="DFU"
+                return
+            fi
+            sleep 1
+        done
+    fi
     echo -e "\n$(print "* Release $top button and keep holding $home button.")"
     for i in {08..01}; do
         echo -n "$i "
@@ -8682,7 +8701,9 @@ main() {
     mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
 
     mode=
-    if [[ -z $mode ]]; then
+    if [[ -n $main_argmode ]]; then
+        mode="$main_argmode"
+    else
         menu_main
     fi
 
@@ -8719,7 +8740,7 @@ main() {
         "save-onboard-dump" ) shsh_save_onboard dump;;
         "save-cydia-blobs" ) shsh_save_cydia;;
         "enterrecovery" ) device_enter_mode Recovery;;
-        "exitrecovery" ) $irecovery -n;;
+        "exitrecovery" ) log "Attempting to exit Recovery mode."; $irecovery -n;;
         "enterdfu" ) device_enter_mode DFU;;
         "dfuipsw" ) restore_dfuipsw;;
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
@@ -8735,7 +8756,7 @@ main() {
     esac
 
     echo
-    print "* Save the terminal output now if needed."
+    print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
     print "* Legacy iOS Kit $version_current ($git_hash)"
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     echo
@@ -8763,6 +8784,8 @@ for i in "$@"; do
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
         "--skip-first" ) ipsw_skip_first=1;;
         "--skip-blob" ) restore_useskipblob=1;;
+        "--dfuhelper" ) main_argmode="device_dfuhelper";;
+        "--exit-recovery" ) main_argmode="exitrecovery";;
     esac
 done
 
