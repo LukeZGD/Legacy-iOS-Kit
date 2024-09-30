@@ -984,10 +984,13 @@ device_get_info() {
             device_proc=8;; # A8
         iPhone8,[124] )
             device_proc=9;; # A9
-        iPhone9,[1234] | iPhone10* | iPad6* | iPod9,1 )
-            device_proc=10;; # A10 (or A9 iPad/A11 device)
+        iPhone9,[1234] | iPhone10* | iPad[67]* | iPod9,1 )
+            device_proc=10;; # A10 (or A9/A10 iPad/A11 device)
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
+    esac
+    case $device_type in
+        iPad7* ) device_checkm8ipad=1;;
     esac
     device_get_name
     if (( device_proc > 10 )); then
@@ -1060,10 +1063,12 @@ device_get_info() {
         iPad6* | iPhone10* )
             device_latest_vers="16.7.10"
             device_latest_build="20H350"
-            #log "Getting latest iOS version for $device_type"
-            #local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
-            #device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
-            #device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+        ;;
+        iPad7* )
+            log "Getting latest iOS version for $device_type"
+            local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+            device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+            device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -4441,7 +4446,7 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
-    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         return
     elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
@@ -4698,7 +4703,7 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
-    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* ]]; then
+    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         idevicerestore2+="2"
         ExtraArgs+="y"
     fi
@@ -7170,6 +7175,11 @@ menu_ipsw() {
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
+            if [[ $device_latest_vers == "18"* ]]; then
+                warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
+                pause
+                return
+            fi
             echo
         fi
 
@@ -7434,6 +7444,34 @@ menu_ipsw_browse() {
     elif [[ $device_latest_vers == "16"* ]]; then
         case $device_target_build in
             20[GH]* ) :;; # 16.6 and newer only
+            18[CDEFGH]* | 19* )
+                if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then
+                    log "Selected IPSW ($device_target_vers) is not supported as target version."
+                    print "* Latest SEP/BB is not compatible."
+                    pause
+                    return
+                else
+                    warn "Please read: You will need to follow a guide regarding activation files before and after the restore."
+                    print "* You will encounter issues activating if you do not follow this."
+                    print "* Link to guide: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
+                    pause
+                fi
+            ;;
+            * )
+                log "Selected IPSW ($device_target_vers) is not supported as target version."
+                print "* Latest SEP/BB is not compatible."
+                pause
+                return
+            ;;
+        esac
+    elif [[ $device_checkm8ipad == 1 ]]; then
+        case $device_target_build in
+            1[89]* )
+                warn "Please read: You will need to follow a guide regarding activation files before and after the restore."
+                print "* You will encounter issues activating if you do not follow this."
+                print "* Link to guide: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
+                pause
+            ;;
             * )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
