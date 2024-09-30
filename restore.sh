@@ -1145,10 +1145,14 @@ device_find_mode() {
     log "Finding device in $mode mode..."
     while (( i < timeout )); do
         if [[ $mode == "Restore" ]]; then
-            device_find_all
-            if [[ $? == 4 ]]; then
-                device_in=1
+            if [[ $platform == "macos" ]]; then
+                opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
+            elif [[ $platform == "linux" ]]; then
+                opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
             fi
+            case $opt in
+                12[9a][0123456789abcdef] ) device_in=1;; # normal
+            esac
         elif [[ $platform == "linux" ]]; then
             device_in=$(lsusb | grep -c "05ac:$usb")
         elif [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$mode" ]]; then
@@ -5310,6 +5314,7 @@ device_ramdisk64() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
+    device_find_mode Restore 20
 
     if [[ $ios8 == 1 ]]; then
         device_iproxy 44
@@ -5549,7 +5554,7 @@ device_ramdisk() {
         return
     elif [[ -n $1 ]]; then
         log "Booting, please wait..."
-        device_find_mode Restore 25
+        device_find_mode Restore 20
     fi
 
     device_iproxy
