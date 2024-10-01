@@ -1174,7 +1174,7 @@ device_find_mode() {
     done
 
     if [[ $device_in != 1 ]]; then
-        if [[ $timeout != 1 && $timeout != 25 ]]; then
+        if [[ $timeout != 1 && $timeout != 20 ]]; then
             error "Failed to find device in $mode mode (Timed out). Please run the script again."
         fi
         return 1
@@ -7569,7 +7569,7 @@ menu_shsh_browse() {
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect)"
     else
-        newpath="$($zenity --file-selection --file-filter='SHSH | *.shsh *.shsh2' --title="Select $text SHSH file")"
+        newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
     fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
@@ -7788,7 +7788,7 @@ menu_other() {
                     menu_items+=("Activation Records")
                 fi
             fi
-            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_proc != 1 ]]; then
+            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
                 menu_items+=("SSH Ramdisk")
             fi
             case $device_mode in
