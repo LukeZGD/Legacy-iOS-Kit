@@ -37,7 +37,7 @@ pause() {
 
 clean() {
     kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
-    popd &>/dev/null
+    popd >/dev/null
     rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 ]]; then
         killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -1200,11 +1200,17 @@ device_sshpass() {
 device_iproxy() {
     local port=22
     log "Running iproxy for SSH..."
-    if [[ -n $1 ]]; then
-        port=$1
+    if [[ -n $2 ]]; then
+        port=$2
     fi
-    "$dir/iproxy" $ssh_port $port >/dev/null &
-    iproxy_pid=$!
+    if [[ $1 == "no-logging" ]]; then
+        "$dir/iproxy" $ssh_port $port >/dev/null &
+        iproxy_pid=$!
+    else
+        "$dir/iproxy" $ssh_port $port &
+        iproxy_pid=$!
+    fi
+    log "iproxy PID: $iproxy_pid"
     sleep 1
 }
 
@@ -4599,6 +4605,7 @@ restore_futurerestore() {
         log "Starting local server for firmware keys: $opt"
         $opt &
         httpserver_pid=$!
+        log "httpserver PID: $httpserver_pid"
         popd >/dev/null
         log "Waiting for local server"
         until [[ $(curl http://127.0.0.1:$port 2>/dev/null) ]]; do
@@ -4629,7 +4636,7 @@ restore_futurerestore() {
         else
             ExtraArr=("--latest-sep")
             case $device_type in
-                iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 ) ExtraArr+=("--latest-baseband");;
+                iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 | iPad7,[46] | iPad7,12 ) ExtraArr+=("--latest-baseband");;
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
@@ -5322,21 +5329,21 @@ device_ramdisk64() {
     device_find_mode Restore 20
 
     if [[ $ios8 == 1 ]]; then
-        device_iproxy 44
+        device_iproxy no-logging 44
         print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
     else
-        device_iproxy
+        device_iproxy no-logging
         print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
     fi
     device_sshpass alpine
 
-    print "* Mount filesystems with this command (for iOS 11 and newer):"
+    print "* Mount filesystems with this command (for iOS 11.3 and newer):"
     print "    /usr/bin/mount_filesystems"
     print "* Mount filesystems with this command (for iOS 10.3.x):"
     print "    /sbin/mount_apfs /dev/disk0s1s1 /mnt1; /sbin/mount_apfs /dev/disk0s1s2 /mnt2"
     print "* Mount filesystems with this command (for iOS 10.2.1 and older):"
     print "    /sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
-    print "* Mounting and/or modifying data (/mnt2) might not work depending on iOS"
+    warn "Mounting and/or modifying data (/mnt2) might not work for 64-bit iOS"
 
     menu_ramdisk $build_id
 }
@@ -5560,9 +5567,12 @@ device_ramdisk() {
     elif [[ -n $1 ]]; then
         log "Booting, please wait..."
         device_find_mode Restore 20
+        device_iproxy
+    else
+        log "Booting, please wait..."
+        device_find_mode Restore 20
+        device_iproxy no-logging
     fi
-
-    device_iproxy
     device_sshpass alpine
 
     case $mode in
@@ -5695,14 +5705,14 @@ device_ramdisk() {
         ;;
 
         "clearnvram" )
-            log "Sending commands for clearing NVRAM..."
+            log "Sending command for clearing NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done, your device should reboot now"
             return
         ;;
 
         "setnvram" )
-            log "Sending commands for NVRAM..."
+            log "Sending commands for setting NVRAM variables..."
             $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
             if [[ $rec == 2 ]]; then
                 case $device_type in
@@ -5781,9 +5791,11 @@ device_ramdisk_ios3exploit() {
 device_ramdisk_iosvers() {
     device_vers=
     device_build=
-    log "Mounting root filesystem"
-    $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
-    sleep 1
+    if (( device_proc < 7 )); then
+        log "Mounting root filesystem"
+        $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
+        sleep 1
+    fi
     log "Getting iOS version"
     $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
     if [[ $platform == "macos" ]]; then
@@ -5801,13 +5813,13 @@ device_ramdisk_iosvers() {
 menu_ramdisk() {
     local loop
     local mode
-    local menu_items=("Connect to SSH")
+    local menu_items=("Connect to SSH" "Dump Blobs")
     local reboot="reboot_bak"
     if (( device_proc >= 7 )); then
-        menu_items+=("Dump Blobs")
+        menu_items+=("Dump SEP Firmware")
         reboot="/sbin/reboot"
     else
-        menu_items+=("Get iOS Version" "Dump Baseband/Activation")
+        menu_items+=("Dump Baseband/Activation")
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
@@ -5816,7 +5828,10 @@ menu_ramdisk() {
     elif (( device_proc <= 8 )); then
         menu_items+=("Erase All (iOS 7 and 8)")
     fi
-    menu_items+=("Reboot Device" "Exit")
+    if (( device_proc >= 5 )); then
+        menu_items+=("Erase All (iOS 9+)")
+    fi
+    menu_items+=("Clear NVRAM" "Get iOS Version" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
     print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
@@ -5847,6 +5862,9 @@ menu_ramdisk() {
                 "Dump Baseband/Activation" ) mode="dump-bbactrec";;
                 "Install TrollStore" ) mode="trollstore";;
                 "Erase All (iOS 7 and 8)" ) mode="erase78";;
+                "Erase All (iOS 9+)" ) mode="erase9";;
+                "Clear NVRAM" ) mode="clearnvram";;
+                "Dump SEP Firmware" ) mode="dump-sep";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -5858,7 +5876,6 @@ menu_ramdisk() {
                     ssh_pid=$!
                     sleep 1
                     kill $ssh_pid
-                    killall ssh
                 fi
                 $ssh -p $ssh_port root@127.0.0.1
             ;;
@@ -5873,6 +5890,12 @@ menu_ramdisk() {
                     if [[ $opt != 'Y' && $opt != 'y' ]]; then
                         continue
                     fi
+                elif (( device_proc < 7 )); then
+                    warn "This is the wrong place to dump onboard blobs for 32-bit devices."
+                    print "* Reboot your device, run the script again and go to Save SHSH Blobs -> Onboard Blobs"
+                    print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Saving-onboard-SHSH-blobs-of-current-iOS-version"
+                    pause
+                    continue
                 fi
                 log "Attempting to dump blobs"
                 $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
@@ -5897,6 +5920,16 @@ menu_ramdisk() {
                 print "* If unable to be converted, this dump is likely not usable for restoring."
             ;;
             "iosvers" )
+                if (( device_proc >= 7 )); then
+                    print "* Unfortunately the mount command needs to be done manually for 64-bit devices."
+                    print "* The mount command also changes depending on the iOS version (which is what we're trying to get here in the first place)"
+                    print "* You need to mount filesystems using the appropriate command before continuing (scroll up to see the commands)"
+                    warn "Make sure that you know what you are doing when using this option on 64-bit devices."
+                    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                        continue
+                    fi
+                fi
                 device_ramdisk_iosvers
                 if [[ -n $device_vers ]]; then
                     log "Retrieved the current iOS version"
@@ -5940,9 +5973,11 @@ menu_ramdisk() {
                 log "Done!"
             ;;
             "erase78" )
+                log "Please read the message below:"
                 warn "This will do a \"Erase All Content and Settings\" procedure for iOS 7 and 8 devices."
+                warn "Do NOT do this if your device is jailbroken untethered!!!"
                 print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
-                print "* If you want to, you may also do this process manually by running the commands in the tutorial."
+                print "* Note that it may also be better to do this process manually instead by following the commands in the tutorial."
                 print "* For iOS 8 devices, also remove this file if you will be doing it manually: /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
                 if (( device_proc >= 7 )); then
                     print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
@@ -5959,6 +5994,30 @@ menu_ramdisk() {
                 log "Done, your device should reboot now"
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
+            ;;
+            "dump-sep" )
+                log "Please read the message below:"
+                print "* To dump SEP Firmware, do the following:"
+                print "    - Mount filesystems using the appropriate command for your iOS version (scroll up to see the commands)"
+                print "    - Grab the file sep-firmware.img4 from /mnt1/usr/standalone or /mnt1/usr/standalone/firmware"
+                print "* Better do this process manually since Legacy iOS Kit does not know your iOS version"
+                pause
+            ;;
+            "clearnvram" )
+                log "Sending command for clearing NVRAM..."
+                $ssh -p $ssh_port root@127.0.0.1 "nvram -c"
+                log "Done"
+            ;;
+            "erase9" )
+                warn "This will do a \"Erase All Content and Settings\" procedure for iOS 9+ devices."
+                warn "Do NOT do this if your device is jailbroken untethered!!! (mostly iOS 9.3.4/9.1 and lower)"
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    continue
+                fi
+                log "Sending command for erasing all content and settings..."
+                $ssh -p $ssh_port root@127.0.0.1 "nvram oblit-inprogress=5"
+                log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
         esac
     done
@@ -7875,7 +7934,7 @@ device_ssh() {
     print "* If this is not what you want, you might be looking for the \"SSH Ramdisk\" option instead."
     echo
     device_ssh_message
-    device_iproxy
+    device_iproxy no-logging
     device_sshpass
     log "Connecting to device SSH..."
     print "* For accessing data, note the following:"
@@ -8470,6 +8529,7 @@ device_altserver() {
     log "Running Anisette"
     $anisette &
     anisette_pid=$!
+    log "Anisette PID: $anisette_pid"
     local ready=0
     log "Waiting for Anisette"
     while [[ $ready != 1 ]]; do
@@ -8505,6 +8565,7 @@ restore_latest64() {
     input "Restore/Update Select Option"
     print "* Restore will do factory reset and update the device, all data will be cleared"
     print "* Update will only update the device to the latest version"
+    print "* Or press Ctrl+C to cancel"
     read -p "$(input "Select Y to Restore, select N to Update (Y/n) ")" opt2
     if [[ $opt2 != 'n' && $opt2 != 'N' ]]; then
         opt+="e"
