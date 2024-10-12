@@ -5842,7 +5842,6 @@ menu_ramdisk() {
     case $device_type in
         iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
     esac
-    menu_items+=("Disable/Enable Exploit")
     menu_items+=("Clear NVRAM" "Get iOS Version" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
