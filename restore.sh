@@ -2201,7 +2201,9 @@ ipsw_preference_set() {
         ;;
     esac
 
-    if [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
+    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+        ipsw_canmemory=
+    elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
           $device_type == "$device_disable_bbupdate" ]]; then
         ipsw_canmemory=1
@@ -5007,6 +5009,8 @@ ipsw_prepare() {
         1 )
             if [[ $ipsw_jailbreak == 1 ]]; then
                 ipsw_prepare_s5l8900
+            elif [[ $device_target_vers == "$device_latest_vers" && ! -s "../$ipsw_latest_path.ipsw" ]]; then
+                ipsw_download "../$ipsw_latest_path"
             fi
         ;;
 
@@ -5712,32 +5716,9 @@ device_ramdisk() {
         ;;
 
         "setnvram" )
-            log "Sending commands for setting NVRAM variables..."
-            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
-            if [[ $rec == 2 ]]; then
-                case $device_type in
-                    iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg";;
-                    iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
-                    iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
-                    iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
-                    iPhone5*  )
-                        read -p "$(input "Select base version: Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
-                        if [[ $opt != 'N' && $opt != 'n' ]]; then
-                            $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
-                        else
-                            $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
-                        fi
-                    ;;
-                    iPad1,1 | iPod3,1 )
-                        device_ramdisk_iosvers
-                        if [[ $device_vers == "3"* ]]; then
-                            device_ramdisk_ios3exploit
-                        fi
-                    ;;
-                esac
-            fi
+            device_ramdisk_setnvram
+            log "Rebooting device"
             $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
-            log "Done, your device should reboot now"
             return
         ;;
 
@@ -5747,6 +5728,34 @@ device_ramdisk() {
     print "* Mount filesystems with this command:"
     print "    mount.sh"
     menu_ramdisk
+}
+
+device_ramdisk_setnvram() {
+    log "Sending commands for setting NVRAM variables..."
+    $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
+    if [[ $rec == 2 ]]; then
+        case $device_type in
+            iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg";;
+            iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
+            iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
+            iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
+            iPhone5*  )
+                read -p "$(input "Select base version: Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
+                if [[ $opt != 'N' && $opt != 'n' ]]; then
+                    $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
+                else
+                    $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
+                fi
+            ;;
+            iPad1,1 | iPod3,1 )
+                device_ramdisk_iosvers
+                if [[ $device_vers == "3"* ]]; then
+                    device_ramdisk_ios3exploit
+                fi
+            ;;
+        esac
+    fi
+    log "Done"
 }
 
 device_ramdisk_ios3exploit() {
@@ -5812,7 +5821,6 @@ device_ramdisk_iosvers() {
 
 menu_ramdisk() {
     local loop
-    local mode
     local menu_items=("Connect to SSH" "Dump Blobs")
     local reboot="reboot_bak"
     if (( device_proc >= 7 )); then
@@ -5831,6 +5839,10 @@ menu_ramdisk() {
     if (( device_proc >= 5 )); then
         menu_items+=("Erase All (iOS 9+)")
     fi
+    case $device_type in
+        iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
+    esac
+    menu_items+=("Disable/Enable Exploit")
     menu_items+=("Clear NVRAM" "Get iOS Version" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
@@ -5865,9 +5877,11 @@ menu_ramdisk() {
                 "Erase All (iOS 9+)" ) mode="erase9";;
                 "Clear NVRAM" ) mode="clearnvram";;
                 "Dump SEP Firmware" ) mode="dump-sep";;
+                "Disable/Enable Exploit" ) menu_remove4;;
                 "Exit" ) mode="exit";;
             esac
         done
+
         case $mode in
             "ssh" )
                 log "Use the \"exit\" command to go back to SSH Ramdisk Menu"
@@ -6019,6 +6033,7 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "nvram oblit-inprogress=5"
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
+            "remove4" ) device_ramdisk_setnvram;;
         esac
     done
 }
@@ -7226,6 +7241,8 @@ menu_ipsw() {
             menu_items+=("Download Target IPSW")
             if [[ -n $ipsw_path ]]; then
                 print "* Selected IPSW: $ipsw_path.ipsw"
+                menu_items+=("$start")
+            elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
                 menu_items+=("$start")
             else
                 print "* Select $1 IPSW to continue"
