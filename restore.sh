@@ -614,7 +614,7 @@ device_get_name() {
         "iPhone16,1") device_name="iPhone 15 Pro";;
         "iPhone16,2") device_name="iPhone 15 Pro Max";;
         "iPhone17,1") device_name="iPhone 16 Pro";;
-        "iPhone17,2") device_name="iPhone 16 Pro Max";
+        "iPhone17,2") device_name="iPhone 16 Pro Max";;
         "iPhone17,3") device_name="iPhone 16";;
         "iPhone17,4") device_name="iPhone 16 Plus";;
         "iPad1,1") device_name="iPad 1";;
