@@ -5010,7 +5010,8 @@ ipsw_prepare() {
             if [[ $ipsw_jailbreak == 1 ]]; then
                 ipsw_prepare_s5l8900
             elif [[ $device_target_vers == "$device_latest_vers" && ! -s "../$ipsw_latest_path.ipsw" ]]; then
-                ipsw_download "../$ipsw_latest_path"
+                ipsw_path="../$ipsw_latest_path"
+                ipsw_download "$ipsw_path"
             fi
         ;;
 
@@ -6404,6 +6405,9 @@ menu_fourthree() {
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
         print "* Read the README here: https://github.com/LukeZGD/FourThree-iPad2"
+        if [[ $device_type != "iPad2,1" ]]; then
+            warn "FourThree is known to have issues with cellular iPad 2 devices."
+        fi
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
@@ -7676,7 +7680,7 @@ menu_shshdump_browse() {
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect --with-extensions raw)"
     else
-        newpath="$($zenity --file-selection --file-filter='Raw Dump | *.raw' --title="Select Raw Dump")"
+        newpath="$($zenity --file-selection --file-filter='Raw Dump | *.dump *.raw' --title="Select Raw Dump")"
     fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
