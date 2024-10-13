@@ -613,6 +613,10 @@ device_get_name() {
         "iPhone15,5") device_name="iPhone 15 Plus";;
         "iPhone16,1") device_name="iPhone 15 Pro";;
         "iPhone16,2") device_name="iPhone 15 Pro Max";;
+        "iPhone17,1") device_name="iPhone 16 Pro";;
+        "iPhone17,2") device_name="iPhone 16 Pro Max";
+        "iPhone17,3") device_name="iPhone 16";;
+        "iPhone17,4") device_name="iPhone 16 Plus";;
         "iPad1,1") device_name="iPad 1";;
         "iPad2,1") device_name="iPad 2 (Wi-Fi)";;
         "iPad2,2") device_name="iPad 2 (GSM)";;
@@ -698,8 +702,8 @@ device_get_name() {
         "iPad14,9") device_name="iPad Air 11\" (M2, Cellular)";;
         "iPad14,10") device_name="iPad Air 13\" (M2, Wi-Fi)";;
         "iPad14,11") device_name="iPad Air 13\" (M2, Cellular)";;
-        "iPad16,3") device_name="iPad Pro 11\" (M2, Wi-Fi)";;
-        "iPad16,4") device_name="iPad Pro 11\" (M2, Cellular)";;
+        "iPad16,3") device_name="iPad Pro 11\" (M4, Wi-Fi)";;
+        "iPad16,4") device_name="iPad Pro 11\" (M4, Cellular)";;
         "iPad16,5") device_name="iPad Pro 12.9\" (M4, Wi-Fi)";;
         "iPad16,6") device_name="iPad Pro 12.9\" (M4, Cellular)";;
         "iPod1,1") device_name="iPod touch";;
