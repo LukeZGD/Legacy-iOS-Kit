@@ -37,7 +37,7 @@ pause() {
 
 clean() {
     kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
-    popd >/dev/null
+    popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 ]]; then
         killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -174,6 +174,9 @@ set_tool_paths() {
             distro="debian"
         elif (( fedora_ver >= 37 )); then
             distro="fedora"
+            if [[ $(command -v rpm-ostree) ]]; then
+                distro="fedora-atomic"
+            fi
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
         elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
@@ -362,7 +365,7 @@ install_depends() {
     if [[ $platform == "linux" ]]; then
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
         print "* Enter your user password when prompted"
-        if [[ $distro != "debian" ]]; then
+        if [[ $distro != "debian" && $distro != "fedora-atomic" ]]; then
             echo
             warn "Before continuing, make sure that your system is fully updated first!"
             echo "${color_Y}* This operation can result in a partial upgrade and may cause breakage if your system is not updated${color_N}"
@@ -392,6 +395,10 @@ install_depends() {
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
+    elif [[ $distro == "fedora-atomic" ]]; then
+        rpm-ostree install patch vim-common zenity
+        print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
+
     elif [[ $distro == "opensuse" ]]; then
         sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
         sudo zypper -n install -t pattern devel_basis
@@ -410,7 +417,7 @@ install_depends() {
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
-    if [[ $platform == "linux" ]]; then
+    if [[ $platform == "linux" && $distro != "fedora-atomic" ]]; then
         # from linux_fix and libirecovery-rules by Cryptiiiic
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
@@ -1759,6 +1766,11 @@ device_ipwndfu() {
             print "* Try installing pyenv and/or python2 manually:"
             print "    pyenv:   > curl https://pyenv.run | bash"
             print "    python2: > $pyenv install 2.7.18"
+            if [[ $distro == "fedora-atomic" ]]; then
+                print "* For Fedora Atomic, you will also need to set up toolbox and build environment."
+                print "* Follow the commands here under Fedora Silverblue: https://github.com/pyenv/pyenv/wiki#suggested-build-environment"
+                print "* Run the pyenv install commands while in the toolbox container."
+            fi
             error "Cannot detect python2 for ipwndfu, cannot continue."
         fi
     fi
@@ -5497,7 +5509,7 @@ device_ramdisk() {
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v amfi=0xff cs_enforcement_disable=1"
             device_boot4=1
         else
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v"
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "$device_justboot_bootargs"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
@@ -5506,7 +5518,7 @@ device_ramdisk() {
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
             if [[ $1 == "justboot" ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "-v pio-error=0"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "$device_justboot_bootargs"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             fi
@@ -7932,7 +7944,7 @@ menu_other() {
             "Activation Records" ) mode="actrec";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "DFU Mode Helper" ) mode="enterdfu";;
-            "Just Boot" ) mode="device_justboot";;
+            "Just Boot" ) menu_justboot;;
             "Get iOS Version" ) mode="getversion";;
             "Pair Device" ) device_pair;;
             "Power Options" ) menu_power;;
@@ -8488,9 +8500,58 @@ device_enter_build() {
     done
 }
 
+menu_justboot() {
+    local menu_items
+    local selected
+    local back
+    local vers
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=("Enter Build Version" "Custom Bootargs")
+        if [[ -n $vers ]]; then
+            menu_items+=("Just Boot")
+        fi
+        menu_items+=("Go Back")
+        menu_print_info
+        print " > Main Menu > Other Utilities > Just Boot"
+        print "* You are about to do a tethered boot."
+        print "* To know more about build version, go here: https://theapplewiki.com/wiki/Firmware"
+        echo
+        if [[ -n $vers ]]; then
+            print "* Build Version entered: $vers"
+        else
+            print "* Enter build version to continue"
+        fi
+        echo
+        if [[ -n $device_justboot_bootargs ]]; then
+            print "* Custom Bootargs: $device_justboot_bootargs"
+        else
+            print "* Default Bootargs: -v pio-error=0"
+            print "* You may enter custom bootargs (optional, advanced option)"
+        fi
+        echo
+        input "Select an option:"
+        select opt in "${menu_items[@]}"; do
+            selected="$opt"
+            break
+        done
+        case $selected in
+            "Enter Build Version" )
+                print "* Enter the build version of your device's current iOS version to boot."
+                device_enter_build
+                vers="$device_rd_build"
+            ;;
+            "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_justboot_bootargs;;
+            "Just Boot" ) mode="device_justboot";;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
+
 device_justboot() {
-    print "* You are about to do a tethered boot."
-    device_enter_build required
+    if [[ -z $device_justboot_bootargs ]]; then
+        device_justboot_bootargs="-v pio-error=0"
+    fi
     device_ramdisk justboot
 }
 
