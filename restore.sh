@@ -5409,9 +5409,6 @@ device_ramdisk() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-        if [[ -z $name ]]; then
-            error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
-        fi
         case $getcomp in
             "iBSS" | "iBEC" ) path="Firmware/dfu/";;
             "DeviceTree" )
@@ -8077,8 +8074,8 @@ device_jailbreak() {
             return
         ;;
         10* )
-            print "* For this version, download kok3shiX or socket and sideload it to your device."
-            print "* https://kok3shidoll.github.io/download/kokeshi/kokeshiX_v1.0_alpha_2.ipa"
+            print "* For this version, use patched h3lix, kok3shiX, or socket to jailbreak."
+            print "* https://ios.cfw.guide/installing-h3lix/"
             print "* https://github.com/staturnzz/socket"
             return
         ;;
