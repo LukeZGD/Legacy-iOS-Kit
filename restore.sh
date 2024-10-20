@@ -1427,7 +1427,7 @@ device_enter_mode() {
             print "* Follow these instructions to enter kDFU mode."
             print "1. Install \"OpenSSH\" and \"Core Utilities\" in Cydia or Zebra."
             if [[ $device_det == 1 ]]; then
-                print "  - Jailbreak with kok3shiX, and enable \"use legacy patches\""
+                print "  - Jailbreak with patched h3lix: https://ios.cfw.guide/installing-h3lix/"
                 print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
             fi
             print "  - After installing these requirements, lock your device."
@@ -8074,7 +8074,7 @@ device_jailbreak() {
             return
         ;;
         10* )
-            print "* For this version, use patched h3lix, kok3shiX, or socket to jailbreak."
+            print "* For this version, use patched h3lix or socket to jailbreak."
             print "* https://ios.cfw.guide/installing-h3lix/"
             print "* https://github.com/staturnzz/socket"
             return
