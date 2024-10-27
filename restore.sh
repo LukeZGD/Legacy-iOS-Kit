@@ -1425,7 +1425,7 @@ device_enter_mode() {
 
             log "Please read the message below:"
             print "* Follow these instructions to enter kDFU mode."
-            print "1. Install \"OpenSSH\" and \"Core Utilities\" in Cydia or Zebra."
+            print "1. Install \"OpenSSH\" in Cydia or Zebra."
             if [[ $device_det == 1 ]]; then
                 print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
                 print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
@@ -1461,13 +1461,19 @@ device_enter_mode() {
             device_sshpass
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
-            if [[ $device_det == 1 ]]; then
-                print "* If the script is stuck here, reboot and re-jailbreak the device, and try again."
-                print "* Follow the steps in the GitHub wiki under \"A6(X) devices, jailbroken on iOS 10\""
-            fi
             log "Sending files to device: ${sendfiles[*]}"
-            $scp -P $ssh_port ${sendfiles[@]} root@127.0.0.1:/tmp
-            if [[ $? == 0 ]]; then
+            if [[ $device_det == 1 ]]; then
+                for file in "${sendfiles[@]}"; do
+                    cat $file | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
+                done
+                sleep 3
+                cat scp.log
+                check="$(cat scp.log | grep -c "Connection reset")"
+            else
+                $scp -P $ssh_port ${sendfiles[@]} root@127.0.0.1:/tmp
+                check=$?
+            fi
+            if [[ $check == 0 ]]; then
                 log "Running kloader"
                 $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
             else
@@ -5215,14 +5221,19 @@ device_ramdisk64() {
             unzip iram.zip
             mv iram.tar $sshtar
         fi
+        cp $sshtar ssh.tar
     else
         comps+=("Trustcache")
-        if [[ ! -e $sshtar ]]; then
-            log "Downloading ssh.tar from SSHRD_Script..."
-            download_file https://github.com/LukeZGD/sshtars/raw/cbaf9f826ca994452beb9e99a3a4ffb496f918fb/ssh.tar.gz ssh.tar.gz
-            mv ssh.tar.gz $sshtar.gz
-            gzip -d $sshtar.gz
+        if [[ $($sha1sum $sshtar.gz 2>/dev/null | awk '{print $1}') != "61975423c096d5f21fd9f8a48042fffd3828708b" ]]; then
+            rm -f $sshtar $sshtar.gz
         fi
+        if [[ ! -e $sshtar.gz ]]; then
+            log "Downloading ssh.tar from SSHRD_Script..."
+            download_file https://github.com/LukeZGD/sshtars/raw/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
+            mv ssh.tar.gz $sshtar.gz
+        fi
+        cp $sshtar.gz ssh.tar.gz
+        gzip -d ssh.tar.gz
     fi
 
     local ramdisk_path="../saved/$device_type/ramdisk_$build_id"
@@ -5322,7 +5333,7 @@ device_ramdisk64() {
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
                     "$dir/hfsplus" $getcomp.orig grow 210000000
                 fi
-                "$dir/hfsplus" $getcomp.orig untar $sshtar
+                "$dir/hfsplus" $getcomp.orig untar ssh.tar
                 "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
             ;;
         esac
@@ -5856,7 +5867,7 @@ menu_ramdisk() {
     case $device_type in
         iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
     esac
-    menu_items+=("Clear NVRAM" "Get iOS Version" "Reboot Device" "Exit")
+    menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
     print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
@@ -5891,6 +5902,7 @@ menu_ramdisk() {
                 "Clear NVRAM" ) mode="clearnvram";;
                 "Dump SEP Firmware" ) mode="dump-sep";;
                 "Disable/Enable Exploit" ) menu_remove4;;
+                "Update DateTime" ) mode="datetime";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -6047,6 +6059,7 @@ menu_ramdisk() {
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
             "remove4" ) device_ramdisk_setnvram;;
+            "datetime" ) $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)";;
         esac
     done
 }
@@ -8105,7 +8118,7 @@ device_jailbreak() {
 }
 
 device_ssh_message() {
-    print "* Make sure to have OpenSSH and Core Utilities installed on your iOS device."
+    print "* Make sure to have OpenSSH installed on your iOS device."
     if [[ $device_det == 1 ]] && (( device_proc < 7 )); then
         print "* Install all updates in Cydia/Zebra."
         print "* Make sure to also have Dropbear installed from my repo."
