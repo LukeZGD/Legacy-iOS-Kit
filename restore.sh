@@ -1214,7 +1214,7 @@ device_iproxy() {
     if [[ -n $2 ]]; then
         port=$2
     fi
-    if [[ $1 == "no-logging" ]]; then
+    if [[ $1 == "no-logging" && $debug_mode != 1 ]]; then
         "$dir/iproxy" $ssh_port $port >/dev/null &
         iproxy_pid=$!
     else
@@ -1427,7 +1427,7 @@ device_enter_mode() {
             print "* Follow these instructions to enter kDFU mode."
             print "1. Install \"OpenSSH\" and \"Core Utilities\" in Cydia or Zebra."
             if [[ $device_det == 1 ]]; then
-                print "  - Jailbreak with patched h3lix: https://ios.cfw.guide/installing-h3lix/"
+                print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
                 print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
             fi
             print "  - After installing these requirements, lock your device."
@@ -8070,12 +8070,11 @@ device_jailbreak() {
         ;;
         9.3.[56] )
             print "* For this version, download kok3shi9 and sideload it to your device."
-            print "* https://kok3shidoll.web.app/kok3shi9.html"
+            print "* https://kok3shidoll.web.app/kok3shi9_32.html"
             return
         ;;
         10* )
-            print "* For this version, use patched h3lix or socket to jailbreak."
-            print "* https://ios.cfw.guide/installing-h3lix/"
+            print "* For this version, download socket and sideload it to your device."
             print "* https://github.com/staturnzz/socket"
             return
         ;;
