@@ -709,6 +709,8 @@ device_get_name() {
         "iPad14,9") device_name="iPad Air 11\" (M2, Cellular)";;
         "iPad14,10") device_name="iPad Air 13\" (M2, Wi-Fi)";;
         "iPad14,11") device_name="iPad Air 13\" (M2, Cellular)";;
+        "iPad16,1") device_name="iPad mini (A17 Pro, Wi-Fi)";;
+        "iPad16,2") device_name="iPad mini (A17 Pro, Cellular)";;
         "iPad16,3") device_name="iPad Pro 11\" (M4, Wi-Fi)";;
         "iPad16,4") device_name="iPad Pro 11\" (M4, Cellular)";;
         "iPad16,5") device_name="iPad Pro 12.9\" (M4, Wi-Fi)";;
