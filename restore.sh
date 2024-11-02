@@ -4667,6 +4667,9 @@ restore_futurerestore() {
             esac
         fi
         ExtraArr+=("--no-rsep")
+        if [[ $device_target_setnonce == 1 ]]; then
+            ExtraArr+=("--set-nonce")
+        fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
             warn "futurerestore nightly is not supported on $platform_arch, cannot continue. x86_64 only."
@@ -5003,6 +5006,7 @@ restore_pwned64() {
         download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
         cp firmwares.json ../saved
     fi
+    rm -f /tmp/firmwares.json
     cp ../saved/firmwares.json /tmp
     if [[ $device_proc == 7 ]]; then
         log "gaster reset"
@@ -5021,6 +5025,7 @@ restore_notpwned64() {
     print "* Before continuing, make sure to set the nonce generator of your device!"
     print "* For iOS 10 and older: https://github.com/tihmstar/futurerestore#how-to-use"
     print "* For iOS 11 and newer: https://github.com/futurerestore/futurerestore/#using-dimentio"
+    print "* Using \"Set Nonce Only\" in the Restore/Downgrade menu is also an option"
     pause
     if [[ $device_mode == "Normal" ]]; then
         device_enter_mode Recovery
@@ -5108,7 +5113,9 @@ restore_usepwndfu64_option() {
         print "* If you want to disable Pwned Restore Option, place the device in Normal/Recovery mode"
         restore_usepwndfu64=1
         return
-    elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    elif [[ $device_target_vers == "10.3.3" && $device_target_other != 1 &&
+            $platform == "macos" && $platform_arch == "arm64" ]] ||
+         [[ $device_target_setnonce == 1 ]]; then
         restore_usepwndfu64=1
         return
     fi
@@ -5311,7 +5318,7 @@ device_ramdisk64() {
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key} -D
                 else
                     reco+=" -P ../resources/sshrd/$name.bpatch"
-                    if [[ $platform == "linux" && $build_id == "18"* ]]; then
+                    if [[ $platform == "linux" && $build_id == "18"* ]] || [[ $device_proc == 10 ]]; then
                         reco+=" -J"
                     fi
                 fi
@@ -6046,7 +6053,7 @@ menu_ramdisk() {
             ;;
             "clearnvram" )
                 log "Sending command for clearing NVRAM..."
-                $ssh -p $ssh_port root@127.0.0.1 "nvram -c"
+                $ssh -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram -c"
                 log "Done"
             ;;
             "erase9" )
@@ -6773,7 +6780,9 @@ menu_restore() {
             if [[ $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
                 menu_items+=("Other (Use SHSH Blobs)")
             fi
-            if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+            if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+                menu_items+=("Set Nonce Only")
+            elif [[ $device_proc == 5 || $device_proc == 6 ]]; then
                 menu_items+=("Other (Tethered)")
             fi
             case $device_type in
@@ -6990,6 +6999,10 @@ menu_ipsw() {
     elif [[ $2 == "fourthree" ]]; then
         nav=" > Main Menu > FourThree Utility > Step 1: Restore"
         start="Start Restore"
+    elif [[ $1 == "Set Nonce Only" ]]; then
+        nav=" > Main Menu > Restore/Downgrade > $1"
+        start="Set Nonce"
+        device_target_setnonce=1
     else
         nav=" > Main Menu > Restore/Downgrade > $1"
         start="Start Restore"
@@ -7093,7 +7106,7 @@ menu_ipsw() {
             ipsw_custom_set $newpath
             newpath+="_Restore"
         fi
-        if [[ $1 == "Other (Use SHSH Blobs)" ]]; then
+        if [[ $1 == "Other (Use SHSH Blobs)" || $1 == "Set Nonce Only" ]]; then
             device_target_other=1
             if [[ $device_type == "iPhone2,1" ]]; then
                 ipsw_canhacktivate=1
@@ -7223,7 +7236,7 @@ menu_ipsw() {
             fi
             echo
 
-        elif [[ $1 == "Other"* ]]; then
+        elif [[ $1 == "Other"* || $1 == "Set Nonce Only" ]]; then
             # menu for other (shsh) restores
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
@@ -7352,8 +7365,8 @@ menu_ipsw() {
             break
         done
         case $selected in
-            "Start Restore" ) mode="downgrade";;
             "Create IPSW" ) mode="custom-ipsw";;
+            "$start" ) mode="downgrade";;
             "Select Target IPSW" ) menu_ipsw_browse "$1";;
             "Select Base IPSW" ) menu_ipsw_browse "base";;
             "Select Target SHSH" ) menu_shsh_browse "$1";;
