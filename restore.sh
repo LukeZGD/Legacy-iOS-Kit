@@ -1602,7 +1602,11 @@ device_enter_mode() {
                 else
                     local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU, and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-                        error_msg+=$'\n* As much as possible, use kDFU mode instead: put the device in normal mode and jailbroken.'
+                        echo
+                        error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
+                        error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
+                        error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
+                        echo
                     fi
                     error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
                     error_msg+=$'\n* For more info about kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
@@ -1723,7 +1727,11 @@ device_pwnerror() {
         error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-            error_msg+=$'\n* As much as possible, use kDFU mode instead: put the device in normal mode and jailbroken.'
+            echo
+            error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
+            error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Zebra.'
+            error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
+            echo
         fi
     elif [[ $platform == "macos" && $device_proc == 4 ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
@@ -4062,7 +4070,6 @@ ipsw_prepare_ios4patches() {
         "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
         "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
         "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
-        zip -r0 temp.ipsw ${path}$name
     done
 }
 
@@ -5048,11 +5055,11 @@ ipsw_prepare() {
             if [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_other == 1 ]] || [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
-                if [[ $device_type == "iPhone2,1" ]]; then
-                    ipsw_prepare_jailbreak
-                else
-                    ipsw_prepare_32bit
-                fi
+                case $device_type in
+                    iPhone2,1 ) ipsw_prepare_jailbreak;;
+                    iPod2,1 ) ipsw_prepare_custom;;
+                    * ) ipsw_prepare_32bit;;
+                esac
             elif [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                 shsh_save version $device_latest_vers
                 case $device_target_vers in
@@ -6435,7 +6442,11 @@ menu_fourthree() {
     ipa_path=
     ipsw_fourthree=
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Step 1: Restore" "Step 2: Partition" "Step 3: OS Install" "Reinstall App" "Go Back")
+        menu_items=("Step 1: Restore" "Step 2: Partition" "Step 3: OS Install")
+        if [[ $device_mode == "Normal" ]]; then
+            menu_items+=("Reinstall App" "Boot iOS 4.3.x")
+        fi
+        menu_items+=("Go Back")
         menu_print_info
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
@@ -6455,6 +6466,7 @@ menu_fourthree() {
             "Step 2: Partition" ) mode="device_fourthree_step2";;
             "Step 3: OS Install" ) mode="device_fourthree_step3";;
             "Reinstall App" ) mode="device_fourthree_app";;
+            "Boot iOS 4.3.x" ) mode="device_fourthree_boot";;
             "Go Back" ) back=1;;
         esac
     done
@@ -7904,9 +7916,6 @@ menu_other() {
         if [[ $device_mode != "none" ]]; then
             if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
                 menu_items+=("Enter pwnDFU Mode")
-                if [[ $device_mode == "Normal" ]]; then
-                    menu_items+=("Activation Records")
-                fi
             fi
             if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
                 menu_items+=("SSH Ramdisk")
@@ -8799,6 +8808,15 @@ device_fourthree_app() {
     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 FourThree boot.sh /usr/bin/runasroot"
     log "Running uicache"
     $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
+}
+
+device_fourthree_boot() {
+    device_iproxy
+    print "* The default root password is: alpine"
+    device_sshpass
+    device_fourthree_check
+    log "Running FourThree Boot"
+    $ssh -p $ssh_port root@127.0.0.1 "/Applications/FourThree.app/FourThree"
 }
 
 device_fourthree_check() {
