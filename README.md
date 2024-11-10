@@ -120,13 +120,12 @@
 
 #### Supported architectures: x86_64, arm64, armhf
 
+- **macOS** 10.11 and newer (10.12 and newer recommended for full support)
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 37 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
-- [**openSUSE**](https://www.opensuse.org/) Tumbleweed
-- [**Gentoo**](https://www.gentoo.org/) and Gentoo-based distros
-- **macOS** 10.11 and newer (10.12 and newer recommended)
+- Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
 
 ## Tools and other stuff used
 - curl

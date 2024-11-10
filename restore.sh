@@ -181,6 +181,8 @@ set_tool_paths() {
             distro="opensuse"
         elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
             distro="gentoo"
+        elif [[ $ID == "void" ]]; then
+            distro="void"
         else
             error "Your distro ($platform_ver - $platform_arch) is not detected/supported. See the repo README for supported OS versions/distros"
         fi
@@ -406,6 +408,9 @@ install_depends() {
 
     elif [[ $distro == "gentoo" ]]; then
         sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+
+    elif [[ $distro == "void" ]]; then
+        sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip base-devel libffi-devel bzip2-devel openssl openssl-devel readline readline-devel sqlite-devel xz liblzma-devel zlib zlib-devel
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
@@ -8923,7 +8928,8 @@ main() {
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" ||
+    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" || ! $(command -v unzip) ||
+          ! $(command -v zip) || ! $(command -v scp) || ! $(command -v ssh) || ! $(command -v patch) ||
           -z $zenity || ! $(command -v curl) || ! $(command -v xxd) || ! $(command -v git) ]]; then
         install_depends
     fi
