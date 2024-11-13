@@ -25,10 +25,10 @@
 - Sideload IPA files for supported devices on Linux
 - Save SHSH blobs for signed OTA versions for supported devices
 - Save onboard and Cydia SHSH blobs for 32-bit devices
-- Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save onboard SHSH blobs using SSH Ramdisk for the supported 64-bit devices
+- Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
 - Install [TrollStore](https://github.com/opa334/TrollStore) using SSH Ramdisk for the supported 64-bit devices on iOS 14/15
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (useful for iOS 4 and lower)
@@ -122,9 +122,11 @@
 
 - **macOS** 10.11 and newer (10.12 and newer recommended for full support)
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
-- [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - [**Fedora**](https://getfedora.org/) 37 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
+    - Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4.
+    - Workaround for now is to run this command: `sudo update-crypto-policies --set DEFAULT:SHA1`
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
+- [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
 
 ## Tools and other stuff used

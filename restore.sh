@@ -5,6 +5,17 @@ device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iB
 jelbrek="../resources/jailbreak"
 ssh_port=6414
 
+bash_test=$(echo -n 0)
+(( bash_test += 1 ))
+if [ "$bash_test" != "1" ] || [ -z $BASH_VERSION ]; then
+    echo "[Error] Detected that script is not running with bash on runtime. Please run the script properly using bash."
+    exit 1
+fi
+bash_ver=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
+if (( bash_ver > 3 )); then
+    shopt -s compat32
+fi
+
 print() {
     echo "${color_B}${1}${color_N}"
 }
@@ -61,11 +72,6 @@ clean_usbmuxd() {
         sudo systemctl restart usbmuxd
     fi
 }
-
-bash_version=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
-if (( bash_version > 3 )); then
-    shopt -s compat32
-fi
 
 display_help() {
     echo ' *** Legacy iOS Kit ***
@@ -177,14 +183,23 @@ set_tool_paths() {
             if [[ $(command -v rpm-ostree) ]]; then
                 distro="fedora-atomic"
             fi
+            if (( fedora_ver >= 41 )); then
+                warn "Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4."
+                print "* Workaround for now is to run this command: sudo update-crypto-policies --set FEDORA40"
+            fi
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
         elif [[ $ID == "gentoo" || $ID_LIKE == "gentoo" || $ID == "pentoo" ]]; then
             distro="gentoo"
         elif [[ $ID == "void" ]]; then
             distro="void"
+        elif [[ -n $ubuntu_ver || -n $debian_ver || -n $fedora_ver ]]; then
+            error "Your distro version ($platform_ver - $platform_arch) is not supported. See the repo README for supported OS versions/distros"
         else
-            error "Your distro ($platform_ver - $platform_arch) is not detected/supported. See the repo README for supported OS versions/distros"
+            warn "Your distro ($platform_ver - $platform_arch) is not detected/supported. See the repo README for supported OS versions/distros"
+            print "* You may still continue, but you need to install required packages and libraries manually as needed."
+            sleep 5
+            pause
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
@@ -261,6 +276,8 @@ set_tool_paths() {
             fi
         fi
         gaster+="$dir/gaster"
+        scp2="$dir/scp"
+        ssh2="$dir/ssh"
 
     elif [[ $(uname -m) == "iP"* ]]; then
         error "Running Legacy iOS Kit on iOS is not supported (yet)" "* Supported platforms: Linux, macOS"
@@ -312,6 +329,8 @@ set_tool_paths() {
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
         zenity="../bin/macos/zenity"
+        scp2="/usr/bin/scp"
+        ssh2="/usr/bin/ssh"
 
         # kill macos daemons
         killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -350,8 +369,8 @@ set_tool_paths() {
     elif [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
         cat ../resources/ssh_config | sed "s,Add,#Add,g" | sed "s,HostKeyA,#HostKeyA,g" > ssh_config
     fi
-    scp2="scp -F ./ssh_config"
-    ssh2="ssh -F ./ssh_config"
+    scp2+=" -F ./ssh_config"
+    ssh2+=" -F ./ssh_config"
 }
 
 prepare_udev_rules() {
@@ -393,7 +412,7 @@ install_depends() {
 
     elif [[ $distro == "fedora" ]]; then
         sudo dnf install -y ca-certificates git ifuse libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
-        sudo dnf group install -y "C Development Tools and Libraries"
+        sudo dnf group install -y c-development
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
@@ -2460,14 +2479,21 @@ ipsw_verify() {
             warn "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Make sure to download and select the correct IPSW."
             pause
         fi
+        if [[ $build_id == "$device_base_build" ]]; then
+            ipsw_base_validate=1
+        else
+            ipsw_validate=1
+        fi
         return 1
     fi
     log "IPSW SHA1sum matches"
     if [[ $build_id == "$device_base_build" ]]; then
         device_base_sha1="$IPSWSHA1"
+        ipsw_base_validate=0
     else
         ipsw_isbeta=
         device_target_sha1="$IPSWSHA1"
+        ipsw_validate=0
     fi
 }
 
@@ -6415,7 +6441,7 @@ menu_backup_restore() {
         if [[ ! -d $backupdir ]]; then
             mkdir -p $backupdir
         fi
-        local backups=($(ls $backupdir))
+        local backups=($(ls $backupdir 2>/dev/null))
         if [[ -z "${backups[*]}" ]]; then
             print "* No backups (saved/backups)"
         else
@@ -6568,12 +6594,19 @@ menu_ipa() {
     done
 }
 
+menu_zenity_check() {
+    if [[ $platform == "linux" && ! $(command -v zenity) ]]; then
+        warn "zenity not found in PATH. Install zenity to have a working file picker."
+    fi
+}
+
 menu_ipa_browse() {
     local newpath
     input "Select your IPA file(s) in the file selection window."
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect --with-extensions ipa)"
     else
+        menu_zenity_check
         newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
     fi
     [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
@@ -7148,14 +7181,7 @@ menu_ipsw() {
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
-                case $device_target_build in
-                    8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
-                    #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
-                    8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
-                    8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
-                    7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
-                    7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
-                esac
+                ipsw_print_warnings powder
                 ipsw_cancustomlogo2=
                 case $device_target_vers in
                     [456]* ) ipsw_cancustomlogo2=1;;
@@ -7187,6 +7213,11 @@ menu_ipsw() {
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
+                if [[ $ipsw_base_validate == 0 ]]; then
+                    print "* Selected Base IPSW is validated"
+                else
+                    warn "Selected Base IPSW failed validation, proceed with caution"
+                fi
                 if [[ $device_proc != 4 ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
@@ -7222,6 +7253,7 @@ menu_ipsw() {
             menu_items+=("Download Target IPSW" "Select Base IPSW")
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target (iOS 6.1.3) IPSW: $ipsw_path.ipsw"
+                ipsw_print_warnings
             else
                 print "* Select Target (iOS 6.1.3) IPSW to continue"
             fi
@@ -7229,6 +7261,11 @@ menu_ipsw() {
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base (iOS 4.3.x) IPSW: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
+                if [[ $ipsw_base_validate == 0 ]]; then
+                    print "* Selected Base IPSW is validated"
+                else
+                    warn "Selected Base IPSW failed validation, proceed with caution"
+                fi
                 echo
             else
                 print "* Select Base (iOS 4.3.x) IPSW to continue"
@@ -7301,14 +7338,14 @@ menu_ipsw() {
             # menu for ota/latest versions
             menu_items+=("Download Target IPSW")
             if [[ -n $ipsw_path ]]; then
-                print "* Selected IPSW: $ipsw_path.ipsw"
+                print "* Selected Target IPSW: $ipsw_path.ipsw"
+                ipsw_print_warnings
                 menu_items+=("$start")
             elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
                 menu_items+=("$start")
             else
                 print "* Select $1 IPSW to continue"
             fi
-            ipsw_print_warnings
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
             fi
@@ -7397,6 +7434,22 @@ menu_ipsw() {
 }
 
 ipsw_print_warnings() {
+    if [[ $ipsw_validate == 0 ]]; then
+        print "* Selected Target IPSW is validated"
+    else
+        warn "Selected Target IPSW failed validation, proceed with caution"
+    fi
+    if [[ $1 == "powder" ]]; then
+        case $device_target_build in
+            8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
+            #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
+            8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
+            8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
+            7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
+            7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
+        esac
+        return
+    fi
     case $device_type in
         "iPhone3"* )
             if [[ $device_target_vers == "4.2"* ]]; then
@@ -7516,6 +7569,7 @@ menu_logo_browse() {
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect --with-extensions png)"
     else
+        menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
     fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Ctrl+C to cancel): ")" newpath
@@ -7530,20 +7584,72 @@ menu_logo_browse() {
 menu_ipsw_browse() {
     local versionc
     local newpath
-    local text="target"
-    [[ $1 == "base" ]] && text="base"
+    local text="Target"
+    local picker
 
-    input "Select your $text IPSW file in the file selection window."
-    if [[ $mac_cocoa == 1 ]]; then
-        newpath="$($cocoadialog fileselect --with-extensions ipsw)"
-    else
-        newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
+    local menu_items=($(ls ../$device_type*.ipsw 2>/dev/null))
+    if [[ $1 == "base" ]]; then
+         text="Base"
+         menu_items=()
+         case $device_type in
+            iPhone3,[13] ) menu_items=($(ls ../${device_type}_7.1.2*.ipsw 2>/dev/null));;
+            iPad1,1 | iPod3,1 ) menu_items=($(ls ../${device_type}_5.1.1*.ipsw 2>/dev/null));;
+            iPhone5* ) menu_items=($(ls ../${device_type}_7*.ipsw 2>/dev/null));;
+            * ) menu_items=($(ls ../${device_type}_7.1*.ipsw 2>/dev/null));;
+        esac
     fi
-    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
+    case $1 in
+        "iOS 10.3.3" ) versionc="10.3.3";;
+        "iOS 8.4.1" ) versionc="8.4.1";;
+        "iOS 6.1.3" ) versionc="6.1.3";;
+        "Latest iOS"* ) versionc="$device_latest_vers";;
+        [6543]* ) versionc="$1";;
+    esac
+    if [[ $versionc == "$device_latest_vers" ]]; then
+        menu_items=()
+    elif [[ -n $versionc ]]; then
+        menu_items=($(ls ../${device_type}_${versionc}*.ipsw 2>/dev/null))
+    fi
+    menu_items+=("Open File Picker" "Enter Path" "Go Back")
+
+    if [[ "${menu_items[0]}" == *".ipsw" ]]; then
+        print "* Select $text IPSW Menu"
+        while true; do
+            input "Select an option:"
+            select opt in "${menu_items[@]}"; do
+                selected="$opt"
+                break
+            done
+            case $selected in
+                "Open File Picker" ) picker=1; break;;
+                "Enter Path" ) break;;
+                *.ipsw ) newpath="$selected"; break;;
+                "Go Back" ) return;;
+            esac
+        done
+    else
+        picker=1
+    fi
+
+    if [[ $picker == 1 ]]; then
+        input "Select your $text IPSW file in the file selection window."
+        if [[ $mac_cocoa == 1 ]]; then
+            newpath="$($cocoadialog fileselect --with-extensions ipsw)"
+        else
+            menu_zenity_check
+            newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
+        fi
+    fi
+    if [[ ! -s "$newpath" ]]; then
+        print "* Enter the full path to the IPSW file to be used."
+        print "* You may also drag and drop the IPSW file to the Terminal window."
+        read -p "$(input "Path to $text IPSW file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
+    fi
     [[ ! -s "$newpath" ]] && return
     newpath="${newpath%?????}"
     log "Selected IPSW file: $newpath.ipsw"
     ipsw_version_set "$newpath" "$1"
+
     if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
         pause
@@ -7617,11 +7723,8 @@ menu_ipsw_browse() {
             ;;
         esac
     fi
+
     case $1 in
-        "iOS 10.3.3" ) versionc="10.3.3";;
-        "iOS 8.4.1" ) versionc="8.4.1";;
-        "iOS 6.1.3" ) versionc="6.1.3";;
-        "Latest iOS"* ) versionc="$device_latest_vers";;
         "base" )
             local check_vers="7.1"
             local base_vers="7.1.x"
@@ -7650,9 +7753,17 @@ menu_ipsw_browse() {
             esac
             if [[ $device_base_vers != "$check_vers"* ]]; then
                 log "Selected IPSW is not for iOS $base_vers."
-                if [[ $ipsw_fourthree != 1 ]]; then
-                    print "* You need iOS $base_vers IPSW and SHSH blobs for this device to use powdersn0w."
+                if [[ $device_proc == 4 ]]; then
+                    print "* You need to select iOS $base_vers IPSW for the base to use powdersn0w."
+                elif [[ $ipsw_fourthree == 1 ]]; then
+                    print "* You need to select iOS $base_vers IPSW for the base to use FourThree."
+                else
+                    print "* You need iOS $base_vers IPSW and SHSH blobs for your device to use powdersn0w."
                 fi
+                pause
+                return
+            elif [[ $device_target_build == "$device_base_build" ]]; then
+                log "The base version and the target version cannot be the same."
                 pause
                 return
             fi
@@ -7671,14 +7782,18 @@ menu_ipsw_browse() {
                 esac
                 pause
                 return
+            elif [[ $device_target_build == "11D257" && $device_type == "iPhone3"* ]] ||
+                 [[ $device_target_build == "9B206" && $device_proc == 4 ]]; then
+                log "Selected IPSW ($device_target_vers) is not supported as target version. You need to select it as base IPSW."
+                pause
+                return
             elif [[ $device_target_build == "$device_base_build" ]]; then
-                log "The base version and the target version must not be the same."
+                log "The base version and the target version cannot be the same."
                 pause
                 return
             fi
             versionc="powder"
         ;;
-        [6543]* ) versionc="$1";;
     esac
     if [[ $versionc == "powder" ]]; then
         :
@@ -7698,17 +7813,22 @@ menu_ipsw_browse() {
 
 menu_shsh_browse() {
     local newpath
-    local text="target"
+    local text="Target"
     local val="$ipsw_path.ipsw"
-    [[ $1 == "base" ]] && text="base"
+    [[ $1 == "base" ]] && text="Base"
 
     input "Select your $text SHSH file in the file selection window."
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect)"
     else
+        menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
     fi
-    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $text IPSW file (or press Ctrl+C to cancel): ")" newpath
+    if [[ ! -s "$newpath" ]]; then
+        print "* Enter the full path to the SHSH file to be used."
+        print "* You may also drag and drop the SHSH file to the Terminal window."
+        read -p "$(input "Path to $text SHSH file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
+    fi
     [[ ! -s "$newpath" ]] && return
     log "Selected SHSH file: $newpath"
     log "Validating..."
@@ -7738,6 +7858,7 @@ menu_shshdump_browse() {
     if [[ $mac_cocoa == 1 ]]; then
         newpath="$($cocoadialog fileselect --with-extensions raw)"
     else
+        menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='Raw Dump | *.dump *.raw' --title="Select Raw Dump")"
     fi
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Ctrl+C to cancel): ")" newpath
@@ -8928,9 +9049,19 @@ main() {
 
     version_check
 
-    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" || ! $(command -v unzip) ||
-          ! $(command -v zip) || ! $(command -v scp) || ! $(command -v ssh) || ! $(command -v patch) ||
-          -z $zenity || ! $(command -v curl) || ! $(command -v xxd) || ! $(command -v git) ]]; then
+    local checks=(curl git patch unzip xxd zip)
+    local check_fail
+    for check in "${checks[@]}"; do
+        if [[ $debug_mode == 1 ]]; then
+            log "Checking for $check in PATH"
+        fi
+        if [[ ! $(command -v $check) ]]; then
+            warn "$check not found in PATH"
+            check_fail=1
+        fi
+    done
+
+    if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" || $check_fail == 1 ]]; then
         install_depends
     fi
 
