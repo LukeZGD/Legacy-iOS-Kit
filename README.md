@@ -123,8 +123,6 @@
 - **macOS** 10.11 and newer (10.12 and newer recommended for full support)
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Fedora**](https://getfedora.org/) 37 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
-    - Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4.
-    - Workaround for now is to run this command: `sudo update-crypto-policies --set DEFAULT:SHA1`
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
@@ -148,6 +146,8 @@
 - [libideviceactivation](https://github.com/LukeeGD/libideviceactivation) - libimobiledevice
 - [ideviceinstaller](https://github.com/LukeeGD/ideviceinstaller) - libimobiledevice
 - [ifuse](https://github.com/LukeeGD/ifuse) - libimobiledevice
+- [static-cross-openssh](https://github.com/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
+- [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only)
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
 - [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux)

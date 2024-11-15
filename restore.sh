@@ -83,7 +83,6 @@ List of options:
     --debug                   For script debugging (set -x and debug mode)
     --dfuhelper               Launch to DFU Mode Helper only
     --disable-sudoloop        Disable running tools as root for Linux
-    --disable-usbmuxd         Disable running usbmuxd as root for Linux
     --entry-device            Enable manual device and ECID entry
     --exit-recovery           Attempt to exit recovery mode
     --help                    Display this help message
@@ -155,6 +154,7 @@ set_tool_paths() {
                 "jammy" | "kinetic"  ) ubuntu_ver=22;;
                 "lunar" | "mantic"   ) ubuntu_ver=23;;
                 "noble" | "oracular" ) ubuntu_ver=24;;
+                "plucky"             ) ubuntu_ver=25;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
@@ -182,10 +182,6 @@ set_tool_paths() {
             distro="fedora"
             if [[ $(command -v rpm-ostree) ]]; then
                 distro="fedora-atomic"
-            fi
-            if (( fedora_ver >= 41 )); then
-                warn "Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4."
-                print "* Workaround for now is to run this command: sudo update-crypto-policies --set FEDORA40"
             fi
         elif [[ $ID == "opensuse-tumbleweed" ]]; then
             distro="opensuse"
@@ -259,17 +255,20 @@ set_tool_paths() {
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
-            if [[ -z $device_disable_usbmuxd ]]; then
-                trap "clean_usbmuxd" EXIT
-            fi
-            if [[ -z $device_disable_usbmuxd && $othertmp == 0 ]]; then
+            trap "clean_usbmuxd" EXIT
+            if [[ $othertmp == 0 ]]; then
                 if [[ $(command -v systemctl 2>/dev/null) ]]; then
                     sudo systemctl stop usbmuxd
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
-                log "Running usbmuxd"
-                sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                if [[ $platform_arch == "armhf" ]]; then
+                    log "Running usbmuxd"
+                    sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                else
+                    log "Running usbmuxd2"
+                    sudo -b $dir/usbmuxd2 &>../saved/usbmuxd.log
+                fi
             elif [[ $othertmp != 0 ]]; then
                 log "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
                 log "Not running usbmuxd"
@@ -1651,8 +1650,9 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_type == "iPod2,1" || $2 == "alloc8" ]]; then
+            elif [[ $device_type == "iPod2,1" || $mode == "device_alloc8" ]]; then
                 # touch 2 uses ipwndfu
+                # also installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
@@ -1683,7 +1683,7 @@ device_enter_mode() {
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif [[ $device_proc == 6 ]]; then
-                # A6 mac uses ipwnder_lite
+                # A6 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
                 $ipwnder -d
                 tool_pwned=$?
@@ -7587,15 +7587,15 @@ menu_ipsw_browse() {
     local text="Target"
     local picker
 
-    local menu_items=($(ls ../$device_type*.ipsw 2>/dev/null))
+    local menu_items=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
          text="Base"
          menu_items=()
          case $device_type in
-            iPhone3,[13] ) menu_items=($(ls ../${device_type}_7.1.2*.ipsw 2>/dev/null));;
-            iPad1,1 | iPod3,1 ) menu_items=($(ls ../${device_type}_5.1.1*.ipsw 2>/dev/null));;
-            iPhone5* ) menu_items=($(ls ../${device_type}_7*.ipsw 2>/dev/null));;
-            * ) menu_items=($(ls ../${device_type}_7.1*.ipsw 2>/dev/null));;
+            iPhone3,[13] ) menu_items=($(ls ../${device_type}_7.1.2*Restore.ipsw 2>/dev/null));;
+            iPad1,1 | iPod3,1 ) menu_items=($(ls ../${device_type}_5.1.1*Restore.ipsw 2>/dev/null));;
+            iPhone5* ) menu_items=($(ls ../${device_type}_7*Restore.ipsw 2>/dev/null));;
+            * ) menu_items=($(ls ../${device_type}_7.1*Restore.ipsw 2>/dev/null));;
         esac
     fi
     case $1 in
@@ -7608,7 +7608,7 @@ menu_ipsw_browse() {
     if [[ $versionc == "$device_latest_vers" ]]; then
         menu_items=()
     elif [[ -n $versionc ]]; then
-        menu_items=($(ls ../${device_type}_${versionc}*.ipsw 2>/dev/null))
+        menu_items=($(ls ../${device_type}_${versionc}*Restore.ipsw 2>/dev/null))
     fi
     menu_items+=("Open File Picker" "Enter Path" "Go Back")
 
@@ -7637,7 +7637,7 @@ menu_ipsw_browse() {
             newpath="$($cocoadialog fileselect --with-extensions ipsw)"
         else
             menu_zenity_check
-            newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
+            newpath="$($zenity --file-selection --file-filter='IPSW | *Restore.ipsw' --title="Select $text IPSW file")"
         fi
     fi
     if [[ ! -s "$newpath" ]]; then
@@ -8144,7 +8144,7 @@ device_ssh() {
 }
 
 device_alloc8() {
-    device_enter_mode pwnDFU alloc8
+    device_enter_mode pwnDFU
     device_ipwndfu alloc8
     log "Done!"
     print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
@@ -8474,7 +8474,15 @@ device_activate() {
             print "* For hacktivation, go to \"Restore/Downgrade\" instead."
         fi
     fi
-    "$dir/ideviceactivation" activate
+    if [[ $platform_arch != "x86_64" ]] && (( fedora_ver >= 41 )); then
+        warn "Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4."
+        print "* Workaround for now is to run this command: sudo update-crypto-policies --set DEFAULT:SHA1"
+    fi
+    if [[ $platform == "linux" && $platform_arch == "x86_64" ]]; then
+        LD_LIBRARY_PATH=$dir/lib "$dir/ideviceactivation" activate
+    else
+        "$dir/ideviceactivation" activate
+    fi
     case $device_type in
         iPod[123],1 )
             if (( device_det <= 3 )); then
@@ -9143,7 +9151,6 @@ for i in "$@"; do
         "--memory" ) ipsw_memory=1;;
         "--disable-bbupdate" ) device_disable_bbupdate=1;;
         "--disable-sudoloop" ) device_disable_sudoloop=1;;
-        "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
         "--activation-records" ) device_actrec=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--skip-ibss" ) device_skip_ibss=1;;
