@@ -199,7 +199,10 @@ set_tool_paths() {
         fi
         bspatch="$dir/bspatch"
         if [[ $platform_arch == "x86_64" ]]; then
-            ideviceactivation="env LD_LIBRARY_PATH=$dir/lib "
+            dir_env="env LD_LIBRARY_PATH=$dir/lib "
+            ideviceactivation="$dir_env"
+            idevicediagnostics="$dir_env"
+            ideviceinstaller="$dir_env"
         fi
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
@@ -356,7 +359,9 @@ set_tool_paths() {
 
     futurerestore+="$dir/futurerestore"
     ideviceactivation+="$dir/ideviceactivation"
+    idevicediagnostics+="$dir/idevicediagnostics"
     ideviceinfo="$dir/ideviceinfo"
+    ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
     ifuse="$(command -v ifuse)"
     ipwnder+="$dir/ipwnder"
@@ -374,6 +379,13 @@ set_tool_paths() {
     fi
     scp2+=" -F ./ssh_config"
     ssh2+=" -F ./ssh_config"
+}
+
+fedora_warning() {
+    if [[ $platform_arch != "x86_64" ]] && (( fedora_ver >= 41 )); then
+        warn "Users on non-x86_64 Fedora 41 (and newer) may have issues connecting to iOS devices for activation/data."
+        print "* Workaround for now is to run this command: sudo update-crypto-policies --set DEFAULT:SHA1"
+    fi
 }
 
 prepare_udev_rules() {
@@ -6391,6 +6403,7 @@ menu_appmanage() {
     local back
 
     menu_print_info
+    fedora_warning
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
@@ -6401,9 +6414,9 @@ menu_appmanage() {
         done
         case $selected in
             "Install IPA (AppSync)" ) menu_ipa "$selected";;
-            "List User Apps"   ) "$dir/ideviceinstaller" list --user;;
-            "List System Apps" ) "$dir/ideviceinstaller" list --system;;
-            "List All Apps"    ) "$dir/ideviceinstaller" list --all;;
+            "List User Apps"   ) $ideviceinstaller list --user;;
+            "List System Apps" ) $ideviceinstaller list --system;;
+            "List All Apps"    ) $ideviceinstaller list --all;;
             "Go Back" ) back=1;;
         esac
     done
@@ -6415,6 +6428,7 @@ menu_datamanage() {
     local back
 
     menu_print_info
+    fedora_warning
     print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
     print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
     print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
@@ -6578,22 +6592,18 @@ menu_ipa() {
             ;;
             "Use Dadoum Sideloader" )
                 local arch="$platform_arch"
-                local sideloader="sideloader-"
-                if [[ $platform == "macos" ]]; then
-                    sideloader+="qt-macOS-$arch"
-                else
-                    case $arch in
-                        "armhf" )
-                            warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
-                            pause
-                            continue
-                        ;;
-                        "arm64" ) arch="aarch64";;
-                    esac
-                    sideloader+="gtk-linux-$arch"
-                fi
+                local sideloader="sideloader-gtk-"
+                case $arch in
+                    "armhf" )
+                        warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
+                        pause
+                        continue
+                    ;;
+                    "arm64" ) arch="aarch64";;
+                esac
+                sideloader+="$arch-linux-gnu"
                 log "Checking for latest Sideloader"
-                local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases/latest | $jq -r ".tag_name")"
+                local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases | $jq -r ".[0].tag_name")"
                 local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
                 log "Latest version: $latest, current version: $current"
                 if [[ $current != "$latest" ]]; then
@@ -8016,6 +8026,7 @@ menu_power() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
         menu_print_info
+        fedora_warning
         print " > Main Menu > Other Utilities > Power Options"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -8493,10 +8504,7 @@ device_activate() {
             iPhone1*  ) print "* For hacktivation, go to \"Restore/Downgrade\" instead.";;
         esac
     fi
-    if [[ $platform_arch != "x86_64" ]] && (( fedora_ver >= 41 )); then
-        warn "Users on Fedora 41 (or newer) may have issues connecting to iOS devices for activation."
-        print "* Workaround for now is to run this command: sudo update-crypto-policies --set DEFAULT:SHA1"
-    fi
+    fedora_warning
     $ideviceactivation activate
     if [[ $device_type == "iPod"* ]] && (( device_det <= 3 )); then
         $ideviceactivation itunes
@@ -8755,7 +8763,7 @@ device_ideviceinstaller() {
     IFS='|' read -r -a ipa_files <<< "$ipa_path"
     for i in "${ipa_files[@]}"; do
         log "Installing: $i"
-        "$dir/ideviceinstaller" install "$i"
+        $ideviceinstaller install "$i"
     done
 }
 
@@ -9009,7 +9017,11 @@ device_backup_create() {
     print "* A backup of your device will be created using idevicebackup2. Please see the notes above."
     pause
     pushd "$(dirname $device_backup)"
-    "../../$dir/idevicebackup2" backup --full "$(basename $device_backup)"
+    dir="../../$dir"
+    if [[ -n $dir_env ]]; then
+        dir_env="env LD_LIBRARY_PATH=$dir/lib "
+    fi
+    $dir_env "$dir/idevicebackup2" backup --full "$(basename $device_backup)"
     popd
 }
 
@@ -9018,7 +9030,11 @@ device_backup_restore() {
     pause
     device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
     pushd "$(dirname $device_backup)"
-    "../../$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
+    dir="../../$dir"
+    if [[ -n $dir_env ]]; then
+        dir_env="env LD_LIBRARY_PATH=$dir/lib "
+    fi
+    $dir_env "$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
     popd
 }
 
@@ -9032,7 +9048,7 @@ device_erase() {
         error "Not proceeding."
     fi
     log "Proceeding."
-    "$dir/idevicebackup2" erase
+    $dir_env "$dir/idevicebackup2" erase
 }
 
 main() {
@@ -9134,8 +9150,8 @@ main() {
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
         "customipsw" ) restore_customipsw;;
         "getversion" ) device_ramdisk getversion;;
-        "shutdown" ) "$dir/idevicediagnostics" shutdown;;
-        "restart" ) "$dir/idevicediagnostics" restart;;
+        "shutdown" ) $idevicediagnostics shutdown;;
+        "restart" ) $idevicediagnostics restart;;
         "restore-latest" ) restore_latest64;;
         "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
         "remove4" ) device_ramdisk setnvram $rec;;
