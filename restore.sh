@@ -4774,7 +4774,7 @@ restore_futurerestore() {
     $futurerestore2 "${ExtraArr[@]}"
     opt=$?
     log "Restoring done! Read the message below if any error has occurred:"
-    if [[ $opt != 0 ]]; then
+    if [[ $opt != 0 ]] && (( device_proc < 7 )); then
         print "* If you are getting the error: \"could not retrieve device serial number\","
         print " -> Try restoring with the jailbreak option enabled"
     fi
