@@ -198,10 +198,15 @@ set_tool_paths() {
             pause
         fi
         bspatch="$dir/bspatch"
+        if [[ $platform_arch == "x86_64" ]]; then
+            ideviceactivation="env LD_LIBRARY_PATH=$dir/lib "
+        fi
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
+        scp2="$dir/scp"
+        ssh2="$dir/ssh"
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
@@ -275,8 +280,6 @@ set_tool_paths() {
             fi
         fi
         gaster+="$dir/gaster"
-        scp2="$dir/scp"
-        ssh2="$dir/ssh"
 
     elif [[ $(uname -m) == "iP"* ]]; then
         error "Running Legacy iOS Kit on iOS is not supported (yet)" "* Supported platforms: Linux, macOS"
@@ -352,6 +355,7 @@ set_tool_paths() {
     fi
 
     futurerestore+="$dir/futurerestore"
+    ideviceactivation+="$dir/ideviceactivation"
     ideviceinfo="$dir/ideviceinfo"
     idevicerestore+="$dir/idevicerestore"
     ifuse="$(command -v ifuse)"
@@ -889,7 +893,12 @@ device_get_info() {
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
-            [[ -z $device_vers ]] && device_vers="Unknown"
+            if [[ -z $device_vers ]]; then
+                device_vers="Unknown"
+                if [[ $device_mode == "Recovery" ]]; then
+                    device_vers+=". Re-enter recovery mode to get iBoot version"
+                fi
+            fi
             device_serial="$($irecovery -q | grep "SRNM" | cut -c 7- | cut -c 3- | cut -c -3)"
             device_get_name
             print "* Device: $device_name (${device_type} - ${device_model}) in $device_mode mode"
@@ -923,6 +932,7 @@ device_get_info() {
             elif [[ $device_type == "iPhone2,1" ]]; then
                 device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
             fi
+            device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
         ;;
     esac
 
@@ -6270,6 +6280,9 @@ menu_print_info() {
     echo
     print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
+    if [[ $device_unactivated == 1 ]]; then
+        print "* Device is not activated, select Attempt Activation to activate."
+    fi
     if [[ -n $device_disable_bbupdate && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
@@ -6332,6 +6345,11 @@ menu_main() {
             if (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
             fi
+            if [[ $device_unactivated == 1 ]]; then
+                menu_items+=("Attempt Activation")
+            elif [[ $device_mode == "Recovery" ]]; then
+                menu_items+=("Exit Recovery Mode")
+            fi
             case $device_type in
                 iPad2,[123] ) menu_items+=("FourThree Utility");;
             esac
@@ -6360,6 +6378,8 @@ menu_main() {
             "Data Management" ) menu_datamanage;;
             "Other Utilities" ) menu_other;;
             "FourThree Utility" ) menu_fourthree;;
+            "Attempt Activation" ) device_activate;;
+            "Exit Recovery Mode" ) mode="exitrecovery";;
             "Exit" ) mode="exit";;
         esac
     done
@@ -8466,31 +8486,23 @@ device_dumprd() {
 
 device_activate() {
     log "Attempting to activate device with ideviceactivation"
-    if (( device_proc <= 4 )) && [[ $device_type == "iPhone"* ]]; then
+    if [[ $device_type == "iPhone"* ]] && (( device_proc <= 4 )); then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        if [[ $device_type == "iPhone2,1" ]]; then
-            print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
-        elif [[ $device_type == "iPhone1"* ]]; then
-            print "* For hacktivation, go to \"Restore/Downgrade\" instead."
-        fi
+        case $device_type in
+            iPhone2,1 ) print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead.";;
+            iPhone1*  ) print "* For hacktivation, go to \"Restore/Downgrade\" instead.";;
+        esac
     fi
     if [[ $platform_arch != "x86_64" ]] && (( fedora_ver >= 41 )); then
-        warn "Users on Fedora 41 (or newer) may have issues connecting to older iOS devices. This applies to devices on lower than iOS 4."
+        warn "Users on Fedora 41 (or newer) may have issues connecting to iOS devices for activation."
         print "* Workaround for now is to run this command: sudo update-crypto-policies --set DEFAULT:SHA1"
     fi
-    if [[ $platform == "linux" && $platform_arch == "x86_64" ]]; then
-        LD_LIBRARY_PATH=$dir/lib "$dir/ideviceactivation" activate
-    else
-        "$dir/ideviceactivation" activate
+    $ideviceactivation activate
+    if [[ $device_type == "iPod"* ]] && (( device_det <= 3 )); then
+        $ideviceactivation itunes
     fi
-    case $device_type in
-        iPod[123],1 )
-            if (( device_det <= 3 )); then
-                "$dir/ideviceactivation" itunes
-            fi
-        ;;
-    esac
     print "* If it returns an error, just try again."
+    device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
     pause
 }
 
@@ -8505,7 +8517,7 @@ device_hacktivate() {
             6.1   ) build="10B141";;
         esac
         log "Checking ideviceactivation status..."
-        "$dir/ideviceactivation" activate
+        $ideviceactivation activate
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
     print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
