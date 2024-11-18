@@ -8695,11 +8695,11 @@ menu_justboot() {
         print "* You are about to do a tethered boot."
         print "* To know more about build version, go here: https://theapplewiki.com/wiki/Firmware"
         echo
-        if [[ -n $vers ]]; then
-            print "* Build Version entered: $vers"
-        elif [[ -n $ipsw_justboot_path ]]; then
+        if [[ -n $ipsw_justboot_path ]]; then
             print "* Selected IPSW: $ipsw_justboot_path"
             print "* IPSW Version: $device_target_vers-$device_target_build"
+        elif [[ -n $vers ]]; then
+            print "* Build Version entered: $vers"
         else
             print "* Enter build version or select IPSW to continue"
         fi
