@@ -1786,10 +1786,10 @@ device_ipwndfu() {
     local tool_pwned=0
     local python2=$(command -v python2 2>/dev/null)
     local pyenv=$(command -v pyenv 2>/dev/null)
-    local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
+    local pyenv2=~/.pyenv/versions/2.7.18/bin/python2
 
-    if [[ -z $pyenv && -e "$HOME/.pyenv/bin/pyenv" ]]; then
-        pyenv="$HOME/.pyenv/bin/pyenv"
+    if [[ -z $pyenv && -e ~/.pyenv/bin/pyenv ]]; then
+        pyenv=~/.pyenv/bin/pyenv
     fi
     if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
         python2="/usr/bin/python"
@@ -1807,7 +1807,7 @@ device_ipwndfu() {
             print "* Install pyenv by running: curl https://pyenv.run | bash"
             log "Installing pyenv"
             curl https://pyenv.run | bash
-            pyenv="$HOME/.pyenv/bin/pyenv"
+            pyenv=~/.pyenv/bin/pyenv
             if [[ ! -e $pyenv ]]; then
                 error "Cannot detect pyenv, its installation may have failed." \
                 "* Try installing pyenv manually before retrying."
