@@ -198,7 +198,7 @@ set_tool_paths() {
             pause
         fi
         bspatch="$dir/bspatch"
-        if [[ $platform_arch == "x86_64" ]]; then
+        if [[ $platform_arch != "armhf" ]]; then
             dir_env="env LD_LIBRARY_PATH=$dir/lib "
             ideviceactivation="$dir_env"
             idevicediagnostics="$dir_env"
@@ -379,13 +379,6 @@ set_tool_paths() {
     fi
     scp2+=" -F ./ssh_config"
     ssh2+=" -F ./ssh_config"
-}
-
-fedora_warning() {
-    if [[ $platform_arch != "x86_64" ]] && (( fedora_ver >= 41 )); then
-        warn "Users on non-x86_64 Fedora 41 (and newer) may have issues connecting to iOS devices for activation/data."
-        print "* Workaround for now is to run this command: sudo update-crypto-policies --set DEFAULT:SHA1"
-    fi
 }
 
 prepare_udev_rules() {
@@ -5481,9 +5474,9 @@ device_ramdisk() {
         device_rd_build=
     fi
     build_id=$device_target_build
-    ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     device_fw_key_check
     ipsw_get_url $build_id
+    ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
@@ -5520,7 +5513,9 @@ device_ramdisk() {
         fi
 
         log "$getcomp"
-        if [[ -e $ramdisk_path/$name ]]; then
+        if [[ -n $ipsw_justboot_path ]]; then
+            unzip -o -j "$ipsw_justboot_path.ipsw" "${path}$name" -d .
+        elif [[ -e $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
             "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
@@ -6403,7 +6398,6 @@ menu_appmanage() {
     local back
 
     menu_print_info
-    fedora_warning
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
@@ -6428,7 +6422,6 @@ menu_datamanage() {
     local back
 
     menu_print_info
-    fedora_warning
     print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
     print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
     print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
@@ -8026,7 +8019,6 @@ menu_power() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
         menu_print_info
-        fedora_warning
         print " > Main Menu > Other Utilities > Power Options"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -8504,7 +8496,6 @@ device_activate() {
             iPhone1*  ) print "* For hacktivation, go to \"Restore/Downgrade\" instead.";;
         esac
     fi
-    fedora_warning
     $ideviceactivation activate
     if [[ $device_type == "iPod"* ]] && (( device_det <= 3 )); then
         $ideviceactivation itunes
@@ -8694,7 +8685,7 @@ menu_justboot() {
     local vers
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Enter Build Version" "Custom Bootargs")
+        menu_items=("Enter Build Version" "Select IPSW" "Custom Bootargs")
         if [[ -n $vers ]]; then
             menu_items+=("Just Boot")
         fi
@@ -8706,15 +8697,18 @@ menu_justboot() {
         echo
         if [[ -n $vers ]]; then
             print "* Build Version entered: $vers"
+        elif [[ -n $ipsw_justboot_path ]]; then
+            print "* Selected IPSW: $ipsw_justboot_path"
+            print "* IPSW Version: $device_target_vers-$device_target_build"
         else
-            print "* Enter build version to continue"
+            print "* Enter build version or select IPSW to continue"
         fi
         echo
         if [[ -n $device_justboot_bootargs ]]; then
             print "* Custom Bootargs: $device_justboot_bootargs"
         else
+            print "* You may enter custom bootargs (optional, experimental option)"
             print "* Default Bootargs: -v pio-error=0"
-            print "* You may enter custom bootargs (optional, advanced option)"
         fi
         echo
         input "Select an option:"
@@ -8726,7 +8720,20 @@ menu_justboot() {
             "Enter Build Version" )
                 print "* Enter the build version of your device's current iOS version to boot."
                 device_enter_build
+                case $device_rd_build in
+                    *[bcdefgkmpquv] )
+                        log "iOS beta detected. Entering build version is not supported. Select the IPSW instead."
+                        pause
+                        continue
+                    ;;
+                esac
+                ipsw_justboot_path=
                 vers="$device_rd_build"
+            ;;
+            "Select IPSW" )
+                menu_ipsw_browse
+                ipsw_justboot_path="$ipsw_path"
+                vers="$device_target_build"
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_justboot_bootargs;;
             "Just Boot" ) mode="device_justboot";;
