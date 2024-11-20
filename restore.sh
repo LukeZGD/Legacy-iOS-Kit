@@ -210,6 +210,8 @@ set_tool_paths() {
         zenity="$(command -v zenity)"
         scp2="$dir/scp"
         ssh2="$dir/ssh"
+        cp $ssh2 .
+        chmod +x ssh
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
