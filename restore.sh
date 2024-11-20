@@ -111,6 +111,17 @@ For 64-bit checkm8 devices compatible with pwned restores:
     '
 }
 
+unzip2="$(command -v unzip)"
+zip2="$(command -v zip)"
+
+unzip() {
+    $unzip2 "$@" || error "An error occurred with the unzip operation: $*"
+}
+
+zip() {
+    $zip2 "$@" || error "An error occurred with the zip operation: $*"
+}
+
 set_tool_paths() {
     : '
     sets variables: platform, platform_ver, dir
