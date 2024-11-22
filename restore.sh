@@ -1164,7 +1164,7 @@ device_get_info() {
         ;;
     esac
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
-    if [[ $device_disable_bbupdate == 1 ]]; then
+    if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         device_disable_bbupdate="$device_type"
     fi
     # if latest vers is not set, copy use vers to latest
@@ -2174,7 +2174,7 @@ ipsw_preference_set() {
     fi
 
     case $device_target_vers in
-        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.3* | 4.2.[8761] ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_proc in
                 1 ) ipsw_canjailbreak=1;;
@@ -2238,6 +2238,13 @@ ipsw_preference_set() {
         if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
             warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
             print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+        elif [[ $device_type == "iPhone3,3" ]]; then
+            case $device_target_vers in
+                4.2.9 | 4.2.10 )
+                    warn "This will be a semi-tethered jailbreak."
+                    print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+                ;;
+            esac
         fi
         read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
         if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
@@ -2671,7 +2678,7 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                     fi
                 ;;
-                3.0* | 3.1 | 3.1.[12] ) :;;
+                3.0* | 3.1 | 3.1.[12] | 4.2* ) :;;
                 * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
             esac
             case $device_target_vers in
@@ -2685,8 +2692,7 @@ ipsw_prepare_jailbreak() {
             fi
             if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
                 case $device_target_vers in
-                    4.2.[8761] ) :;;
-                    5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
+                    5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
                 esac
             fi
         fi
@@ -3412,6 +3418,7 @@ ipsw_prepare_32bit() {
                     JBFiles[0]=
                 fi
             ;;
+            4.2.9 | 4.2.10 ) JBFiles[0]=;;
             4.2.1 )
                 if [[ $device_type != "iPhone1,2" ]]; then
                     ExtraArgs+=" -punchd"
@@ -3428,8 +3435,7 @@ ipsw_prepare_32bit() {
         fi
         if [[ $device_target_tethered == 1 ]]; then
             case $device_target_vers in
-                4.2.[8761] ) :;;
-                5* | 4.[32]* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
+                5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
         fi
     fi
@@ -4625,7 +4631,7 @@ restore_idevicerestore() {
 
     mkdir shsh 2>/dev/null
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
-    if [[ $device_use_bb == 0 || -n $device_disable_bbupdate ]]; then
+    if [[ $device_use_bb == 0 || $device_type == "$device_disable_bbupdate" ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
     fi
     ipsw_extract custom
@@ -5590,7 +5596,12 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        if [[ $build_id == "8"* && $device_type == "iPad2"* ]]; then
+        if [[ $device_type == "iPhone3,3" ]]; then
+            case $build_id in
+                8E600 | 8E501 ) device_boot4=1;;
+            esac
+        fi
+        if [[ $build_id == "8"* && $device_type == "iPad2"* ]] || [[ $device_boot4 == 1 ]]; then
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v amfi=0xff cs_enforcement_disable=1"
             device_boot4=1
         else
@@ -5611,7 +5622,7 @@ device_ramdisk() {
         fi
     fi
 
-    if [[ $device_type == "iPad2"* && $build_id == "8"* ]]; then
+    if [[ $device_boot4 == 1 ]]; then
         log "Patch Kernelcache"
         mv Kernelcache.dec Kernelcache0.dec
         "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
@@ -6303,10 +6314,10 @@ menu_print_info() {
     if [[ $device_unactivated == 1 ]]; then
         print "* Device is not activated, select Attempt Activation to activate."
     fi
-    if [[ -n $device_disable_bbupdate && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
+    if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
-            warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate"
+            warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate after restore"
         else
             print "* Current device baseband will be dumped and stitched to custom IPSW"
             print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (tethered or with SHSH), powdersn0w"
@@ -6315,24 +6326,29 @@ menu_print_info() {
     elif [[ -n $device_disable_bbupdate ]]; then
         warn "Disable bbupdate flag detected, but this flag is not supported for this device"
     fi
-    if [[ $device_actrec == 1 ]]; then
-        warn "Activation records flag detected. Proceed with caution"
-        print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+    if [[ -n $device_disable_bbupdate ]]; then
+        print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update"
     fi
-    if [[ $device_pwnrec == 1 ]]; then
-        warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
-    elif [[ $device_skip_ibss == 1 ]]; then
-        warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
-    fi
-    if [[ $ipsw_jailbreak == 1 ]]; then
+    if [[ $ipsw_jailbreak == 1 ]] && (( device_proc < 7 )); then
         warn "Jailbreak flag detected. Jailbreak option enabled."
     fi
-    if [[ $ipsw_gasgauge_patch ]]; then
-        warn "gasgauge-patch flag detected. multipatch enabled."
-        print "* This supports up to iOS 8.4.1 only. iOS 9 will not work"
-    fi
-    if [[ $ipsw_skip_first ]]; then
-        warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
+    if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+        if [[ $device_actrec == 1 ]]; then
+            warn "Activation records flag detected. Proceed with caution"
+            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+        fi
+        if [[ $device_pwnrec == 1 ]]; then
+            warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
+        elif [[ $device_skip_ibss == 1 ]]; then
+            warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
+        fi
+        if [[ $ipsw_gasgauge_patch == 1 ]]; then
+            warn "gasgauge-patch flag detected. multipatch enabled."
+            print "* This supports up to iOS 8.4.1 only. iOS 9 will not work"
+        fi
+        if [[ $ipsw_skip_first == 1 ]]; then
+            warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
+        fi
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -7558,11 +7574,10 @@ ipsw_custom_set() {
     if [[ $device_actrec == 1 ]]; then
         ipsw_custom+="A"
     fi
-    if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc > 4 )); then
+    if [[ $device_deadbb == 1 ]]; then
+        ipsw_custom+="D"
+    elif [[ $device_type == "$device_disable_bbupdate" ]]; then
         ipsw_custom+="B"
-        if [[ $device_deadbb == 1 ]]; then
-            ipsw_custom+="D"
-        fi
     fi
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         ipsw_custom+="G"
@@ -8057,23 +8072,28 @@ menu_other() {
         if [[ $device_mode != "none" && $device_proc != 1 ]] && (( device_proc < 7 )); then
             case $device_mode in
                 "Normal" ) menu_items+=("Enter kDFU Mode");;
-                * ) menu_items+=("Get iOS Version");;
+                * )
+                    if [[ $device_type != "iPod2,1" ]]; then
+                        menu_items+=("Just Boot")
+                    fi
+                ;;
             esac
             case $device_proc in
                 [56] ) menu_items+=("Send Pwned iBSS");;
                 *    ) menu_items+=("Enter pwnDFU Mode");;
             esac
-            menu_items+=("Clear NVRAM" "Activation Records")
-            case $device_type in
-                iPhone* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
-            esac
-            if [[ $device_type != "iPod2,1" ]]; then
-                menu_items+=("Just Boot")
-            fi
+            menu_items+=("Clear NVRAM")
             case $device_type in
                 iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
+            if [[ $device_mode != "Normal" ]]; then
+                menu_items+=("Get iOS Version")
+            fi
+            case $device_type in
+                iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
+            esac
+            menu_items+=("Activation Records")
         fi
         if [[ $device_mode != "none" ]]; then
             if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
@@ -8225,6 +8245,14 @@ device_jailbreak() {
         warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
         print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
         pause
+    elif [[ $device_type == "iPhone3,3" ]]; then
+        case $device_vers in
+            4.2.9 | 4.2.10 )
+                warn "This will be a semi-tethered jailbreak."
+                print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+                pause
+            ;;
+        esac
     elif [[ $device_proc == 5 ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
         print "* Especially since this method may require the usage of checkm8-a5."
@@ -8295,6 +8323,11 @@ device_jailbreak() {
         warn "For 3.x versions on the 3GS, the \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
         print "* This applies to all 3.x versions on the 3GS only. They require usage of the \"Restore/Downgrade\" option first."
         echo
+    elif [[ $device_vers == "7"* ]]; then
+        warn "The iOS 7 untethers may cause issues to your device after jailbreaking with this method."
+        print "* You may encounter issues like slowdowns/freezing and losing baseband functionality."
+        print "* It is recommended to instead dump blobs and restore with the jailbreak option enabled."
+        print "* Or use other methods like jailbreaking with evasi0n7/Pangu if your device is not OTA updated."
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
