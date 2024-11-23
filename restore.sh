@@ -66,7 +66,7 @@ clean_usbmuxd() {
     if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
         return
     fi
-    sudo killall usbmuxd 2>/dev/null
+    sudo killall usbmuxd usbmuxd2 2>/dev/null
     if [[ $(command -v systemctl 2>/dev/null) ]]; then
         sleep 1
         sudo systemctl restart usbmuxd
@@ -288,7 +288,7 @@ set_tool_paths() {
                     sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
                 else
                     log "Running usbmuxd2"
-                    sudo -b $dir/usbmuxd2 &>../saved/usbmuxd.log
+                    sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
                 fi
             elif [[ $othertmp != 0 ]]; then
                 log "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
@@ -6872,7 +6872,7 @@ menu_restore() {
                 esac
                 menu_items+=("Other (powdersn0w $text2 blobs)")
             ;;
-            iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPad1,1 | iPod[1234],1 )
+            iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPod[1234],1 )
                 if [[ -z $1 ]]; then
                     menu_items+=("Other (Custom IPSW)")
                 fi
