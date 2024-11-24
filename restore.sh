@@ -610,6 +610,7 @@ device_entry() {
 }
 
 device_get_name() {
+    # all devices that run iOS/iPhoneOS/iPadOS
     device_name=$device_type
     case $device_type in
         "iPhone1,1") device_name="iPhone 2G";;
@@ -760,7 +761,7 @@ device_get_name() {
         "iPad16,4") device_name="iPad Pro 11\" (M4, Cellular)";;
         "iPad16,5") device_name="iPad Pro 12.9\" (M4, Wi-Fi)";;
         "iPad16,6") device_name="iPad Pro 12.9\" (M4, Cellular)";;
-        "iPod1,1") device_name="iPod touch";;
+        "iPod1,1") device_name="iPod touch 1";;
         "iPod2,1") device_name="iPod touch 2";;
         "iPod3,1") device_name="iPod touch 3";;
         "iPod4,1") device_name="iPod touch 4";;
@@ -942,6 +943,7 @@ device_get_info() {
             device_model=$($ideviceinfo -s -k HardwareModel)
             device_vers=$($ideviceinfo -s -k ProductVersion)
             device_det=$(echo "$device_vers" | cut -c 1)
+            device_det2=$(echo "$device_vers" | cut -c -2)
             device_build=$($ideviceinfo -s -k BuildVersion)
             device_udid=$($ideviceinfo -s -k UniqueDeviceID)
             [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -961,7 +963,7 @@ device_get_info() {
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
     device_model="${device_model%??}" # remove "ap" from the end
     if [[ -z $device_type && -n $device_model ]]; then
-        # device_model fallback
+        # device_model fallback (this will be up to checkm8 devices only)
         case $device_model in
             k48  ) device_type="iPad1,1";;
             k93  ) device_type="iPad2,1";;
@@ -990,6 +992,22 @@ device_get_info() {
             j97  ) device_type="iPad5,2";;
             j81  ) device_type="iPad5,3";;
             j82  ) device_type="iPad5,4";;
+            j127 ) device_type="iPad6,3";;
+            j128 ) device_type="iPad6,4";;
+            j98a ) device_type="iPad6,7";;
+            j99a ) device_type="iPad6,8";;
+            j71s ) device_type="iPad6,11";;
+            j71t ) device_type="iPad6,11";;
+            j72s ) device_type="iPad6,12";;
+            j72t ) device_type="iPad6,12";;
+            j120 ) device_type="iPad7,1";;
+            j121 ) device_type="iPad7,2";;
+            j207 ) device_type="iPad7,3";;
+            j208 ) device_type="iPad7,4";;
+            j71b ) device_type="iPad7,5";;
+            j72b ) device_type="iPad7,6";;
+            j171 ) device_type="iPad7,11";;
+            j172 ) device_type="iPad7,12";;
             m68  ) device_type="iPhone1,1";;
             n82  ) device_type="iPhone1,2";;
             n88  ) device_type="iPhone2,1";;
@@ -1015,6 +1033,12 @@ device_get_info() {
             d11  ) device_type="iPhone9,2";;
             d101 ) device_type="iPhone9,3";;
             d111 ) device_type="iPhone9,4";;
+            d20  ) device_type="iPhone10,1";;
+            d21  ) device_type="iPhone10,2";;
+            d22  ) device_type="iPhone10,3";;
+            d201 ) device_type="iPhone10,4";;
+            d211 ) device_type="iPhone10,5";;
+            d221 ) device_type="iPhone10,6";;
             n45  ) device_type="iPod1,1";;
             n72  ) device_type="iPod2,1";;
             n18  ) device_type="iPod3,1";;
@@ -1249,9 +1273,16 @@ device_find_mode() {
 
 device_sshpass() {
     # ask for device password and use sshpass for scp and ssh
+    ssh_user="root"
+    if [[ $device_det == 1 ]]; then
+        if (( device_det2 >= 15 )); then
+            log "iOS 15+ device detected. Connecting to device SSH as mobile..."
+            ssh_user="mobile"
+        fi
+    fi
     local pass=$1
     if [[ -z $pass ]]; then
-        read -s -p "$(input 'Enter the root password of your iOS device: ')" pass
+        read -s -p "$(input "Enter the SSH $ssh_user password of your iOS device: ")" pass
         echo
     fi
     if [[ -z $pass ]]; then
@@ -1439,10 +1470,12 @@ device_enter_mode() {
 
         "Recovery" )
             if [[ $device_mode == "Normal" ]]; then
-                print "* The device needs to be in recovery/DFU mode before proceeding."
-                read -p "$(input 'Send device to recovery mode? (Y/n): ')" opt
-                if [[ $opt == 'n' || $opt == 'N' ]]; then
-                    exit
+                if [[ $mode != "enterrecovery" ]]; then
+                    print "* The device needs to be in recovery/DFU mode before proceeding."
+                    read -p "$(input 'Send device to recovery mode? (Y/n): ')" opt
+                    if [[ $opt == 'n' || $opt == 'N' ]]; then
+                        exit
+                    fi
                 fi
                 log "Entering recovery mode..."
                 print "* If the device does not enter recovery mode automatically:"
@@ -2237,12 +2270,12 @@ ipsw_preference_set() {
         print "* This option is enabled by default (Y). Select this option if unsure."
         if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
             warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
-            print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+            print "* To boot jailbroken later, go to: Just Boot"
         elif [[ $device_type == "iPhone3,3" ]]; then
             case $device_target_vers in
                 4.2.9 | 4.2.10 )
                     warn "This will be a semi-tethered jailbreak."
-                    print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+                    print "* To boot jailbroken later, go to: Just Boot"
                 ;;
             esac
         fi
@@ -6083,7 +6116,7 @@ menu_ramdisk() {
                 if [[ -s ../saved/TrollStore.tar && -s ../saved/PersistenceHelper_Embedded ]]; then
                     cp ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded .
                 else
-                    rm ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded 2>/dev/null
+                    rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                     log "Downloading files for latest TrollStore"
                     download_file https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
                     download_file https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
@@ -6380,6 +6413,11 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
+                if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
+                    case $device_mode in
+                        "Recovery" | "DFU" ) menu_items+=("Just Boot");;
+                    esac
+                fi
             fi
             if [[ $device_unactivated == 1 ]]; then
                 menu_items+=("Attempt Activation")
@@ -6398,7 +6436,7 @@ menu_main() {
                 [12].*  ) :;;
                 [1289]* ) menu_items+=("Sideload IPA");;
             esac
-            menu_items+=("App Management" "Data Management")
+            menu_items+=("App Management" "Data Management" "Device Management")
         fi
         menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
@@ -6407,15 +6445,17 @@ menu_main() {
         done
         case $selected in
             "Restore/Downgrade" ) menu_restore;;
-            "Jailbreak Device" ) mode="device_jailbreak";;
+            "Jailbreak Device" ) device_jailbreak_confirm;;
             "Save SHSH Blobs" ) menu_shsh;;
             "Sideload IPA" ) menu_ipa "$selected";;
             "App Management" ) menu_appmanage;;
             "Data Management" ) menu_datamanage;;
+            "Device Management" ) menu_devicemanage;;
             "Other Utilities" ) menu_other;;
             "FourThree Utility" ) menu_fourthree;;
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
+            "Just Boot" ) menu_justboot;;
             "Exit" ) mode="exit";;
         esac
     done
@@ -6458,10 +6498,10 @@ menu_datamanage() {
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     if [[ -z $ifuse ]]; then
-        warn "ifuse not installed. Mount Device will not work. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
+        warn "ifuse not installed. Mount Device options will not work. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
     fi
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Connect to SSH" "Erase All Content and Settings" "Go Back")
+        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Connect to SSH" "Cydia App Install" "Erase All Content and Settings" "Go Back")
         echo
         print " > Main Menu > Data Management"
         input "Select an option:"
@@ -6482,6 +6522,16 @@ menu_datamanage() {
             "Mount Device (Raw File System)" ) mkdir ../mount 2>/dev/null; $ifuse --root ../mount; log "Device (root) should now be mounted on mount folder";;
             "Unmount Device" ) log "Attempting to umount device from mount folder"; umount ../mount;;
             "Connect to SSH" ) mode="device_ssh";;
+            "Cydia App Install" )
+                echo
+                print "* Cydia App Install: You need to have working AFC2 or SSH for transferring the .deb files to your device."
+                print "* This must be done manually. Place the .deb files you want to install to this path:"
+                print "    > /var/root/Media/Cydia/AutoInstall"
+                print "* Using the \"Mount Device (Raw File System)\" or \"Connect to SSH\" options."
+                print "* Create the folders as needed if they do not exist."
+                print "* Reboot your device after transferring the .deb files to start the installation."
+                echo
+            ;;
         esac
     done
 }
@@ -6537,7 +6587,7 @@ menu_fourthree() {
         menu_print_info
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
-        print "* Read the README here: https://github.com/LukeZGD/FourThree-iPad2"
+        print "* Please read the README here: https://github.com/LukeZGD/FourThree-iPad2"
         if [[ $device_type != "iPad2,1" ]]; then
             warn "FourThree is known to have issues with cellular iPad 2 devices."
         fi
@@ -8039,21 +8089,42 @@ menu_flags() {
     done
 }
 
-menu_power() {
+menu_devicemanage() {
     local menu_items
     local selected
     local back
 
+    menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
-        menu_print_info
-        print " > Main Menu > Other Utilities > Power Options"
+        menu_items=("Export Device Info" "Export Battery Info" "Pair Device" "Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
+        print " > Main Menu > Device Management"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
             selected="$opt"
             break
         done
         case $selected in
+            "Export Device Info" )
+                mkdir -p ../saved/info 2>/dev/null
+                log "Running ideviceinfo"
+                local info="../saved/info/device-$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).txt"
+                $ideviceinfo > $info
+                if [[ $? != 0 ]]; then
+                    $ideviceinfo -s > $info
+                fi
+                log "Device Info exported to: $info"
+            ;;
+            "Export Battery Info" )
+                mkdir -p ../saved/info 2>/dev/null
+                log "Running idevicediagnostics"
+                local info="../saved/info/battery-$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).txt"
+                $idevicediagnostics ioregentry AppleSmartBattery > $info
+                if [[ $? != 0 ]]; then
+                    $idevicediagnostics ioregentry AppleARMPMUCharger > $info
+                fi
+                log "Battery Info exported to: $info"
+            ;;
+            "Pair Device" ) device_pair;;
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
@@ -8070,14 +8141,9 @@ menu_other() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
         if [[ $device_mode != "none" && $device_proc != 1 ]] && (( device_proc < 7 )); then
-            case $device_mode in
-                "Normal" ) menu_items+=("Enter kDFU Mode");;
-                * )
-                    if [[ $device_type != "iPod2,1" ]]; then
-                        menu_items+=("Just Boot")
-                    fi
-                ;;
-            esac
+            if [[ $device_mode == "Normal" ]]; then
+                menu_items+=("Enter kDFU Mode")
+            fi
             case $device_proc in
                 [56] ) menu_items+=("Send Pwned iBSS");;
                 *    ) menu_items+=("Enter pwnDFU Mode");;
@@ -8087,7 +8153,20 @@ menu_other() {
                 iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
-            if [[ $device_mode != "Normal" ]]; then
+            if [[ $device_mode == "Normal" ]]; then
+                case $device_type in
+                    iPhone1* )
+                        case $device_vers in
+                            3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                        esac
+                    ;;
+                    iPhone[23],1 )
+                        case $device_vers in
+                            3.1* | [456]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                        esac
+                    ;;
+                esac
+            else
                 menu_items+=("Get iOS Version")
             fi
             case $device_type in
@@ -8102,30 +8181,9 @@ menu_other() {
             if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
                 menu_items+=("SSH Ramdisk")
             fi
-            case $device_mode in
-                "Normal" )
-                    menu_items+=("Attempt Activation")
-                    case $device_vers in
-                        3.1* | [456]* )
-                            case $device_type in
-                                iPhone1* )
-                                    case $device_vers in
-                                        3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
-                                    esac
-                                ;;
-                                iPhone[23],1 ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
-                                iPad2* )
-                                    case $device_vers in
-                                        4.3* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
-                                    esac
-                                ;;
-                            esac
-                        ;;
-                    esac
-                    menu_items+=("Pair Device" "Power Options")
-                ;;
-                "Recovery" ) menu_items+=("Exit Recovery Mode");;
-            esac
+            if [[ $device_mode == "Normal" ]]; then
+                menu_items+=("Attempt Activation")
+            fi
             if [[ $device_mode != "DFU" ]]; then
                 menu_items+=("DFU Mode Helper")
             fi
@@ -8160,10 +8218,7 @@ menu_other() {
             "Activation Records" ) mode="actrec";;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "DFU Mode Helper" ) mode="enterdfu";;
-            "Just Boot" ) menu_justboot;;
             "Get iOS Version" ) mode="getversion";;
-            "Pair Device" ) device_pair;;
-            "Power Options" ) menu_power;;
             "Enable Flags" ) menu_flags;;
             "Go Back" ) back=1;;
         esac
@@ -8174,7 +8229,7 @@ device_pair() {
     log "Attempting idevicepair"
     "$dir/idevicepair" pair
     if [[ $? != 0 ]]; then
-        log "Press \"Trust\" on the device before pressing Enter/Return."
+        log "Unlock and press \"Trust\" on the device before pressing Enter/Return."
         pause
         log "Attempting idevicepair"
     fi
@@ -8190,13 +8245,8 @@ device_ssh() {
     device_sshpass
     log "Connecting to device SSH..."
     print "* For accessing data, note the following:"
-    print "* Host: sftp://127.0.0.1 | User: root | Password: <your password> (default is alpine) | Port: $ssh_port"
-    $ssh -p $ssh_port root@127.0.0.1
-    if [[ $? != 0 ]]; then
-        log "Failed to connect to SSH as root. Connecting to device SSH as mobile..."
-        print "* Host: sftp://127.0.0.1 | User: mobile | Password: <your password> | Port: $ssh_port"
-        $ssh -p $ssh_port mobile@127.0.0.1
-    fi
+    print "* Host: sftp://127.0.0.1 | User: $ssh_user | Password: <your password> (default is alpine) | Port: $ssh_port"
+    $ssh -p $ssh_port ${ssh_user}@127.0.0.1
 }
 
 device_alloc8() {
@@ -8209,10 +8259,11 @@ device_alloc8() {
     print "* To retry, just go back to: Other Utilities -> Install alloc8 Exploit"
 }
 
-device_jailbreak() {
+device_jailbreak_confirm() {
     if [[ $device_proc == 1 ]]; then
         print "* The \"Jailbreak Device\" option is not supported for this device."
         print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.1 or 3.1.3, then enable the jailbreak option."
+        pause
         return
     elif [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         device_vers=
@@ -8228,14 +8279,11 @@ device_jailbreak() {
                 if [[ $device_proc == 4 ]]; then
                     print "* Note: If the process fails somewhere, you can just enter DFU mode and attempt jailbreaking again from there."
                 fi
-                pause
-                pushd ../resources/jailbreak/g1lbertJB >/dev/null
-                log "Copying freeze.tar to Cydia.tar"
-                cp ../freeze.tar payload/common/Cydia.tar
-                log "Running g1lbertJB..."
-                "../../$dir/gilbertjb"
-                rm payload/common/Cydia.tar
-                popd >/dev/null
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    return
+                fi
+                mode="device_jailbreak_gilbert"
                 return
             ;;
         esac
@@ -8243,13 +8291,13 @@ device_jailbreak() {
     log "Checking if your device and version is supported..."
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
         warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
-        print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+        print "* To boot jailbroken later, go to: Just Boot"
         pause
     elif [[ $device_type == "iPhone3,3" ]]; then
         case $device_vers in
             4.2.9 | 4.2.10 )
                 warn "This will be a semi-tethered jailbreak."
-                print "* To boot jailbroken later, go to: Other Utilities -> Just Boot"
+                print "* To boot jailbroken later, go to: Just Boot"
                 pause
             ;;
         esac
@@ -8287,22 +8335,26 @@ device_jailbreak() {
                 print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
                 print "* For this version, use Home Depot patched with ohd and sideload it to your device."
                 print "* https://github.com/LukeZGD/ohd"
+                pause
                 return
             fi
         ;;
         9.0* )
             print "* For this version, use Pangu9 on older macOS to jailbreak your device."
             print "* https://ios.cfw.guide/installing-pangu9/"
+            pause
             return
         ;;
         9.3.[56] )
             print "* For this version, download kok3shi9 and sideload it to your device."
             print "* https://kok3shidoll.web.app/kok3shi9_32.html"
+            pause
             return
         ;;
         10* )
             print "* For this version, download socket and sideload it to your device."
             print "* https://github.com/staturnzz/socket"
+            pause
             return
         ;;
         9.3.[1234] | 9.3 | 9.2* | 9.1 | [8765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
@@ -8310,12 +8362,14 @@ device_jailbreak() {
             if [[ $device_type != "iPhone2,1" ]]; then
                 warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
                 print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+                pause
                 return
             fi
         ;;
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
             print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+            pause
             return
         ;;
     esac
@@ -8332,8 +8386,25 @@ device_jailbreak() {
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
-    pause
+    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+        return
+    fi
+    mode="device_jailbreak"
+}
+
+device_jailbreak() {
     device_ramdisk jailbreak
+}
+
+device_jailbreak_gilbert() {
+    pushd ../resources/jailbreak/g1lbertJB >/dev/null
+    log "Copying freeze.tar to Cydia.tar"
+    cp ../freeze.tar payload/common/Cydia.tar
+    log "Running g1lbertJB..."
+    "../../$dir/gilbertjb"
+    rm payload/common/Cydia.tar
+    popd >/dev/null
 }
 
 device_ssh_message() {
@@ -8782,7 +8853,6 @@ menu_justboot() {
                 vers="$device_target_build"
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_justboot_bootargs;;
-            "Just Boot" ) mode="device_justboot";;
             "Go Back" ) back=1;;
         esac
     done
@@ -9012,7 +9082,7 @@ device_fourthree_app() {
     device_fourthree_check
     log "Installing FourThree app"
     $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
-    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 FourThree boot.sh /usr/bin/runasroot"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -h -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 boot.sh FourThree kloader_ios5 /usr/bin/runasroot"
     log "Running uicache"
     $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
 }
@@ -9039,7 +9109,7 @@ device_fourthree_check() {
         return 1
     fi
     log "Checking if Step 2 is complete"
-    check="$($ssh -p $ssh_port root@127.0.0.1 "ls /dev/disk0s3")"
+    check="$($ssh -p $ssh_port root@127.0.0.1 "ls /dev/disk0s3 2>/dev/null")"
     if [[ $check != "/dev/disk0s3" ]]; then
         if [[ $opt == 2 ]]; then
             return 1
@@ -9066,9 +9136,9 @@ device_fourthree_check() {
 
 device_backup_create() {
     device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
-    mkdir -p $device_backup
     print "* A backup of your device will be created using idevicebackup2. Please see the notes above."
     pause
+    mkdir -p $device_backup
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     if [[ -n $dir_env ]]; then
