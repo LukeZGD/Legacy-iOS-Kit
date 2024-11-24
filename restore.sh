@@ -8144,6 +8144,9 @@ menu_other() {
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
+            #if [[ $device_type != "iPod2,1" ]]; then
+            #    menu_items+=("Just Boot")
+            #fi
             case $device_proc in
                 [56] ) menu_items+=("Send Pwned iBSS");;
                 *    ) menu_items+=("Enter pwnDFU Mode");;
@@ -8851,8 +8854,10 @@ menu_justboot() {
                 menu_ipsw_browse
                 ipsw_justboot_path="$ipsw_path"
                 vers="$device_target_build"
+                device_rd_build="$vers"
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_justboot_bootargs;;
+            "Just Boot" ) mode="device_justboot";;
             "Go Back" ) back=1;;
         esac
     done
