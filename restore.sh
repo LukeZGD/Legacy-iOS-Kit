@@ -5638,7 +5638,7 @@ device_ramdisk() {
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v amfi=0xff cs_enforcement_disable=1"
             device_boot4=1
         else
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "$device_justboot_bootargs"
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "$device_bootargs"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
@@ -5647,7 +5647,7 @@ device_ramdisk() {
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
             if [[ $1 == "justboot" ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "$device_justboot_bootargs"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "$device_bootargs"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             fi
@@ -6486,7 +6486,7 @@ menu_appmanage() {
 }
 
 menu_datamanage() {
-    local menu_items
+    local menu_items=()
     local selected
     local back
 
@@ -6494,14 +6494,25 @@ menu_datamanage() {
     print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
     print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
     print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
-    print "* Note 3: Limited support for backups. Better use iCloud Backups instead"
+    print "* Note 3: You may need to select Pair Device first to get some options working."
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
-    if [[ -z $ifuse ]]; then
-        warn "ifuse not installed. Mount Device options will not work. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
+    if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
+        warn "Device is on lower than iOS 4. Backup and Restore options are not available."
+    else
+        menu_items+=("Backup" "Restore")
     fi
+    if [[ -z $ifuse ]]; then
+        warn "ifuse not installed. Mount Device options are not available. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
+    else
+        menu_items+=("Mount Device" "Mount Device (Raw File System)" "Unmount Device")
+    fi
+    menu_items+=("Connect to SSH" "Cydia App Install")
+    case $device_det in
+        [91] ) menu_items+=("Erase All Content and Settings");;
+    esac
+    menu_items+=("Pair Device" "Go Back")
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Backup" "Restore" "Mount Device" "Mount Device (Raw File System)" "Unmount Device" "Connect to SSH" "Cydia App Install" "Erase All Content and Settings" "Go Back")
         echo
         print " > Main Menu > Data Management"
         input "Select an option:"
@@ -6511,10 +6522,6 @@ menu_datamanage() {
         done
         case $selected in
             "Go Back" ) back=1;;
-            *"ount"*  ) :;;
-            * ) device_pair;;
-        esac
-        case $selected in
             "Backup"  ) mode="device_backup_create";;
             "Restore" ) menu_backup_restore;;
             "Erase All Content and Settings" ) mode="device_erase";;
@@ -6532,6 +6539,7 @@ menu_datamanage() {
                 print "* Reboot your device after transferring the .deb files to start the installation."
                 echo
             ;;
+            "Pair Device" ) device_pair;;
         esac
     done
 }
@@ -6588,9 +6596,6 @@ menu_fourthree() {
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
         print "* Please read the README here: https://github.com/LukeZGD/FourThree-iPad2"
-        if [[ $device_type != "iPad2,1" ]]; then
-            warn "FourThree is known to have issues with cellular iPad 2 devices."
-        fi
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
@@ -8811,12 +8816,12 @@ menu_justboot() {
         fi
         menu_items+=("Go Back")
         menu_print_info
-        print " > Main Menu > Other Utilities > Just Boot"
+        print " > Main Menu > Just Boot"
         print "* You are about to do a tethered boot."
         print "* To know more about build version, go here: https://theapplewiki.com/wiki/Firmware"
         echo
         if [[ -n $ipsw_justboot_path ]]; then
-            print "* Selected IPSW: $ipsw_justboot_path"
+            print "* Selected IPSW: $ipsw_justboot_path.ipsw"
             print "* IPSW Version: $device_target_vers-$device_target_build"
         elif [[ -n $vers ]]; then
             print "* Build Version entered: $vers"
@@ -8824,8 +8829,8 @@ menu_justboot() {
             print "* Enter build version or select IPSW to continue"
         fi
         echo
-        if [[ -n $device_justboot_bootargs ]]; then
-            print "* Custom Bootargs: $device_justboot_bootargs"
+        if [[ -n $device_bootargs ]]; then
+            print "* Custom Bootargs: $device_bootargs"
         else
             print "* You may enter custom bootargs (optional, experimental option)"
             print "* Default Bootargs: -v pio-error=0"
@@ -8856,7 +8861,7 @@ menu_justboot() {
                 vers="$device_target_build"
                 device_rd_build="$vers"
             ;;
-            "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_justboot_bootargs;;
+            "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Just Boot" ) mode="device_justboot";;
             "Go Back" ) back=1;;
         esac
@@ -8864,8 +8869,8 @@ menu_justboot() {
 }
 
 device_justboot() {
-    if [[ -z $device_justboot_bootargs ]]; then
-        device_justboot_bootargs="-v pio-error=0"
+    if [[ -z $device_bootargs ]]; then
+        device_bootargs="-v pio-error=0"
     fi
     device_ramdisk justboot
 }
