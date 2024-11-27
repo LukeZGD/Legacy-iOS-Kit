@@ -1834,7 +1834,7 @@ device_ipwndfu() {
     local pyenv=$(command -v pyenv 2>/dev/null)
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
-    if [[ -z "$pyenv" && -e "$HOME.pyenv/bin/pyenv" ]]; then
+    if [[ -z "$pyenv" && -e "$HOME/.pyenv/bin/pyenv" ]]; then
         pyenv="$HOME/.pyenv/bin/pyenv"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
