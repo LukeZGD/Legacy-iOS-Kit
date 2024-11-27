@@ -1832,10 +1832,10 @@ device_ipwndfu() {
     local tool_pwned=0
     local python2=$(command -v python2 2>/dev/null)
     local pyenv=$(command -v pyenv 2>/dev/null)
-    local pyenv2=~/.pyenv/versions/2.7.18/bin/python2
+    local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
-    if [[ -z $pyenv && -e ~/.pyenv/bin/pyenv ]]; then
-        pyenv=~/.pyenv/bin/pyenv
+    if [[ -z "$pyenv" && -e "$HOME.pyenv/bin/pyenv" ]]; then
+        pyenv="$HOME/.pyenv/bin/pyenv"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
         python2="/usr/bin/python"
@@ -1843,30 +1843,30 @@ device_ipwndfu() {
         print "* You may also install python2 from pyenv if something is wrong with system python2"
         print "* Install pyenv by running: curl https://pyenv.run | bash"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-    elif [[ -n $python2 && $device_sudoloop == 1 ]]; then
-        python2="sudo $python2"
-    elif [[ -z $python2 && ! -e $pyenv2 ]]; then
+    elif [[ -n "$python2" && $device_sudoloop == 1 ]]; then
+        p2_sudo="sudo"
+    elif [[ -z "$python2" && ! -e "$pyenv2" ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-        if [[ -z $pyenv ]]; then
+        if [[ -z "$pyenv" ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
             print "* Install pyenv by running: curl https://pyenv.run | bash"
             log "Installing pyenv"
             curl https://pyenv.run | bash
-            pyenv=~/.pyenv/bin/pyenv
-            if [[ ! -e $pyenv ]]; then
+            pyenv="$HOME/.pyenv/bin/pyenv"
+            if [[ ! -e "$pyenv" ]]; then
                 error "Cannot detect pyenv, its installation may have failed." \
                 "* Try installing pyenv manually before retrying."
             fi
         fi
         log "Installing python2 using pyenv"
         print "* This may take a while, but should not take longer than a few minutes."
-        $pyenv install 2.7.18
-        if [[ ! -e $pyenv2 ]]; then
+        "$pyenv" install 2.7.18
+        if [[ ! -e "$pyenv2" ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
             print "* Try installing pyenv and/or python2 manually:"
             print "    pyenv:   > curl https://pyenv.run | bash"
-            print "    python2: > $pyenv install 2.7.18"
+            print "    python2: > \"$pyenv\" install 2.7.18"
             if [[ $distro == "fedora-atomic" ]]; then
                 print "* For Fedora Atomic, you will also need to set up toolbox and build environment."
                 print "* Follow the commands here under Fedora Silverblue: https://github.com/pyenv/pyenv/wiki#suggested-build-environment"
@@ -1875,13 +1875,12 @@ device_ipwndfu() {
             error "Cannot detect python2 for ipwndfu, cannot continue."
         fi
     fi
-    if [[ -e $pyenv2 ]]; then
+    if [[ -e "$pyenv2" ]]; then
         log "python2 from pyenv detected, this will be used"
-        python2=
         if [[ $device_sudoloop == 1 ]]; then
-            python2="sudo "
+            p2_sudo="sudo"
         fi
-        python2+="$pyenv2"
+        python2="$pyenv2"
     fi
 
     mkdir ../saved/ipwndfu 2>/dev/null
@@ -1906,16 +1905,16 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
     fi
-    if [[ $platform == "macos" && ! -e ~/lib/libusb-1.0.dylib ]]; then
-        if [[ -e ~/lib && -e ~/lib.bak ]]; then
-            rm -rf ~/lib
-        elif [[ -e ~/lib ]]; then
-            mv ~/lib ~/lib.bak
+    if [[ $platform == "macos" && ! -e "$HOME/lib/libusb-1.0.dylib" ]]; then
+        if [[ -e "$HOME/lib" && -e "$HOME/lib.bak" ]]; then
+            rm -rf "$HOME/lib"
+        elif [[ -e "$HOME/lib" ]]; then
+            mv "$HOME/lib" "$HOME/lib.bak"
         fi
         if [[ -e /opt/local/lib/libusb-1.0.dylib ]]; then
-            ln -sf /opt/local/lib ~/lib
+            ln -sf /opt/local/lib "$HOME/lib"
         elif [[ -e /opt/homebrew/lib/libusb-1.0.dylib ]]; then
-            ln -sf /opt/homebrew/lib ~/lib
+            ln -sf /opt/homebrew/lib "$HOME/lib"
         fi
     fi
 
@@ -1923,7 +1922,7 @@ device_ipwndfu() {
     case $1 in
         "send_ibss" )
             log "Sending iBSS using ipwndfu..."
-            $python2 ipwndfu -l pwnediBSS
+            $p2_sudo "$python2" ipwndfu -l pwnediBSS
             tool_pwned=$?
             rm pwnediBSS
             if [[ $tool_pwned != 0 ]]; then
@@ -1940,7 +1939,7 @@ device_ipwndfu() {
 
         "pwn" )
             log "Placing device to pwnDFU Mode using ipwndfu"
-            $python2 ipwndfu -p
+            $p2_sudo "$python2" ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
                 if (( device_proc >= 6 )) && [[ $tool_pwned != 2 ]]; then
@@ -1968,7 +1967,7 @@ device_ipwndfu() {
 
         "rmsigchks" )
             log "Running rmsigchks..."
-            $python2 rmsigchks.py
+            $p2_sudo "$python2" rmsigchks.py
         ;;
 
         "alloc8" )
@@ -1977,7 +1976,7 @@ device_ipwndfu() {
                 "../$dir/pzb" -g "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" -o n88ap-iBSS-4.3.5.img3 http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw
             fi
             log "Installing alloc8 to device"
-            $python2 ipwndfu -x
+            $p2_sudo "$python2" ipwndfu -x
             if [[ $platform == "macos" ]]; then
                 print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
             fi
@@ -9345,7 +9344,10 @@ if [[ $othertmp != 0 ]]; then
     print "* There might be other Legacy iOS Kit instance(s) running, or residual tmp folder(s) not deleted."
     print "* Running multiple instances is not fully supported and can cause unexpected behavior."
     print "* It is recommended to only use a single instance and/or delete all existing \"tmp\" folders in your Legacy iOS Kit folder before continuing."
-    pause
+    read -p "$(input "Select Y to remove all tmp folders, N to run as is (Y/n) ")" opt
+    if [[ $opt != 'N' && $opt != 'n' ]]; then
+        rm -r "$(dirname "$0")/tmp"*
+    fi
 fi
 
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
