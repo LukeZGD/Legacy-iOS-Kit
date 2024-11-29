@@ -105,6 +105,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
 
 For 64-bit checkm8 devices compatible with pwned restores:
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
+    --use-pwndfu              Enable futurerestore pwned restore option
 
     * Default IPSW path: <script location>/<name of IPSW file>.ipsw
     * Default SHSH path: <script location>/saved/shsh/<name of SHSH file>.shsh(2)
@@ -2705,7 +2706,9 @@ ipsw_prepare_jailbreak() {
                     fi
                 ;;
                 4.2.[8761] )
-                    if [[ $device_type != "iPhone1,2" ]]; then
+                    if [[ $device_type == "iPhone1,2" ]]; then
+                        JBFiles[2]=
+                    else
                         ExtraArgs+=" -punchd"
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                     fi
@@ -3294,7 +3297,9 @@ ipsw_prepare_bundle() {
         if [[ $vers != "3"* && $vers != "4"* ]] || [[ $device_type == "iPad1,1" || $device_type == "iPad2"* ]]; then
             ipsw_prepare_keys iBEC $1
         fi
-        if [[ $device_proc != 1 ]]; then
+        if [[ $device_proc == 1 && $device_target_vers != "4.2.1" ]]; then
+            :
+        else
             ipsw_prepare_keys RestoreDeviceTree $1
             ipsw_prepare_keys RestoreLogo $1
         fi
@@ -3303,6 +3308,8 @@ ipsw_prepare_bundle() {
                 [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
                 * ) ipsw_prepare_keys KernelCache $1;;
             esac
+        elif [[ $device_proc == 1 && $device_target_vers == "4.2.1" ]]; then
+            ipsw_prepare_keys RestoreKernelCache $1
         elif [[ $device_proc != 1 && $device_target_vers != "3.0"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
         fi
@@ -4363,23 +4370,15 @@ ipsw_prepare_powder() {
 }
 
 ipsw_prepare_patchcomp() {
-    local path="$all_flash"
+    local path="$all_flash/"
     local name="LLB.${device_model}ap.RELEASE"
+    local name2
     local ext="img3"
     local patch
     local iv
     local key
-    if [[ $1 == "WTF2" ]]; then
-        path="Firmware/dfu"
-        name="WTF.s5l8900xall.RELEASE"
-        ext="dfu"
-    elif [[ $1 == "iBEC" ]]; then
-        path="Firmware/dfu"
-        name="iBEC.${device_model}ap.RELEASE"
-        ext="dfu"
-    elif [[ $1 == "iBoot" ]]; then
-        name="iBoot.${device_model}ap.RELEASE"
-    elif [[ $1 == "Kernelcache" ]]; then
+
+    if [[ $1 == "Kernelcache" ]]; then
         path=
         name="kernelcache.release"
         ext="s5l8900x"
@@ -4388,48 +4387,102 @@ ipsw_prepare_patchcomp() {
         fi
         patch="../resources/patch/$name.$ext.p2"
         log "Patch $1"
-        unzip -o -j "$ipsw_custom.ipsw" $name.$ext
+        unzip -o -j temp.ipsw $name.$ext
         mv $name.$ext kc.orig
         $bspatch kc.orig $name.$ext $patch.patch
-        zip -r0 "$ipsw_custom.ipsw" $name.$ext
+        cp $name
+        zip -r0 temp.ipsw $name.$ext
         return
+    fi
+
+    if [[ $1 == "WTF2" ]]; then
+        path="Firmware/dfu/"
+        name="WTF.s5l8900xall.RELEASE"
+        ext="dfu"
+    elif [[ $1 == "iBoot" ]]; then
+        name="iBoot.${device_model}ap.RELEASE"
+    elif [[ $1 == "iB"* ]]; then
+        path="Firmware/dfu/"
+        name="$1.${device_model}ap.RELEASE"
+        ext="dfu"
     elif [[ $1 == "RestoreRamdisk" ]]; then
         path=
         name="018-6494-014"
         iv=25e713dd5663badebe046d0ffa164fee
         key=7029389c2dadaaa1d1e51bf579493824
-        if [[ $device_target_vers == "4.1" ]]; then
+        if [[ $device_target_vers == "4"* ]]; then
             name="018-7079-079"
             iv=a0fc6ca4ef7ef305d975e7f881ddcc7f
             key=18eab1ba646ae018b013bc959001fbde
-        elif [[ $device_target_vers == "4.2.1" ]]; then
-            name="038-0029-002"
-            iv=673d874f06e87e018adbe8a34425df19
-            key=91fd0e11469cafd56cff8ac906e54b93
+            if [[ $device_target_vers == "4.2.1" ]]; then
+                name41="$name"
+                name="038-0029-002"
+            fi
         fi
         ext="dmg"
+    elif [[ $1 == "RestoreDeviceTree" ]]; then
+        name="DeviceTree.${device_model}ap"
+        ext="img3"
+    elif [[ $1 == "RestoreKernelCache" ]]; then
+        path=
+        name="kernelcache.release"
+        ext="$device_model"
     fi
     patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle/$name.patch"
+    local saved_path="../saved/$device_type/8B117"
     if [[ $1 == "RestoreRamdisk" ]]; then
         local ivkey
         if [[ $device_target_vers == "4"* || $device_type == *"1,1" ]]; then
             ivkey="-iv $iv -k $key"
         fi
         log "Patch $1"
-        unzip -o -j "$ipsw_path.ipsw" $name.$ext
+        if [[ $device_target_vers == "4.2.1" ]]; then
+            mkdir -p $saved_path 2>/dev/null
+            if [[ -s $saved_path/$name41.$ext ]]; then
+                cp $saved_path/$name41.$ext $name.$ext
+            else
+                ipsw_get_url 8B117
+                "$dir/pzb" -g $name41.$ext -o $name.$ext "$ipsw_url"
+                cp $name.$ext $saved_path/$name41.$ext
+            fi
+        else
+            unzip -o -j "$ipsw_path.ipsw" $name.$ext
+        fi
         mv $name.$ext rd.orig
         "$dir/xpwntool" rd.orig rd.dec -iv $iv -k $key
         $bspatch rd.dec rd.patched "$patch"
         "$dir/xpwntool" rd.patched $name.$ext -t rd.orig $ivkey
-        zip -r0 "$ipsw_custom.ipsw" $name.$ext
+        zip -r0 temp.ipsw $name.$ext
         return
     fi
     log "Patch $1"
-    unzip -o -j "$ipsw_path.ipsw" $path/$name.$ext
+    if [[ $device_target_vers == "4.2.1" ]] && [[ $1 == "RestoreDeviceTree" || $1 == "RestoreKernelCache" ]]; then
+        mkdir -p $saved_path 2>/dev/null
+        if [[ -s $saved_path/$name.$ext ]]; then
+            cp $saved_path/$name.$ext $name.$ext
+        else
+            ipsw_get_url 8B117
+            "$dir/pzb" -g ${path}$name.$ext -o $name.$ext "$ipsw_url"
+            cp $name.$ext $saved_path/$name.$ext
+        fi
+        mkdir Downgrade 2>/dev/null
+        if [[ $1 == "RestoreKernelCache" ]]; then
+            local ivkey="-iv 7238dcea75bf213eff209825a03add51 -k 0295d4ef87b9db687b44f54c8585d2b6"
+            "$dir/xpwntool" $name.$ext kernelcache $ivkey
+            $bspatch kernelcache kc.patched ../resources/patch/$name.$ext.patch
+            "$dir/xpwntool" kc.patched Downgrade/$1 -t $name.$ext $ivkey
+        else
+            mv $name.$ext Downgrade/$1
+        fi
+        zip -r0 temp.ipsw Downgrade/$1
+        return
+    else
+        unzip -o -j "$ipsw_path.ipsw" ${path}$name.$ext
+    fi
     $bspatch $name.$ext $name.patched $patch
     mkdir -p $path
-    mv $name.patched $path/$name.$ext
-    zip -r0 "$ipsw_custom.ipsw" $path/$name.$ext
+    mv $name.patched ${path}$name.$ext
+    zip -r0 temp.ipsw ${path}$name.$ext
 }
 
 ipsw_prepare_s5l8900() {
@@ -4442,7 +4495,7 @@ ipsw_prepare_s5l8900() {
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     elif [[ $device_target_vers == "4.2.1" ]]; then
         rname="038-0029-002.dmg"
-        sha1E="a8914d2f7f0dddc41eb17f197d0633d7bcb9f6b4"
+        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
         ipsw_url+="iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
         sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
@@ -4504,6 +4557,7 @@ ipsw_prepare_s5l8900() {
 
     ipsw_prepare_jailbreak old
 
+    mv "$ipsw_custom.ipsw" temp.ipsw
     ipsw_prepare_patchcomp LLB
     ipsw_prepare_patchcomp iBoot
     ipsw_prepare_patchcomp RestoreRamdisk
@@ -4514,6 +4568,13 @@ ipsw_prepare_s5l8900() {
         ipsw_prepare_patchcomp WTF2
         ipsw_prepare_patchcomp iBEC
     fi
+
+    if [[ $device_target_vers == "4.2.1" ]]; then
+        ipsw_prepare_patchcomp iBSS
+        ipsw_prepare_patchcomp RestoreDeviceTree
+        ipsw_prepare_patchcomp RestoreKernelCache
+    fi
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_custom() {
@@ -4527,6 +4588,7 @@ ipsw_prepare_custom() {
 
     ipsw_prepare_jailbreak old
 
+    mv "$ipsw_custom.ipsw" temp.ipsw
     if [[ $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
             4.2.1 | 4.1 | 3.1.3 ) :;;
@@ -4541,7 +4603,7 @@ ipsw_prepare_custom() {
                 unzip -o -j "$ipsw_path.ipsw" kernelcache.release.s5l8920x
                 mv kernelcache.release.s5l8920x kernelcache.orig
                 $bspatch kernelcache.orig kernelcache.release.s5l8920x ../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_target_vers}_${device_target_build}.bundle/kernelcache.release.patch
-                zip -r0 "$ipsw_custom.ipsw" kernelcache.release.s5l8920x
+                zip -r0 temp.ipsw kernelcache.release.s5l8920x
             ;;
             * )
                 ipsw_prepare_patchcomp LLB
@@ -4557,10 +4619,11 @@ ipsw_prepare_custom() {
                 patch_iboot -b "$ExtraArgs3"
                 mkdir -p $path
                 mv $name $path/$name
-                zip -r0 "$ipsw_custom.ipsw" $path/$name
+                zip -r0 temp.ipsw $path/$name
             ;;
         esac
     fi
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_extract() {
@@ -4669,8 +4732,9 @@ restore_idevicerestore() {
     ipsw_extract custom
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    elif [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
-         [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
+    fi
+    if [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
+       [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
             patch_ibss
             log "Sending iBSS..."
@@ -4706,7 +4770,7 @@ restore_idevicerestore() {
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -4750,8 +4814,8 @@ restore_futurerestore() {
     else
         ExtraArr+=("-b" "$restore_baseband" "-p" "$restore_manifest")
     fi
+    # sep args for 64bit
     if [[ -n $restore_sep ]]; then
-        # sep args for 64bit
         ExtraArr+=("-s" "$restore_sep" "-m" "$restore_manifest")
     fi
     if (( device_proc < 7 )); then
@@ -4776,7 +4840,7 @@ restore_futurerestore() {
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
-            warn "futurerestore nightly is not supported on $platform_arch, cannot continue. x86_64 only."
+            warn "futurerestore nightly is not supported on Linux $platform_arch, cannot continue. x86_64 only."
             return
         fi
         log "Checking for futurerestore updates..."
@@ -4813,8 +4877,8 @@ restore_futurerestore() {
             echo "$fr_latest" > ${futurerestore2}_version
         fi
     fi
+    # custom arg(s), either --use-pwndfu or --skip-blob, or both
     if [[ -n "$1" ]]; then
-        # custom arg, either --use-pwndfu or --skip-blob
         ExtraArr+=("$1")
     fi
     if [[ -n "$2" ]]; then
@@ -4887,7 +4951,7 @@ restore_latest() {
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            [34]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+            [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
         esac
     fi
 }
@@ -5206,7 +5270,7 @@ ipsw_prepare() {
 }
 
 restore_usepwndfu64_option() {
-    if [[ $device_target_vers == "$device_latest_vers" ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" || $restore_usepwndfu64 == 1 ]]; then
         return
     elif [[ $restore_useskipblob == 1 ]]; then
         log "skip-blob flag detected, Pwned Restore Option enabled."
@@ -5848,7 +5912,7 @@ device_ramdisk() {
             fi
             log "Cool, done and jailbroken (hopefully)"
             case $vers in
-                4* | 3* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
+                [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
             esac
             return
         ;;
@@ -5942,9 +6006,15 @@ device_ramdisk_ios3exploit() {
     fi
 }
 
+device_ramdisk_datetime() {
+    log "Running command to Update DateTime"
+    $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
+}
+
 device_ramdisk_iosvers() {
     device_vers=
     device_build=
+    device_ramdisk_datetime
     if (( device_proc < 7 )); then
         log "Mounting root filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
@@ -6179,7 +6249,7 @@ menu_ramdisk() {
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
             "remove4" ) device_ramdisk_setnvram;;
-            "datetime" ) $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)";;
+            "datetime" ) device_ramdisk_datetime;;
         esac
     done
 }
@@ -6380,6 +6450,13 @@ menu_print_info() {
         fi
         if [[ $ipsw_skip_first == 1 ]]; then
             warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
+        fi
+    elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+        if [[ $restore_useskipblob == 1 ]]; then
+            warn "skip-blob flag detected. futurerestore will have --skip-blob enabled."
+        fi
+        if [[ $restore_usepwndfu64 == 1 ]]; then
+            warn "use-pwndfu flag detected. futurerestore will have --use-pwndfu enabled."
         fi
     fi
     if [[ -n $device_build ]]; then
@@ -6907,9 +6984,7 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        if [[ $device_type == "iPhone1,2" ]]; then
-            : # dont show 4.2.1 option for 3g
-        elif (( device_proc < 7 )); then
+        if (( device_proc < 7 )); then
             menu_items+=("Latest iOS ($device_latest_vers)")
         elif [[ $platform == "linux" ]]; then
             if (( device_proc > 10 )); then
@@ -7429,6 +7504,7 @@ menu_ipsw() {
                 fi
                 if (( device_proc >= 7 )); then
                     print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
+                    print "* The skip-blob flag can also help if the restore fails with validated blobs"
                 fi
                 echo
 
@@ -9319,6 +9395,7 @@ for i in "$@"; do
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
         "--skip-first" ) ipsw_skip_first=1;;
         "--skip-blob" ) restore_useskipblob=1;;
+        "--use-pwndfu" ) restore_usepwndfu64=1;;
         "--dfuhelper" ) main_argmode="device_dfuhelper";;
         "--exit-recovery" ) main_argmode="exitrecovery";;
     esac

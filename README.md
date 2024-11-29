@@ -36,6 +36,7 @@
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
 - [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase device
+- [Device Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Device-Management) - Export data and battery info, shutdown/restart device, pair device
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -109,8 +110,7 @@
     - For jailbreaking support, see below
 - Jailbreaking for 32-bit devices and versions support:
     - iPhone 2G and touch 1 - 3.1.3 only
-    - iPhone 3G - 4.1 and 3.1.3
-    - iPod touch 2 - 4.2.1, 4.1, and 3.1.3
+    - iPhone 3G and touch 2 - 4.2.1, 4.1, and 3.1.3
     - iPhone 3GS - All versions are supported (all release versions from 3.0 to 6.1.6)
     - Other devices - All versions from 3.1.3 to 9.3.4 are supported, with some exceptions
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
