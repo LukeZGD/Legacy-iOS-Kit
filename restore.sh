@@ -4385,15 +4385,11 @@ ipsw_prepare_patchcomp() {
         path=
         name="kernelcache.release"
         ext="s5l8900x"
-        if [[ $device_target_vers == "4"* ]]; then
-            return
-        fi
         patch="../resources/patch/$name.$ext.p2"
         log "Patch $1"
         unzip -o -j temp.ipsw $name.$ext
         mv $name.$ext kc.orig
         $bspatch kc.orig $name.$ext $patch.patch
-        cp $name
         zip -r0 temp.ipsw $name.$ext
         return
     fi
@@ -4563,18 +4559,16 @@ ipsw_prepare_s5l8900() {
     ipsw_prepare_patchcomp LLB
     ipsw_prepare_patchcomp iBoot
     ipsw_prepare_patchcomp RestoreRamdisk
-    if [[ $device_target_vers != "4.1" ]]; then
-        ipsw_prepare_patchcomp Kernelcache
-    fi
     if [[ $device_target_vers == "4"* ]]; then
         ipsw_prepare_patchcomp WTF2
         ipsw_prepare_patchcomp iBEC
     fi
-
     if [[ $device_target_vers == "4.2.1" ]]; then
         ipsw_prepare_patchcomp iBSS
         ipsw_prepare_patchcomp RestoreDeviceTree
         ipsw_prepare_patchcomp RestoreKernelCache
+    elif [[ $device_target_vers == "3.1.3" ]]; then
+        ipsw_prepare_patchcomp Kernelcache
     fi
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
