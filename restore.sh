@@ -497,6 +497,7 @@ version_update() {
     local req
     read -p "$(input 'Do you want to update now? (Y/n): ')" opt
     if [[ $opt == 'n' || $opt == 'N' ]]; then
+        log "User selected N, cannot continue. Exiting."
         exit
     fi
     if [[ -d .git ]]; then
@@ -1097,6 +1098,7 @@ device_get_info() {
     if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
         log "Found an S5L8900 device in DFU mode. Please re-enter WTF mode for good measure."
         print "* Force restart your device and place it in normal or recovery mode, then run the script again."
+        print "* You may also use DFU Mode Helper (--dfuhelper) for entering WTF mode."
         exit
     fi
 
@@ -1476,6 +1478,7 @@ device_enter_mode() {
                     print "* The device needs to be in recovery/DFU mode before proceeding."
                     read -p "$(input 'Send device to recovery mode? (Y/n): ')" opt
                     if [[ $opt == 'n' || $opt == 'N' ]]; then
+                        log "User selected N, cannot continue. Exiting."
                         exit
                     fi
                 fi
@@ -4995,19 +4998,21 @@ restore_prepare_pwnrec64() {
 }
 
 device_buttons() {
-    local opt
+    local selection=("pwnDFU" "kDFU")
     if [[ $device_mode != "Normal" ]]; then
         device_enter_mode pwnDFU
         return
     fi
+    input "pwnDFU/kDFU Mode Option"
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
-    print "* Select Y for pwnDFU mode, N for kDFU mode. Select Y if unsure."
-    read -p "$(input 'Are both your home and power buttons working properly? (Y/n): ')" opt
-    if [[ $opt != 'N' && $opt != 'n' ]]; then
-        device_enter_mode pwnDFU
-    else
-        device_enter_mode kDFU
-    fi
+    print "* Selecting 1 (pwnDFU) is recommended. Both your home and power buttons must be working properly for DFU mode."
+    print "* Selecting 2 (kDFU) is for those that prefer the jailbroken method instead (have OpenSSH installed)."
+    input "Select your option:"
+    select opt2 in "${selection[@]}"; do
+        case $opt2 in
+            *"DFU" ) device_enter_mode $opt2; break;;
+        esac
+    done
 }
 
 restore_prepare() {
@@ -8337,7 +8342,7 @@ device_alloc8() {
 device_jailbreak_confirm() {
     if [[ $device_proc == 1 ]]; then
         print "* The \"Jailbreak Device\" option is not supported for this device."
-        print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.1 or 3.1.3, then enable the jailbreak option."
+        print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.2.1, 4.1, or 3.1.3, then enable the jailbreak option."
         pause
         return
     elif [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
