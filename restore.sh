@@ -67,7 +67,7 @@ clean_usbmuxd() {
         return
     fi
     sudo killall usbmuxd usbmuxd2 2>/dev/null
-    if [[ $(command -v systemctl 2>/dev/null) ]]; then
+    if [[ $(command -v systemctl) ]]; then
         sleep 1
         sudo systemctl restart usbmuxd
     fi
@@ -279,7 +279,7 @@ set_tool_paths() {
             fi
             trap "clean_usbmuxd" EXIT
             if [[ $othertmp == 0 ]]; then
-                if [[ $(command -v systemctl 2>/dev/null) ]]; then
+                if [[ $(command -v systemctl) ]]; then
                     sudo systemctl stop usbmuxd
                 fi
                 #sudo killall usbmuxd 2>/dev/null
@@ -465,7 +465,7 @@ install_depends() {
     echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" && $distro != "fedora-atomic" ]]; then
         # from linux_fix and libirecovery-rules by Cryptiiiic
-        if [[ $(command -v systemctl 2>/dev/null) ]]; then
+        if [[ $(command -v systemctl) ]]; then
             sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
         fi
         sudo cp 39-libirecovery.rules /etc/udev/rules.d/39-libirecovery.rules
@@ -1466,6 +1466,7 @@ device_enter_mode() {
             log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
             print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
             print "* You can enter WTF mode by doing the DFU mode procedure."
+            device_dfuhelper norec WTFreal
             device_find_mode WTFreal 100
         ;;
 
@@ -1479,8 +1480,7 @@ device_enter_mode() {
                     fi
                 fi
                 log "Entering recovery mode..."
-                print "* If the device does not enter recovery mode automatically:"
-                print "* Press Ctrl+C to cancel for now and try putting the device in DFU/Recovery mode manually"
+                print "* If the device does not enter recovery mode automatically, press Ctrl+C to cancel and try putting the device in DFU/Recovery mode manually"
                 "$dir/ideviceenterrecovery" "$device_udid" >/dev/null
                 device_find_mode Recovery 50
             fi
@@ -1831,8 +1831,8 @@ device_pwnerror() {
 
 device_ipwndfu() {
     local tool_pwned=0
-    local python2=$(command -v python2 2>/dev/null)
-    local pyenv=$(command -v pyenv 2>/dev/null)
+    local python2="$(command -v python2)"
+    local pyenv="$(command -v pyenv)"
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
 
     if [[ -z "$pyenv" && -e "$HOME/.pyenv/bin/pyenv" ]]; then
@@ -2270,12 +2270,12 @@ ipsw_preference_set() {
         print "* This option is enabled by default (Y). Select this option if unsure."
         if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
             warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
-            print "* To boot jailbroken later, go to: Just Boot"
+            print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
         elif [[ $device_type == "iPhone3,3" ]]; then
             case $device_target_vers in
                 4.2.9 | 4.2.10 )
                     warn "This will be a semi-tethered jailbreak."
-                    print "* To boot jailbroken later, go to: Just Boot"
+                    print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
                 ;;
             esac
         fi
@@ -3401,17 +3401,17 @@ ipsw_prepare_32bit() {
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
+    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
+        daibutsu="daibutsu"
+        ExtraArgs+=" -daibutsu"
+        cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
+        ipsw_prepare_rebootsh
     elif [[ $ipsw_nskip == 1 ]]; then
         :
     elif [[ $ipsw_jailbreak != 1 && $device_target_build != "9A406" && # 9a406 needs custom ipsw
             $device_proc != 4 && $device_actrec != 1 && $device_target_tethered != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
-    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
-        daibutsu="daibutsu"
-        ExtraArgs+=" -daibutsu"
-        cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
-        ipsw_prepare_rebootsh
     fi
     ipsw_prepare_usepowder=1
 
@@ -4372,7 +4372,7 @@ ipsw_prepare_powder() {
 ipsw_prepare_patchcomp() {
     local path="$all_flash/"
     local name="LLB.${device_model}ap.RELEASE"
-    local name2
+    local name41
     local ext="img3"
     local patch
     local iv
@@ -4408,6 +4408,7 @@ ipsw_prepare_patchcomp() {
     elif [[ $1 == "RestoreRamdisk" ]]; then
         path=
         name="018-6494-014"
+        ext="dmg"
         iv=25e713dd5663badebe046d0ffa164fee
         key=7029389c2dadaaa1d1e51bf579493824
         if [[ $device_target_vers == "4"* ]]; then
@@ -4419,10 +4420,8 @@ ipsw_prepare_patchcomp() {
                 name="038-0029-002"
             fi
         fi
-        ext="dmg"
     elif [[ $1 == "RestoreDeviceTree" ]]; then
         name="DeviceTree.${device_model}ap"
-        ext="img3"
     elif [[ $1 == "RestoreKernelCache" ]]; then
         path=
         name="kernelcache.release"
@@ -6604,7 +6603,7 @@ menu_datamanage() {
             "Mount Device" ) mkdir ../mount 2>/dev/null; $ifuse ../mount; log "Device (Media) should now be mounted on mount folder";;
             "Mount Device (Raw File System)" ) mkdir ../mount 2>/dev/null; $ifuse --root ../mount; log "Device (root) should now be mounted on mount folder";;
             "Unmount Device" ) log "Attempting to umount device from mount folder"; umount ../mount;;
-            "Connect to SSH" ) mode="device_ssh";;
+            "Connect to SSH" ) device_ssh;;
             "Cydia App Install" )
                 echo
                 print "* Cydia App Install: You need to have working AFC2 or SSH for transferring the .deb files to your device."
@@ -7654,12 +7653,6 @@ ipsw_print_warnings() {
                 print "* It is recommended to select 3.1 or newer instead."
             fi
         ;;
-        "iPhone1,2" )
-            if [[ $device_type == "iPhone1,2" && $device_target_vers == "4.2.1" ]]; then
-                warn "iOS 4.2.1 for iPhone1,2 will fail to restore with the jailbreak/hacktivate option."
-                print "* It is recommended to select 4.1 or 3.1.3 instead."
-            fi
-        ;;
     esac
 }
 
@@ -8224,9 +8217,9 @@ menu_other() {
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
-            #if [[ $device_type != "iPod2,1" ]]; then
-            #    menu_items+=("Just Boot")
-            #fi
+            if [[ $device_type != "iPod2,1" && $debug_mode == 1 ]]; then
+                menu_items+=("Just Boot")
+            fi
             case $device_proc in
                 [56] ) menu_items+=("Send Pwned iBSS");;
                 *    ) menu_items+=("Enter pwnDFU Mode");;
@@ -8250,12 +8243,11 @@ menu_other() {
                     ;;
                 esac
             else
-                menu_items+=("Get iOS Version")
+                menu_items+=("Get iOS Version" "Activation Records")
             fi
             case $device_type in
                 iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
             esac
-            menu_items+=("Activation Records")
         fi
         if [[ $device_mode != "none" ]]; then
             if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
@@ -8265,7 +8257,7 @@ menu_other() {
                 menu_items+=("SSH Ramdisk")
             fi
             if [[ $device_mode == "Normal" ]]; then
-                menu_items+=("Attempt Activation")
+                menu_items+=("Attempt Activation" "Activation Records")
             fi
             if [[ $device_mode != "DFU" ]]; then
                 menu_items+=("DFU Mode Helper")
@@ -8299,7 +8291,6 @@ menu_other() {
             "Install alloc8 Exploit" ) mode="device_alloc8";;
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
-            "Exit Recovery Mode" ) mode="exitrecovery";;
             "DFU Mode Helper" ) mode="enterdfu";;
             "Get iOS Version" ) mode="getversion";;
             "Enable Flags" ) menu_flags;;
@@ -8330,6 +8321,7 @@ device_ssh() {
     print "* For accessing data, note the following:"
     print "* Host: sftp://127.0.0.1 | User: $ssh_user | Password: <your password> (default is alpine) | Port: $ssh_port"
     $ssh -p $ssh_port ${ssh_user}@127.0.0.1
+    kill $iproxy_pid
 }
 
 device_alloc8() {
@@ -8374,13 +8366,13 @@ device_jailbreak_confirm() {
     log "Checking if your device and version is supported..."
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
         warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
-        print "* To boot jailbroken later, go to: Just Boot"
+        print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
         pause
     elif [[ $device_type == "iPhone3,3" ]]; then
         case $device_vers in
             4.2.9 | 4.2.10 )
                 warn "This will be a semi-tethered jailbreak."
-                print "* To boot jailbroken later, go to: Just Boot"
+                print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
                 pause
             ;;
         esac
@@ -8513,7 +8505,7 @@ device_dump() {
             dmp2="private/var/root/Library/Lockdown"
             case $device_vers in
                 [34567]* ) dmps="/$dmp2";;
-                8* ) dmps="/private/var/mobile/Library/mad";;
+                8* | 9.[012]* ) dmps="/private/var/mobile/Library/mad";;
                 * )
                     dmps="/private/var/containers/Data/System/*/Library/activation_records"
                     dmp2+="/activation_records"
@@ -8543,10 +8535,10 @@ device_dump() {
         device_sshpass
         if [[ $arg == "activation" ]]; then
             log "Creating $arg.tar"
-            $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /tmp/$dmp2; cp -R $dmps/* /tmp/$dmp2"
-            $ssh -p $ssh_port root@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
+            $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
+            $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
             log "Copying $arg.tar"
-            $scp -P $ssh_port root@127.0.0.1:/tmp/$arg.tar .
+            $scp -P $ssh_port ${ssh_user}@127.0.0.1:/tmp/$arg.tar .
             mv $arg.tar $arg-$device_ecid.tar
         else
             device_dumpbb
@@ -8659,7 +8651,7 @@ device_dumprd() {
     dmp2="root/Library/Lockdown"
     case $vers in
         [34567]* ) dmps="$dmp2";;
-        8* ) dmps="mobile/Library/mad";;
+        8* | 9.[012]* ) dmps="mobile/Library/mad";;
         * )
             dmps="containers/Data/System/*/Library/activation_records"
             dmp2+="/activation_records"
@@ -8773,7 +8765,7 @@ restore_customipsw() {
         echo
         print "* Note that you might need to restore twice, due to NOR flash."
         print "* For iPhone 2G/3G, the second restore may fail due to baseband."
-        print "* You can exit recovery mode after by going to: Other Utilities -> Exit Recovery Mode"
+        print "* You can exit recovery mode after by going to: Main Menu -> Exit Recovery Mode"
     fi
     pause
     menu_ipsw_browse custom
@@ -9337,6 +9329,13 @@ main() {
             print "    > ./restore.sh --disable-bbupdate"
         ;;
         "actrec" )
+            if (( device_proc >= 7 )); then
+                warn "Activation records dumping is experimental for 64-bit devices."
+                print "* It may not work on newer iOS versions and/or have incomplete files."
+                print "* For more info of the files, go here: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/a9ios9activation"
+                print "* You may also look into here: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
+                pause
+            fi
             device_dump activation
             log "Activation records dumping is done"
             if (( device_proc < 7 )); then
