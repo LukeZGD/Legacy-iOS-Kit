@@ -1630,7 +1630,6 @@ device_enter_mode() {
         "pwnDFU" )
             local irec_pwned
             local tool_pwned
-            local tool_ipwndfu
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -1707,6 +1706,10 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
+            if [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
+                tool_ipwndfu=1
+            fi
+
             if (( device_proc > 7 )); then
                 # A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
@@ -1720,7 +1723,7 @@ device_enter_mode() {
                 # also installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
+            elif [[ $tool_ipwndfu == 1 ]]; then
                 # A6 intel mac/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
@@ -1732,12 +1735,13 @@ device_enter_mode() {
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
                 print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
-                print "* If the first option does not work, try the other option(s)."
+                print "* If the first option does not work, try the other option and do multiple attempts."
+                print "* Note: Some Intel Macs may have better success rates with ipwndfu than ipwnder."
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
                     log "Placing device to pwnDFU mode using $opt2"
                     case $opt2 in
-                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; tool_ipwndfu=1; break;;
+                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
                         "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
                         "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
                         "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
@@ -1759,30 +1763,21 @@ device_enter_mode() {
                 tool_pwned=$?
             else
                 # A7 intel mac uses ipwnder32/ipwnder_lite
-                local selection=("ipwnder32" "ipwnder_lite")
+                local selection=("ipwnder32" "ipwnder_lite" "ipwndfu")
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
                 print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
                 print "* If the first option does not work, try many times and/or try the other option(s)."
+                print "* Note: Some Intel Macs have very low success rates for A7 checkm8."
                 input "Select your option:"
                 select opt2 in "${selection[@]}"; do
+                    log "Placing device to pwnDFU mode using $opt"
                     case $opt2 in
-                        "ipwnder32" ) opt="$ipwnder32 -p"; break;;
-                        * ) opt="${ipwnder}2 -p"; break;;
+                        "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?; break;;
+                        "ipwndfu" ) tool_ipwndfu=1; device_ipwndfu pwn; tool_pwned=$?; break;;
+                        * ) ${ipwnder}2 -p; tool_pwned=$?; break;;
                     esac
                 done
-                echo
-                log "Please read the message below:"
-                warn "If you have an older Mac with Core 2 Duo, success rates for A7 checkm8 are very low."
-                print "* Pwning using another Mac or iOS device using iPwnder Lite are better options if needed."
-                print "* For more details, read the \"Troubleshooting\" wiki page in GitHub"
-                print "* Troubleshooting links:"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting"
-                print "    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device"
-                echo
-                log "Placing device to pwnDFU mode using $opt"
-                $opt
-                tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
@@ -1794,7 +1789,7 @@ device_enter_mode() {
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
-            if [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" && $tool_ipwndfu == 1 ]]; then
+            if [[ $device_proc == 6 && $tool_ipwndfu == 1 ]]; then
                 device_ipwndfu send_ibss
                 return
             fi
@@ -1822,8 +1817,16 @@ device_pwnerror() {
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
             echo
         fi
-    elif [[ $platform == "macos" && $device_proc == 4 ]]; then
+    elif [[ $platform == "macos" && $tool_ipwndfu == 1 ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
+    elif [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
+        if [[ $device_proc == 4 || $device_proc == 6 ]]; then
+            error_msg+=$'\n* Try to do attempts with ipwndfu selected if ipwnder does not work.'
+        elif [[ $device_proc == 7 ]]; then
+            error_msg+=$'\n* Some Intel Macs have very low success rates for A7 checkm8.'
+            error_msg+=$'\n* Particularly Core 2 Duo Macs, but may include some newer Intel Macs as well.'
+            error_msg+=$'\n* Pwning using another Mac or iOS device using iPwnder Lite are better options if needed.'
+        fi
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -1946,7 +1949,7 @@ device_ipwndfu() {
             $p2_sudo "$python2" ipwndfu -p
             tool_pwned=$?
             if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
-                if (( device_proc >= 6 )) && [[ $tool_pwned != 2 ]]; then
+                if (( device_proc >= 6 )) && [[ $tool_pwned != 2 && $platform == "linux" ]]; then
                     log "You may see the langid error above. This is normal, let's try to make it work"
                     print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
                     log "Please read the message below:"
