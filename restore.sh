@@ -1744,7 +1744,7 @@ device_enter_mode() {
                         "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
                         "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
                         "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
-                        "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
+                        "ipwnder"            ) tool_ipwndfu=2; $ipwnder -d; tool_pwned=$?; break;;
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
@@ -1789,7 +1789,7 @@ device_enter_mode() {
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
-            if [[ $device_proc == 6 && $tool_ipwndfu == 1 ]]; then
+            if [[ $device_proc == 6 && $tool_ipwndfu == 2 ]]; then
                 device_ipwndfu send_ibss
                 return
             fi
@@ -1817,7 +1817,7 @@ device_pwnerror() {
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
             echo
         fi
-    elif [[ $platform == "macos" && $tool_ipwndfu == 1 ]]; then
+    elif [[ $platform == "macos" && -n $tool_ipwndfu ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     elif [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
         if [[ $device_proc == 4 || $device_proc == 6 ]]; then
