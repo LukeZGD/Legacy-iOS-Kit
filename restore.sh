@@ -4838,33 +4838,45 @@ restore_futurerestore() {
             ExtraArr+=("--set-nonce")
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
+        print "* Builds from here: https://github.com/LukeeGD/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
             warn "futurerestore nightly is not supported on Linux $platform_arch, cannot continue. x86_64 only."
             return
         fi
         log "Checking for futurerestore updates..."
         #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
-        local fr_latest="1a5317ce543e6f6c583b31e379775e36b0ac0916--"
-        local fr_current="$(cat ${futurerestore2}_version 2>/dev/null)"
+        local fr_latest
+        local fr_branch
+        local device_det3=$(echo "$device_target_vers" | cut -c -2)
+        if (( device_det3 > 15 )); then
+            fr_latest="21990ed74bff49937de8185d1209d8bace51b18f"
+            fr_branch="dev"
+        else
+            fr_latest="cb5376bfd1b5deba512a80578b15daf47257262b"
+            fr_branch="main"
+        fi
+        local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
+        log "futurerestore $fr_branch branch will be used for this restore"
         if [[ $fr_latest != "$fr_current" ]]; then
             log "futurerestore nightly update detected, downloading."
-            rm $futurerestore2
+            rm -f ${futurerestore2}-${fr_branch}*
         fi
-        if [[ ! -e $futurerestore2 ]]; then
-            local url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/"
+        if [[ ! -e ${futurerestore2}-${fr_branch} ]]; then
+            local url="https://github.com/LukeeGD/futurerestore/releases/download/latest/"
             local file="futurerestore-"
             case $platform in
-                "macos" ) file+="macOS-RELEASE.zip";;
-                "linux" ) file+="Linux-x86_64-RELEASE.zip";;
+                "macos" ) file+="macOS-RELEASE-${fr_branch}.zip";;
+                "linux" ) file+="Linux-x86_64-RELEASE-${fr_branch}.zip";;
             esac
             url+="$file"
             download_file $url $file
             unzip -q "$file" -d .
             tar -xJvf futurerestore*.xz
-            mv futurerestore $futurerestore2
-            perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
-            chmod +x $futurerestore2
+            mv futurerestore ${futurerestore2}-${fr_branch}
+            #perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
+            chmod +x ${futurerestore2}-${fr_branch}
             if [[ $platform == "macos" ]]; then
+                : '
                 ldid="../saved/ldid_${platform}_${platform_arch}"
                 if [[ ! -e $ldid ]]; then
                     download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_$platform_arch ldid
@@ -4872,9 +4884,12 @@ restore_futurerestore() {
                     mv ldid $ldid
                 fi
                 $ldid -S $futurerestore2
+                '
+                xattr -cr ${futurerestore2}-${fr_branch}
             fi
-            echo "$fr_latest" > ${futurerestore2}_version
+            echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
         fi
+        futurerestore2+="-$fr_branch"
     fi
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     if [[ -n "$1" ]]; then
