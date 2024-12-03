@@ -1706,10 +1706,6 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
-                tool_ipwndfu=1
-            fi
-
             if (( device_proc > 7 )); then
                 # A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
@@ -1723,7 +1719,7 @@ device_enter_mode() {
                 # also installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            elif [[ $tool_ipwndfu == 1 ]]; then
+            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
                 # A6 intel mac/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
@@ -1744,7 +1740,7 @@ device_enter_mode() {
                         "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
                         "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
                         "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
-                        "ipwnder"            ) tool_ipwndfu=2; $ipwnder -d; tool_pwned=$?; break;;
+                        "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
@@ -1774,8 +1770,8 @@ device_enter_mode() {
                     log "Placing device to pwnDFU mode using $opt"
                     case $opt2 in
                         "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?; break;;
-                        "ipwndfu" ) tool_ipwndfu=1; device_ipwndfu pwn; tool_pwned=$?; break;;
-                        * ) ${ipwnder}2 -p; tool_pwned=$?; break;;
+                        "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?; break;;
+                        *           ) ${ipwnder}2 -p; tool_pwned=$?; break;;
                     esac
                 done
             fi
@@ -1789,7 +1785,7 @@ device_enter_mode() {
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
-            if [[ $device_proc == 6 && $tool_ipwndfu == 2 ]]; then
+            if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" ]]; then
                 device_ipwndfu send_ibss
                 return
             fi
@@ -1797,8 +1793,6 @@ device_enter_mode() {
                 return
             elif [[ $device_proc == 7 ]]; then
                 device_ipwndfu rmsigchks
-            elif [[ $device_proc != 4 ]]; then
-                device_ipwndfu send_ibss
             fi
         ;;
     esac
@@ -1817,7 +1811,7 @@ device_pwnerror() {
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
             echo
         fi
-    elif [[ $platform == "macos" && -n $tool_ipwndfu ]]; then
+    elif [[ $platform == "macos" && $tool_pwndfu == "ipwndfu" ]]; then
         error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
     elif [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
         if [[ $device_proc == 4 || $device_proc == 6 ]]; then
@@ -1945,6 +1939,7 @@ device_ipwndfu() {
         ;;
 
         "pwn" )
+            tool_pwndfu="ipwndfu"
             log "Placing device to pwnDFU Mode using ipwndfu"
             $p2_sudo "$python2" ipwndfu -p
             tool_pwned=$?
@@ -4889,7 +4884,7 @@ restore_futurerestore() {
             fi
             echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
         fi
-        futurerestore2+="-$fr_branch"
+        futurerestore2+="-${fr_branch}"
     fi
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     if [[ -n "$1" ]]; then
