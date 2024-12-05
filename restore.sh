@@ -7808,7 +7808,9 @@ menu_ipsw_browse() {
     fi
     menu_items+=("Open File Picker" "Enter Path" "Go Back")
 
-    if [[ "${menu_items[0]}" == *".ipsw" ]]; then
+    if [[ $1 == "custom" ]]; then
+        picker=1
+    elif [[ "${menu_items[0]}" == *".ipsw" ]]; then
         print "* Select $text IPSW Menu"
         while true; do
             input "Select an option:"
@@ -7831,6 +7833,9 @@ menu_ipsw_browse() {
         input "Select your $text IPSW file in the file selection window."
         if [[ $mac_cocoa == 1 ]]; then
             newpath="$($cocoadialog fileselect --with-extensions ipsw)"
+        elif [[ $1 == "custom" ]]; then
+            menu_zenity_check
+            newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
         else
             menu_zenity_check
             newpath="$($zenity --file-selection --file-filter='IPSW | *Restore.ipsw' --title="Select $text IPSW file")"
@@ -8801,7 +8806,7 @@ restore_customipsw() {
         print "* You can exit recovery mode after by going to: Main Menu -> Exit Recovery Mode"
     fi
     pause
-    menu_ipsw_browse custom
+    menu_ipsw_browse "custom"
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
     fi
