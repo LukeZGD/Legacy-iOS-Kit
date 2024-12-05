@@ -5812,8 +5812,11 @@ device_ramdisk() {
         ;;
 
         "TwistedMind2" )
-            log "Sending dd command for TwistedMind2"
+            log "Sending TwistedMind2"
             $scp -P $ssh_port TwistedMind2 root@127.0.0.1:/
+            log "Waiting for disks..."
+            $ssh -p $ssh_port root@127.0.0.1 'while [[ ! $(ls /dev/rdisk* 2>/dev/null) ]]; do :; done'
+            log "Sending dd command for TwistedMind2"
             $ssh -p $ssh_port root@127.0.0.1 "dd if=/TwistedMind2 of=/dev/rdisk0 bs=8192; reboot_bak"
             return
         ;;
@@ -8188,7 +8191,18 @@ menu_devicemanage() {
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Export Device Info" "Export Battery Info" "Pair Device" "Shutdown Device" "Restart Device" "Enter Recovery Mode" "Go Back")
+        menu_items=("Export Device Info")
+        if (( device_det < 5 )) && [[ $device_det != 1 ]]; then
+            warn "Device is on lower than iOS 5. Battery info is not available"
+        else
+            menu_items+=("Export Battery Info")
+        fi
+        if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
+            warn "Device is on lower than iOS 4. Shutdown/Restart device options are not available"
+        else
+            menu_items+=("Shutdown Device" "Restart Device")
+        fi
+        menu_items+=("Pair Device" "Enter Recovery Mode" "Go Back")
         print " > Main Menu > Device Management"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -9208,6 +9222,7 @@ device_fourthree_check() {
     check="$($ssh -p $ssh_port root@127.0.0.1 "ls /dev/disk0s3 2>/dev/null")"
     if [[ $check != "/dev/disk0s3" ]]; then
         if [[ $opt == 2 ]]; then
+            log "Step 2 is not complete. Proceeding"
             return 1
         fi
         error "Cannot find /dev/disk0s3. Something went wrong with Step 2" \
@@ -9218,10 +9233,11 @@ device_fourthree_check() {
     fi
     log "Checking if Step 3 is complete"
     local kcb="/System/Library/Caches/com.apple.kernelcaches/kernelcachb"
-    local kc="$($ssh -p $ssh_port root@127.0.0.1 "ls $kcb")"
-    local llb="$($ssh -p $ssh_port root@127.0.0.1 "ls /LLB")"
+    local kc="$($ssh -p $ssh_port root@127.0.0.1 "ls $kcb 2>/dev/null")"
+    local llb="$($ssh -p $ssh_port root@127.0.0.1 "ls /LLB 2>/dev/null")"
     if [[ $kc != "$kcb" || $llb != "/LLB" ]]; then
         if [[ $opt == 3 ]]; then
+            log "Step 3 is not complete. Proceeding"
             return 2
         fi
         error "Cannot find Kernelcache/LLB. Something went wrong with Step 3" \
@@ -9434,8 +9450,9 @@ fi
 
 case $1 in
     "--just-boot" )
-        print "* Just Boot usage: --just-boot --device=<device> --build-id=<id>"
+        print "* Just Boot usage: --just-boot --device=<type> --build-id=<id>"
         print "* Optional: --bootargs=\"<bootargs>\""
+        print "* Example: --just-boot --device=iPhone5,2 --build-id=12H321"
         if [[ -z $device_type ]]; then
             error "Just Boot (--just-boot) requires specifying device type (--device=<type>)"
         fi
