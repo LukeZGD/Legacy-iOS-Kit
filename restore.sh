@@ -36,8 +36,14 @@ error() {
     echo -e "${color_R}[Error] ${1}\n${color_Y}${*:2}${color_N}"
     echo
     print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
-    print "* Legacy iOS Kit $version_current ($git_hash)"
-    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+    if [[ -n $version_current && -n $git_hash ]]; then
+        print "* Legacy iOS Kit $version_current ($git_hash)"
+    else
+        print "* Legacy iOS Kit"
+    fi
+    if [[ -n $platform ]]; then
+        print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+    fi
     exit 1
 }
 
@@ -98,6 +104,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
+    --just-boot               Tether boot the device (requires additional arguments)
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
     --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
@@ -5519,7 +5526,7 @@ device_ramdisk64() {
                     "$dir/hfsplus" $getcomp.orig grow 50000000
                 else
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
-                    "$dir/hfsplus" $getcomp.orig grow 210000000
+                    "$dir/hfsplus" $getcomp.orig grow 130000000
                 fi
                 "$dir/hfsplus" $getcomp.orig untar ssh.tar
                 "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
@@ -9409,14 +9416,12 @@ for i in "$@"; do
         "--use-pwndfu" ) restore_usepwndfu64=1;;
         "--dfuhelper" ) main_argmode="device_dfuhelper";;
         "--exit-recovery" ) main_argmode="exitrecovery";;
+        "--device"* ) device_type="${i#*=}";;
+        "--ecid"* ) device_ecid="${i#*=}";;
+        "--build-id"* ) device_rd_build="${i#*=}";;
+        "--bootargs"* ) device_bootargs="${i#*=}";;
     esac
 done
-
-trap "clean" EXIT
-trap "exit 1" INT TERM
-
-clean
-othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 
 if [[ $no_color != 1 ]]; then
     TERM=xterm-256color # fix colors for msys2 terminal
@@ -9426,6 +9431,31 @@ if [[ $no_color != 1 ]]; then
     color_Y=$(tput setaf 208)
     color_N=$(tput sgr0)
 fi
+
+case $1 in
+    "--just-boot" )
+        print "* Just Boot usage: --just-boot --device=<device> --build-id=<id>"
+        print "* Optional: --bootargs=\"<bootargs>\""
+        if [[ -z $device_type ]]; then
+            error "Just Boot (--just-boot) requires specifying device type (--device=<type>)"
+        fi
+        if [[ -z $device_rd_build ]]; then
+            error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
+        fi
+        justboot_args="Just Boot arguments: --just-boot --device=$device_type --build-id=$device_rd_build"
+        if [[ -n $device_bootargs ]]; then
+            justboot_args+=" --bootargs=\"$device_bootargs\""
+        fi
+        log "Just Boot arguments: $justboot_args"
+        main_argmode="device_justboot"
+    ;;
+esac
+
+trap "clean" EXIT
+trap "exit 1" INT TERM
+
+clean
+othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 
 if [[ $othertmp != 0 ]]; then
     log "Detected existing tmp folder(s)."
