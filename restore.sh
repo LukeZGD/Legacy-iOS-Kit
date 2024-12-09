@@ -2094,6 +2094,7 @@ device_fw_key_check() {
 ipsw_get_url() {
     local build_id="$1"
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
+    local url_local="$url"
     ipsw_url=
     log "Checking URL in $device_fw_dir/$build_id/url"
     if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
@@ -2103,8 +2104,18 @@ ipsw_get_url() {
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
         url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
-        if [[ $(echo "$url" | grep -c '<') != 0 ]]; then
+        if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
             url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
+        fi
+        if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
+            if [[ -n $url_local ]]; then
+                url="$url_local"
+                log "Using saved URL for this IPSW: $url"
+                echo "$url" > $device_fw_dir/$build_id/url
+                ipsw_url="$url"
+                return
+            fi
+            error "Unable to get URL for $device_type-$build_id"
         fi
         mkdir -p $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
