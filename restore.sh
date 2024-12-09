@@ -95,6 +95,7 @@ List of options:
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
+    --pwn                     Pwn the connected device
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
@@ -1095,8 +1096,8 @@ device_get_info() {
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
         echo
-        warn "This device is not supported by Legacy iOS Kit."
-        print "* You may still continue but features will be very limited."
+        warn "This device is mostly not supported by Legacy iOS Kit."
+        print "* You may still continue but options will be limited to sideloading and other basic features."
         pause
     elif [[ -z $device_proc ]]; then
         error "Unrecognized device $device_type. Enter the device type properly."
@@ -1374,6 +1375,25 @@ device_dfuhelper2() {
     device_find_mode DFU
 }
 
+device_dfuhelper3() {
+    echo -e "\n$(print "* Hold TOP and HOME buttons.")"
+    for i in {10..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
+    for i in {10..01}; do
+        echo -n "$i "
+        sleep 1
+    done
+    echo
+    if [[ $1 == "WTFreal" ]]; then
+        device_find_mode WTFreal
+    else
+        device_find_mode DFU
+    fi
+}
+
 device_dfuhelper() {
     local opt
     local rec="recovery mode "
@@ -1407,36 +1427,30 @@ device_dfuhelper() {
         sleep 1
     done
     case $device_type in
-        iPhone1,* | iPad1,1 | iPad1[12]* ) :;;
+        iPhone1,* | iPod1,1  ) device_dfuhelper3 $2; return;;
+        iPad1,1 | iPad1[12]* ) :;;
         iPhone1* | iPad[81]* ) device_dfuhelper2; return;;
     esac
     local top="TOP"
     local home="HOME"
     case $device_type in
-        iPhone7* | iPhone8,[12] | iPhone9* ) top="SIDE";;
+        iPhone[79]* | iPhone8,[12] ) top="SIDE";;
     esac
     if [[ $device_type == "iPhone9"* || $device_type == "iPod9,1" ]]; then
         home="VOL DOWN"
     fi
     echo -e "\n$(print "* Hold $top and $home buttons.")"
-    if [[ $device_proc == 1 ]]; then
-        for i in {10..01}; do
-            echo -n "$i "
-            sleep 1
-        done
-    else
-        for i in {08..01}; do
-            echo -n "$i "
-            device_find_all $1
-            opt=$?
-            if [[ $opt == 1 ]]; then
-                echo -e "\n$(log 'Found device in DFU mode.')"
-                device_mode="DFU"
-                return
-            fi
-            sleep 1
-        done
-    fi
+    for i in {08..01}; do
+        echo -n "$i "
+        device_find_all $1
+        opt=$?
+        if [[ $opt == 1 ]]; then
+            echo -e "\n$(log 'Found device in DFU mode.')"
+            device_mode="DFU"
+            return
+        fi
+        sleep 1
+    done
     echo -e "\n$(print "* Release $top button and keep holding $home button.")"
     for i in {08..01}; do
         echo -n "$i "
@@ -1450,11 +1464,7 @@ device_dfuhelper() {
         sleep 1
     done
     echo
-    if [[ $2 == "WTFreal" ]]; then
-        device_find_mode WTFreal
-    else
-        device_find_mode DFU
-    fi
+    device_find_mode DFU
 }
 
 device_enter_mode() {
@@ -5019,7 +5029,7 @@ device_buttons() {
     fi
     input "pwnDFU/kDFU Mode Option"
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
-    print "* Selecting 1 (pwnDFU) is recommended. Both your home and power buttons must be working properly for DFU mode."
+    print "* Selecting 1 (pwnDFU) is recommended. Both your home and power buttons must be working properly for entering DFU mode."
     print "* Selecting 2 (kDFU) is for those that prefer the jailbroken method instead (have OpenSSH installed)."
     input "Select your option:"
     select opt2 in "${selection[@]}"; do
@@ -7800,6 +7810,7 @@ menu_ipsw_browse() {
         "iOS 6.1.3" ) versionc="6.1.3";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
         [6543]* ) versionc="$1";;
+        "custom" ) text="Custom";;
     esac
     if [[ $versionc == "$device_latest_vers" ]]; then
         menu_items=()
@@ -7808,9 +7819,7 @@ menu_ipsw_browse() {
     fi
     menu_items+=("Open File Picker" "Enter Path" "Go Back")
 
-    if [[ $1 == "custom" ]]; then
-        picker=1
-    elif [[ "${menu_items[0]}" == *".ipsw" ]]; then
+    if [[ "${menu_items[0]}" == *".ipsw" ]]; then
         print "* Select $text IPSW Menu"
         while true; do
             input "Select an option:"
@@ -8255,7 +8264,7 @@ menu_other() {
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
-            if [[ $device_type != "iPod2,1" && $debug_mode == 1 ]]; then
+            if [[ $device_type != "iPod2,1" ]]; then
                 menu_items+=("Just Boot")
             fi
             case $device_proc in
@@ -8332,6 +8341,7 @@ menu_other() {
             "DFU Mode Helper" ) mode="enterdfu";;
             "Get iOS Version" ) mode="getversion";;
             "Enable Flags" ) menu_flags;;
+            "Just Boot" ) menu_justboot;;
             "Go Back" ) back=1;;
         esac
     done
@@ -8913,13 +8923,17 @@ menu_justboot() {
     local selected
     local back
     local vers
+    local recent="../saved/$device_type/justboot_${device_ecid}"
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Enter Build Version" "Select IPSW" "Custom Bootargs")
+        menu_items=("Enter Build Version" "Select IPSW")
+        if [[ -s $recent ]]; then
+            menu_items+=("Recent Build Version")
+        fi
         if [[ -n $vers ]]; then
             menu_items+=("Just Boot")
         fi
-        menu_items+=("Go Back")
+        menu_items+=("Custom Bootargs" "Go Back")
         menu_print_info
         print " > Main Menu > Just Boot"
         print "* You are about to do a tethered boot."
@@ -8966,8 +8980,15 @@ menu_justboot() {
                 vers="$device_target_build"
                 device_rd_build="$vers"
             ;;
+            "Recent Build Version" )
+                vers="$(cat $recent)"
+                device_rd_build="$vers"
+            ;;
+            "Just Boot" )
+                echo "$vers" > $recent
+                mode="device_justboot"
+            ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
-            "Just Boot" ) mode="device_justboot";;
             "Go Back" ) back=1;;
         esac
     done
@@ -9435,8 +9456,6 @@ for i in "$@"; do
         "--skip-first" ) ipsw_skip_first=1;;
         "--skip-blob" ) restore_useskipblob=1;;
         "--use-pwndfu" ) restore_usepwndfu64=1;;
-        "--dfuhelper" ) main_argmode="device_dfuhelper";;
-        "--exit-recovery" ) main_argmode="exitrecovery";;
         "--device"* ) device_type="${i#*=}";;
         "--ecid"* ) device_ecid="${i#*=}";;
         "--build-id"* ) device_rd_build="${i#*=}";;
@@ -9454,6 +9473,8 @@ if [[ $no_color != 1 ]]; then
 fi
 
 case $1 in
+    "--dfuhelper" ) main_argmode="device_dfuhelper";;
+    "--exit-recovery" ) main_argmode="exitrecovery";;
     "--just-boot" )
         print "* Just Boot usage: --just-boot --device=<type> --build-id=<id>"
         print "* Optional: --bootargs=\"<bootargs>\""
@@ -9471,6 +9492,7 @@ case $1 in
         log "Just Boot arguments: $justboot_args"
         main_argmode="device_justboot"
     ;;
+    "--pwn" ) main_argmode="pwned-ibss";;
 esac
 
 trap "clean" EXIT
