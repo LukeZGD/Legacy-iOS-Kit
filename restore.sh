@@ -87,9 +87,11 @@ Usage: ./restore.sh [Options]
 
 List of options:
     --debug                   For script debugging (set -x and debug mode)
+    --device=<type>           Specify device type
     --dfuhelper               Launch to DFU Mode Helper only
     --disable-sudoloop        Disable running tools as root for Linux
-    --entry-device            Enable manual device and ECID entry
+    --ecid=<ecid>             Specify device ECID
+    --entry-device            Enable manual device type and ECID entry
     --exit-recovery           Attempt to exit recovery mode
     --help                    Display this help message
     --no-color                Disable colors for script output
@@ -612,7 +614,9 @@ device_entry() {
     until [[ -n $device_type ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
-    if [[ $device_type != "iPhone1"* && $device_type != "iPod1,1" ]]; then
+    if [[ $main_argmode == "device_justboot" ]]; then
+        :
+    elif [[ $device_type != "iPhone1"* && $device_type != "iPod1,1" ]]; then
         until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
         done
@@ -1208,6 +1212,11 @@ device_get_info() {
         device_latest_build=$device_use_build
         device_latest_bb=$device_use_bb
         device_latest_bb_sha1=$device_use_bb_sha1
+    fi
+
+    if [[ $device_argmode == "none" ]]; then
+        device_mode="none"
+        device_vers="Unknown"
     fi
 }
 
@@ -6442,6 +6451,9 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     echo
+    if [[ $device_argmode == "entry" ]]; then
+        warn "Device type and/or ECID manually specified"
+    fi
     print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
     if [[ $device_unactivated == 1 ]]; then
@@ -8264,9 +8276,6 @@ menu_other() {
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
-            if [[ $device_type != "iPod2,1" ]]; then
-                menu_items+=("Just Boot")
-            fi
             case $device_proc in
                 [56] ) menu_items+=("Send Pwned iBSS");;
                 *    ) menu_items+=("Enter pwnDFU Mode");;
@@ -8276,6 +8285,9 @@ menu_other() {
                 iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
                 iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
             esac
+            if [[ $device_type != "iPod2,1" ]]; then
+                menu_items+=("Just Boot")
+            fi
             if [[ $device_mode == "Normal" ]]; then
                 case $device_type in
                     iPhone1* )
@@ -9456,8 +9468,8 @@ for i in "$@"; do
         "--skip-first" ) ipsw_skip_first=1;;
         "--skip-blob" ) restore_useskipblob=1;;
         "--use-pwndfu" ) restore_usepwndfu64=1;;
-        "--device"* ) device_type="${i#*=}";;
-        "--ecid"* ) device_ecid="${i#*=}";;
+        "--device"* ) device_type="${i#*=}"; device_argmode="entry";;
+        "--ecid"* ) device_ecid="${i#*=}"; device_argmode="entry";;
         "--build-id"* ) device_rd_build="${i#*=}";;
         "--bootargs"* ) device_bootargs="${i#*=}";;
     esac
