@@ -1145,11 +1145,11 @@ device_get_info() {
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-        iPad3,[56] | iPhone5,[12] )
+        iPad3,[56] | iPhone5,[1234] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
-        iPad3,4 | iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
+        iPad3,4 | iPad4,[12345] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
         ;;
@@ -4531,13 +4531,13 @@ ipsw_prepare_s5l8900() {
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
         ipsw_url+="iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
-        sha1E="f642829875ce632cd071e62169a1acbdcffcf0c8"
+        sha1E="3def867e6e386a044ec3bad58dda05a45f6405b8"
     elif [[ $device_type == "iPhone1,1" ]]; then
         ipsw_url+="iPhone1.1_3.1.3_7E18_Custom.ipsw"
-        sha1E="7b3dd17c48c139dc827696284736d3c37d8fb7ac"
+        sha1E="617020bbae1579d1ee34267fab85bf8dd29fedda"
     elif [[ $device_type == "iPod1,1" ]]; then
         ipsw_url+="iPod1.1_3.1.3_7E18_Custom.ipsw"
-        sha1E="f76cd3d4deaf82587dc758c6fbe724c31c9b6de2"
+        sha1E="bf61225e8da8cc35b03a9ca898f830d3066be2f6"
     fi
 
     if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
@@ -7680,8 +7680,8 @@ ipsw_print_warnings() {
             8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
             #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
             8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
-            8*  ) warn "Not all devices support iOS 4. It may not restore/boot properly";;
-            7B* ) warn "Not all 3.2.x versions will work. It may not restore/boot properly";;
+            8*  ) warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
+            #7B* ) warn "Not all devices support 3.2.x. It may not restore/boot properly";;
             7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
         esac
         return
@@ -8016,7 +8016,7 @@ menu_ipsw_browse() {
                 pause
                 return
             elif [[ $device_target_build == "11D257" && $device_type == "iPhone3"* ]] ||
-                 [[ $device_target_build == "9B206" && $device_proc == 4 ]]; then
+                 [[ $device_target_build == "9B206" && $device_proc == 4 && $device_type != "iPhone3"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version. You need to select it as base IPSW."
                 pause
                 return
