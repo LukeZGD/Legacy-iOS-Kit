@@ -72,10 +72,11 @@ clean_usbmuxd() {
     if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
         return
     fi
-    sudo killall usbmuxd usbmuxd2 2>/dev/null
+    sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
     if [[ $(command -v systemctl) ]]; then
-        sleep 1
         sudo systemctl restart usbmuxd
+    elif [[ $(command -v rc-service) ]]; then
+        sudo rc-service usbmuxd start
     fi
 }
 
@@ -98,6 +99,8 @@ List of options:
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
     --pwn                     Pwn the connected device
+    --sshrd                   Enter SSH ramdisk mode (requires additional arguments)
+    --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
@@ -291,6 +294,10 @@ set_tool_paths() {
             if [[ $othertmp == 0 ]]; then
                 if [[ $(command -v systemctl) ]]; then
                     sudo systemctl stop usbmuxd
+                elif [[ $(command -v rc-service) ]]; then
+                    sudo rc-service usbmuxd zap
+                else
+                    sudo killall -9 usbmuxd
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
@@ -614,7 +621,7 @@ device_entry() {
     until [[ -n $device_type ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
-    if [[ $main_argmode == "device_justboot" ]]; then
+    if [[ $main_argmode == "device_justboot" || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
     elif [[ $device_type != "iPhone1"* && $device_type != "iPod1,1" ]]; then
         until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
@@ -859,6 +866,9 @@ device_get_info() {
         log "No device mode is enabled."
         device_mode="none"
         device_vers="Unknown"
+    elif [[ $main_argmode == "device_enter_ramdisk_menu" ]]; then
+        log "sshrd-menu flag detected, assuming device is in SSH ramdisk mode"
+        device_mode="Normal"
     else
         log "Finding device in Normal mode..."
         if [[ $platform == "linux" ]]; then
@@ -867,15 +877,14 @@ device_get_info() {
                 print "* If it fails to detect devices, try to delete all \"tmp\" folders in your Legacy iOS Kit folder"
             fi
         fi
-    fi
-
-    $ideviceinfo -s >/dev/null
-    if [[ $? == 0 ]]; then
-        device_mode="Normal"
-    else
-        $ideviceinfo >/dev/null
+        $ideviceinfo -s >/dev/null
         if [[ $? == 0 ]]; then
             device_mode="Normal"
+        else
+            $ideviceinfo >/dev/null
+            if [[ $? == 0 ]]; then
+                device_mode="Normal"
+            fi
         fi
     fi
 
@@ -1319,10 +1328,10 @@ device_iproxy() {
         port=$2
     fi
     if [[ $1 == "no-logging" && $debug_mode != 1 ]]; then
-        "$dir/iproxy" $ssh_port $port >/dev/null &
+        "$dir/iproxy" $ssh_port $port -s 127.0.0.1 >/dev/null &
         iproxy_pid=$!
     else
-        "$dir/iproxy" $ssh_port $port &
+        "$dir/iproxy" $ssh_port $port -s 127.0.0.1 &
         iproxy_pid=$!
     fi
     log "iproxy PID: $iproxy_pid"
@@ -1766,7 +1775,14 @@ device_enter_mode() {
                         "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
                         "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
                         "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
-                        "ipwnder"            ) $ipwnder -d; tool_pwned=$?; break;;
+                        "ipwnder" )
+                            mkdir image3 ../saved/image3 2>/dev/null
+                            cp ../saved/image3/* image3/ 2>/dev/null
+                            $ipwnder -d
+                            tool_pwned=$?
+                            cp image3/* ../saved/image3/
+                            break
+                        ;;
                     esac
                 done
             elif [[ $platform == "linux" ]]; then
@@ -1776,8 +1792,11 @@ device_enter_mode() {
             elif [[ $device_proc == 6 ]]; then
                 # A6 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
+                mkdir image3 ../saved/image3 2>/dev/null
+                cp ../saved/image3/* image3/ 2>/dev/null
                 $ipwnder -d
                 tool_pwned=$?
+                cp image3/* ../saved/image3/
             elif [[ $platform_arch == "arm64" ]]; then
                 # A7 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
@@ -4044,7 +4063,7 @@ ipsw_prepare_multipatch() {
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
 
     log "Patch ASR"
-    if [[ $ipsw_prepare_usepowder == 1 ]]; then
+    if [[ $ipsw_prepare_usepowder == 1 && $ipsw_gasgauge_patch != 1 ]]; then
         rm -f asr
         "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
@@ -5414,22 +5433,8 @@ device_ramdisk64() {
         build_id="18C66"
     fi
 
-    if [[ $1 == "jailbreak" ]]; then
+    if [[ $device_ramdisk_ios8 == 1 ]]; then
         ios8=1
-    elif (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
-        local ver="12"
-        if [[ $device_type == "iPad5"* ]]; then
-            ver="14"
-        fi
-        device_ramdiskver="$ver"
-        input "Version Select Option"
-        print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
-        print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
-        print "* If not sure, just press Enter/Return. This will select the default version."
-        read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
-        if [[ $opt == 'n' || $opt == 'N' ]]; then
-            ios8=1
-        fi
     fi
 
     if [[ $ios8 == 1 ]]; then
@@ -9026,18 +9031,48 @@ device_justboot() {
 
 device_enter_ramdisk() {
     if (( device_proc >= 7 )); then
-        device_ramdisk64
-        return
+        if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
+            device_ramdiskver="12"
+            if [[ $device_type == "iPad5"* ]]; then
+                device_ramdiskver="14"
+            fi
+            local ver="$device_ramdiskver"
+            input "Version Select Option"
+            print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
+            print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
+            print "* If not sure, just press Enter/Return. This will select the default version."
+            read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
+            if [[ $opt == 'n' || $opt == 'N' ]]; then
+                device_ramdisk_ios8=1
+            fi
+        fi
     elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
         device_rd_build="13A452"
     elif (( device_proc >= 5 )) && (( device_det <= 8 )) && [[ $device_mode == "Normal" ]]; then
         :
-    elif (( device_proc >= 5 )); then
+    elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
         print "* If not sure, just press Enter/Return. This will select the default version."
         device_enter_build
     fi
-    device_ramdisk $1
+
+    if [[ $1 == "menu" ]]; then
+        clear
+        device_iproxy
+        device_sshpass alpine
+        menu_ramdisk
+        return
+    fi
+
+    if (( device_proc >= 7 )); then
+        device_ramdisk64
+    else
+        device_ramdisk $1
+    fi
+}
+
+device_enter_ramdisk_menu() {
+    device_enter_ramdisk menu
 }
 
 device_ideviceinstaller() {
@@ -9296,9 +9331,9 @@ device_fourthree_check() {
 }
 
 device_backup_create() {
-    device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
     print "* A backup of your device will be created using idevicebackup2. Please see the notes above."
     pause
+    device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
     mkdir -p $device_backup
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
@@ -9516,6 +9551,11 @@ case $1 in
         main_argmode="device_justboot"
     ;;
     "--pwn" ) main_argmode="pwned-ibss";;
+    "--sshrd" ) main_argmode="device_enter_ramdisk";;
+    "--sshrd-menu" )
+        device_argmode="entry"
+        main_argmode="device_enter_ramdisk_menu"
+    ;;
 esac
 
 trap "clean" EXIT
