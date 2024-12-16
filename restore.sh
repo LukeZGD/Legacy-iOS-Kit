@@ -963,19 +963,21 @@ device_get_info() {
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
                 device_ecid=$($ideviceinfo -s -k UniqueChipID)
             fi
-            device_model=$($ideviceinfo -s -k HardwareModel)
-            device_vers=$($ideviceinfo -s -k ProductVersion)
-            device_det=$(echo "$device_vers" | cut -c 1)
-            device_det2=$(echo "$device_vers" | cut -c -2)
-            device_build=$($ideviceinfo -s -k BuildVersion)
-            device_udid=$($ideviceinfo -s -k UniqueDeviceID)
-            [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
-            if [[ $device_type == "iPod2,1" ]]; then
-                device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
-            elif [[ $device_type == "iPhone2,1" ]]; then
-                device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
+            if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
+                device_model=$($ideviceinfo -s -k HardwareModel)
+                device_vers=$($ideviceinfo -s -k ProductVersion)
+                device_det=$(echo "$device_vers" | cut -c 1)
+                device_det2=$(echo "$device_vers" | cut -c -2)
+                device_build=$($ideviceinfo -s -k BuildVersion)
+                device_udid=$($ideviceinfo -s -k UniqueDeviceID)
+                [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
+                if [[ $device_type == "iPod2,1" ]]; then
+                    device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
+                elif [[ $device_type == "iPhone2,1" ]]; then
+                    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
+                fi
+                device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
             fi
-            device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
         ;;
     esac
 
@@ -1268,7 +1270,7 @@ device_find_mode() {
     while (( i < timeout )); do
         if [[ $mode == "Restore" ]]; then
             if [[ $platform == "macos" ]]; then
-                opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
+                opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r | head -n 1)"
             elif [[ $platform == "linux" ]]; then
                 opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
             fi
@@ -2289,11 +2291,19 @@ ipsw_preference_set() {
         esac
     fi
 
+    case $device_type in
+        iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
+    esac
+    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]] ||
+       [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        ipsw_nskip=1
+    fi
+
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
             [98]* ) ipsw_canjailbreak=1;;
         esac
-    elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 ]]; then
+    elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 && $ipsw_nskip != 1 ]]; then
         return
     fi
 
@@ -2362,14 +2372,6 @@ ipsw_preference_set() {
             ipsw_hacktivate=
         fi
         echo
-    fi
-
-    case $device_type in
-        iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
-    esac
-    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]] ||
-       [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        ipsw_nskip=1
     fi
 
     case $device_type in
@@ -6638,7 +6640,7 @@ menu_datamanage() {
         menu_items+=("Backup" "Restore")
     fi
     if [[ -z $ifuse ]]; then
-        warn "ifuse not installed. Mount Device options are not available. Install ifuse in Homebrew/MacPorts or your package manager to fix this"
+        warn "ifuse not installed. Mount Device options are not available. Install ifuse from your package manager to fix this"
     else
         menu_items+=("Mount Device" "Mount Device (Raw File System)" "Unmount Device")
     fi
