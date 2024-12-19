@@ -1285,6 +1285,10 @@ device_find_mode() {
 
         if [[ $device_in == 1 ]]; then
             log "Found device in $mode mode."
+            if [[ $mode == "Restore" ]]; then
+                log "Giving the device some time to start up SSH..."
+                sleep 5
+            fi
             device_mode="$mode"
             break
         fi
@@ -5590,7 +5594,7 @@ device_ramdisk64() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
-    device_find_mode Restore 20
+    device_find_mode Restore 30
 
     if [[ $ios8 == 1 ]]; then
         device_iproxy no-logging 44
@@ -5797,6 +5801,7 @@ device_ramdisk() {
         patch_ibss
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
+        sleep 2
         log "Sending iBEC..."
         $irecovery -f $ramdisk_path/iBEC
     elif (( device_proc < 5 )) && [[ $device_pwnrec != 1 ]]; then
@@ -5834,11 +5839,11 @@ device_ramdisk() {
         return
     elif [[ -n $1 ]]; then
         log "Booting, please wait..."
-        device_find_mode Restore 20
+        device_find_mode Restore 30
         device_iproxy
     else
         log "Booting, please wait..."
-        device_find_mode Restore 20
+        device_find_mode Restore 30
         device_iproxy no-logging
     fi
     device_sshpass alpine
@@ -6507,7 +6512,6 @@ menu_print_info() {
         fi
         if [[ $ipsw_gasgauge_patch == 1 ]]; then
             warn "gasgauge-patch flag detected. multipatch enabled."
-            print "* This supports up to iOS 8.4.1 only. iOS 9 will not work"
         fi
         if [[ $ipsw_skip_first == 1 ]]; then
             warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
@@ -8485,16 +8489,27 @@ device_jailbreak_confirm() {
         8.2 | 8.[10]* )
             if [[ $device_proc == 5 ]]; then
                 warn "This version ($device_vers) is broken for daibutsu A5(X)."
-                print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only for now."
-                print "* For this version, use Home Depot patched with ohd and sideload it to your device."
-                print "* https://github.com/LukeZGD/ohd"
+                print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only."
+                print "* For this version, use EverPwnage and sideload it to your device."
+                print "* https://github.com/LukeZGD/EverPwnage"
                 pause
                 return
+            else
+                print "* For this version, you can also use EverPwnage and sideload it to your device."
+                print "* https://github.com/LukeZGD/EverPwnage"
+                print "* You may still continue if you really want to do the ramdisk method instead."
+                pause
             fi
         ;;
+        8* )
+            print "* For this version, you can also use EverPwnage and sideload it to your device."
+            print "* https://github.com/LukeZGD/EverPwnage"
+            print "* You may still continue if you really want to do the ramdisk method instead."
+            pause
+        ;;
         9.0* )
-            print "* For this version, use Pangu9 on older macOS to jailbreak your device."
-            print "* https://ios.cfw.guide/installing-pangu9/"
+            print "* For this version, use EverPwnage and sideload it to your device."
+            print "* https://github.com/LukeZGD/EverPwnage"
             pause
             return
         ;;
@@ -8503,6 +8518,12 @@ device_jailbreak_confirm() {
             print "* https://kok3shidoll.web.app/kok3shi9_32.html"
             pause
             return
+        ;;
+        9* )
+            print "* For this version, you can also use HomeDepot and sideload it to your device."
+            print "* https://ios.cfw.guide/installing-homedepot/"
+            print "* You may still continue if you really want to do the ramdisk method instead."
+            pause
         ;;
         10* )
             print "* For this version, download socket and sideload it to your device."
@@ -9536,12 +9557,9 @@ case $1 in
     "--dfuhelper" ) main_argmode="device_dfuhelper";;
     "--exit-recovery" ) main_argmode="exitrecovery";;
     "--just-boot" )
-        print "* Just Boot usage: --just-boot --device=<type> --build-id=<id>"
-        print "* Optional: --bootargs=\"<bootargs>\""
+        print "* Just Boot usage: --just-boot --build-id=<id>"
+        print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
         print "* Example: --just-boot --device=iPhone5,2 --build-id=12H321"
-        if [[ -z $device_type ]]; then
-            error "Just Boot (--just-boot) requires specifying device type (--device=<type>)"
-        fi
         if [[ -z $device_rd_build ]]; then
             error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
         fi
