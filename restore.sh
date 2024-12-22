@@ -57,7 +57,8 @@ clean() {
     popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 ]]; then
-        killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
+        # ill disable this for now since finder is annoying, ill just keep them in a stopped state.
+        : killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
     fi
 }
 
@@ -1715,7 +1716,7 @@ device_enter_mode() {
             fi
 
             if [[ $device_proc == 5 ]]; then
-                print "* DFU mode for A5 device - Make sure that your device is in PWNED DFU mode."
+                print "* DFU mode for A5(X) device - Make sure that your device is in PWNED DFU mode."
                 print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
                 print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
                 print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
@@ -2269,6 +2270,11 @@ ipsw_preference_set() {
         ipsw_canjailbreak=
     fi
 
+    # jailbreak option: available for versions 3.1.3 to 9.3.4, with some exceptions:
+    # 3.1-4.1: option is disabled due to an issue with putting .launchd_use_gmalloc in the correct partition.
+    # it should be in system, but restore puts it in data instead due to it being in var.
+    # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
+    # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
@@ -2295,6 +2301,8 @@ ipsw_preference_set() {
         esac
     fi
 
+    # ipsw_nskip being 1 means that it will always create/use a custom ipsw.
+    # useful for disabling baseband update, or in the case of macos arm64, not having to use futurerestore.
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
     esac
@@ -2303,6 +2311,8 @@ ipsw_preference_set() {
         ipsw_nskip=1
     fi
 
+    # make jailbreak version available for all of 8.x-9.x if the restore is a powdersn0w one.
+    # meanwhile, exit this function if ipsw_canjailbreak is not set to 1 and/or other options will not be used.
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
             [98]* ) ipsw_canjailbreak=1;;
@@ -2311,6 +2321,8 @@ ipsw_preference_set() {
         return
     fi
 
+    # detect certain ios betas now. for ios 8, disable betas 1 and 2 since powdersn0w cant patch the kernels for those.
+    # for betas below ios 6, disable the jailbreak option, its not supported since (currently) no patchfinders used there and stuff.
     if [[ $ipsw_isbeta == 1 ]]; then
         case $device_target_vers in
             8* )
@@ -2664,6 +2676,7 @@ ipsw_prepare_1033() {
 ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
+    echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
     echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
     echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
     echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
@@ -3498,11 +3511,16 @@ ipsw_prepare_32bit() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
-            9.2* | 9.1 ) JBFiles+=("untetherhomedepot921.tar");;
-            7.1* )       JBFiles+=("panguaxe.tar");;
-            7* )         JBFiles+=("evasi0n7-untether.tar");;
-            6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
-            6* )         JBFiles+=("evasi0n6-untether.tar");;
+            9.2* | 9.1 )       JBFiles+=("untetherhomedepot921.tar");;
+            7.1* )
+                case $device_type in
+                    iPod* ) JBFiles+=("panguaxe-ipod.tar");;
+                    *     ) JBFiles+=("panguaxe.tar");;
+                esac
+            ;;
+            7* )           JBFiles+=("evasi0n7-untether.tar");;
+            6.1.[3456] )   JBFiles+=("p0sixspwn.tar");;
+            6* )           JBFiles+=("evasi0n6-untether.tar");;
             5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
         esac
         if [[ -n ${JBFiles[0]} ]]; then
@@ -4131,6 +4149,7 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
     elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
+        # daibutsu haxx overwrite
         "$dir/hfsplus" RestoreRamdisk.dec untar bin.tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add reboot.sh sbin/reboot
@@ -4357,7 +4376,13 @@ ipsw_prepare_powder() {
         case $device_target_vers in
             5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
             7.0* ) ExtraArgs+=" $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
-            7.1* ) ExtraArgs+=" $jelbrek/panguaxe.tar $jelbrek/fstab7.tar";;
+            7.1* )
+                ExtraArgs+=" $jelbrek/fstab7.tar"
+                case $device_type in
+                    iPod* ) ExtraArgs+=" panguaxe-ipod.tar";;
+                    *     ) ExtraArgs+=" panguaxe.tar";;
+                esac
+            ;;
         esac
         case $device_target_vers in
             [689]* ) :;;
@@ -5880,7 +5905,12 @@ device_ramdisk() {
                 9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
                 8* )         untether="daibutsu/untether.tar";;
-                7.1* )       untether="panguaxe.tar";;
+                7.1* )
+                    case $device_type in
+                        iPod* ) untether="panguaxe-ipod.tar";;
+                        *     ) untether="panguaxe.tar";;
+                    esac
+                ;;
                 7* )         untether="evasi0n7-untether.tar";;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
@@ -7692,7 +7722,7 @@ ipsw_print_warnings() {
             #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
             8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
             8*  ) warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
-            #7B* ) warn "Not all devices support 3.2.x. It may not restore/boot properly";;
+            7B* ) :;;
             7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
         esac
         return
@@ -8418,7 +8448,7 @@ device_alloc8() {
 
 device_jailbreak_confirm() {
     if [[ $device_proc == 1 ]]; then
-        print "* The \"Jailbreak Device\" option is not supported for this device."
+        print "* The \"Jailbreak Device\" option (ramdisk method) is not supported for this device."
         print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.2.1, 4.1, or 3.1.3, then enable the jailbreak option."
         pause
         return
@@ -8531,20 +8561,14 @@ device_jailbreak_confirm() {
             pause
             return
         ;;
-        9.3.[1234] | 9.3 | 9.2* | 9.1 | [8765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
+        [765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
         3.[10]* )
             if [[ $device_type != "iPhone2,1" ]]; then
-                warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
+                warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
                 print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
                 pause
                 return
             fi
-        ;;
-        * )
-            warn "This version ($device_vers) is not supported for jailbreaking with SSHRD."
-            print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
-            pause
-            return
         ;;
     esac
     if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
