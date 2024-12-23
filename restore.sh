@@ -1120,10 +1120,11 @@ device_get_info() {
     fi
 
     if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
-        log "Found an S5L8900 device in DFU mode. Please re-enter WTF mode for good measure."
-        print "* Force restart your device and place it in normal or recovery mode, then run the script again."
-        print "* You may also use DFU Mode Helper (--dfuhelper) for entering WTF mode."
-        exit
+        log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
+        print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
+        print "* You can enter WTF mode by doing the DFU mode procedure."
+        device_dfuhelper norec WTFreal
+        device_find_mode WTFreal 100
     fi
 
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
@@ -1375,17 +1376,17 @@ device_dfuhelper2() {
     print "* Press the VOL DOWN button now."
     sleep 1
     print "* Press and hold the $top button."
-    for i in {10..01}; do
+    for i in {10..1}; do
         echo -n "$i "
         sleep 1
     done
     echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
-    for i in {05..01}; do
+    for i in {5..1}; do
         echo -n "$i "
         sleep 1
     done
     echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
-    for i in {08..01}; do
+    for i in {8..1}; do
         echo -n "$i "
         device_find_all $1
         opt=$?
@@ -1402,12 +1403,12 @@ device_dfuhelper2() {
 
 device_dfuhelper3() {
     echo -e "\n$(print "* Hold TOP and HOME buttons.")"
-    for i in {10..01}; do
+    for i in {10..1}; do
         echo -n "$i "
         sleep 1
     done
     echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-    for i in {10..01}; do
+    for i in {10..1}; do
         echo -n "$i "
         sleep 1
     done
@@ -1464,9 +1465,13 @@ device_dfuhelper() {
     if [[ $device_type == "iPhone9"* || $device_type == "iPod9,1" ]]; then
         home="VOL DOWN"
     fi
+    local sec=10
+    if [[ $device_mode == "Recovery" ]]; then
+        sec=8
+    fi
     echo -e "\n$(print "* Hold $top and $home buttons.")"
-    for i in {08..01}; do
-        echo -n "$i "
+    while (( sec > 0 )); do
+        echo -n "$sec "
         device_find_all $1
         opt=$?
         if [[ $opt == 1 ]]; then
@@ -1475,9 +1480,10 @@ device_dfuhelper() {
             return
         fi
         sleep 1
+        sec=$((sec-1))
     done
     echo -e "\n$(print "* Release $top button and keep holding $home button.")"
-    for i in {08..01}; do
+    for i in {8..1}; do
         echo -n "$i "
         device_find_all $1
         opt=$?
@@ -5151,6 +5157,8 @@ restore_prepare() {
                             print "* Please put the device in DFU mode after it reboots!"
                             sleep 10
                             device_mode=
+                            log "Press Enter/Return when the device reboots and is on black screen, Apple logo, or iTunes logo."
+                            device_enter_mode DFU
                         fi
                         log "Finding device in Recovery/DFU mode..."
                         until [[ -n $device_mode ]]; do
@@ -5862,6 +5870,12 @@ device_ramdisk() {
     if [[ $1 == "justboot" ]]; then
         log "Device should now boot."
         return
+    elif [[ -n $1 && $platform == "macos" ]]; then
+        log "Booting, please wait..."
+        print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while."
+        print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
+        device_find_mode Restore 90
+        device_iproxy
     elif [[ -n $1 ]]; then
         log "Booting, please wait..."
         device_find_mode Restore 30
