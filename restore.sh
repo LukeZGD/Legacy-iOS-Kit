@@ -95,6 +95,7 @@ List of options:
     --ecid=<ecid>             Specify device ECID
     --entry-device            Enable manual device type and ECID entry
     --exit-recovery           Attempt to exit recovery mode
+    --kdfu                    Enter kDFU mode with the connected device
     --help                    Display this help message
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
@@ -1722,12 +1723,24 @@ device_enter_mode() {
             fi
 
             if [[ $device_proc == 5 ]]; then
+                local device_todfu
+                if [[ $device_mode != "DFU" ]]; then
+                    device_todfu=1
+                    device_enter_mode DFU
+                    log "Device is now in DFU mode. Now put your device in PWNED DFU mode using checkm8-a5."
+                fi
+                echo
                 print "* DFU mode for A5(X) device - Make sure that your device is in PWNED DFU mode."
                 print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
                 print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
                 print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, restart your device in normal mode."
+                echo
+                if [[ $device_todfu == 1 ]]; then
+                    log "* After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
+                    pause
+                fi
                 echo
                 log "Checking for device"
                 device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
@@ -1964,15 +1977,20 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
     fi
+    # create a lib symlink in the home directory for macos, needed by ipwndfu/pyusb
+    # no need to do this for homebrew x86_64 since /usr/local/lib is being checked along with ~/lib
     if [[ $platform == "macos" && ! -e "$HOME/lib/libusb-1.0.dylib" ]]; then
         if [[ -e "$HOME/lib" && -e "$HOME/lib.bak" ]]; then
             rm -rf "$HOME/lib"
         elif [[ -e "$HOME/lib" ]]; then
             mv "$HOME/lib" "$HOME/lib.bak"
         fi
+        # prioritize macports here since it has longer support
         if [[ -e /opt/local/lib/libusb-1.0.dylib ]]; then
+            log "Detected libusb installed via MacPorts"
             ln -sf /opt/local/lib "$HOME/lib"
         elif [[ -e /opt/homebrew/lib/libusb-1.0.dylib ]]; then
+            log "Detected libusb installed via Homebrew (arm64)"
             ln -sf /opt/homebrew/lib "$HOME/lib"
         fi
     fi
@@ -4408,7 +4426,7 @@ ipsw_prepare_powder() {
         ipsw_powder_5c70=1
     fi
     if [[ $device_type == "iPhone5"* && $ipsw_powder_5c70 != 1 ]]; then
-        # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of jump ibot to ibob
+        # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of ramdiskI (jump ibot to ibob)
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArr[0]+="9"
         fi
@@ -5627,6 +5645,10 @@ device_ramdisk64() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
+    if [[ $platform == "macos" ]]; then
+        print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while before it connects."
+        print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
+    fi
     device_find_mode Restore 30
 
     if [[ $ios8 == 1 ]]; then
@@ -5882,6 +5904,10 @@ device_ramdisk() {
         device_iproxy
     else
         log "Booting, please wait..."
+        if [[ $platform == "macos" ]]; then
+            print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while before it connects."
+            print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
+        fi
         device_find_mode Restore 30
         device_iproxy no-logging
     fi
@@ -9614,6 +9640,7 @@ case $1 in
         device_argmode="entry"
         main_argmode="device_enter_ramdisk_menu"
     ;;
+    "--kdfu" ) main_argmode="kdfu";;
 esac
 
 trap "clean" EXIT
