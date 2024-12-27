@@ -1736,6 +1736,7 @@ device_enter_mode() {
                 print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
                 print "* If you do not know what you are doing, restart your device in normal mode."
+                print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
                 echo
                 if [[ $device_todfu == 1 ]]; then
                     log "* After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
@@ -5133,6 +5134,29 @@ device_buttons() {
     done
 }
 
+device_buttons2() {
+    local selection=("Jailbroken" "pwnDFU")
+    if [[ $device_mode != "Normal" ]]; then
+        device_enter_mode pwnDFU
+        return
+    fi
+    input "Jailbroken/pwnDFU Mode Option"
+    print "* This device needs to be jailbroken/in kDFU mode before proceeding."
+    print "* Selecting 1 (Jailbroken) is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
+    print "* Selecting 2 (pwnDFU) is for those that prefer the ramdisk method instead."
+    if [[ $device_proc == 5 ]]; then
+        warn "Selecting 2 will require usage of checkm8-a5."
+        print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+    fi
+    input "Select your option:"
+    select opt2 in "${selection[@]}"; do
+        case $opt2 in
+            "Jailbroken" ) break;;
+            *"DFU" ) device_enter_mode $opt2; break;;
+        esac
+    done
+}
+
 restore_prepare() {
     case $device_proc in
         1 )
@@ -5849,7 +5873,7 @@ device_ramdisk() {
     elif [[ $device_proc == 1 ]]; then
         device_enter_mode DFU
     else
-        device_enter_mode kDFU
+        device_buttons2
     fi
 
     if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
@@ -6052,16 +6076,13 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending command for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
-            log "Done, your device should reboot now"
-            return
+            $ssh -p $ssh_port root@127.0.0.1 "nvram -c"
+            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there."
         ;;
 
         "setnvram" )
             device_ramdisk_setnvram
-            log "Rebooting device"
-            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
-            return
+            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there."
         ;;
 
         * ) log "Device should now boot to SSH ramdisk mode.";;
@@ -6139,7 +6160,7 @@ device_ramdisk_ios3exploit() {
     fi
 }
 
-device_ramdisk_datetime() {
+device_datetime_cmd() {
     log "Running command to Update DateTime"
     $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
 }
@@ -6147,7 +6168,7 @@ device_ramdisk_datetime() {
 device_ramdisk_iosvers() {
     device_vers=
     device_build=
-    device_ramdisk_datetime
+    device_datetime_cmd
     if (( device_proc < 7 )); then
         log "Mounting root filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
@@ -6382,7 +6403,7 @@ menu_ramdisk() {
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
             "remove4" ) device_ramdisk_setnvram;;
-            "datetime" ) device_ramdisk_datetime;;
+            "datetime" ) device_datetime_cmd;;
         esac
     done
 }
@@ -8413,6 +8434,7 @@ menu_other() {
             if [[ $device_mode != "DFU" ]]; then
                 menu_items+=("DFU Mode Helper")
             fi
+            menu_items+=("Update DateTime")
         fi
         if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
@@ -8422,6 +8444,7 @@ menu_other() {
         fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         menu_print_info
+        # other utilities menu
         print " > Main Menu > Other Utilities"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
@@ -8446,9 +8469,23 @@ menu_other() {
             "Get iOS Version" ) mode="getversion";;
             "Enable Flags" ) menu_flags;;
             "Just Boot" ) menu_justboot;;
+            "Update DateTime" ) mode="device_update_datetime";;
             "Go Back" ) back=1;;
         esac
     done
+}
+
+device_update_datetime() {
+    device_buttons2
+    if [[ $device_mode == "Normal" ]]; then
+        log "Proceeding on Nzormal mode."
+        device_ssh_message
+        device_iproxy
+        device_sshpass
+        device_datetime_cmd
+    else
+        device_ramdisk getversion
+    fi
 }
 
 device_pair() {
@@ -8691,6 +8728,8 @@ device_dump() {
     fi
     if [[ $device_mode == "Recovery" ]]; then
         device_enter_mode pwnDFU
+    elif [[ $device_mode == "Normal" ]]; then
+        device_buttons2
     fi
     if [[ $device_mode == "Normal" ]]; then
         device_ssh_message
@@ -8707,7 +8746,8 @@ device_dump() {
             device_dumpbb
         fi
         cp $arg-$device_ecid.tar $dump
-    elif [[ $device_mode == "DFU" ]]; then
+    fi
+    if [[ $device_mode == "DFU" ]]; then
         log "This operation requires an SSH ramdisk, proceeding"
         print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
         device_enter_ramdisk $arg
