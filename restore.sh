@@ -446,7 +446,7 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git ifuse libimobiledevice6 libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -1075,6 +1075,9 @@ device_get_info() {
             n112 ) device_type="iPod9,1";;
         esac
     fi
+    case $device_type in
+        iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
+    esac
 
     device_fw_dir="../resources/firmware/$device_type"
     if [[ -s $device_fw_dir/hwmodel ]]; then
@@ -1524,7 +1527,7 @@ device_enter_mode() {
         "Recovery" )
             if [[ $device_mode == "Normal" ]]; then
                 if [[ $mode != "enterrecovery" ]]; then
-                    print "* The device needs to be in recovery/DFU mode before proceeding."
+                    print "* The device needs to be in Recovery/DFU mode before proceeding."
                     read -p "$(input 'Send device to recovery mode? (Y/n): ')" opt
                     if [[ $opt == 'n' || $opt == 'N' ]]; then
                         log "User selected N, cannot continue. Exiting."
@@ -2301,7 +2304,7 @@ ipsw_preference_set() {
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
     case $device_target_vers in
-        9.3.[4321] | 9.3 | 9.[21]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
+        9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_proc in
                 1 ) ipsw_canjailbreak=1;;
@@ -2310,11 +2313,7 @@ ipsw_preference_set() {
         ;;
     esac
 
-    if [[ $device_proc == 5 ]]; then
-        case $device_target_vers in
-            8.[210]* ) ipsw_canjailbreak=;;
-        esac
-    elif [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
+    if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
             3.1.3 ) :;;
@@ -3496,13 +3495,22 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
+    # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
+    if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
+        case $device_target_vers in
+            8.[012]* )
+                ipsw_everuntether=1
+                JBFiles+=("everuntether.tar")
+            ;;
+        esac
+    fi
     if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $ipsw_nskip != 1 ]]; then
         ipsw_prepare_jailbreak
         return
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
+    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* && $ipsw_everuntether != 1 ]]; then
         daibutsu="daibutsu"
         ExtraArgs+=" -daibutsu"
         cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
@@ -3537,6 +3545,7 @@ ipsw_prepare_32bit() {
         case $device_target_vers in
             9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
             9.2* | 9.1 )       JBFiles+=("untetherhomedepot921.tar");;
+            9.0* )             JBFiles+=("everuntether.tar");;
             7.1* )
                 case $device_type in
                     iPod* ) JBFiles+=("panguaxe-ipod.tar");;
@@ -3552,7 +3561,7 @@ ipsw_prepare_32bit() {
             JBFiles[0]=$jelbrek/${JBFiles[0]}
         fi
         case $device_target_vers in
-            9* | 8* ) JBFiles+=("$jelbrek/fstab8.tar");;
+            [98]* ) JBFiles+=("$jelbrek/fstab8.tar");;
             7* ) JBFiles+=("$jelbrek/fstab7.tar");;
             4* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
@@ -3572,7 +3581,9 @@ ipsw_prepare_32bit() {
             ;;
         esac
         JBFiles+=("$jelbrek/freeze.tar")
-        if [[ $device_target_vers == "5"* ]]; then
+        if [[ $device_target_vers == "9"* || $ipsw_everuntether == 1 ]]; then
+            JBFiles+=("$jelbrek/daemonloader.tar" "$jelbrek/launchctl.tar")
+        elif [[ $device_target_vers == "5"* ]]; then
             JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
         fi
         if [[ $ipsw_openssh == 1 ]]; then
@@ -4173,7 +4184,7 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
-    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* ]]; then
+    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* && $ipsw_everuntether != 1 ]]; then
         # daibutsu haxx overwrite
         "$dir/hfsplus" RestoreRamdisk.dec untar bin.tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
@@ -5968,6 +5979,7 @@ device_ramdisk() {
             case $vers in
                 9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
+                9.0* )       untether="everuntether.tar";;
                 8* )         untether="daibutsu/untether.tar";;
                 7.1* )
                     case $device_type in
@@ -5992,6 +6004,15 @@ device_ramdisk() {
                     return
                 ;;
             esac
+            # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
+            if [[ $device_proc == 5 ]]; then
+                case $vers in
+                    8.[012]* )
+                        ipsw_everuntether=1
+                        untether="everuntether.tar"
+                    ;;
+                esac
+            fi
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
             $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
@@ -6012,7 +6033,7 @@ device_ramdisk() {
             log "Mounting data partition"
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
-                9* | 8* ) device_send_rdtar fstab8.tar;;
+                [98]* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;;
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
@@ -6053,7 +6074,11 @@ device_ramdisk() {
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
             fi
-            if [[ $vers == "8"* ]]; then
+            if [[ $vers == "9"* || $ipsw_everuntether == 1 ]]; then
+                device_send_rdtar daemonloader.tar
+                device_send_rdtar launchctl.tar
+            fi
+            if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
@@ -6208,9 +6233,9 @@ menu_ramdisk() {
     if (( device_proc >= 5 )); then
         menu_items+=("Erase All (iOS 9+)")
     fi
-    case $device_type in
-        iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
-    esac
+    if [[ $device_canpowder == 1 ]]; then
+        menu_items+=("Disable/Enable Exploit")
+    fi
     menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
@@ -8593,32 +8618,11 @@ device_jailbreak_confirm() {
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
     echo
     case $device_vers in
-        8.2 | 8.[10]* )
-            if [[ $device_proc == 5 ]]; then
-                warn "This version ($device_vers) is broken for daibutsu A5(X)."
-                print "* Supported iOS 8 versions for A5(X) are 8.3 to 8.4.1 only."
-                print "* For this version, use EverPwnage and sideload it to your device."
-                print "* https://github.com/LukeZGD/EverPwnage"
-                pause
-                return
-            else
-                print "* For this version, you can also use EverPwnage and sideload it to your device."
-                print "* https://github.com/LukeZGD/EverPwnage"
-                print "* You may still continue if you really want to do the ramdisk method instead."
-                pause
-            fi
-        ;;
-        8* )
+        8* | 9.0* )
             print "* For this version, you can also use EverPwnage and sideload it to your device."
             print "* https://github.com/LukeZGD/EverPwnage"
             print "* You may still continue if you really want to do the ramdisk method instead."
             pause
-        ;;
-        9.0* )
-            print "* For this version, use EverPwnage and sideload it to your device."
-            print "* https://github.com/LukeZGD/EverPwnage"
-            pause
-            return
         ;;
         9.3.[56] )
             print "* For this version, download kok3shi9 and sideload it to your device."
@@ -9597,7 +9601,15 @@ main() {
         "save-onboard-dump" ) shsh_save_onboard dump;;
         "save-cydia-blobs" ) shsh_save_cydia;;
         "enterrecovery" ) device_enter_mode Recovery;;
-        "exitrecovery" ) log "Attempting to exit Recovery mode."; $irecovery -n;;
+        "exitrecovery" )
+            log "Attempting to exit Recovery mode."
+            $irecovery -n
+            print "* Note: For tether downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
+            if [[ $device_canpowder == 1 ]]; then
+                print "* Note 2: If your device is stuck in recovery mode, it may have been restored with powdersn0w before."
+                print "    - If so, try to clear the device's NVRAM: go to Other Utilities -> Clear NVRAM"
+            fi
+        ;;
         "enterdfu" ) device_enter_mode DFU;;
         "dfuipsw" ) restore_dfuipsw;;
         "dfuipswipsw" ) restore_dfuipsw ipsw;;
