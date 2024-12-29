@@ -1864,7 +1864,7 @@ device_enter_mode() {
                 device_ipwndfu send_ibss
                 return
             fi
-            if [[ $platform == "macos" ]] || (( device_proc > 7 )); then
+            if [[ $platform == "macos" ]]; then
                 return
             elif [[ $device_proc == 7 ]]; then
                 device_ipwndfu rmsigchks
@@ -2700,7 +2700,6 @@ ipsw_prepare_1033() {
 ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
-    echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
     echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
     echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
     echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
@@ -8503,7 +8502,7 @@ menu_other() {
 device_update_datetime() {
     device_buttons2
     if [[ $device_mode == "Normal" ]]; then
-        log "Proceeding on Nzormal mode."
+        log "Proceeding on Normal mode."
         device_ssh_message
         device_iproxy
         device_sshpass
@@ -8622,7 +8621,6 @@ device_jailbreak_confirm() {
             print "* For this version, you can also use EverPwnage and sideload it to your device."
             print "* https://github.com/LukeZGD/EverPwnage"
             print "* You may still continue if you really want to do the ramdisk method instead."
-            pause
         ;;
         9.3.[56] )
             print "* For this version, download kok3shi9 and sideload it to your device."
@@ -8634,7 +8632,6 @@ device_jailbreak_confirm() {
             print "* For this version, you can also use HomeDepot and sideload it to your device."
             print "* https://ios.cfw.guide/installing-homedepot/"
             print "* You may still continue if you really want to do the ramdisk method instead."
-            pause
         ;;
         10* )
             print "* For this version, download socket and sideload it to your device."
@@ -8646,7 +8643,7 @@ device_jailbreak_confirm() {
         3.[10]* )
             if [[ $device_type != "iPhone2,1" ]]; then
                 warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
-                print "* Supported versions are: 3.1.3 to 9.3.4 (excluding 9.0.x)"
+                print "* Supported versions are: 3.1.3 to 9.3.4"
                 pause
                 return
             fi
@@ -9156,6 +9153,9 @@ menu_justboot() {
 device_justboot() {
     if [[ -z $device_bootargs ]]; then
         device_bootargs="-v pio-error=0"
+    fi
+    if [[ $main_argmode == "device_justboot" ]]; then
+        cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
     fi
     device_ramdisk justboot
 }
