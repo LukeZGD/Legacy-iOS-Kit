@@ -220,7 +220,7 @@ set_tool_paths() {
             error "Your distro version ($platform_ver - $platform_arch) is not supported. See the repo README for supported OS versions/distros"
         else
             warn "Your distro ($platform_ver - $platform_arch) is not detected/supported. See the repo README for supported OS versions/distros"
-            print "* You may still continue, but you need to install required packages and libraries manually as needed."
+            print "* You may still continue, but you will need to install required packages and libraries manually as needed."
             sleep 5
             pause
         fi
@@ -7034,8 +7034,25 @@ menu_shsh() {
         case $selected in
             "iOS"* ) mode="save-ota-blobs";;
             "Onboard Blobs" ) menu_shsh_onboard;;
-            "Onboard Blobs (Raw Dump)" ) mode="save-onboard-dump";;
-            "Cydia Blobs" ) mode="save-cydia-blobs";;
+            "Onboard Blobs (Raw Dump)" )
+                print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
+                print "* This option is useful for determining the iBoot version of your device first, to get the correct IPSW for conversion."
+                print "* See the Convert Raw Dump option for converting raw dumps to usable SHSH blobs."
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    continue
+                fi
+                mode="save-onboard-dump"
+            ;;
+
+            "Cydia Blobs" )
+                print "* This option will check if this device has saved blobs in Cydia servers, and proceed to save them if there are any."
+                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    continue
+                fi
+                mode="save-cydia-blobs"
+            ;;
             "Convert Raw Dump" ) menu_shsh_convert;;
             "Go Back" ) back=1;;
         esac
@@ -7248,7 +7265,13 @@ menu_restore() {
             "" ) :;;
             "Go Back" ) back=1;;
             "Other (Custom IPSW)" ) mode="customipsw";;
-            "DFU IPSW" ) mode="dfuipsw${1}";;
+            "DFU IPSW" )
+                if [[ $1 == "ipsw" ]]; then
+                    mode="dfuipswipsw"
+                else
+                    device_dfuipsw_confirm
+                fi
+            ;;
             "More versions" ) menu_restore_more "$1";;
             "Latest iOS" ) mode="restore-latest";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
@@ -8493,7 +8516,7 @@ menu_other() {
             "Get iOS Version" ) mode="getversion";;
             "Enable Flags" ) menu_flags;;
             "Just Boot" ) menu_justboot;;
-            "Update DateTime" ) mode="device_update_datetime";;
+            "Update DateTime" ) device_update_datetime;;
             "Go Back" ) back=1;;
         esac
     done
@@ -8507,8 +8530,9 @@ device_update_datetime() {
         device_iproxy
         device_sshpass
         device_datetime_cmd
+        kill $iproxy_pid
     else
-        device_ramdisk getversion
+        mode="getversion"
     fi
 }
 
@@ -8658,6 +8682,7 @@ device_jailbreak_confirm() {
         print "* You may encounter issues like slowdowns/freezing and losing baseband functionality."
         print "* It is recommended to instead dump blobs and restore with the jailbreak option enabled."
         print "* Or use other methods like jailbreaking with evasi0n7/Pangu if your device is not OTA updated."
+        echo
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
@@ -8985,17 +9010,24 @@ restore_customipsw() {
     restore_latest custom
 }
 
-restore_dfuipsw() {
+device_dfuipsw_confirm() {
+    print "* You are about to restore with a DFU IPSW."
+    print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
+    print "* All device data will be wiped! Only proceed if you have backed up your data."
+    print "* Expect the restore to fail and the device to be stuck in DFU mode."
+    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+        return
+    fi
+    mode="device_dfuipsw"
+}
+
+device_dfuipsw() {
     # the only change done to the "dfu ipsw" is just applelogo copied and renamed to llb
     # replacing llb with an invalid img3/im4p to make the restore fail, the device will then fallback to true dfu mode
     # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
     # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
     # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
-    print "* You are about to restore with a DFU IPSW."
-    print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
-    print "* All device data will be wiped! Only proceed if you have backed up your data."
-    print "* Expect the restore to fail and the device to be stuck in DFU mode."
-    pause
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
     ipsw_latest_set
@@ -9611,8 +9643,7 @@ main() {
             fi
         ;;
         "enterdfu" ) device_enter_mode DFU;;
-        "dfuipsw" ) restore_dfuipsw;;
-        "dfuipswipsw" ) restore_dfuipsw ipsw;;
+        "dfuipswipsw" ) device_dfuipsw ipsw;;
         "customipsw" ) restore_customipsw;;
         "getversion" ) device_ramdisk getversion;;
         "shutdown" ) $idevicediagnostics shutdown;;

@@ -118,7 +118,7 @@
 
 ## Supported OS versions/distros
 
-#### Supported architectures: x86_64, arm64, armhf
+#### Supported architectures: x86_64, arm64 (armhf deprecated)
 
 - **macOS** 10.11 and newer (10.12 and newer recommended for full support)
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
