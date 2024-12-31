@@ -53,10 +53,10 @@ jobs:
           mkdir ./bin/linux
           cp -R ./exclude/bin/linux/x86_64 ./bin/linux
 
-      - name: Zip linux files
+      - name: Zip linux x86_64 files
         run: zip -r ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
-      - name: Move linux binaries and other files
+      - name: Move linux x86_64 binaries and other files
         run: |
           rm -r ./bin/linux/x86_64
           cp -R ./exclude/bin/linux/arm64 ./bin/linux
@@ -64,15 +64,7 @@ jobs:
       - name: Zip linux arm64 files
         run: zip -r ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
-      - name: Move linux arm64 binaries and other files
-        run: |
-          rm -r ./bin/linux/arm64
-          cp -R ./exclude/bin/linux/armhf ./bin/linux
-
-      - name: Zip linux armhf files
-        run: zip -r ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
-
-      - name: Move linux armhf binaries and other files
+      - name: Move linux binaries and other files
         run: rm -r ./bin/linux
 
       - name: Copy exclude files back
@@ -96,6 +88,5 @@ jobs:
             git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip
             ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip
-            ${{ github.event.repository.name }}_linux_armhf_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip
             ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip
