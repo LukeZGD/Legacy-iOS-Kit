@@ -7198,12 +7198,10 @@ menu_restore() {
                 esac
                 menu_items+=("Other (powdersn0w $text2 blobs)")
             ;;
-            iPhone1,[12] | iPhone2,1 | iPhone3,[23] | iPod[1234],1 )
-                if [[ -z $1 ]]; then
-                    menu_items+=("Other (Custom IPSW)")
-                fi
-            ;;
         esac
+        if (( device_proc < 5 )); then
+            menu_items+=("Other (Custom IPSW)")
+        fi
         if [[ $device_proc != 1 ]]; then
             if [[ $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
                 menu_items+=("Other (Use SHSH Blobs)")
@@ -7264,7 +7262,7 @@ menu_restore() {
         case $selected in
             "" ) :;;
             "Go Back" ) back=1;;
-            "Other (Custom IPSW)" ) mode="customipsw";;
+            "Other (Custom IPSW)" ) restore_customipsw_confirm;;
             "DFU IPSW" )
                 if [[ $1 == "ipsw" ]]; then
                     mode="dfuipswipsw"
@@ -7984,7 +7982,7 @@ menu_ipsw_browse() {
         [6543]* ) versionc="$1";;
         "custom" ) text="Custom";;
     esac
-    if [[ $versionc == "$device_latest_vers" ]]; then
+    if [[ $versionc == "$device_latest_vers" || $1 == "custom" ]]; then
         menu_items=()
     elif [[ -n $versionc ]]; then
         menu_items=($(ls ../${device_type}_${versionc}*Restore.ipsw 2>/dev/null))
@@ -8653,8 +8651,8 @@ device_jailbreak_confirm() {
             return
         ;;
         9* )
-            print "* For this version, you can also use HomeDepot and sideload it to your device."
-            print "* https://ios.cfw.guide/installing-homedepot/"
+            print "* For this version, you can also use JailbreakMe 4.0 to jailbreak your device."
+            print "* https://lukezgd.github.io/jbme4/"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         10* )
@@ -8974,14 +8972,14 @@ device_reverthacktivate() {
     log "Done. Your device should reboot now"
 }
 
-restore_customipsw() {
+restore_customipsw_confirm() {
     print "* You are about to restore with a custom IPSW."
     print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
     if [[ $device_newbr == 1 ]]; then
         warn "Your device is a new bootrom model and some custom IPSWs might not be compatible."
         print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
     else
-        warn "Do NOT use this option for powdersn0w or jailbreak IPSWs with Legacy iOS Kit!"
+        warn "Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
     fi
     if [[ $platform == "macos" ]] && [[ $device_type == "iPod2,1" || $device_proc == 1 ]]; then
         echo
@@ -8996,7 +8994,14 @@ restore_customipsw() {
         print "* For iPhone 2G/3G, the second restore may fail due to baseband."
         print "* You can exit recovery mode after by going to: Main Menu -> Exit Recovery Mode"
     fi
-    pause
+    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
+    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+        return
+    fi
+    mode="customipsw"
+}
+
+restore_customipsw() {
     menu_ipsw_browse "custom"
     if [[ -z $ipsw_path ]]; then
         error "No IPSW selected, cannot continue."
