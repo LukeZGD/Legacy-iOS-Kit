@@ -36,7 +36,7 @@
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
 - [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase device
-- [Device Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Device-Management) - Export data and battery info, shutdown/restart device, pair device
+- [Device Operations](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Device-Operations) - Export data and battery info, shutdown/restart device, pair device
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)

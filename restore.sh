@@ -5883,7 +5883,7 @@ device_ramdisk() {
     elif [[ $device_proc == 1 ]]; then
         device_enter_mode DFU
     else
-        device_buttons2
+        device_enter_mode kDFU
     fi
 
     if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
@@ -6187,6 +6187,8 @@ device_ramdisk_ios3exploit() {
 device_datetime_cmd() {
     log "Running command to Update DateTime"
     $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
+    log "Done"
+    pause
 }
 
 device_ramdisk_iosvers() {
@@ -6692,7 +6694,7 @@ menu_main() {
                 [12].*  ) :;;
                 [1289]* ) menu_items+=("Sideload IPA");;
             esac
-            menu_items+=("App Management" "Data Management" "Device Management")
+            menu_items+=("App Management" "Data Management" "Device Operations")
         fi
         menu_items+=("Other Utilities" "Exit")
         select opt in "${menu_items[@]}"; do
@@ -6706,7 +6708,7 @@ menu_main() {
             "Sideload IPA" ) menu_ipa "$selected";;
             "App Management" ) menu_appmanage;;
             "Data Management" ) menu_datamanage;;
-            "Device Management" ) menu_devicemanage;;
+            "Device Operations" ) menu_devicemanage;;
             "Other Utilities" ) menu_other;;
             "FourThree Utility" ) menu_fourthree;;
             "Attempt Activation" ) device_activate;;
@@ -6889,9 +6891,10 @@ menu_ipa() {
             print "* If you have AppSync installed, go to App Management -> Install IPA (AppSync) instead."
             if [[ $platform == "macos" ]]; then
                 echo
-                warn "\"Sideload IPA\" is currently not supported on macOS."
+                warn "\"Sideload IPA\" is not supported on macOS."
                 print "* Use Sideloadly or AltServer instead for this."
                 print "* You also might be looking for the \"Install IPA (AppSync)\" option instead."
+                print "* You can find it by going to App Management."
                 pause
                 break
             fi
@@ -6901,7 +6904,7 @@ menu_ipa() {
             print "* Selected IPA: $ipa_path"
             menu_items+=("Install IPA")
         elif [[ $1 == "Install"* ]]; then
-            print "* Select IPA files to install (multiple selection)"
+            print "* Select IPA file(s) to install (multiple selection)"
         else
             print "* Select IPA file to install (or select Use Dadoum Sideloader)"
             menu_items+=("Use Dadoum Sideloader")
@@ -7190,15 +7193,13 @@ menu_restore() {
                 menu_items+=("Latest iOS ($device_latest_vers)")
             fi
         fi
-        case $device_type in
-            iPhone4,1 | iPhone5,[1234] | iPad2,4 | iPod5,1 )
-                local text2="7.1.x"
-                case $device_type in
-                    iPhone5,[1234] ) text2="7.x";;
-                esac
-                menu_items+=("Other (powdersn0w $text2 blobs)")
-            ;;
-        esac
+        if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
+            local text2="7.1.x"
+            case $device_type in
+                iPhone5,[1234] ) text2="7.x";;
+            esac
+            menu_items+=("Other (powdersn0w $text2 blobs)")
+        fi
         if (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
         fi
@@ -8387,7 +8388,7 @@ menu_devicemanage() {
             menu_items+=("Shutdown Device" "Restart Device")
         fi
         menu_items+=("Pair Device" "Enter Recovery Mode" "Go Back")
-        print " > Main Menu > Device Management"
+        print " > Main Menu > Device Operations"
         input "Select an option:"
         select opt in "${menu_items[@]}"; do
             selected="$opt"
@@ -8439,10 +8440,11 @@ menu_other() {
                 *    ) menu_items+=("Enter pwnDFU Mode");;
             esac
             menu_items+=("Clear NVRAM")
-            case $device_type in
-                iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) menu_items+=("Disable/Enable Exploit");;
-                iPhone2,1 ) menu_items+=("Install alloc8 Exploit");;
-            esac
+            if [[ $device_canpowder == 1 ]]; then
+                menu_items+=("Disable/Enable Exploit")
+            elif [[ $device_type == "iPhone2,1" ]]; then
+                menu_items+=("Install alloc8 Exploit")
+            fi
             if [[ $device_type != "iPod2,1" ]]; then
                 menu_items+=("Just Boot")
             fi
@@ -8459,12 +8461,7 @@ menu_other() {
                         esac
                     ;;
                 esac
-            else
-                menu_items+=("Get iOS Version" "Activation Records")
             fi
-            case $device_type in
-                iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
-            esac
         fi
         if [[ $device_mode != "none" ]]; then
             if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
@@ -8480,6 +8477,14 @@ menu_other() {
                 menu_items+=("DFU Mode Helper")
             fi
             menu_items+=("Update DateTime")
+            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+                if [[ $device_mode != "Normal" ]]; then
+                    menu_items+=("Get iOS Version" "Activation Records")
+                fi
+                case $device_type in
+                    iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
+                esac
+            fi
         fi
         if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
@@ -8600,13 +8605,13 @@ device_jailbreak_confirm() {
     fi
     log "Checking if your device and version is supported..."
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
-        warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
+        warn "For this version, it will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
         print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
         pause
     elif [[ $device_type == "iPhone3,3" ]]; then
         case $device_vers in
             4.2.9 | 4.2.10 )
-                warn "This will be a semi-tethered jailbreak."
+                warn "For this version, it will be a semi-tethered jailbreak."
                 print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
                 pause
             ;;
@@ -8637,7 +8642,6 @@ device_jailbreak_confirm() {
         esac
     fi
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
-    echo
     case $device_vers in
         8* | 9.0* )
             print "* For this version, you can also use EverPwnage and sideload it to your device."
@@ -8671,6 +8675,7 @@ device_jailbreak_confirm() {
             fi
         ;;
     esac
+    echo
     if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
         warn "For 3.x versions on the 3GS, the \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
         print "* This applies to all 3.x versions on the 3GS only. They require usage of the \"Restore/Downgrade\" option first."
@@ -8770,8 +8775,7 @@ device_dump() {
             device_dumpbb
         fi
         cp $arg-$device_ecid.tar $dump
-    fi
-    if [[ $device_mode == "DFU" ]]; then
+    else
         log "This operation requires an SSH ramdisk, proceeding"
         print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
         device_enter_ramdisk $arg
