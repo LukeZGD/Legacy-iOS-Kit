@@ -154,8 +154,8 @@ function select_option {
     cursor_blink_on()  { printf "$ESC[?25h"; }
     cursor_blink_off() { printf "$ESC[?25l"; }
     cursor_to()        { printf "$ESC[$1;${2:-1}H"; }
-    print_option()     { printf "   $1 "; }
-    print_selected()   { printf "  $ESC[7m $1 $ESC[27m"; }
+    print_option()     { printf "   $1  "; }
+    print_selected()   { printf " ->$ESC[7m $1 $ESC[27m"; }
     get_cursor_row()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[}; }
     key_input()        { read -s -n3 key 2>/dev/null >&2
                          if [[ $key = $ESC[A ]]; then echo up;    fi
@@ -217,40 +217,38 @@ select_yesno() {
     fi
 
     if [[ $menu_old == 1 ]]; then
-        local cont
         local opt
-        while [[ $cont != 1 ]]; do
+        while true; do
             read -p "$(input "$msg")" opt
             case $opt in
-                [NnYy] ) cont=1;;
+                [NnYy] ) break;;
+                "" )
+                    # select default if no y/n given
+                    if [[ $2 == 1 ]]; then
+                        opt='y'
+                    else
+                        opt='n'
+                    fi
+                    break
+                ;;
             esac
         done
-        if [[ $2 == 1 ]]; then
-            # yes is default if $2 set to 1
-            if [[ $opt == 'N' || $opt == 'n' ]]; then
-                return 0
-            fi
-            return 1
+        if [[ $2 == 1 ]]; then # default is "yes" if $2 is set to 1
+            [[ $opt == [Nn] ]] && return 0 || return 1
+        else                   # default is "no" otherwise
+            [[ $opt == [Yy] ]] && return 1 || return 0
         fi
-        # no is default by default
-        if [[ $opt == 'Y' || $opt == 'y' ]]; then
-            return 1
-        fi
-        return 0
     fi
 
-    local yesno=("No" "Yes") # no is default by default
-    if [[ $2 == 1 ]]; then # yes is default if $2 set to 1
+    local yesno=("No" "Yes") # default is "no" by default
+    if [[ $2 == 1 ]]; then # default is "yes" if $2 is set to 1
         yesno=("Yes" "No")
     fi
     input "$msg"
     select_option "${yesno[@]}"
     local res=$?
     if [[ $2 == 1 ]]; then
-        case $res in
-            0 ) return 1;;
-            1 ) return 0;;
-        esac
+        [[ $res == 0 ]] && return 1 || return 0
     fi
     return $res
 }
