@@ -100,6 +100,7 @@ List of options:
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
     --no-version-check        Disable script version checking
+    --old-menu                Use the old menus with number select and y/n
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode (requires additional arguments)
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
@@ -136,6 +137,122 @@ unzip() {
 
 zip() {
     $zip2 "$@" || error "An error occurred with the zip operation: $*"
+}
+
+# from https://unix.stackexchange.com/questions/146570/arrow-key-enter-menu#415155
+function select_option {
+    if [[ $menu_old == 1 ]]; then
+        select opt in "$@"; do
+            selected=$((REPLY-1))
+            break
+        done
+        return $selected
+    fi
+
+    # little helpers for terminal print control and key input
+    ESC=$( printf "\033")
+    cursor_blink_on()  { printf "$ESC[?25h"; }
+    cursor_blink_off() { printf "$ESC[?25l"; }
+    cursor_to()        { printf "$ESC[$1;${2:-1}H"; }
+    print_option()     { printf "   $1 "; }
+    print_selected()   { printf "  $ESC[7m $1 $ESC[27m"; }
+    get_cursor_row()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[}; }
+    key_input()        { read -s -n3 key 2>/dev/null >&2
+                         if [[ $key = $ESC[A ]]; then echo up;    fi
+                         if [[ $key = $ESC[B ]]; then echo down;  fi
+                         if [[ $key = ""     ]]; then echo enter; fi; }
+
+    # initially print empty new lines (scroll down if at bottom of screen)
+    for opt; do printf "\n"; done
+
+    # determine current screen position for overwriting the options
+    local lastrow=`get_cursor_row`
+    local startrow=$(($lastrow - $#))
+
+    # ensure cursor and input echoing back on upon a ctrl+c during read -s
+    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
+    cursor_blink_off
+
+    local selected=0
+    while true; do
+        # print options by overwriting the last lines
+        local idx=0
+        for opt; do
+            cursor_to $(($startrow + $idx))
+            if [ $idx -eq $selected ]; then
+                print_selected "$opt"
+            else
+                print_option "$opt"
+            fi
+            ((idx++))
+        done
+
+        # user key control
+        case `key_input` in
+            enter) break;;
+            up)    ((selected--));
+                   if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi;;
+            down)  ((selected++));
+                   if [ $selected -ge $# ]; then selected=0; fi;;
+        esac
+    done
+
+    # cursor position back to normal
+    cursor_to $lastrow
+    printf "\n"
+    cursor_blink_on
+
+    return $selected
+}
+
+select_yesno() {
+    local msg="Do you want to continue?"
+    if [[ -n $1 ]]; then
+        msg="$1"
+    fi
+    if [[ $2 == 1 ]]; then
+        msg+=" (Y/n): "
+    else
+        msg+=" (y/N): "
+    fi
+
+    if [[ $menu_old == 1 ]]; then
+        local cont
+        local opt
+        while [[ $cont != 1 ]]; do
+            read -p "$(input "$msg")" opt
+            case $opt in
+                [NnYy] ) cont=1;;
+            esac
+        done
+        if [[ $2 == 1 ]]; then
+            # yes is default if $2 set to 1
+            if [[ $opt == 'N' || $opt == 'n' ]]; then
+                return 0
+            fi
+            return 1
+        fi
+        # no is default by default
+        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+            return 1
+        fi
+        return 0
+    fi
+
+    local yesno=("No" "Yes") # no is default by default
+    if [[ $2 == 1 ]]; then # yes is default if $2 set to 1
+        yesno=("Yes" "No")
+    fi
+    input "$msg"
+    select_option "${yesno[@]}"
+    local res=$?
+    if [[ $2 == 1 ]]; then
+        case $res in
+            0 ) return 1;;
+            1 ) return 0;;
+        esac
+    fi
+    return $res
 }
 
 set_tool_paths() {
@@ -514,8 +631,8 @@ version_update_check() {
 version_update() {
     local url
     local req
-    read -p "$(input 'Do you want to update now? (Y/n): ')" opt
-    if [[ $opt == 'n' || $opt == 'N' ]]; then
+    select_yesno "Do you want to update now?" 1
+    if [[ $? != 1 ]]; then
         log "User selected N, cannot continue. Exiting."
         exit
     fi
@@ -930,8 +1047,8 @@ device_get_info() {
             if [[ $device_type == "iPhone1,1" && -z $device_argmode ]]; then
                 print "* Device Type Option"
                 print "* Select Y if the device is an iPhone 2G, or N if it is an iPod touch 1"
-                read -p "$(input 'Is this device an iPhone 2G? (Y/n): ')" opt
-                if [[ $opt == 'n' || $opt == 'N' ]]; then
+                select_yesno "Is this device an iPhone 2G?" 1
+                if [[ $? != 1 ]]; then
                     device_type="iPod1,1"
                 fi
             fi
@@ -1436,8 +1553,8 @@ device_dfuhelper() {
     fi
     print "* DFU Mode Helper - Get ready to enter DFU mode."
     print "* If you already know how to enter DFU mode, you may do so right now before continuing."
-    read -p "$(input "Select Y to continue, N to exit $rec(Y/n) ")" opt
-    if [[ $opt == 'N' || $opt == 'n' ]]; then
+    select_yesno "Select Y to continue, N to exit $rec" 1
+    if [[ $? != 1 ]]; then
         if [[ -z $1 ]]; then
             log "Attempting to exit Recovery mode."
             $irecovery -n
@@ -1528,8 +1645,8 @@ device_enter_mode() {
             if [[ $device_mode == "Normal" ]]; then
                 if [[ $mode != "enterrecovery" ]]; then
                     print "* The device needs to be in Recovery/DFU mode before proceeding."
-                    read -p "$(input 'Send device to recovery mode? (Y/n): ')" opt
-                    if [[ $opt == 'n' || $opt == 'N' ]]; then
+                    select_yesno "Send device to recovery mode?" 1
+                    if [[ $? != 1 ]]; then
                         log "User selected N, cannot continue. Exiting."
                         exit
                     fi
@@ -1701,8 +1818,8 @@ device_enter_mode() {
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N if this is not the case. (pwned using checkm8-a5)"
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
-                read -p "$(input 'Is your device already in pwned iBSS/kDFU mode? (y/N): ')" opt
-                if [[ $opt == "Y" || $opt == "y" ]]; then
+                select_yesno "Is your device already in pwned iBSS/kDFU mode?" 0
+                if [[ $? != 0 ]]; then
                     log "Pwned iBSS/kDFU mode specified by user."
                     return
                 fi
@@ -1799,22 +1916,22 @@ device_enter_mode() {
                 print "* If the first option does not work, try the other option and do multiple attempts."
                 print "* Note: Some Intel Macs may have better success rates with ipwndfu than ipwnder."
                 input "Select your option:"
-                select opt2 in "${selection[@]}"; do
-                    log "Placing device to pwnDFU mode using $opt2"
-                    case $opt2 in
-                        "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
-                        "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
-                        "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
-                        "ipwnder" )
-                            mkdir image3 ../saved/image3 2>/dev/null
-                            cp ../saved/image3/* image3/ 2>/dev/null
-                            $ipwnder -d
-                            tool_pwned=$?
-                            cp image3/* ../saved/image3/
-                            break
-                        ;;
-                    esac
-                done
+                select_option "${selection[@]}"
+                opt2="${selection[$?]}"
+                log "Placing device to pwnDFU mode using $opt2"
+                case $opt2 in
+                    "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
+                    "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
+                    "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
+                    "ipwnder" )
+                        mkdir image3 ../saved/image3 2>/dev/null
+                        cp ../saved/image3/* image3/ 2>/dev/null
+                        $ipwnder -d
+                        tool_pwned=$?
+                        cp image3/* ../saved/image3/
+                        break
+                    ;;
+                esac
             elif [[ $platform == "linux" ]]; then
                 # A6/A7 linux uses ipwndfu
                 device_ipwndfu pwn
@@ -1841,14 +1958,14 @@ device_enter_mode() {
                 print "* If the first option does not work, try many times and/or try the other option(s)."
                 print "* Note: Some Intel Macs have very low success rates for A7 checkm8."
                 input "Select your option:"
-                select opt2 in "${selection[@]}"; do
-                    log "Placing device to pwnDFU mode using $opt"
-                    case $opt2 in
-                        "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?; break;;
-                        "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?; break;;
-                        *           ) ${ipwnder}2 -p; tool_pwned=$?; break;;
-                    esac
-                done
+                select_option "${selection[@]}"
+                opt2="${selection[$?]}"
+                log "Placing device to pwnDFU mode using $opt"
+                case $opt2 in
+                    "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?; break;;
+                    "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?; break;;
+                    *           ) ${ipwnder}2 -p; tool_pwned=$?; break;;
+                esac
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
@@ -2386,8 +2503,8 @@ ipsw_preference_set() {
                 ;;
             esac
         fi
-        read -p "$(input 'Enable this option? (Y/n): ')" ipsw_jailbreak
-        if [[ $ipsw_jailbreak == 'N' || $ipsw_jailbreak == 'n' ]]; then
+        select_yesno "Enable this option?" 1
+        if [[ $? != 1 ]]; then
             ipsw_jailbreak=
             log "Jailbreak option disabled by user."
         else
@@ -2403,8 +2520,8 @@ ipsw_preference_set() {
         print "* Enable this option if you have no valid SIM card to activate the phone."
         print "* Disable this option if you have a working SIM card and want cellular data."
         print "* This option is disabled by default (N). Select this option if unsure."
-        read -p "$(input 'Enable this option? (y/N): ')" ipsw_hacktivate
-        if [[ $ipsw_hacktivate == 'Y' || $ipsw_hacktivate == 'y' ]]; then
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
             log "Hacktivate option enabled by user."
             ipsw_hacktivate=1
         else
@@ -2438,8 +2555,8 @@ ipsw_preference_set() {
         print "* I recommend to enable this option to speed up creating the custom IPSW."
         print "* However, if your PC/Mac has less than 8 GB of RAM, disable this option."
         print "* This option is enabled by default (Y). Select this option if unsure."
-        read -p "$(input 'Enable this option? (Y/n): ')" ipsw_memory
-        if [[ $ipsw_memory == 'N' || $ipsw_memory == 'n' ]]; then
+        select_yesno "Enable this option?" 1
+        if [[ $? != 1 ]]; then
             log "Memory option disabled by user."
             ipsw_memory=
         else
@@ -2464,8 +2581,8 @@ ipsw_preference_set() {
         input "Verbose Boot Option"
         print "* When this option is enabled, the device will have verbose boot on restore."
         print "* This option is enabled by default (Y). Select this option if unsure."
-        read -p "$(input 'Enable this option? (Y/n): ')" ipsw_verbose
-        if [[ $ipsw_verbose == 'N' || $ipsw_verbose == 'n' ]]; then
+        select_yesno "Enable this option?" 1
+        if [[ $? != 1 ]]; then
             ipsw_verbose=
             log "Verbose boot option disabled by user."
         else
@@ -5137,11 +5254,11 @@ device_buttons() {
     print "* Selecting 1 (pwnDFU) is recommended. Both your home and power buttons must be working properly for entering DFU mode."
     print "* Selecting 2 (kDFU) is for those that prefer the jailbroken method instead (have OpenSSH installed)."
     input "Select your option:"
-    select opt2 in "${selection[@]}"; do
-        case $opt2 in
-            *"DFU" ) device_enter_mode $opt2; break;;
-        esac
-    done
+    select_option "${selection[@]}"
+    opt2="${selection[$?]}"
+    case $opt2 in
+        *"DFU" ) device_enter_mode $opt2; break;;
+    esac
 }
 
 device_buttons2() {
@@ -5159,12 +5276,12 @@ device_buttons2() {
         print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     fi
     input "Select your option:"
-    select opt2 in "${selection[@]}"; do
-        case $opt2 in
-            "Jailbroken" ) break;;
-            *"DFU" ) device_enter_mode $opt2; break;;
-        esac
-    done
+    select_option "${selection[@]}"
+    opt2="${selection[$?]}"
+    case $opt2 in
+        "Jailbroken" ) break;;
+        *"DFU" ) device_enter_mode $opt2; break;;
+    esac
 }
 
 restore_prepare() {
@@ -5453,8 +5570,8 @@ restore_usepwndfu64_option() {
     fi
     if [[ $device_proc == 7 ]]; then
         print "* This option is disabled by default (N). Select this option if unsure."
-        read -p "$(input 'Enable this option? (y/N): ')" opt
-        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
             log "Pwned restore option enabled by user."
             restore_usepwndfu64=1
         else
@@ -5462,8 +5579,8 @@ restore_usepwndfu64_option() {
         fi
     else
         print "* This option is enabled by default (Y). Select this option if unsure."
-        read -p "$(input 'Enable this option? (Y/n): ')" opt
-        if [[ $opt == 'N' || $opt == 'n' ]]; then
+        select_yesno "Enable this option?" 1
+        if [[ $? != 1 ]]; then
             log "Pwned restore option disabled by user."
         else
             log "Pwned restore option enabled."
@@ -5482,10 +5599,8 @@ menu_remove4() {
         menu_print_info
         print " > Main Menu > Other Utilities > Disable/Enable Exploit"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Disable Exploit" ) rec=0;;
             "Enable Exploit" ) rec=2;;
@@ -6127,12 +6242,13 @@ device_ramdisk_setnvram() {
             iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
             iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
             iPhone5*  )
-                read -p "$(input "Select base version: Y for iOS 7.1.x, N for iOS 7.0.x (Y/n) ")" opt
-                if [[ $opt != 'N' && $opt != 'n' ]]; then
-                    $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg"
-                else
-                    $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg"
-                fi
+                local selection=("iOS 7.1.x" "iOS 7.0.x")
+                input "Select this device's base version:"
+                select_option "${selection[@]}"
+                case $? in
+                    1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
+                    * ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg";;
+                esac
             ;;
             iPad1,1 | iPod3,1 )
                 device_ramdisk_iosvers
@@ -6256,10 +6372,8 @@ menu_ramdisk() {
         print "* SSH Ramdisk Menu"
         while [[ -z $mode ]]; do
             input "Select an option:"
-            select opt in "${menu_items[@]}"; do
-                selected="$opt"
-                break
-            done
+            select_option "${menu_items[@]}"
+            selected="${menu_items[$?]}"
             case $selected in
                 "Connect to SSH" ) mode="ssh";;
                 "Reboot Device" ) mode="reboot";;
@@ -6295,8 +6409,8 @@ menu_ramdisk() {
                 if [[ $1 == "12"* ]]; then
                     warn "Dumping blobs may fail on iOS 8 ramdisk."
                     print "* It is recommended to do this on iOS $device_ramdiskver ramdisk instead."
-                    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    select_yesno
+                    if [[ $? != 1 ]]; then
                         continue
                     fi
                 elif (( device_proc < 7 )); then
@@ -6334,8 +6448,8 @@ menu_ramdisk() {
                     print "* The mount command also changes depending on the iOS version (which is what we're trying to get here in the first place)"
                     print "* You need to mount filesystems using the appropriate command before continuing (scroll up to see the commands)"
                     warn "Make sure that you know what you are doing when using this option on 64-bit devices."
-                    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                    select_yesno
+                    if [[ $? != 1 ]]; then
                         continue
                     fi
                 fi
@@ -6351,8 +6465,8 @@ menu_ramdisk() {
             "trollstore" )
                 print "* Make sure that your device is on iOS 14 or 15 before continuing."
                 print "* If your device is on iOS 13 or below, TrollStore will NOT work."
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     continue
                 fi
                 log "Checking for latest TrollStore"
@@ -6392,8 +6506,8 @@ menu_ramdisk() {
                     print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
                 fi
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     continue
                 fi
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
@@ -6420,8 +6534,8 @@ menu_ramdisk() {
             "erase9" )
                 warn "This will do a \"Erase All Content and Settings\" procedure for iOS 9+ devices."
                 warn "Do NOT do this if your device is jailbroken untethered!!! (mostly iOS 9.3.4/9.1 and lower)"
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     continue
                 fi
                 log "Sending command for erasing all content and settings..."
@@ -6697,10 +6811,8 @@ menu_main() {
             menu_items+=("App Management" "Data Management" "Device Operations")
         fi
         menu_items+=("Other Utilities" "Exit")
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Restore/Downgrade" ) menu_restore;;
             "Jailbreak Device" ) device_jailbreak_confirm;;
@@ -6729,10 +6841,8 @@ menu_appmanage() {
         menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Install IPA (AppSync)" ) menu_ipa "$selected";;
             "List User Apps"   ) $ideviceinstaller list --user;;
@@ -6774,10 +6884,8 @@ menu_datamanage() {
         echo
         print " > Main Menu > Data Management"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Go Back" ) back=1;;
             "Backup"  ) mode="device_backup_create";;
@@ -6826,10 +6934,8 @@ menu_backup_restore() {
         echo
         print " > Main Menu > Data Management > Restore"
         input "Select option to restore:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Go Back" ) back=1;;
             * ) device_backup="$selected"; mode="device_backup_restore";;
@@ -6857,10 +6963,8 @@ menu_fourthree() {
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Step 1: Restore" ) ipsw_fourthree=1; menu_ipsw "iOS 6.1.3" "fourthree";;
             "Step 2: Partition" ) mode="device_fourthree_step2";;
@@ -6913,10 +7017,8 @@ menu_ipa() {
         echo
         print " > Main Menu > $1"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Select IPA" ) menu_ipa_browse;;
             "Install IPA" )
@@ -7016,10 +7118,8 @@ menu_shsh() {
         fi
         print " > Main Menu > Save SHSH Blobs"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
@@ -7041,8 +7141,8 @@ menu_shsh() {
                 print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
                 print "* This option is useful for determining the iBoot version of your device first, to get the correct IPSW for conversion."
                 print "* See the Convert Raw Dump option for converting raw dumps to usable SHSH blobs."
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     continue
                 fi
                 mode="save-onboard-dump"
@@ -7050,8 +7150,8 @@ menu_shsh() {
 
             "Cydia Blobs" )
                 print "* This option will check if this device has saved blobs in Cydia servers, and proceed to save them if there are any."
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     continue
                 fi
                 mode="save-cydia-blobs"
@@ -7096,10 +7196,8 @@ menu_shsh_onboard() {
         echo
         print " > Main Menu > Save SHSH Blobs > Onboard Blobs"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Save Onboard Blobs" ) mode="save-onboard-blobs";;
@@ -7144,10 +7242,8 @@ menu_shsh_convert() {
         echo
         print " > Main Menu > Save SHSH Blobs > Convert Raw Dump"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Select Raw Dump" ) menu_shshdump_browse;;
@@ -7256,10 +7352,8 @@ menu_restore() {
             echo
         fi
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "" ) :;;
             "Go Back" ) back=1;;
@@ -7305,10 +7399,8 @@ menu_ipsw_downloader() {
         fi
         echo
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Enter Build Version" )
                 print "* Enter the build version of the IPSW you want to download."
@@ -7356,10 +7448,8 @@ menu_restore_more() {
             echo
         fi
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "" ) :;;
             "Go Back" ) back=1;;
@@ -7798,10 +7888,8 @@ menu_ipsw() {
 
         print "$nav"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Create IPSW" ) mode="custom-ipsw";;
             "$start" ) mode="downgrade";;
@@ -7994,10 +8082,8 @@ menu_ipsw_browse() {
         print "* Select $text IPSW Menu"
         while true; do
             input "Select an option:"
-            select opt in "${menu_items[@]}"; do
-                selected="$opt"
-                break
-            done
+            select_option "${menu_items[@]}"
+            selected="${menu_items[$?]}"
             case $selected in
                 "Open File Picker" ) picker=1; break;;
                 "Enter Path" ) break;;
@@ -8274,10 +8360,8 @@ menu_flags() {
         menu_print_info
         print " > Main Menu > Other Utilities > Enable Flags"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Enable disable-bbupdate flag" )
                 warn "This will enable the --disable-bbupdate flag."
@@ -8286,8 +8370,8 @@ menu_flags() {
                 print "* This applies to the following: iPhone 4S, 5, 5C, iPad 4, mini 1"
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the disable-bbupdate flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the disable-bbupdate flag?" 0
+                if [[ $? != 0 ]]; then
                     device_disable_bbupdate="$device_type"
                     back=1
                 fi
@@ -8297,8 +8381,8 @@ menu_flags() {
                 print "* This will enable usage of dumped activation records and stitch to IPSW."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the activation-records flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the activation-records flag?" 0
+                if [[ $? != 0 ]]; then
                     device_actrec=1
                     back=1
                 fi
@@ -8308,8 +8392,8 @@ menu_flags() {
                 print "* This will assume that a pwned iBSS has already been sent to the device."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the skip-ibss flag?" 0
+                if [[ $? != 0 ]]; then
                     device_skip_ibss=1
                     back=1
                 fi
@@ -8322,8 +8406,8 @@ menu_flags() {
                 print "* The recommended method is to jailbreak after the restore instead."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the jailbreak flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the jailbreak flag?" 0
+                if [[ $? != 0 ]]; then
                     ipsw_jailbreak=1
                     back=1
                 fi
@@ -8335,8 +8419,8 @@ menu_flags() {
                 print "* This issue is called \"gas gauge\" error, also known as error 29 in iTunes."
                 print "* By enabling this, firmware components for 6.1.3 or lower will be used for restoring to get past the error."
                 local opt
-                read -p "$(input 'Do you want to enable the gasgauge-patch flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the gasgauge-patch flag?" 0
+                if [[ $? != 0 ]]; then
                     ipsw_gasgauge_patch=1
                     back=1
                 fi
@@ -8346,8 +8430,8 @@ menu_flags() {
                 print "* This will skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the skip-ibss flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the skip-ibss flag?" 0
+                if [[ $? != 0 ]]; then
                     ipsw_skip_first=1
                     back=1
                 fi
@@ -8358,8 +8442,8 @@ menu_flags() {
                 print "* This can be used to skip blob verification for OTA/onboard/factory SHSH blobs."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                read -p "$(input 'Do you want to enable the skip-blob flag? (y/N): ')" opt
-                if [[ $opt == 'y' || $opt == 'Y' ]]; then
+                select_yesno "Do you want to enable the skip-blob flag?" 0
+                if [[ $? != 0 ]]; then
                     restore_useskipblob=1
                     back=1
                 fi
@@ -8390,10 +8474,8 @@ menu_devicemanage() {
         menu_items+=("Pair Device" "Enter Recovery Mode" "Go Back")
         print " > Main Menu > Device Operations"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Export Device Info" )
                 mkdir -p ../saved/info 2>/dev/null
@@ -8497,10 +8579,8 @@ menu_other() {
         # other utilities menu
         print " > Main Menu > Other Utilities"
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Hacktivate Device" ) mode="device_hacktivate";;
             "Revert Hacktivation" ) mode="device_reverthacktivate";;
@@ -8594,8 +8674,8 @@ device_jailbreak_confirm() {
                 if [[ $device_proc == 4 ]]; then
                     print "* Note: If the process fails somewhere, you can just enter DFU mode and attempt jailbreaking again from there."
                 fi
-                read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-                if [[ $opt != 'Y' && $opt != 'y' ]]; then
+                select_yesno
+                if [[ $? != 1 ]]; then
                     return
                 fi
                 mode="device_jailbreak_gilbert"
@@ -8690,8 +8770,8 @@ device_jailbreak_confirm() {
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
-    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+    select_yesno
+    if [[ $? != 1 ]]; then
         return
     fi
     mode="device_jailbreak"
@@ -8748,8 +8828,8 @@ device_dump() {
         log "Found existing dumped $arg: $dump"
         print "* Select Y to overwrite, or N to use existing dump"
         print "* Make sure to keep a backup of the dump if needed"
-        read -p "$(input 'Overwrite this existing dump? (y/N) ')" opt
-        if [[ $opt != 'Y' && $opt != 'y' ]]; then
+        select_yesno "Overwrite this existing dump?" 0
+        if [[ $? != 1 ]]; then
             return
         fi
         log "Deleting existing dumped $arg"
@@ -8869,8 +8949,8 @@ device_dumprd() {
             device_dumpbb rd
             print "* Reminder to backup dump tars if needed"
             if [[ -s $dump/baseband-$device_ecid.tar ]]; then
-                read -p "$(input "Baseband dump exists in $dump/baseband-$device_ecid.tar. Overwrite? (y/N) ")" opt
-                if [[ $opt == 'Y' || $opt == 'y' ]]; then
+                select_yesno "Baseband dump exists in $dump/baseband-$device_ecid.tar. Overwrite?" 0
+                if [[ $? == 1 ]]; then
                     log "Deleting existing dumped baseband"
                     rm $dump/baseband-$device_ecid.tar
                 fi
@@ -8901,7 +8981,8 @@ device_dumprd() {
     mv activation.tar activation-$device_ecid.tar
     if [[ -s $dump/activation-$device_ecid.tar ]]; then
         read -p "$(input "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite? (y/N) ")" opt
-        if [[ $opt == 'Y' || $opt == 'y' ]]; then
+        select_yesno "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite?" 0
+        if [[ $? == 1 ]]; then
             log "Deleting existing dumped activation"
             rm $dump/activation-$device_ecid.tar
         fi
@@ -8998,8 +9079,8 @@ restore_customipsw_confirm() {
         print "* For iPhone 2G/3G, the second restore may fail due to baseband."
         print "* You can exit recovery mode after by going to: Main Menu -> Exit Recovery Mode"
     fi
-    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+    select_yesno
+    if [[ $? != 1 ]]; then
         return
     fi
     mode="customipsw"
@@ -9024,8 +9105,8 @@ device_dfuipsw_confirm() {
     print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
     print "* All device data will be wiped! Only proceed if you have backed up your data."
     print "* Expect the restore to fail and the device to be stuck in DFU mode."
-    read -p "$(input "Select Y to continue, N to go back (y/N) ")" opt
-    if [[ $opt != 'Y' && $opt != 'y' ]]; then
+    select_yesno
+    if [[ $? != 1 ]]; then
         return
     fi
     mode="device_dfuipsw"
@@ -9153,10 +9234,8 @@ menu_justboot() {
         fi
         echo
         input "Select an option:"
-        select opt in "${menu_items[@]}"; do
-            selected="$opt"
-            break
-        done
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
         case $selected in
             "Enter Build Version" )
                 print "* Enter the build version of your device's current iOS version to boot."
@@ -9213,8 +9292,8 @@ device_enter_ramdisk() {
             print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
             print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
             print "* If not sure, just press Enter/Return. This will select the default version."
-            read -p "$(input "Select Y to use iOS $ver, select N to use iOS 8 (Y/n) ")" opt
-            if [[ $opt == 'n' || $opt == 'N' ]]; then
+            select_yesno "Select Y to use iOS $ver, select N to use iOS 8" 1
+            if [[ $? != 1 ]]; then
                 device_ramdisk_ios8=1
             fi
         fi
@@ -9327,10 +9406,12 @@ restore_latest64() {
     print "* Restore will do factory reset and update the device, all data will be cleared"
     print "* Update will only update the device to the latest version"
     print "* Or press Ctrl+C to cancel"
-    read -p "$(input "Select Y to Restore, select N to Update (Y/n) ")" opt2
-    if [[ $opt2 != 'n' && $opt2 != 'N' ]]; then
-        opt+="e"
-    fi
+    local selection=("Restore" "Update")
+    input "Select your option:"
+    select_option "${selection[@]}"
+    case $? in
+        1 ) opt+="e";;
+    esac
     $idevicerestore2 $opt
     mv *.ipsw ..
 }
@@ -9697,6 +9778,7 @@ for i in "$@"; do
         "--ecid"* ) device_ecid="${i#*=}"; device_argmode="entry";;
         "--build-id"* ) device_rd_build="${i#*=}";;
         "--bootargs"* ) device_bootargs="${i#*=}";;
+        "--old-menu" ) menu_old=1;;
     esac
 done
 
@@ -9746,8 +9828,8 @@ if [[ $othertmp != 0 ]]; then
     print "* There might be other Legacy iOS Kit instance(s) running, or residual tmp folder(s) not deleted."
     print "* Running multiple instances is not fully supported and can cause unexpected behavior."
     print "* It is recommended to only use a single instance and/or delete all existing \"tmp\" folders in your Legacy iOS Kit folder before continuing."
-    read -p "$(input "Select Y to remove all tmp folders, N to run as is (Y/n) ")" opt
-    if [[ $opt != 'N' && $opt != 'n' ]]; then
+    select_yesno "Select Y to remove all tmp folders, N to run as is" 1
+    if [[ $? == 1 ]]; then
         rm -r "$(dirname "$0")/tmp"*
     fi
 fi
