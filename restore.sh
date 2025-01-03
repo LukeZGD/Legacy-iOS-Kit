@@ -74,6 +74,7 @@ clean_usbmuxd() {
         return
     fi
     sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+    sleep 1
     if [[ $(command -v systemctl) ]]; then
         sudo systemctl restart usbmuxd
     elif [[ $(command -v rc-service) ]]; then
@@ -140,7 +141,7 @@ zip() {
 }
 
 # from https://unix.stackexchange.com/questions/146570/arrow-key-enter-menu#415155
-function select_option {
+select_option() {
     if [[ $menu_old == 1 ]]; then
         select opt in "$@"; do
             selected=$((REPLY-1))
@@ -1541,7 +1542,7 @@ device_dfuhelper3() {
 
 device_dfuhelper() {
     local opt
-    local rec="recovery mode "
+    local rec=" recovery mode"
     if [[ $1 == "norec" ]]; then
         rec=
     fi
@@ -1551,7 +1552,7 @@ device_dfuhelper() {
     fi
     print "* DFU Mode Helper - Get ready to enter DFU mode."
     print "* If you already know how to enter DFU mode, you may do so right now before continuing."
-    select_yesno "Select Y to continue, N to exit $rec" 1
+    select_yesno "Select Y to continue, N to exit$rec" 1
     if [[ $? != 1 ]]; then
         if [[ -z $1 ]]; then
             log "Attempting to exit Recovery mode."
@@ -1918,16 +1919,15 @@ device_enter_mode() {
                 opt2="${selection[$?]}"
                 log "Placing device to pwnDFU mode using $opt2"
                 case $opt2 in
-                    "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?; break;;
-                    "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?; break;;
-                    "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?; break;;
+                    "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?;;
+                    "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?;;
+                    "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?;;
                     "ipwnder" )
                         mkdir image3 ../saved/image3 2>/dev/null
                         cp ../saved/image3/* image3/ 2>/dev/null
                         $ipwnder -d
                         tool_pwned=$?
                         cp image3/* ../saved/image3/
-                        break
                     ;;
                 esac
             elif [[ $platform == "linux" ]]; then
@@ -1960,9 +1960,9 @@ device_enter_mode() {
                 opt2="${selection[$?]}"
                 log "Placing device to pwnDFU mode using $opt"
                 case $opt2 in
-                    "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?; break;;
-                    "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?; break;;
-                    *           ) ${ipwnder}2 -p; tool_pwned=$?; break;;
+                    "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?;;
+                    "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?;;
+                    "ipwnder"*  ) ${ipwnder}2 -p; tool_pwned=$?;;
                 esac
             fi
             if [[ $tool_pwned == 2 ]]; then
@@ -2393,7 +2393,7 @@ ipsw_nojailbreak_message() {
     log "Jailbreak option is not available for this version. You may jailbreak$hac later after the restore"
     print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
     if [[ $tohac == 1 ]]; then
-        print "* To hacktivate, go to \"Other Utilities -> Hacktivate Device\" after jailbreaking"
+        print "* To hacktivate, go to \"Useful Utilities -> Hacktivate Device\" after jailbreaking"
     fi
 }
 
@@ -4989,7 +4989,7 @@ restore_idevicerestore() {
     echo
     log "Restoring done! Read the message below if any error has occurred:"
     case $device_target_vers in
-        [1234]* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
     esac
     if [[ $opt != 0 ]]; then
         print "* If the restore failed on updating baseband:"
@@ -5193,7 +5193,7 @@ restore_latest() {
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
     case $device_target_vers in
-        [1234]* ) print "* For device activation, go to: Other Utilities -> Attempt Activation";;
+        [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
     esac
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -5254,9 +5254,9 @@ device_buttons() {
     input "Select your option:"
     select_option "${selection[@]}"
     opt2="${selection[$?]}"
-    case $opt2 in
-        *"DFU" ) device_enter_mode $opt2; break;;
-    esac
+    if [[ $opt2 == *"DFU" ]]; then
+        device_enter_mode $opt2
+    fi
 }
 
 device_buttons2() {
@@ -5276,10 +5276,9 @@ device_buttons2() {
     input "Select your option:"
     select_option "${selection[@]}"
     opt2="${selection[$?]}"
-    case $opt2 in
-        "Jailbroken" ) break;;
-        *"DFU" ) device_enter_mode $opt2; break;;
-    esac
+    if [[ $opt2 == *"DFU" ]]; then
+        device_enter_mode $opt2
+    fi
 }
 
 restore_prepare() {
@@ -5340,7 +5339,7 @@ restore_prepare() {
                 if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $device_target_powder == 1 ]]; then
                     echo
                     log "The device may enter recovery mode after the restore"
-                    print "* To fix this, go to: Other Utilities -> Disable/Enable Exploit -> Enable Exploit"
+                    print "* To fix this, go to: Useful Utilities -> Disable/Enable Exploit -> Enable Exploit"
                 fi
             elif [[ $device_target_other == 1 ]]; then
                 case $device_target_vers in
@@ -5372,7 +5371,7 @@ restore_prepare() {
                 if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
                     restore_latest custom first
                     print "* Proceed to install the alloc8 exploit for the device to boot:"
-                    print " -> Go to: Other Utilities -> Install alloc8 Exploit"
+                    print " -> Go to: Useful Utilities -> Install alloc8 Exploit"
                     log "Do not disconnect your device, not done yet"
                     device_find_mode DFU 50
                     device_alloc8
@@ -5595,7 +5594,7 @@ menu_remove4() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Disable Exploit" "Enable Exploit" "Go Back")
         menu_print_info
-        print " > Main Menu > Other Utilities > Disable/Enable Exploit"
+        print " > Main Menu > Useful Utilities > Disable/Enable Exploit"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
@@ -6548,7 +6547,7 @@ menu_ramdisk() {
 
 shsh_save_onboard64() {
     print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
-    print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Other Utilities -> SSH Ramdisk"
+    print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
     print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
     echo
     if [[ $device_mode != "Normal" ]]; then
@@ -6759,7 +6758,7 @@ menu_print_info() {
         print "* iOS Version: $device_vers"
     fi
     if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
-        print "* To get iOS version, go to: Other Utilities -> Get iOS Version"
+        print "* To get iOS version, go to: Misc Utilities -> Get iOS Version"
     fi
     if [[ $device_proc != 1 ]]; then
         print "* ECID: $device_ecid"
@@ -6804,11 +6803,14 @@ menu_main() {
         if [[ $device_mode == "Normal" ]]; then
             case $device_vers in
                 [12].*  ) :;;
-                [1289]* ) menu_items+=("Sideload IPA");;
+                [1289]* ) [[ $platform == "linux" ]] && menu_items+=("Sideload IPA");;
             esac
-            menu_items+=("App Management" "Data Management" "Device Operations")
+            menu_items+=("App Management" "Data Management")
         fi
-        menu_items+=("Other Utilities" "Exit")
+        if [[ $device_mode != "none" ]]; then
+            menu_items+=("Useful Utilities")
+        fi
+        menu_items+=("Misc Utilities" "Exit")
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
@@ -6818,8 +6820,8 @@ menu_main() {
             "Sideload IPA" ) menu_ipa "$selected";;
             "App Management" ) menu_appmanage;;
             "Data Management" ) menu_datamanage;;
-            "Device Operations" ) menu_devicemanage;;
-            "Other Utilities" ) menu_other;;
+            "Misc Utilities" ) menu_miscutilities;;
+            "Useful Utilities" ) menu_usefulutilities;;
             "FourThree Utility" ) menu_fourthree;;
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
@@ -6985,6 +6987,7 @@ menu_ipa() {
         menu_print_info
         if [[ $1 == "Install"* ]]; then
             print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
+            print "* Install IPA (AppSync) will not work if your device is not activated."
         else
             print "* Sideload IPA is for iOS 9 and newer only. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
@@ -7316,7 +7319,7 @@ menu_restore() {
         menu_items+=("IPSW Downloader" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
-            print " > Main Menu > Other Utilities > Create Custom IPSW"
+            print " > Main Menu > Misc Utilities > Create Custom IPSW"
         else
             print " > Main Menu > Restore/Downgrade"
         fi
@@ -7385,7 +7388,7 @@ menu_ipsw_downloader() {
         menu_items+=("Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
-            print " > Main Menu > Other Utilities > Create Custom IPSW > IPSW Downloader"
+            print " > Main Menu > Misc Utilities > Create Custom IPSW > IPSW Downloader"
         else
             print " > Main Menu > Restore/Downgrade > IPSW Downloader"
         fi
@@ -7434,7 +7437,7 @@ menu_restore_more() {
         menu_items+=("Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
-            print " > Main Menu > Other Utilities > Create Custom IPSW"
+            print " > Main Menu > Misc Utilities > Create Custom IPSW"
         else
             print " > Main Menu > Restore/Downgrade"
         fi
@@ -7515,7 +7518,7 @@ menu_ipsw() {
     local start
 
     if [[ $2 == "ipsw" ]]; then
-        nav=" > Main Menu > Other Utilities > Create Custom IPSW > $1"
+        nav=" > Main Menu > Misc Utilities > Create Custom IPSW > $1"
         start="Create IPSW"
     elif [[ $2 == "fourthree" ]]; then
         nav=" > Main Menu > FourThree Utility > Step 1: Restore"
@@ -8356,7 +8359,7 @@ menu_flags() {
         esac
         menu_items+=("Go Back")
         menu_print_info
-        print " > Main Menu > Other Utilities > Enable Flags"
+        print " > Main Menu > Misc Utilities > Enable Flags"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
@@ -8451,26 +8454,46 @@ menu_flags() {
     done
 }
 
-menu_devicemanage() {
+menu_miscutilities() {
     local menu_items
     local selected
     local back
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Export Device Info")
-        if (( device_det < 5 )) && [[ $device_det != 1 ]]; then
-            warn "Device is on lower than iOS 5. Battery info is not available"
-        else
-            menu_items+=("Export Battery Info")
+        menu_items=()
+        if [[ $device_mode != "none" ]]; then
+            if [[ $device_mode == "Normal" ]]; then
+                menu_items+=("Pair Device" "Export Device Info")
+                if (( device_det < 5 )) && [[ $device_det != 1 ]]; then
+                    warn "Device is on lower than iOS 5. Battery info is not available"
+                else
+                    menu_items+=("Export Battery Info")
+                fi
+                if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
+                    warn "Device is on lower than iOS 4. Shutdown/Restart device options are not available"
+                else
+                    menu_items+=("Shutdown Device" "Restart Device")
+                fi
+                menu_items+=("Enter Recovery Mode" "Attempt Activation" "Activation Records")
+            fi
+            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+                if [[ $device_mode != "Normal" ]]; then
+                    menu_items+=("Get iOS Version" "Activation Records")
+                fi
+                case $device_type in
+                    iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
+                esac
+            fi
         fi
-        if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
-            warn "Device is on lower than iOS 4. Shutdown/Restart device options are not available"
-        else
-            menu_items+=("Shutdown Device" "Restart Device")
+        if [[ $device_proc != 1 ]] && (( device_proc < 11 )); then
+            menu_items+=("Enable Flags")
         fi
-        menu_items+=("Pair Device" "Enter Recovery Mode" "Go Back")
-        print " > Main Menu > Device Operations"
+        if (( device_proc < 7 )); then
+            menu_items+=("Create Custom IPSW")
+        fi
+        menu_items+=("(Re-)Install Dependencies" "Go Back")
+        print " > Main Menu > Misc Utilities"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
@@ -8499,19 +8522,27 @@ menu_devicemanage() {
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
+            "Attempt Activation" ) device_activate;;
+            "Dump Baseband" ) mode="baseband";;
+            "Activation Records" ) mode="actrec";;
+            "Enable Flags" ) menu_flags;;
+            "DFU Mode Helper" ) mode="enterdfu";;
+            "(Re-)Install Dependencies" ) install_depends;;
+            "Create Custom IPSW" ) menu_restore ipsw;;
+            "Get iOS Version" ) mode="getversion";;
             "Go Back" ) back=1;;
         esac
     done
 }
 
-menu_other() {
+menu_usefulutilities() {
     local menu_items
     local selected
     local back
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
-        if [[ $device_mode != "none" && $device_proc != 1 ]] && (( device_proc < 7 )); then
+        if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
@@ -8525,7 +8556,7 @@ menu_other() {
             elif [[ $device_type == "iPhone2,1" ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
-            if [[ $device_type != "iPod2,1" ]]; then
+            if [[ $device_type != "iPod2,1" && $device_mode == "Normal" ]]; then
                 menu_items+=("Just Boot")
             fi
             if [[ $device_mode == "Normal" ]]; then
@@ -8543,59 +8574,32 @@ menu_other() {
                 esac
             fi
         fi
-        if [[ $device_mode != "none" ]]; then
-            if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
-                menu_items+=("Enter pwnDFU Mode")
-            fi
-            if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
-                menu_items+=("SSH Ramdisk")
-            fi
-            if [[ $device_mode == "Normal" ]]; then
-                menu_items+=("Attempt Activation" "Activation Records")
-            fi
-            if [[ $device_mode != "DFU" ]]; then
-                menu_items+=("DFU Mode Helper")
-            fi
-            menu_items+=("Update DateTime")
-            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
-                if [[ $device_mode != "Normal" ]]; then
-                    menu_items+=("Get iOS Version" "Activation Records")
-                fi
-                case $device_type in
-                    iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Dump Baseband");;
-                esac
-            fi
+        if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+            menu_items+=("Enter pwnDFU Mode")
         fi
-        if (( device_proc < 7 )); then
-            menu_items+=("Create Custom IPSW")
+        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
+            menu_items+=("SSH Ramdisk")
         fi
-        if [[ $device_proc != 1 ]] && (( device_proc < 11 )); then
-            menu_items+=("Enable Flags")
+        menu_items+=("Update DateTime")
+        if [[ $device_mode != "DFU" ]]; then
+            menu_items+=("DFU Mode Helper")
         fi
-        menu_items+=("(Re-)Install Dependencies" "Go Back")
+        menu_items+=("Go Back")
         menu_print_info
         # other utilities menu
-        print " > Main Menu > Other Utilities"
+        print " > Main Menu > Useful Utilities"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
             "Hacktivate Device" ) mode="device_hacktivate";;
             "Revert Hacktivation" ) mode="device_reverthacktivate";;
-            "Create Custom IPSW" ) menu_restore ipsw;;
             "Enter kDFU Mode" ) mode="kdfu";;
             "Disable/Enable Exploit" ) menu_remove4;;
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
-            "(Re-)Install Dependencies" ) install_depends;;
-            "Attempt Activation" ) device_activate;;
             "Install alloc8 Exploit" ) mode="device_alloc8";;
-            "Dump Baseband" ) mode="baseband";;
-            "Activation Records" ) mode="actrec";;
-            "DFU Mode Helper" ) mode="enterdfu";;
-            "Get iOS Version" ) mode="getversion";;
-            "Enable Flags" ) menu_flags;;
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
             "Go Back" ) back=1;;
@@ -8649,7 +8653,7 @@ device_alloc8() {
     print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
     print "* If it fails, try to unplug and replug your device then run the script again."
     print "* You may also need to force restart the device and re-enter DFU mode before retrying."
-    print "* To retry, just go back to: Other Utilities -> Install alloc8 Exploit"
+    print "* To retry, just go back to: Useful Utilities -> Install alloc8 Exploit"
 }
 
 device_jailbreak_confirm() {
@@ -8860,7 +8864,7 @@ device_dump() {
         device_dumprd
         $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=0; reboot_bak"
         log "Done, device should reboot to recovery mode now"
-        log "Just exit recovery mode if needed: Other Utilities -> Exit Recovery Mode"
+        log "Just exit recovery mode if needed: Main Menu -> Exit Recovery Mode"
         if [[ $mode != "baseband" && $mode != "actrec" ]]; then
             log "Put your device back in kDFU/pwnDFU mode to proceed"
             device_find_mode Recovery
@@ -9060,7 +9064,7 @@ restore_customipsw_confirm() {
     print "* This option is only for restoring with IPSWs NOT made with Legacy iOS Kit, like whited00r or GeekGrade."
     if [[ $device_newbr == 1 ]]; then
         warn "Your device is a new bootrom model and some custom IPSWs might not be compatible."
-        print "* For iPhone 3GS, after restoring you will need to go to Other Utilities -> Install alloc8 Exploit"
+        print "* For iPhone 3GS, after restoring you will need to go to Useful Utilities -> Install alloc8 Exploit"
     else
         warn "Do NOT use this option for powdersn0w or jailbreak IPSWs made with Legacy iOS Kit!"
     fi
@@ -9727,7 +9731,7 @@ main() {
             print "* Note: For tether downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
             if [[ $device_canpowder == 1 ]]; then
                 print "* Note 2: If your device is stuck in recovery mode, it may have been restored with powdersn0w before."
-                print "    - If so, try to clear the device's NVRAM: go to Other Utilities -> Clear NVRAM"
+                print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
             fi
         ;;
         "enterdfu" ) device_enter_mode DFU;;

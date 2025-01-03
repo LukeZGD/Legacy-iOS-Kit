@@ -8,35 +8,37 @@
 
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10/A11) devices
-    - Devices that received iOS 16 and newer are mostly not supported and only have limited functionality (such as sideload on Linux etc.)
-    - S5L8900 devices (iPhone 2G, 3G, touch 1) are only partially supported, some features like SSH ramdisk are not available
+    - Devices that received iOS 16 and newer will only have limited functionality (such as sideload on Linux etc.)
+    - For S5L8900 devices (iPhone 2G, 3G, touch 1), some features like SSH ramdisk are not available
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
-- Restore some 32-bit devices to other iOS versions without blobs
-    - This includes downgrading iPhone 3GS, iPhone 4 GSM and CDMA, iPod touch 2, touch 3, iPad 1
-- Restore with SHSH blobs on supported devices
-- Restore to other iOS versions with iOS 7 blobs (powdersn0w)
-- Tethered downgrades/restores to other iOS versions for A5/A6 and other devices
-- Jailbreak all 32-bit iOS devices on (almost) any iOS version
-    - Available on iOS versions 3.0 to 9.3.4 with some exceptions
+- Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
+- Restore supported devices to unsigned versions with SHSH blobs
+- Restore to unsigned iOS versions with iOS 7 blobs (powdersn0w)
+- Restore supported 32-bit devices to unsigned iOS versions "without" blobs
+    - Includes downgrading iPhone 2G, 3G, 3GS, iPhone 4 GSM and CDMA, iPod touch 1, 2, 3, iPad 1
+    - "without" is in quotes because powdersn0w uses iOS 5/7 blobs for touch 3 and A4 devices, but it is signed for everyone to use
+    - Other devices however are true blobless
+- Tethered downgrades/restores to supported iOS versions for A5(X)/A6(X) and some other 32-bit devices
+- Jailbreak all 32-bit iOS devices on nearly any iOS version
+    - Available on iOS versions 3.0 to 9.3.4 with some small exceptions
 - Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - [FourThree Utility](https://github.com/LukeZGD/FourThree-iPad2) - Dualboot iOS 4.3.x for the iPad 2
-- Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
+- Boot SSH Ramdisk for supported 32-bit and 64-bit devices
+- Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
 - Install IPA files for supported devices with AppSync Unified installed
 - Sideload IPA files for supported devices on Linux
-- Save SHSH blobs for signed OTA versions for supported devices
-- Save onboard and Cydia SHSH blobs for 32-bit devices
+- Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
-- Boot SSH Ramdisk for supported 32-bit and 64-bit devices
-- Save onboard SHSH blobs using SSH Ramdisk for the supported 64-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
-- Install [TrollStore](https://github.com/opa334/TrollStore) using SSH Ramdisk for the supported 64-bit devices on iOS 14/15
+- Install [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) using SSH Ramdisk for supported 64-bit devices on iOS 14/15
 - Clear NVRAM for 32-bit devices
-- Device activation using ideviceactivation (useful for iOS 4 and lower)
-- The latest baseband will be flashed for A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
+- Device activation using ideviceactivation (especially useful for iOS 4 and lower)
+- The latest baseband will be flashed for certain A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
+    - For more info on baseband, go to [Baseband Update](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update) wiki page
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
-- [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase device
-- [Device Operations](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Device-Operations) - Export data and battery info, shutdown/restart device, pair device
+- [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase all content and settings
+- [Misc Utilities](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Misc-Utilities) - Pair device, export data and battery info, shutdown/restart device, and more
 
 ## Supported devices
 - [Identify your device here](https://ipsw.me/device-finder)
@@ -77,7 +79,7 @@
 </table>
 
 - Restoring with SHSH blobs, jailbreaking, and using SSH ramdisks are supported on the following devices:
-    - iPhone 2G, 3G, iPod touch 1 (SSH ramdisks not supported)
+    - iPhone 2G, 3G, iPod touch 1 (SSH ramdisks not supported for these)
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
