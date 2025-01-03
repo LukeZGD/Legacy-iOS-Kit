@@ -1568,7 +1568,7 @@ device_dfuhelper() {
         return
     fi
     print "* Get ready..."
-    for i in {03..01}; do
+    for i in {3..1}; do
         echo -n "$i "
         sleep 1
     done
@@ -2761,7 +2761,7 @@ ipsw_verify() {
 
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
-        if [[ -z $3 ]]; then
+        if [[ $1 != "nopause" ]]; then
             log "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
             warn "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Make sure to download and select the correct IPSW."
             pause
@@ -6079,19 +6079,25 @@ device_ramdisk() {
             return
         ;;
 
-        "jailbreak" | "getversion" )
+        "getversion" )
+            device_ramdisk_iosvers
+            log "Retrieved the current iOS version, rebooting device"
+            if [[ -n $device_vers ]]; then
+                print "* iOS Version: $device_vers ($device_build)"
+            else
+                warn "Something wrong happened. Failed to get iOS version."
+            fi
+            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
+            pause
+        ;;
+
+        "jailbreak" )
             local vers
             local build
             local untether
             device_ramdisk_iosvers
             vers=$device_vers
             build=$device_build
-            if [[ $1 == "getversion" && -n $vers ]]; then
-                log "Retrieved the current iOS version, rebooting device"
-                print "* iOS Version: $vers ($build)"
-                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
-                return
-            fi
             case $vers in
                 9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
@@ -6218,12 +6224,14 @@ device_ramdisk() {
         "clearnvram" )
             log "Sending command for clearing NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "nvram -c"
-            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there."
+            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
+            pause
         ;;
 
         "setnvram" )
             device_ramdisk_setnvram
-            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there."
+            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
+            pause
         ;;
 
         * ) log "Device should now boot to SSH ramdisk mode.";;
@@ -6305,14 +6313,16 @@ device_ramdisk_ios3exploit() {
 device_datetime_cmd() {
     log "Running command to Update DateTime"
     $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
-    log "Done"
-    pause
+    if [[ $1 != "nopause" ]]; then
+        log "Done"
+        pause
+    fi
 }
 
 device_ramdisk_iosvers() {
     device_vers=
     device_build=
-    device_datetime_cmd
+    device_datetime_cmd nopause
     if (( device_proc < 7 )); then
         log "Mounting root filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
@@ -8548,7 +8558,7 @@ menu_usefulutilities() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
         if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
-            if [[ $device_mode == "Normal" ]]; then
+            if [[ $device_mode == "Normal" && $device_type != "iPod2,1" ]]; then
                 menu_items+=("Enter kDFU Mode")
             fi
             case $device_proc in
