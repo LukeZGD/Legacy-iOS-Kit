@@ -2097,8 +2097,8 @@ device_ipwndfu() {
         rm -rf ../saved/ipwndfu-*
     fi
     # create a lib symlink in the home directory for macos, needed by ipwndfu/pyusb
-    # no need to do this for homebrew x86_64 since /usr/local/lib is being checked along with ~/lib
-    if [[ $platform == "macos" && ! -e "$HOME/lib/libusb-1.0.dylib" ]]; then
+    # no need to do this for homebrew x86_64 since /usr/local/lib is being checked along with ~/lib, but lets do the symlink anyway
+    if [[ $platform == "macos" ]]; then
         if [[ -e "$HOME/lib" && -e "$HOME/lib.bak" ]]; then
             rm -rf "$HOME/lib"
         elif [[ -e "$HOME/lib" ]]; then
@@ -2111,6 +2111,11 @@ device_ipwndfu() {
         elif [[ -e /opt/homebrew/lib/libusb-1.0.dylib ]]; then
             log "Detected libusb installed via Homebrew (arm64)"
             ln -sf /opt/homebrew/lib "$HOME/lib"
+        elif [[ -e /usr/local/lib/libusb-1.0.dylib ]]; then
+            log "Detected libusb installed via Homebrew (x86_64)"
+            ln -sf /usr/local/lib "$HOME/lib"
+        else
+            warn "No libusb detected. ipwndfu might fail especially on arm64 (Apple Silicon) devices."
         fi
     fi
 
@@ -7078,7 +7083,7 @@ menu_ipa_browse() {
         menu_zenity_check
         newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
     fi
-    [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Ctrl+C to cancel): ")" newpath
+    [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     ipa_path="$newpath"
 }
 
@@ -8038,7 +8043,7 @@ menu_logo_browse() {
         menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
     fi
-    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Ctrl+C to cancel): ")" newpath
+    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected $1 image file: $newpath"
     case $1 in
@@ -8329,7 +8334,7 @@ menu_shshdump_browse() {
         menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='Raw Dump | *.dump *.raw' --title="Select Raw Dump")"
     fi
-    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Ctrl+C to cancel): ")" newpath
+    [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected raw dump file: $newpath"
     shsh_path="$newpath"
@@ -8982,7 +8987,6 @@ device_dumprd() {
     fi
     mv activation.tar activation-$device_ecid.tar
     if [[ -s $dump/activation-$device_ecid.tar ]]; then
-        read -p "$(input "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite? (y/N) ")" opt
         select_yesno "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite?" 0
         if [[ $? == 1 ]]; then
             log "Deleting existing dumped activation"
