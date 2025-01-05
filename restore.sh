@@ -5796,11 +5796,7 @@ device_ramdisk64() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
-    if [[ $platform == "macos" ]]; then
-        print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while before it connects."
-        print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
-    fi
-    device_find_mode Restore 30
+    sleep 10
 
     if [[ $ios8 == 1 ]]; then
         device_iproxy no-logging 44
@@ -5810,6 +5806,13 @@ device_ramdisk64() {
         print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
     fi
     device_sshpass alpine
+
+    local found
+    log "Waiting for device..."
+    while [[ $found != 1 ]]; do
+        found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+        sleep 1
+    done
 
     print "* Mount filesystems with this command (for iOS 11.3 and newer):"
     print "    /usr/bin/mount_filesystems"
@@ -6043,26 +6046,23 @@ device_ramdisk() {
     if [[ $1 == "justboot" ]]; then
         log "Device should now boot."
         return
-    elif [[ -n $1 && $platform == "macos" ]]; then
-        log "Booting, please wait..."
-        print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while."
-        print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
-        device_find_mode Restore 90
-        device_iproxy
-    elif [[ -n $1 ]]; then
-        log "Booting, please wait..."
-        device_find_mode Restore 30
+    fi
+    log "Booting, please wait..."
+    sleep 10
+
+    if [[ -n $1 ]]; then
         device_iproxy
     else
-        log "Booting, please wait..."
-        if [[ $platform == "macos" ]]; then
-            print "* For some reason, macOS takes way too long to discover iOS devices on some Macs. You may need to wait for a while before it connects."
-            print "* If it still does not work/recognize your device, try restarting your Mac before trying again."
-        fi
-        device_find_mode Restore 30
         device_iproxy no-logging
     fi
     device_sshpass alpine
+
+    local found
+    log "Waiting for device..."
+    while [[ $found != 1 ]]; do
+        found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+        sleep 1
+    done
 
     case $mode in
         "activation" | "baseband" )
@@ -6081,7 +6081,7 @@ device_ramdisk() {
 
         "getversion" )
             device_ramdisk_iosvers
-            log "Retrieved the current iOS version, rebooting device"
+            log "Retrieved the current iOS version"
             if [[ -n $device_vers ]]; then
                 print "* iOS Version: $device_vers ($device_build)"
             else
