@@ -2750,6 +2750,11 @@ ipsw_verify() {
     elif [[ -z $IPSWSHA1 && -z $IPSWSHA1E ]]; then
         warn "No SHA1 hash from either The Apple Wiki or local hash, cannot verify IPSW."
         pause
+        if [[ $build_id == "$device_base_build" ]]; then
+            device_base_sha1="$IPSWSHA1L"
+        else
+            device_target_sha1="$IPSWSHA1L"
+        fi
         return
     elif [[ -n $IPSWSHA1E ]]; then
         warn "Local SHA1 hash mismatch. Overwriting local hash."
@@ -7772,6 +7777,7 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
             fi
+            echo
             warn "This is a tethered downgrade. Not recommended unless you know what you are doing."
             print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-Downgrade and read the \"Other (Tethered)\" section"
             if [[ -n $ipsw_path ]]; then
@@ -7924,6 +7930,8 @@ menu_ipsw() {
 ipsw_print_warnings() {
     if [[ $ipsw_validate == 0 ]]; then
         print "* Selected Target IPSW is validated"
+    elif [[ $ipsw_isbeta == 1 ]]; then
+        warn "Selected Target IPSW is a beta version, proceed with caution"
     else
         warn "Selected Target IPSW failed validation, proceed with caution"
     fi
@@ -9774,7 +9782,7 @@ for i in "$@"; do
         "--no-device" ) device_argmode="none";;
         "--entry-device" ) device_argmode="entry";;
         "--no-version-check" ) no_version_check=1;;
-        "--debug" ) set -x; debug_mode=1;;
+        "--debug" ) set -x; debug_mode=1; menu_old=1;;
         "--help" ) display_help; exit;;
         "--ipsw-verbose" ) ipsw_verbose=1;;
         "--jailbreak" ) ipsw_jailbreak=1;;
