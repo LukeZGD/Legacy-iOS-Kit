@@ -2424,12 +2424,12 @@ ipsw_preference_set() {
     # it should be in system, but restore puts it in data instead due to it being in var.
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
-    # for 3.x 3gs, kernel is patched so its also enabled there.
+    # for 3.x 3gs, and old br 3.1.3 touch 2, kernel is patched so its also enabled for those.
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
             case $device_type in
-                iPhone1* | iPod1,1 | iPhone2,1 ) ipsw_canjailbreak=1;;
+                iPhone1* | iPod[12],1 | iPhone2,1 ) ipsw_canjailbreak=1;;
                 * ) ipsw_nojailbreak_message;;
             esac
         ;;
@@ -2439,6 +2439,11 @@ ipsw_preference_set() {
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
         esac
+        if [[ $device_type == "iPod2,1" && $device_newbr != 0 && $device_target_vers == "3.1.3" ]]; then
+            warn "New bootrom detected. Disabling jailbreak option"
+            ipsw_canjailbreak=
+            ipsw_nojailbreak_message
+        fi
     else
         case $device_target_vers in
             4.[10]* ) ipsw_nojailbreak_message;;
@@ -3539,14 +3544,9 @@ ipsw_prepare_bundle() {
         fi
         ipsw_prepare_keys RestoreRamdisk $1
         if [[ $1 == "old" ]]; then
-            if [[ $device_type == "iPod2,1" ]]; then
-                case $device_target_vers in
-                    4.2.1 | 4.1 | 3.1.3 ) :;;
-                    * )
-                        ipsw_prepare_keys iBoot $1
-                        ipsw_prepare_keys KernelCache $1
-                    ;;
-                esac
+            if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+                ipsw_prepare_keys iBoot $1
+                ipsw_prepare_keys KernelCache $1
             elif [[ $device_proc == 1 ]]; then
                 ipsw_prepare_keys KernelCache $1
                 ipsw_prepare_keys WTF2 $1
@@ -4833,40 +4833,40 @@ ipsw_prepare_custom() {
     ipsw_prepare_jailbreak old
 
     mv "$ipsw_custom.ipsw" temp.ipsw
-    if [[ $device_type == "iPod2,1" ]]; then
-        case $device_target_vers in
-            4.2.1 | 4.1 | 3.1.3 ) :;;
-            * ) ipsw_prepare_patchcomp LLB;;
-        esac
-    else # 3GS
-        case $device_target_vers in
-            6.1.6 | 4.1 ) :;;
-            3.0* )
-                ipsw_prepare_patchcomp LLB
-                log "Patch Kernelcache"
-                unzip -o -j "$ipsw_path.ipsw" kernelcache.release.s5l8920x
-                mv kernelcache.release.s5l8920x kernelcache.orig
-                $bspatch kernelcache.orig kernelcache.release.s5l8920x ../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_target_vers}_${device_target_build}.bundle/kernelcache.release.patch
-                zip -r0 temp.ipsw kernelcache.release.s5l8920x
-            ;;
-            * )
-                ipsw_prepare_patchcomp LLB
-                local ExtraArgs3="$device_bootargs_default"
-                if [[ $ipsw_verbose == 1 ]]; then
-                    ExtraArgs3="pio-error=0 -v"
-                fi
-                if [[ $device_target_vers == "3"* ]]; then
-                    ExtraArgs3+=" amfi=0xff cs_enforcement_disable=1"
-                fi
-                local path="Firmware/all_flash/all_flash.${device_model}ap.production"
-                local name="iBoot.${device_model}ap.RELEASE.img3"
-                patch_iboot -b "$ExtraArgs3"
-                mkdir -p $path
-                mv $name $path/$name
-                zip -r0 temp.ipsw $path/$name
-            ;;
-        esac
+    if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+        ipsw_prepare_patchcomp LLB
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
     fi
+
+    # 3GS
+    case $device_target_vers in
+        6.1.6 | 4.1 ) :;;
+        3.0* )
+            ipsw_prepare_patchcomp LLB
+            log "Patch Kernelcache"
+            unzip -o -j "$ipsw_path.ipsw" kernelcache.release.s5l8920x
+            mv kernelcache.release.s5l8920x kernelcache.orig
+            $bspatch kernelcache.orig kernelcache.release.s5l8920x ../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_target_vers}_${device_target_build}.bundle/kernelcache.release.patch
+            zip -r0 temp.ipsw kernelcache.release.s5l8920x
+        ;;
+        * )
+            ipsw_prepare_patchcomp LLB
+            local ExtraArgs3="$device_bootargs_default"
+            if [[ $ipsw_verbose == 1 ]]; then
+                ExtraArgs3="pio-error=0 -v"
+            fi
+            if [[ $device_target_vers == "3"* ]]; then
+                ExtraArgs3+=" amfi=0xff cs_enforcement_disable=1"
+            fi
+            local path="Firmware/all_flash/all_flash.${device_model}ap.production"
+            local name="iBoot.${device_model}ap.RELEASE.img3"
+            patch_iboot -b "$ExtraArgs3"
+            mkdir -p $path
+            mv $name $path/$name
+            zip -r0 temp.ipsw $path/$name
+        ;;
+    esac
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
@@ -7587,7 +7587,8 @@ menu_ipsw() {
                 if [[ $device_target_vers != "3.0"* ]]; then
                     ipsw_canhacktivate=1
                 fi
-                if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
+                if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]] ||
+                   [[ $device_type == "iPod2,1" && $device_newbr == 0 && $1 == "3.1.3" ]]; then
                     ipsw_cancustomlogo=1
                 fi
             ;;
@@ -8028,6 +8029,9 @@ ipsw_custom_set() {
         if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
             ipsw_customlogo2=1
         fi
+    fi
+    if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+        ipsw_custom+="O"
     fi
     if [[ $device_target_powder == 1 ]]; then
         ipsw_custom+="P"
