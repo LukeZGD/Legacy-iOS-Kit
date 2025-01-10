@@ -2,6 +2,7 @@
 
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
+device_bootargs_default="pio-error=0 debug=0x2014e serial=3"
 jelbrek="../resources/jailbreak"
 ssh_port=6414
 
@@ -2423,11 +2424,12 @@ ipsw_preference_set() {
     # it should be in system, but restore puts it in data instead due to it being in var.
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
+    # for 3.x 3gs, kernel is patched so its also enabled there.
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
-            case $device_proc in
-                1 ) ipsw_canjailbreak=1;;
+            case $device_type in
+                iPhone1* | iPod1,1 | iPhone2,1 ) ipsw_canjailbreak=1;;
                 * ) ipsw_nojailbreak_message;;
             esac
         ;;
@@ -2436,8 +2438,6 @@ ipsw_preference_set() {
     if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
-            3.1.3 ) :;;
-            3.[10]* ) ipsw_nojailbreak_message;;
         esac
     else
         case $device_target_vers in
@@ -3933,13 +3933,7 @@ ipsw_prepare_ios4multipart() {
     local JBFiles=()
     ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
     local all_flash2="$ipsw_custom_part2/$all_flash"
-    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4"
     local iboot
-    case $device_target_vers in
-        4.2.9 | 4.2.10 ) :;;
-        * ) ExtraArgs2+=" --433";;
-    esac
-    ExtraArgs2+=" -b"
 
     if [[ -e "../$ipsw_custom_part2.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSWs. Skipping IPSW creation."
@@ -4058,11 +4052,18 @@ ipsw_prepare_ios4multipart() {
     rm $all_flash2/DeviceTree.${device_model}ap.img3
     unzip -o -j "$ipsw_path.ipsw" $all_flash/DeviceTree.${device_model}ap.img3 -d $all_flash2
 
-    local ExtraArgs3="pio-error=0"
+    local ExtraArr=("--boot-partition" "--boot-ramdisk" "--logo4")
+    case $device_target_vers in
+        4.2.9 | 4.2.10 ) :;;
+        * ) ExtraArr+=("--433");;
+    esac
+    local bootargs="$device_bootargs_default"
     if [[ $ipsw_verbose == 1 ]]; then
-        ExtraArgs3+=" -v"
+        bootargs="pio-error=0 -v"
     fi
-    patch_iboot $ExtraArgs2 "$ExtraArgs3"
+    ExtraArr+=("-b" "$bootargs")
+    patch_iboot "${ExtraArr[@]}"
+
     if [[ $device_type == "iPad1,1" && $device_target_vers == "3"* ]]; then
         cp iBoot ../saved/iPad1,1/iBoot3_$device_ecid
     elif [[ $device_type == "iPad1,1" ]]; then
@@ -4421,7 +4422,6 @@ ipsw_prepare_ios4patches() {
 
 ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
-    local ExtraArgs2="--boot-partition --boot-ramdisk --logo4 "
     local JBFiles=()
     ipsw_prepare_usepowder=1
 
@@ -4457,14 +4457,19 @@ ipsw_prepare_ios4powder() {
         device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
+
+    local ExtraArr=("--boot-partition" "--boot-ramdisk" "--logo4")
     case $device_target_vers in
         4.3.[45] ) :;;
-        * ) ExtraArgs2+="--433 ";;
+        * ) ExtraArr+=("--433");;
     esac
+    local bootargs="$device_bootargs_default"
     if [[ $ipsw_verbose == 1 ]]; then
-        ExtraArgs2+="-b -v"
+        bootargs="pio-error=0 -v"
     fi
-    patch_iboot $ExtraArgs2
+    ExtraArr+=("-b" "$bootargs")
+    patch_iboot "${ExtraArr[@]}"
+
     tar -rvf src/bin.tar iBoot
     if [[ $device_type == "iPad1,1" ]]; then
         cp iBoot iBEC
@@ -4554,6 +4559,10 @@ ipsw_prepare_powder() {
     fi
 
     local ExtraArr=("--boot-partition" "--boot-ramdisk")
+    local bootargs="$device_bootargs_default"
+    if [[ $ipsw_verbose == 1 ]]; then
+        bootargs="pio-error=0 -v"
+    fi
     case $device_target_vers in
         [789]* ) :;;
         * ) ExtraArr+=("--logo");;
@@ -4566,12 +4575,8 @@ ipsw_prepare_powder() {
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArr[0]+="9"
         fi
-        local bootargs
         if [[ $ipsw_jailbreak == 1 && $device_target_vers != "7"* ]]; then
-            bootargs+="cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff"
-        fi
-        if [[ $ipsw_verbose == 1 ]]; then
-            bootargs+=" -v"
+            bootargs+=" cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff"
         fi
         ExtraArr+=("-b" "$bootargs")
         patch_iboot "${ExtraArr[@]}"
@@ -4579,9 +4584,7 @@ ipsw_prepare_powder() {
         ExtraArgs+=" iBoot.tar"
     elif [[ $device_type == "iPad1,1" ]]; then
         # ipad 1 ramdiskH jumps to /iBEC instead
-        if [[ $ipsw_verbose == 1 ]]; then
-            ExtraArr+=("-b" "-v")
-        fi
+        ExtraArr+=("-b" "$bootargs")
         patch_iboot "${ExtraArr[@]}"
         mv iBoot iBEC
         tar -cvf iBoot.tar iBEC
@@ -4848,12 +4851,12 @@ ipsw_prepare_custom() {
             ;;
             * )
                 ipsw_prepare_patchcomp LLB
-                local ExtraArgs3="pio-error=0"
+                local ExtraArgs3="$device_bootargs_default"
+                if [[ $ipsw_verbose == 1 ]]; then
+                    ExtraArgs3="pio-error=0 -v"
+                fi
                 if [[ $device_target_vers == "3"* ]]; then
                     ExtraArgs3+=" amfi=0xff cs_enforcement_disable=1"
-                fi
-                if [[ $ipsw_verbose == 1 ]]; then
-                    ExtraArgs3+=" -v"
                 fi
                 local path="Firmware/all_flash/all_flash.${device_model}ap.production"
                 local name="iBoot.${device_model}ap.RELEASE.img3"
@@ -6145,18 +6148,12 @@ device_ramdisk() {
             $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
             # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
             case $vers in
-                4.[10]* | 3.2* )
+                4.[10]* | 3.[21]* )
                     untether="${device_type}_${build}.tar"
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                 ;;
             esac
-            # Do not extract untether for 3GS 3.1.x
-            if [[ $vers == "3.1"* && $device_type != "iPhone2,1" ]]; then
-                untether="${device_type}_${build}.tar"
-                log "Extracting $untether"
-                $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-            fi
             log "Mounting data partition"
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
@@ -7317,7 +7314,7 @@ menu_restore() {
             esac
             menu_items+=("Other (powdersn0w $text2 blobs)")
         fi
-        if (( device_proc < 5 )); then
+        if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
         fi
         if [[ $device_proc != 1 ]]; then
@@ -7342,13 +7339,10 @@ menu_restore() {
             print " > Main Menu > Misc Utilities > Create Custom IPSW"
         else
             print " > Main Menu > Restore/Downgrade"
-        fi
-        if [[ -z $1 ]]; then
             if [[ $device_proc == 1 ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.0 to 3.1.2)"
                 echo
-            fi
-            if [[ $device_type == "iPod2,1" ]]; then
+            elif [[ $device_type == "iPod2,1" ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.1.1 to 3.0)"
                 echo
             fi
@@ -9254,7 +9248,7 @@ menu_justboot() {
             print "* Custom Bootargs: $device_bootargs"
         else
             print "* You may enter custom bootargs (optional, experimental option)"
-            print "* Default Bootargs: -v pio-error=0"
+            print "* Default Bootargs: pio-error=0 -v"
         fi
         echo
         input "Select an option:"
@@ -9296,7 +9290,7 @@ menu_justboot() {
 
 device_justboot() {
     if [[ -z $device_bootargs ]]; then
-        device_bootargs="-v pio-error=0"
+        device_bootargs="pio-error=0 -v"
     fi
     if [[ $main_argmode == "device_justboot" ]]; then
         cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
