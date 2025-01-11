@@ -2942,7 +2942,12 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                     fi
                 ;;
-                3.0* | 3.1 | 3.1.[12] | 4.2* ) :;;
+                3.1* )
+                    if [[ $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
+                        JBFiles[2]=
+                    fi
+                ;;
+                3.0* | 4.2* ) :;;
                 * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
             esac
             case $device_target_vers in
@@ -3544,7 +3549,7 @@ ipsw_prepare_bundle() {
         fi
         ipsw_prepare_keys RestoreRamdisk $1
         if [[ $1 == "old" ]]; then
-            if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+            if [[ $ipsw_24o == 1 ]]; then
                 ipsw_prepare_keys iBoot $1
                 ipsw_prepare_keys KernelCache $1
             elif [[ $device_proc == 1 ]]; then
@@ -4833,7 +4838,7 @@ ipsw_prepare_custom() {
     ipsw_prepare_jailbreak old
 
     mv "$ipsw_custom.ipsw" temp.ipsw
-    if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+    if [[ $ipsw_24o == 1 ]]; then
         ipsw_prepare_patchcomp LLB
         mv temp.ipsw "$ipsw_custom.ipsw"
         return
@@ -4852,16 +4857,16 @@ ipsw_prepare_custom() {
         ;;
         * )
             ipsw_prepare_patchcomp LLB
-            local ExtraArgs3="$device_bootargs_default"
+            local bootargs="$device_bootargs_default"
             if [[ $ipsw_verbose == 1 ]]; then
-                ExtraArgs3="pio-error=0 -v"
+                bootargs="pio-error=0 -v"
             fi
             if [[ $device_target_vers == "3"* ]]; then
-                ExtraArgs3+=" amfi=0xff cs_enforcement_disable=1"
+                bootargs+=" amfi=0xff cs_enforcement_disable=1"
             fi
             local path="Firmware/all_flash/all_flash.${device_model}ap.production"
             local name="iBoot.${device_model}ap.RELEASE.img3"
-            patch_iboot -b "$ExtraArgs3"
+            patch_iboot -b "$bootargs"
             mkdir -p $path
             mv $name $path/$name
             zip -r0 temp.ipsw $path/$name
@@ -7546,6 +7551,7 @@ menu_ipsw() {
         start="Start Restore"
     fi
 
+    ipsw_24o=
     ipsw_cancustomlogo=
     ipsw_cancustomlogo2=
     ipsw_customlogo=
@@ -7587,9 +7593,12 @@ menu_ipsw() {
                 if [[ $device_target_vers != "3.0"* ]]; then
                     ipsw_canhacktivate=1
                 fi
-                if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]] ||
-                   [[ $device_type == "iPod2,1" && $device_newbr == 0 && $1 == "3.1.3" ]]; then
+                if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
                     ipsw_cancustomlogo=1
+                fi
+                if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $1 == "3.1.3" ]]; then
+                    ipsw_cancustomlogo=1
+                    ipsw_24o=1
                 fi
             ;;
         esac
@@ -8030,7 +8039,7 @@ ipsw_custom_set() {
             ipsw_customlogo2=1
         fi
     fi
-    if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $device_target_vers == "3.1.3" ]]; then
+    if [[ $ipsw_24o == 1 ]]; then
         ipsw_custom+="O"
     fi
     if [[ $device_target_powder == 1 ]]; then
