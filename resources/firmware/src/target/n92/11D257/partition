@@ -22,6 +22,22 @@ sleep 1s
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.mobile.softwareupdated.plist
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist
 
+if [[ -e "/ios71" ]]; then
+  # step1
+  mv -v /mnt1/System/Library/LaunchDaemons/* /mnt1/Library/LaunchDaemons/
+  sleep 3s
+
+  # step2
+  mv -v /mnt1/Library/LaunchDaemons/bootps.plist /mnt1/System/Library/LaunchDaemons/
+  mv -v /mnt1/Library/LaunchDaemons/com.apple.CrashHousekeeping.plist /mnt1/System/Library/LaunchDaemons/
+  mv -v /mnt1/Library/LaunchDaemons/com.apple.MobileFileIntegrity.plist /mnt1/System/Library/LaunchDaemons/
+  mv -v /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
+
+  # step3
+  mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup
+  ln -sf /lyncis /mnt1/usr/libexec/CrashHousekeeping
+fi
+
 Data_GUID="$((echo -e "i\n2\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*Partition unique GUID: //p')"
 LogicalSector="$((echo -e "p\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*Logical sector size: //p' | sed 's/ .*//')"
 System_LastSector="$((echo -e "i\n1\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*Last sector: //p' | sed 's/ .*//')"

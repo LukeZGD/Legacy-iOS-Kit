@@ -106,6 +106,7 @@ List of options:
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode (requires additional arguments)
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
+    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
@@ -420,12 +421,12 @@ set_tool_paths() {
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
-                if [[ $platform_arch == "armhf" ]]; then
-                    log "Running usbmuxd"
-                    sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
-                else
+                if [[ $use_usbmuxd2 == 1 ]]; then
                     log "Running usbmuxd2"
                     sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
+                else
+                    log "Running usbmuxd"
+                    sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
                 fi
             elif [[ $othertmp != 0 ]]; then
                 log "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
@@ -452,9 +453,10 @@ set_tool_paths() {
         if [[ $mac_majver == 10 ]]; then
             mac_minver=${platform_ver:3}
             mac_minver=${mac_minver%.*}
+            # go here if need to disable os x 10.11 support for now
             if (( mac_minver < 11 )); then
                 warn "Your macOS version ($platform_ver - $platform_arch) is not supported. Expect features to not work properly."
-                print "* Supported versions are macOS 10.11 and newer. (10.13/10.15 and newer recommended)"
+                print "* Supported versions are macOS 10.11 and newer. (10.12 and newer recommended)"
                 pause
             fi
             if (( mac_minver <= 11 )); then
@@ -2832,7 +2834,13 @@ ipsw_prepare_rebootsh() {
     echo '#!/bin/bash' | tee reboot.sh
     echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
     echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
-    echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
+    if [[ $1 == "lyncis" ]]; then
+        echo "mv /mnt1/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist_ /mnt1/Library/LaunchDaemons/com.apple.mDNSResponder.plist" | tee -a reboot.sh
+        echo "mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup; ln -s /lyncis /mnt1/usr/libexec/CrashHousekeeping" | tee -a reboot.sh
+        echo "rm /mnt1/install.sh; /sbin/reboot_" | tee -a reboot.sh
+    else
+        echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
+    fi
 }
 
 ipsw_prepare_logos_convert() {
@@ -3468,7 +3476,8 @@ ipsw_prepare_bundle() {
             4* ) printf "4" >> $NewPlist;;
             5* ) printf "5" >> $NewPlist;;
             6* ) printf "6" >> $NewPlist;;
-            7* ) printf "7" >> $NewPlist;;
+            7.0* ) printf "70" >> $NewPlist;; # remove 7.0* and change 7.1* to 7* for lyncis 7.0.x
+            7.1* ) printf "71" >> $NewPlist;;
             8* ) printf "8" >> $NewPlist;;
             9* ) printf "9" >> $NewPlist;;
         esac
@@ -3639,11 +3648,19 @@ ipsw_prepare_32bit() {
     elif [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* && $ipsw_everuntether != 1 ]]; then
-        daibutsu="daibutsu"
-        ExtraArgs+=" -daibutsu"
-        cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
-        ipsw_prepare_rebootsh
+    elif [[ $ipsw_jailbreak == 1 && $ipsw_everuntether != 1 ]]; then
+        if [[ $device_target_vers == "8"* ]]; then
+            daibutsu="daibutsu"
+            ExtraArgs+=" -daibutsu"
+            cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
+            ipsw_prepare_rebootsh
+        elif [[ $device_target_vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
+            daibutsu="daibutsu"
+            ExtraArgs+=" -daibutsu"
+            cp $jelbrek/daibutsu/bin.tar .
+            cp $jelbrek/lyncis.tar untether.tar
+            ipsw_prepare_rebootsh lyncis
+        fi
     elif [[ $ipsw_nskip == 1 ]]; then
         :
     elif [[ $ipsw_jailbreak != 1 && $device_target_build != "9A406" && # 9a406 needs custom ipsw
@@ -3675,13 +3692,7 @@ ipsw_prepare_32bit() {
             9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
             9.2* | 9.1 )       JBFiles+=("untetherhomedepot921.tar");;
             9.0* )             JBFiles+=("everuntether.tar");;
-            7.1* )
-                case $device_type in
-                    iPod* ) JBFiles+=("panguaxe-ipod.tar");;
-                    *     ) JBFiles+=("panguaxe.tar");;
-                esac
-            ;;
-            7* )           JBFiles+=("evasi0n7-untether.tar");;
+            7.0* )         JBFiles+=("evasi0n7-untether.tar");; # remove for lyncis 7.0.x
             6.1.[3456] )   JBFiles+=("p0sixspwn.tar");;
             6* )           JBFiles+=("evasi0n6-untether.tar");;
             5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
@@ -4544,15 +4555,9 @@ ipsw_prepare_powder() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
         case $device_target_vers in
-            5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
+            7.1* ) ExtraArgs+=" $jelbrek/lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
             7.0* ) ExtraArgs+=" $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
-            7.1* )
-                ExtraArgs+=" $jelbrek/fstab7.tar"
-                case $device_type in
-                    iPod* ) ExtraArgs+=" panguaxe-ipod.tar";;
-                    *     ) ExtraArgs+=" panguaxe.tar";;
-                esac
-            ;;
+            5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
         esac
         case $device_target_vers in
             [689]* ) :;;
@@ -6116,13 +6121,8 @@ device_ramdisk() {
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
                 9.0* )       untether="everuntether.tar";;
                 8* )         untether="daibutsu/untether.tar";;
-                7.1* )
-                    case $device_type in
-                        iPod* ) untether="panguaxe-ipod.tar";;
-                        *     ) untether="panguaxe.tar";;
-                    esac
-                ;;
-                7* )         untether="evasi0n7-untether.tar";;
+                7.1* )       untether="lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
+                7.0* )       untether="evasi0n7-untether.tar";;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
@@ -6163,7 +6163,7 @@ device_ramdisk() {
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
-                7* ) device_send_rdtar fstab7.tar;;
+                7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
                 5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
@@ -6182,7 +6182,8 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                8* | 4.[10]* | 3* ) :;;
+                8* | 7.1* ) :;; # do not extract, will extract later below
+                4.[10]* | 3* ) :;; # do not extract, already extracted above
                 * )
                     log "Extracting $untether"
                     $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
@@ -6207,16 +6208,26 @@ device_ramdisk() {
                 device_send_rdtar daemonloader.tar
                 device_send_rdtar launchctl.tar
             fi
-            if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then
+            if [[ $vers == "8"* && $ipsw_everuntether != 1 ]] || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
-                $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh; rm /mnt1/move.sh"
-                untether="untether.tar"
-                log "Extracting $untether"
-                $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-                log "Running haxx_overwrite --${device_type}_${build}"
-                $ssh -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
+                $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh $vers; rm /mnt1/move.sh"
+                if [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x. but this portion is unused anyway since ramdisk method is disabled for 7.x
+                    untether="lyncis.tar"
+                    log "Extracting $untether"
+                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether /mnt1/install.sh"
+                    log "Symlinking lyncis"
+                    $ssh -p $ssh_port root@127.0.0.1 "mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup; ln -s /lyncis /mnt1/usr/libexec/CrashHousekeeping"
+                    log "Rebooting"
+                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                else
+                    untether="untether.tar"
+                    log "Extracting $untether"
+                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    log "Running haxx_overwrite --${device_type}_${build}"
+                    $ssh -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
+                fi
             else
                 log "Rebooting"
                 $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
@@ -7365,11 +7376,18 @@ menu_restore() {
         if [[ $platform == "macos" ]] && (( device_proc >= 7 )); then
             print "* Note: Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
             if [[ $mac_cocoa == 1 ]]; then
-                warn "Restoring 64-bit devices is broken on OS X 10.11 El Capitan. Use macOS 10.12 Sierra or newer for this."
+                warn "Restoring 64-bit devices is broken on 10.11 El Capitan, so it has been disabled."
+                print "* To proceed, use macOS 10.12 Sierra or newer."
                 pause
                 break
             fi
             echo
+        fi
+        if [[ $mac_cocoa == 1 && $device_use_bb != 0 ]]; then
+            warn "Restoring devices is mostly broken for A5(X) and newer devices on 10.11 El Capitan, so it has been disabled."
+            print "* To proceed, use macOS 10.12 Sierra or newer."
+            pause
+            break
         fi
         input "Select an option:"
         select_option "${menu_items[@]}"
@@ -8734,29 +8752,38 @@ device_jailbreak_confirm() {
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     fi
+    if [[ $device_vers == "7"* ]]; then
+        warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
+        print "* It is recommended to use evasi0n7/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
+        echo
+    fi
     if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
         case $device_vers in
-            7.1* )
-                print "* For this version, Pangu on Windows/Mac can also be used instead of this option."
-                print "* https://ios.cfw.guide/installing-pangu7/"
-            ;;
-            7.0* )
-                print "* For this version, evasi0n7 on Windows/Mac can also be used instead of this option."
-                print "* https://ios.cfw.guide/installing-evasi0n7/"
-            ;;
             6.1.[3456] )
                 print "* For this version, p0sixspwn on Windows/Mac can also be used instead of this option."
                 print "* https://ios.cfw.guide/installing-p0sixspwn/"
             ;;
-            10* | 9* )
+            9* | 10* )
                 print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
             ;;
         esac
     fi
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
     case $device_vers in
+        7.0* )
+            print "* For this version, evasi0n7 on Windows/Mac can be used instead of this option."
+            print "* https://ios.cfw.guide/installing-evasi0n7/"
+            pause
+            return
+        ;;
+        7.1* )
+            print "* For this version, use Lyncis to jailbreak your device."
+            print "* https://ios.cfw.guide/using-lyncis/"
+            pause
+            return
+        ;;
         8* | 9.0* )
-            print "* For this version, you can also use EverPwnage and sideload it to your device."
+            print "* For this version, you can use EverPwnage and sideload it to your device."
             print "* https://github.com/LukeZGD/EverPwnage"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
@@ -8767,8 +8794,8 @@ device_jailbreak_confirm() {
             return
         ;;
         9* )
-            print "* For this version, you can also use JailbreakMe 4.0 to jailbreak your device."
-            print "* https://lukezgd.github.io/jbme4/"
+            print "* For this version, you can use JailbreakMe 4.0 to jailbreak your device."
+            print "* https://ios.cfw.guide/using-jailbreakme-4-0/"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         10* )
@@ -8786,17 +8813,17 @@ device_jailbreak_confirm() {
                 return
             fi
         ;;
+        * )
+            warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
+            print "* Supported versions are: 3.1.3 to 9.3.4"
+            pause
+            return
+        ;;
     esac
     echo
     if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
         warn "For 3.x versions on the 3GS, the \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
         print "* This applies to all 3.x versions on the 3GS only. They require usage of the \"Restore/Downgrade\" option first."
-        echo
-    elif [[ $device_vers == "7"* ]]; then
-        warn "The iOS 7 untethers may cause issues to your device after jailbreaking with this method."
-        print "* You may encounter issues like slowdowns/freezing and losing baseband functionality."
-        print "* It is recommended to instead dump blobs and restore with the jailbreak option enabled."
-        print "* Or use other methods like jailbreaking with evasi0n7/Pangu if your device is not OTA updated."
         echo
     fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
@@ -9810,6 +9837,7 @@ for i in "$@"; do
         "--build-id"* ) device_rd_build="${i#*=}";;
         "--bootargs"* ) device_bootargs="${i#*=}";;
         "--old-menu" ) menu_old=1;;
+        "--use-usbmuxd2" ) use_usbmuxd2=1;;
     esac
 done
 

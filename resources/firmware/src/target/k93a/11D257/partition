@@ -23,7 +23,7 @@ sleep 1s
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.mobile.softwareupdated.plist
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist
 
-if [ -e "/ios8" ]; then
+if [[ -e "/ios71" || -e "/ios8" || -e "/ios9" ]]; then
   # step1
   mv -v /mnt1/System/Library/LaunchDaemons/* /mnt1/Library/LaunchDaemons/
   sleep 3s
@@ -33,30 +33,18 @@ if [ -e "/ios8" ]; then
   mv -v /mnt1/Library/LaunchDaemons/com.apple.CrashHousekeeping.plist /mnt1/System/Library/LaunchDaemons/
   mv -v /mnt1/Library/LaunchDaemons/com.apple.MobileFileIntegrity.plist /mnt1/System/Library/LaunchDaemons/
   mv -v /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
-  mv -v /mnt1/Library/LaunchDaemons/com.apple.mDNSResponder.plist /mnt1/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist__
-  sleep 3s
+  if [[ -e "/ios8" ]]; then
+    mv -v /mnt1/Library/LaunchDaemons/com.apple.mDNSResponder.plist /mnt1/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist__
+  fi
 
   # step3
-  mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping_
-  mv -v /mnt1/reloader /mnt1/usr/libexec/CrashHousekeeping
-  sleep 1s
-fi
-
-if [ -e "/ios9" ]; then
-  # step1
-  mv -v /mnt1/System/Library/LaunchDaemons/* /mnt1/Library/LaunchDaemons/
-  sleep 3s
-
-  # step2 
-  mv -v /mnt1/Library/LaunchDaemons/bootps.plist /mnt1/System/Library/LaunchDaemons/
-  mv -v /mnt1/Library/LaunchDaemons/com.apple.CrashHousekeeping.plist /mnt1/System/Library/LaunchDaemons/
-  mv -v /mnt1/Library/LaunchDaemons/com.apple.MobileFileIntegrity.plist /mnt1/System/Library/LaunchDaemons/
-  mv -v /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
-  sleep 3s
-
-  # step3
-  mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping_
-  mv -v /mnt1/reloader /mnt1/usr/libexec/CrashHousekeeping
+  if [[ -e "/ios71" ]]; then
+    mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup
+    ln -sf /lyncis /mnt1/usr/libexec/CrashHousekeeping
+  else
+    mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping_
+    ln -sf /reloader /mnt1/usr/libexec/CrashHousekeeping
+  fi
   sleep 1s
 fi
 

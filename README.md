@@ -174,8 +174,10 @@
 - [sshpass](https://sourceforge.net/project/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
 - [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
-- [Pangu](https://www.theapplewiki.com/wiki/Pangu)
+- [EverPwnage](https://github.com/LukeZGD/EverPwnage)
+- [Lyncis](https://github.com/staturnzz/lyncis)
 - [p0sixspwn](https://www.theapplewiki.com/wiki/p0sixspwn)
+- [evasi0n7](https://www.theapplewiki.com/wiki/Evasi0n7)
 - [evasi0n](https://www.theapplewiki.com/wiki/Evasi0n)
 - [g1lbertJB](https://github.com/g1lbertJB/g1lbertJB)
 - [UntetherHomeDepot](https://www.theapplewiki.com/wiki/UntetherHomeDepot)
