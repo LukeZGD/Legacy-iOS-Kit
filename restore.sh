@@ -2689,9 +2689,7 @@ ipsw_download() {
 ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
-    local cutver
-    local device
-    local type
+    local phone
     local IPSWSHA1
     local IPSWSHA1E=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
@@ -2709,53 +2707,30 @@ ipsw_verify() {
         ;;
     esac
     case $build_id in
-        7*  ) cutver=3;;
-        8*  ) cutver=4;;
-        9*  ) cutver=5;;
-        10* ) cutver=6;;
-        11* ) cutver=7;;
-        12* ) cutver=8;;
-        13* ) cutver=9;;
+        1[AC]* | [23457]* ) phone="Phone";; # iPhoneOS
     esac
-    if [[ -n $cutver ]]; then
-        type="$device_type"
-    else
-        ipsw_latest_set
-        type="$device_type2"
+    if [[ $device_type == "iPad"* ]]; then
+        case $build_id in
+            1[789]* | [23]* ) phone="Pad";; # iPadOS
+        esac
     fi
-    case $build_id in
-        14* ) cutver=10;;
-        15* ) cutver=11;;
-        16* ) cutver=12;;
-        17* ) cutver=13;;
-        18* ) cutver=14;;
-        19* ) cutver=15;;
-        20* ) cutver=16;;
-    esac
-    case $device_type in
-        iPad4,[123] | iPad5,[34] ) device="iPad_Air";;
-        iPad2,[567] | iPad[45],* ) device="iPad_mini";;
-        iPad6,[3478] ) device="iPad_Pro";;
-        iPad* ) device="iPad";;
-        iPho* ) device="iPhone";;
-        iPod* ) device="iPod_touch";;
-    esac
 
     if [[ $(echo "$IPSWSHA1E" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
     fi
 
-    log "Getting SHA1 hash from The Apple Wiki..."
-    IPSWSHA1="$(curl "https://theapplewiki.com/index.php?title=Firmware/${device}/${cutver}.x" | grep -A10 "${type}.*${build_id}" | sed -ne '/<code>/,/<\/code>/p' | sed '1!d' | sed -e "s/<code>//" | sed "s/<\/code>//" | cut -c 5-)"
+    log "Getting SHA1 hash from AppleDB..."
+    # i cant seem to connect to appledb.dev, ill just use the github gh-pages
+    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone}OS;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
         log "Using saved SHA1 hash for this IPSW: $IPSWSHA1"
     elif [[ -z $IPSWSHA1 && -n $IPSWSHA1E ]]; then
-        warn "No SHA1 hash from The Apple Wiki, using local hash"
+        warn "No SHA1 hash from AppleDB, using local hash"
         IPSWSHA1="$IPSWSHA1E"
     elif [[ -z $IPSWSHA1 && -z $IPSWSHA1E ]]; then
-        warn "No SHA1 hash from either The Apple Wiki or local hash, cannot verify IPSW."
+        warn "No SHA1 hash from either AppleDB or local hash, cannot verify IPSW."
         pause
         if [[ $build_id == "$device_base_build" ]]; then
             device_base_sha1="$IPSWSHA1L"
@@ -3145,11 +3120,6 @@ ipsw_prepare_keys() {
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-    if [[ $device_target_build == "14"* && $getcomp == "iBSS" ]]; then
-        name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "iBSS" -A1 | sed "s/^.*keypage-ibss\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | sed "s/<\/p>//" | tr -d '\n')"
-    elif [[ $device_target_build == "14"* && $getcomp == "iBEC" ]]; then
-        name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "iBEC" -A1 | sed "s/^.*keypage-ibec\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | sed "s/<\/p>//" | tr -d '\n')"
-    fi
     if [[ -z $name && $device_proc != 1 ]]; then
         error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
     fi
@@ -3386,21 +3356,6 @@ ipsw_prepare_bundle() {
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
-    if [[ $device_target_build == "14"* ]]; then
-        case $device_target_build in
-            14A* ) ipsw_codename="Whitetail";;
-            14B* ) ipsw_codename="Butler";;
-            14C* ) ipsw_codename="Corry";;
-            14D* ) ipsw_codename="Dubois";;
-            14E* ) ipsw_codename="Erie";;
-            14F* ) ipsw_codename="Franklin";;
-            14G* ) ipsw_codename="Greensburg";;
-        esac
-        if [[ $ipsw_isbeta == 1 ]]; then
-            ipsw_codename+="Seed"
-        fi
-        ramdisk_name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "Restore Ramdisk" -A1 | sed "s/^.*keypage-restoreramdisk\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | tr -d '\n')"
-    fi
     if [[ -z $ramdisk_name ]]; then
         error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
@@ -3429,9 +3384,6 @@ ipsw_prepare_bundle() {
     RootSize=$((RootSize+30))
     local rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
     local rootfs_key="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')"
-    if [[ $device_target_build == "14"* ]]; then
-        rootfs_name="$(curl "https://www.theiphonewiki.com/wiki/${ipsw_codename}_${device_target_build}_(${device_type})" | grep "Root" -A1 | sed "s/^.*keypage-rootfs\">//" | sed "s/^.*h2>//" | sed "s/<\/span>//" | tr -d '\n')"
-    fi
     if [[ -z $rootfs_name ]]; then
         error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
     fi
@@ -6182,7 +6134,7 @@ device_ramdisk() {
                 ;;
             esac
             case $vers in
-                8* | 7.1* ) :;; # do not extract, will extract later below
+                8* ) :;; # do not extract, will extract later below
                 4.[10]* | 3* ) :;; # do not extract, already extracted above
                 * )
                     log "Extracting $untether"
@@ -6214,9 +6166,6 @@ device_ramdisk() {
                 log "Moving files"
                 $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh $vers; rm /mnt1/move.sh"
                 if [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x. but this portion is unused anyway since ramdisk method is disabled for 7.x
-                    untether="lyncis.tar"
-                    log "Extracting $untether"
-                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether /mnt1/install.sh"
                     log "Symlinking lyncis"
                     $ssh -p $ssh_port root@127.0.0.1 "mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup; ln -s /lyncis /mnt1/usr/libexec/CrashHousekeeping"
                     log "Rebooting"
@@ -6727,8 +6676,14 @@ menu_print_info() {
     if [[ -n $version_current ]]; then
         print "* Version: $version_current ($git_hash)"
     fi
+    if [[ $no_internet_check == 1 ]]; then
+        warn "No internet check flag detected, check is disabled and no support will be provided."
+    fi
     if [[ $no_version_check == 1 ]]; then
-        warn "No version check flag detected, update check is disabled and no support will be provided."
+        warn "No version check flag detected, check is disabled and no support will be provided."
+    fi
+    if [[ $EUID == 0 && $run_as_root == 1 ]]; then
+        warn "Script is running as root. This is not supported, proceed with caution."
     fi
     if [[ $git_hash_latest != "$git_hash" ]]; then
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
@@ -9688,7 +9643,7 @@ main() {
     echo
     version_get
 
-    if [[ $EUID == 0 ]]; then
+    if [[ $EUID == 0 && $run_as_root != 1 ]]; then
         error "Running the script as root is not allowed."
     fi
 
@@ -9699,18 +9654,20 @@ main() {
 
     set_tool_paths
 
-    log "Checking Internet connection..."
-    local try=("google.com" "www.apple.com" "208.67.222.222")
-    local check
-    for i in "${try[@]}"; do
-        ping -c1 $i >/dev/null
-        check=$?
-        if [[ $check == 0 ]]; then
-            break
+    if [[ $no_internet_check != 1 ]]; then
+        log "Checking Internet connection..."
+        local try=("google.com" "www.apple.com" "208.67.222.222")
+        local check
+        for i in "${try[@]}"; do
+            ping -c1 $i >/dev/null
+            check=$?
+            if [[ $check == 0 ]]; then
+                break
+            fi
+        done
+        if [[ $check != 0 ]]; then
+            error "Please check your Internet connection before proceeding."
         fi
-    done
-    if [[ $check != 0 ]]; then
-        error "Please check your Internet connection before proceeding."
     fi
 
     version_check
@@ -9815,7 +9772,6 @@ for i in "$@"; do
         "--no-color" ) no_color=1;;
         "--no-device" ) device_argmode="none";;
         "--entry-device" ) device_argmode="entry";;
-        "--no-version-check" ) no_version_check=1;;
         "--debug" ) set -x; debug_mode=1; menu_old=1;;
         "--help" ) display_help; exit;;
         "--ipsw-verbose" ) ipsw_verbose=1;;
@@ -9838,6 +9794,10 @@ for i in "$@"; do
         "--bootargs"* ) device_bootargs="${i#*=}";;
         "--old-menu" ) menu_old=1;;
         "--use-usbmuxd2" ) use_usbmuxd2=1;;
+        # please dont use these, unless you know what youre doing
+        "--run-as-root" ) run_as_root=1;;
+        "--no-internet-check" ) no_internet_check=1;;
+        "--no-version-check" ) no_version_check=1;;
     esac
 done
 
