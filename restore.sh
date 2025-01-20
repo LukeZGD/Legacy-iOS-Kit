@@ -101,7 +101,6 @@ List of options:
     --help                    Display this help message
     --no-color                Disable colors for script output
     --no-device               Enable no device mode
-    --no-version-check        Disable script version checking
     --old-menu                Use the old menus with number select and y/n
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode (requires additional arguments)
@@ -2457,8 +2456,7 @@ ipsw_preference_set() {
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
     esac
-    if [[ $device_target_vers == "4.2"* || $device_target_vers == "4.3"* || $ipsw_gasgauge_patch == 1 ]] ||
-       [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    if [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         ipsw_nskip=1
     fi
 
@@ -3594,10 +3592,10 @@ ipsw_prepare_32bit() {
             ;;
         esac
     fi
-    if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $ipsw_nskip != 1 ]]; then
-        ipsw_prepare_jailbreak
-        return
-    elif [[ -e "$ipsw_custom.ipsw" ]]; then
+    case $device_target_vers in
+        [23]* | 4.[01]* ) ipsw_prepare_jailbreak; return;;
+    esac
+    if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $ipsw_jailbreak == 1 && $ipsw_everuntether != 1 ]]; then
@@ -7177,6 +7175,9 @@ menu_shsh_onboard() {
                     print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
                 fi
             fi
+            if [[ $device_target_vers == "10"* ]]; then
+                warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
+            fi
             menu_items+=("Save Onboard Blobs")
         else
             print "* Select IPSW of your current iOS version to continue"
@@ -7222,6 +7223,9 @@ menu_shsh_convert() {
             echo
             print "* Selected IPSW: $ipsw_path.ipsw"
             print "* IPSW Version: $device_target_vers-$device_target_build"
+            if [[ $device_target_vers == "10"* ]]; then
+                warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
+            fi
             menu_items+=("Convert Raw Dump")
         elif (( device_proc < 7 )); then
             echo
