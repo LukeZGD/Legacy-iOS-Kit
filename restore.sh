@@ -2924,7 +2924,7 @@ ipsw_prepare_jailbreak() {
                     fi
                 ;;
                 3.1* )
-                    if [[ $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
+                    if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
                         JBFiles[2]=
                     fi
                 ;;
