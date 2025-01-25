@@ -1830,7 +1830,7 @@ device_enter_mode() {
                 case $device_proc in
                     4 ) return;;
                     7 )
-                        if [[ $platform != "macos" ]]; then
+                        if [[ $device_pwnd != "ipwnder" ]]; then
                             device_ipwndfu rmsigchks
                         fi
                         return
@@ -1944,14 +1944,14 @@ device_enter_mode() {
                 $ipwnder -d
                 tool_pwned=$?
                 cp image3/* ../saved/image3/
-            elif [[ $platform_arch == "arm64" ]]; then
-                # A7 asi mac uses ipwnder_lite
-                log "Placing device to pwnDFU mode using ipwnder_lite"
-                ${ipwnder}2 -p
-                tool_pwned=$?
             else
-                # A7 intel mac uses ipwnder32/ipwnder_lite
-                local selection=("ipwnder32" "ipwnder_lite" "ipwndfu")
+                # A7 mac uses ipwnder32/ipwnder_lite/other
+                local selection
+                if [[ $platform_arch == "x86_64" ]]; then
+                    selection=("ipwnder32" "ipwnder_lite" "ipwndfu" "gaster")
+                else
+                    selection=("ipwnder_lite" "gaster")
+                fi
                 input "PwnDFU Tool Option"
                 print "* Select tool to be used for entering pwned DFU mode."
                 print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
@@ -1965,6 +1965,7 @@ device_enter_mode() {
                     "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?;;
                     "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?;;
                     "ipwnder"*  ) ${ipwnder}2 -p; tool_pwned=$?;;
+                    "gaster"    ) $gaster pwn; tool_pwned=$?;;
                 esac
             fi
             if [[ $tool_pwned == 2 ]]; then
@@ -1972,18 +1973,19 @@ device_enter_mode() {
             fi
             log "Checking for device"
             irec_pwned=$($irecovery -q | grep -c "PWND")
+            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwning tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
                 device_pwnerror
             fi
+            if [[ -n $device_pwnd ]]; then
+                log "Found device in pwned DFU mode."
+                print "* Pwned: $device_pwnd"
+            fi
             if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" ]]; then
                 device_ipwndfu send_ibss
-                return
-            fi
-            if [[ $platform == "macos" ]]; then
-                return
-            elif [[ $device_proc == 7 ]]; then
+            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" ]]; then
                 device_ipwndfu rmsigchks
             fi
         ;;
@@ -5539,6 +5541,9 @@ restore_usepwndfu64_option() {
         print "* When disabled, user must set the device generator manually before the restore."
     fi
     if [[ $device_proc == 7 ]]; then
+        if [[ $device_target_vers == "10.3.3" && $device_target_other != 1 ]]; then
+            print "* It is recommended to disable this option for 10.3.3 OTA restores."
+        fi
         print "* This option is disabled by default (N). Select this option if unsure."
         select_yesno "Enable this option?" 0
         if [[ $? != 0 ]]; then
@@ -5934,10 +5939,10 @@ device_ramdisk() {
             esac
         fi
         if [[ $build_id == "8"* && $device_type == "iPad2"* ]] || [[ $device_boot4 == 1 ]]; then
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "-v amfi=0xff cs_enforcement_disable=1"
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "-v amfi=0xff cs_enforcement_disable=1"
             device_boot4=1
         else
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa -b "$device_bootargs"
+            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "$device_bootargs"
         fi
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
@@ -5946,7 +5951,7 @@ device_ramdisk() {
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
             if [[ $1 == "justboot" ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "$device_bootargs"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "$device_bootargs"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             fi
