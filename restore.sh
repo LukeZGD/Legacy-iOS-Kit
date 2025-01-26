@@ -3510,15 +3510,17 @@ ipsw_prepare_bundle() {
         fi
         ipsw_prepare_keys RestoreRamdisk $1
         if [[ $1 == "old" ]]; then
-            if [[ $ipsw_24o == 1 ]]; then
+            if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1 3.1.3
                 ipsw_prepare_keys iBoot $1
                 ipsw_prepare_keys KernelCache $1
+            elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
+                : # dont patch iboot/kcache for new bootrom ipod2,1 3.1.3
             elif [[ $device_proc == 1 ]]; then
                 ipsw_prepare_keys KernelCache $1
                 ipsw_prepare_keys WTF2 $1
             else
                 case $device_target_vers in
-                    6.1.6 | 4.1 ) :;;
+                    $device_latest_vers | 4.1 ) :;;
                     3.0* ) ipsw_prepare_keys iBoot $1;;
                     * )
                         ipsw_prepare_keys iBoot $1
