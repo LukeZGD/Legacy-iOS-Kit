@@ -1218,15 +1218,15 @@ device_get_info() {
             device_proc=7;; # A7
         iPhone7,[12] | iPad5,[1234] | iPod7,1 )
             device_proc=8;; # A8
-        iPhone8,[124] )
+        iPhone8,[124] | iPad6* )
             device_proc=9;; # A9
-        iPhone9,[1234] | iPhone10* | iPad[67]* | iPod9,1 )
-            device_proc=10;; # A10 (or A9/A10 iPad/A11 device)
+        iPhone9,[1234] | iPhone10* | iPad7* | iPod9,1 )
+            device_proc=10;; # A10 or A11
         iPhone* | iPad* )
             device_proc=11;; # Newer devices
     esac
     case $device_type in
-        iPad7* ) device_checkm8ipad=1;;
+        iPad[67]* ) device_checkm8ipad=1;;
     esac
     device_get_name
     if (( device_proc > 10 )); then
@@ -3428,8 +3428,9 @@ ipsw_prepare_bundle() {
             4* ) printf "4" >> $NewPlist;;
             5* ) printf "5" >> $NewPlist;;
             6* ) printf "6" >> $NewPlist;;
-            7.0* ) printf "70" >> $NewPlist;; # remove 7.0* and change 7.1* to 7* for lyncis 7.0.x
-            7.1* ) printf "71" >> $NewPlist;;
+            7* ) printf "7" >> $NewPlist;; # remove for lyncis
+            #7.0* ) printf "70" >> $NewPlist;; # remove 7.0* and change 7.1* to 7* for lyncis 7.0.x
+            #7.1* ) printf "71" >> $NewPlist;;
             8* ) printf "8" >> $NewPlist;;
             9* ) printf "9" >> $NewPlist;;
         esac
@@ -3608,12 +3609,14 @@ ipsw_prepare_32bit() {
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
             ipsw_prepare_rebootsh
+        : ' # remove for lyncis (uncomment)
         elif [[ $device_target_vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar .
             cp $jelbrek/lyncis.tar untether.tar
             ipsw_prepare_rebootsh lyncis
+        '
         fi
     elif [[ $ipsw_nskip == 1 ]]; then
         :
@@ -3646,6 +3649,12 @@ ipsw_prepare_32bit() {
             9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
             9.2* | 9.1 )       JBFiles+=("untetherhomedepot921.tar");;
             9.0* )             JBFiles+=("everuntether.tar");;
+            7.1* ) # remove for lyncis
+                case $device_type in
+                    iPod* ) JBFiles+=("panguaxe-ipod.tar");;
+                    *     ) JBFiles+=("panguaxe.tar");;
+                esac
+            ;;
             7.0* )         JBFiles+=("evasi0n7-untether.tar");; # remove for lyncis 7.0.x
             6.1.[3456] )   JBFiles+=("p0sixspwn.tar");;
             6* )           JBFiles+=("evasi0n6-untether.tar");;
@@ -4509,7 +4518,14 @@ ipsw_prepare_powder() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         cp $jelbrek/freeze.tar .
         case $device_target_vers in
-            7.1* ) ExtraArgs+=" $jelbrek/lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
+            7.1* ) # remove for lyncis
+                ExtraArgs+=" $jelbrek/fstab7.tar"
+                case $device_type in
+                    iPod* ) ExtraArgs+=" panguaxe-ipod.tar";;
+                    *     ) ExtraArgs+=" panguaxe.tar";;
+                esac
+            ;;
+            #7.1* ) ExtraArgs+=" $jelbrek/lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
             7.0* ) ExtraArgs+=" $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
             5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
         esac
@@ -6078,7 +6094,13 @@ device_ramdisk() {
                 9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
                 9.0* )       untether="everuntether.tar";;
                 8* )         untether="daibutsu/untether.tar";;
-                7.1* )       untether="lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
+                7.1* ) # remove for lyncis
+                    case $device_type in
+                        iPod* ) untether="panguaxe-ipod.tar";;
+                        *     ) untether="panguaxe.tar";;
+                    esac
+                ;;
+                #7.1* )       untether="lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
                 7.0* )       untether="evasi0n7-untether.tar";;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
@@ -6120,7 +6142,8 @@ device_ramdisk() {
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
-                7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
+                7* ) device_send_rdtar fstab7.tar;; # remove for lyncis
+                #7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
                 5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
@@ -6165,7 +6188,7 @@ device_ramdisk() {
                 device_send_rdtar daemonloader.tar
                 device_send_rdtar launchctl.tar
             fi
-            if [[ $vers == "8"* && $ipsw_everuntether != 1 ]] || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
+            if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then # || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
@@ -8061,6 +8084,19 @@ menu_logo_browse() {
     esac
 }
 
+ipsw_print_1415warn() {
+    warn "Please read: You will need to follow a guide regarding activation files before and after the restore."
+    print "* You will encounter issues activating if you do not follow this."
+    print "* Link to guide: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
+    warn "You will also have several issues after the restore itself. Broken features include:"
+    print "* SMS/iMessage, VPN, Face ID, Touch ID resets, sideloading (use TrollStore instead), and potentially other features"
+}
+
+ipsw_print_16warn() {
+    warn "Please read: You will have some issues after the restore itself. Broken features include:"
+    print "* SMS/iMessage, Face ID, and potentially other features"
+}
+
 menu_ipsw_browse() {
     local versionc
     local newpath
@@ -8166,21 +8202,15 @@ menu_ipsw_browse() {
                 return
             ;;
         esac
-    elif [[ $device_latest_vers == "16"* ]]; then
+    elif [[ $device_checkm8ipad == 1 ]]; then
         case $device_target_build in
-            20[GH]* ) :;; # 16.6 and newer only
-            18[CDEFGH]* | 19* )
-                if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then
-                    log "Selected IPSW ($device_target_vers) is not supported as target version."
-                    print "* Latest SEP/BB is not compatible."
-                    pause
-                    return
-                else
-                    warn "Please read: You will need to follow a guide regarding activation files before and after the restore."
-                    print "* You will encounter issues activating if you do not follow this."
-                    print "* Link to guide: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
-                    pause
-                fi
+            1[89]* )
+                ipsw_print_1415warn
+                pause
+            ;;
+            20[GH]* ) # 16.6-16.7.x only in 16.x
+                ipsw_print_16warn
+                pause
             ;;
             * )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
@@ -8189,13 +8219,22 @@ menu_ipsw_browse() {
                 return
             ;;
         esac
-    elif [[ $device_checkm8ipad == 1 ]]; then
+    elif [[ $device_latest_vers == "16"* ]]; then
         case $device_target_build in
-            1[89]* )
-                warn "Please read: You will need to follow a guide regarding activation files before and after the restore."
-                print "* You will encounter issues activating if you do not follow this."
-                print "* Link to guide: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
+            20[GH]* ) # 16.6-16.7.x only in 16.x
+                ipsw_print_16warn
                 pause
+            ;;
+            18[CDEFGH]* | 19* )
+                if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then # prevent iphone x from restoring to 14.x/15.x
+                    log "Selected IPSW ($device_target_vers) is not supported as target version."
+                    print "* Latest SEP/BB is not compatible."
+                    pause
+                    return
+                else
+                    ipsw_print_1415warn
+                    pause
+                fi
             ;;
             * )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
