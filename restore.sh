@@ -5235,15 +5235,26 @@ restore_prepare_pwnrec64() {
 }
 
 device_buttons() {
-    local selection=("pwnDFU" "kDFU")
+    local selection=("kDFU" "pwnDFU")
     if [[ $device_mode != "Normal" ]]; then
         device_enter_mode pwnDFU
         return
     fi
     input "pwnDFU/kDFU Mode Option"
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
-    print "* Selecting 1 (pwnDFU) is recommended. Both your home and power buttons must be working properly for entering DFU mode."
-    print "* Selecting 2 (kDFU) is for those that prefer the jailbroken method instead (have OpenSSH installed)."
+    if [[ $device_proc == 6 && $platform != "macos" ]]; then
+        print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
+        print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
+        print "* Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
+    elif [[ $device_proc == 5 ]]; then
+        print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
+        print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
+        print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+    else
+        selection=("pwnDFU" "kDFU")
+        print "* Selecting pwnDFU is recommended. Both your home and power buttons must be working properly for entering DFU mode."
+        print "* Selecting kDFU is for those that prefer the jailbroken method instead (have OpenSSH installed)."
+    fi
     input "Select your option:"
     select_option "${selection[@]}"
     opt2="${selection[$?]}"
@@ -5259,7 +5270,7 @@ device_buttons2() {
         return
     fi
     input "Jailbroken/pwnDFU Mode Option"
-    print "* This device needs to be jailbroken/in kDFU mode before proceeding."
+    print "* This device needs to be jailbroken/in pwnDFU mode before proceeding."
     print "* Selecting 1 (Jailbroken) is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
     print "* Selecting 2 (pwnDFU) is for those that prefer the ramdisk method instead."
     if [[ $device_proc == 5 ]]; then
@@ -5387,11 +5398,7 @@ restore_prepare() {
             if [[ $device_target_vers == "$device_latest_vers" && $ipsw_gasgauge_patch != 1 ]]; then
                 restore_latest
             else
-                if [[ $device_proc == 6 && $platform == "macos" ]]; then
-                    device_buttons
-                else
-                    device_enter_mode kDFU
-                fi
+                device_buttons
                 if [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom.ipsw" ]]; then
                     restore_idevicerestore
                 else
@@ -5989,12 +5996,10 @@ device_ramdisk() {
 
     if [[ $1 == "jailbreak" || $1 == "justboot" ]]; then
         device_enter_mode pwnDFU
-    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
-        device_buttons
     elif [[ $device_proc == 1 ]]; then
         device_enter_mode DFU
     else
-        device_enter_mode kDFU
+        device_buttons
     fi
 
     if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
@@ -6590,10 +6595,8 @@ shsh_save_onboard() {
     if (( device_proc >= 7 )); then
         shsh_save_onboard64
         return
-    elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
-        device_buttons
     else
-        device_enter_mode kDFU
+        device_buttons
     fi
     if [[ $device_proc == 4 && $device_pwnrec != 1 ]]; then
         patch_ibss
