@@ -4521,8 +4521,8 @@ ipsw_prepare_powder() {
             7.1* ) # remove for lyncis
                 ExtraArgs+=" $jelbrek/fstab7.tar"
                 case $device_type in
-                    iPod* ) ExtraArgs+=" panguaxe-ipod.tar";;
-                    *     ) ExtraArgs+=" panguaxe.tar";;
+                    iPod* ) ExtraArgs+=" $jelbrek/panguaxe-ipod.tar";;
+                    *     ) ExtraArgs+=" $jelbrek/panguaxe.tar";;
                 esac
             ;;
             #7.1* ) ExtraArgs+=" $jelbrek/lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
