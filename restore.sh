@@ -7375,12 +7375,6 @@ menu_restore() {
             fi
             echo
         fi
-        if [[ $mac_cocoa == 1 && $device_use_bb != 0 ]]; then
-            warn "Restoring devices is mostly broken for A5(X) and newer devices on 10.11 El Capitan, so it has been disabled."
-            print "* To proceed, use macOS 10.12 Sierra or newer."
-            pause
-            break
-        fi
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
