@@ -3655,7 +3655,13 @@ ipsw_prepare_32bit() {
                     *     ) JBFiles+=("panguaxe.tar");;
                 esac
             ;;
-            7.0* )         JBFiles+=("evasi0n7-untether.tar");; # remove for lyncis 7.0.x
+            7.0* ) # remove for lyncis 7.0.x
+                if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_target_vers == "7.0" ]]; then
+                    JBFiles+=("evasi0n7-untether-70.tar")
+                else
+                    JBFiles+=("evasi0n7-untether.tar")
+                fi
+            ;;
             6.1.[3456] )   JBFiles+=("p0sixspwn.tar");;
             6* )           JBFiles+=("evasi0n6-untether.tar");;
             5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
@@ -4526,7 +4532,14 @@ ipsw_prepare_powder() {
                 esac
             ;;
             #7.1* ) ExtraArgs+=" $jelbrek/lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
-            7.0* ) ExtraArgs+=" $jelbrek/evasi0n7-untether.tar $jelbrek/fstab7.tar";;
+            7.0* ) # remove for lyncis 7.0.x
+                ExtraArgs+=" $jelbrek/fstab7.tar"
+                if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_target_vers == "7.0" ]]; then
+                    ExtraArgs+=" $jelbrek/evasi0n7-untether-70.tar"
+                else
+                    ExtraArgs+=" $jelbrek/evasi0n7-untether.tar"
+                fi
+            ;;
             5*   ) ExtraArgs+=" $jelbrek/cydiasubstrate.tar $jelbrek/g1lbertJB.tar $jelbrek/g1lbertJB/${device_type}_${device_target_build}.tar";;
         esac
         case $device_target_vers in
@@ -6106,7 +6119,12 @@ device_ramdisk() {
                     esac
                 ;;
                 #7.1* )       untether="lyncis.tar";; # change to 7* for lyncis 7.0.x and remove below line
-                7.0* )       untether="evasi0n7-untether.tar";;
+                7.0* ) # remove for lyncis 7.0.x
+                    untether="evasi0n7-untether.tar"
+                    if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $vers == "7.0" ]]; then
+                        untether="evasi0n7-untether-70.tar"
+                    fi
+                ;;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
