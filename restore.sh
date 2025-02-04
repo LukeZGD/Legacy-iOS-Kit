@@ -2443,7 +2443,7 @@ ipsw_preference_set() {
             4* ) ipsw_canjailbreak=1;;
         esac
         if [[ $device_type == "iPod2,1" && $device_newbr != 0 && $device_target_vers == "3.1.3" ]]; then
-            warn "New bootrom detected. Disabling jailbreak option"
+            warn "Assuming device is new bootrom. Disabling jailbreak option"
             ipsw_canjailbreak=
             ipsw_nojailbreak_message
         fi
@@ -4826,15 +4826,17 @@ ipsw_prepare_custom() {
     ipsw_prepare_jailbreak old
 
     mv "$ipsw_custom.ipsw" temp.ipsw
-    if [[ $ipsw_24o == 1 ]]; then
+    if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1 3.1.3
         ipsw_prepare_patchcomp LLB
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
+    elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then # new bootrom ipod2,1 3.1.3
         mv temp.ipsw "$ipsw_custom.ipsw"
         return
     fi
 
-    # 3GS
     case $device_target_vers in
-        6.1.6 | 4.1 ) :;;
+        $device_latest_vers | 4.1 ) :;;
         3.0* )
             ipsw_prepare_patchcomp LLB
             log "Patch Kernelcache"
