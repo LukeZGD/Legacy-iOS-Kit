@@ -7357,9 +7357,9 @@ menu_restore() {
             case $device_type in
                 iPhone3,[23] | iPod[34],1 ) menu_items+=("Other (Tethered)");;
             esac
-            if (( device_proc < 7 )); then
-                menu_items+=("DFU IPSW")
-            fi
+        fi
+        if (( device_proc < 7 )); then
+            menu_items+=("DFU IPSW")
         fi
         menu_items+=("IPSW Downloader" "Go Back")
         menu_print_info
