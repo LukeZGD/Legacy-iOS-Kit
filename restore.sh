@@ -1897,7 +1897,7 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_type == "iPod2,1" || $mode == "device_alloc8" ]]; then
+            elif [[ $device_type == "iPod2,1" || $2 == "alloc8" ]]; then
                 # touch 2 uses ipwndfu
                 # also installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
@@ -8717,7 +8717,7 @@ device_ssh() {
 }
 
 device_alloc8() {
-    device_enter_mode pwnDFU
+    device_enter_mode pwnDFU alloc8
     device_ipwndfu alloc8
     log "Done!"
     print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
