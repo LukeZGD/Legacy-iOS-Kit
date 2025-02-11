@@ -2174,6 +2174,13 @@ device_ipwndfu() {
         "rmsigchks" )
             log "Running rmsigchks..."
             $p2_sudo "$python2" rmsigchks.py
+            tool_pwned=$?
+            if [[ $platform == "macos" ]]; then
+                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
+            fi
+            if [[ $tool_pwned != 0 ]]; then
+                error "ipwndfu $1 failed. Please run the script again"
+            fi
         ;;
 
         "alloc8" )
@@ -2183,8 +2190,12 @@ device_ipwndfu() {
             fi
             log "Installing alloc8 to device"
             $p2_sudo "$python2" ipwndfu -x
+            tool_pwned=$?
             if [[ $platform == "macos" ]]; then
                 print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
+            fi
+            if [[ $tool_pwned != 0 ]]; then
+                error "ipwndfu $1 failed. Please run the script again"
             fi
         ;;
     esac
