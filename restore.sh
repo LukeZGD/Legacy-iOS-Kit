@@ -112,6 +112,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --gasgauge-patch          Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
+                              This patch also attempts to get past "invalid ticket" error
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
@@ -4241,16 +4242,20 @@ ipsw_prepare_multipatch() {
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
 
     log "Patch ASR"
-    if [[ $ipsw_prepare_usepowder == 1 && $ipsw_gasgauge_patch != 1 ]]; then
-        rm -f asr
-        "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
-        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 usr/sbin/asr
-    else
-        cp ../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch .
+    local asrpatch="../resources/firmware/FirmwareBundles/Down_${device_type}_${vers}_${build}.bundle/asr.patch"
+    if [[ -s "$asrpatch" ]]; then
+        cp "$asrpatch" .
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
+    else
+        "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/asr usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
+    fi
+    if [[ $ipsw_gasgauge_patch == 1 ]]; then
+        log "Patch restored_external"
+        "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/bin/restored_external
+        "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/re usr/local/bin/restored_external
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/local/bin/restored_external
     fi
 
     if [[ $device_target_vers == "3.2"* ]]; then
@@ -5007,11 +5012,6 @@ restore_idevicerestore() {
     case $device_target_vers in
         [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
     esac
-    if [[ $opt != 0 ]]; then
-        print "* If the restore failed on updating baseband:"
-        print " -> Try disabling baseband update: ./restore.sh --disable-bbupdate"
-        echo
-    fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
@@ -8426,13 +8426,12 @@ menu_flags() {
         if (( device_proc >= 7 )); then
             menu_items+=("Enable skip-blob flag")
         else
-            menu_items+=("Enable activation-records flag" "Enable jailbreak flag")
+            menu_items+=("Enable activation-records flag" "Enable jailbreak flag" "Enable gasgauge-patch flag")
             if (( device_proc >= 5 )); then
                 menu_items+=("Enable skip-ibss flag")
             fi
         fi
         case $device_type in
-            iPhone4,1 ) menu_items+=("Enable gasgauge-patch flag");;
             iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Enable skip-first flag");;
         esac
         menu_items+=("Go Back")
@@ -8497,6 +8496,7 @@ menu_flags() {
                 print "* This is especially useful for iPhone 4S devices that have issues restoring due to battery replacement."
                 print "* This issue is called \"gas gauge\" error, also known as error 29 in iTunes."
                 print "* By enabling this, firmware components for 6.1.3 or lower will be used for restoring to get past the error."
+                print "* This also attempts to get past \"invalid ticket\" error."
                 local opt
                 select_yesno "Do you want to enable the gasgauge-patch flag?" 0
                 if [[ $? != 0 ]]; then
