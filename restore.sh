@@ -1545,10 +1545,10 @@ device_dfuhelper3() {
 device_dfuhelper() {
     local opt
     local rec=" recovery mode"
-    if [[ $1 == "norec" ]]; then
+    if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         rec=
     fi
-    if [[ $device_mode == "DFU" ]]; then
+    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
         log "Device is already in DFU mode"
         return
     fi
@@ -2193,9 +2193,6 @@ device_ipwndfu() {
             tool_pwned=$?
             if [[ $platform == "macos" ]]; then
                 print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
-            fi
-            if [[ $tool_pwned != 0 ]]; then
-                error "ipwndfu $1 failed. Please run the script again"
             fi
         ;;
     esac
@@ -8607,7 +8604,6 @@ menu_miscutilities() {
             "Dump Baseband" ) mode="baseband";;
             "Activation Records" ) mode="actrec";;
             "Enable Flags" ) menu_flags;;
-            "DFU Mode Helper" ) mode="enterdfu";;
             "(Re-)Install Dependencies" ) install_depends;;
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Get iOS Version" ) mode="getversion";;
@@ -8661,10 +8657,7 @@ menu_usefulutilities() {
         if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
             menu_items+=("SSH Ramdisk")
         fi
-        menu_items+=("Update DateTime")
-        if [[ $device_mode != "DFU" ]]; then
-            menu_items+=("DFU Mode Helper")
-        fi
+        menu_items+=("Update DateTime" "DFU Mode Helper")
         menu_items+=("Go Back")
         menu_print_info
         # other utilities menu
@@ -8683,6 +8676,7 @@ menu_usefulutilities() {
             "Install alloc8 Exploit" ) mode="device_alloc8";;
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
+            "DFU Mode Helper" ) mode="device_dfuhelper";;
             "Go Back" ) back=1;;
         esac
     done
@@ -8721,8 +8715,11 @@ device_ssh() {
     device_iproxy no-logging
     device_sshpass
     log "Connecting to device SSH..."
-    print "* For accessing data, note the following:"
-    print "* Host: sftp://127.0.0.1 | User: $ssh_user | Password: <your password> (default is alpine) | Port: $ssh_port"
+    print "* For SSH/SCP access, use the following:"
+    print "* Host: sftp://127.0.0.1 | Username: $ssh_user | Password: <your password> (default is alpine) | Port: $ssh_port"
+    if [[ $ssh_user == "root" ]]; then
+        print "* You may also use mobile as the username for SSH/SCP access."
+    fi
     $ssh -p $ssh_port ${ssh_user}@127.0.0.1
     kill $iproxy_pid
 }
@@ -8730,7 +8727,11 @@ device_ssh() {
 device_alloc8() {
     device_enter_mode pwnDFU alloc8
     device_ipwndfu alloc8
-    log "Done!"
+    if [[ $tool_pwned == 0 ]]; then
+        log "Done!"
+    else
+        warn "ipwndfu alloc8 seems to have failed. Just force restart the device, enter DFU, and try again."
+    fi
     print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
     print "* If it fails, try to unplug and replug your device then run the script again."
     print "* You may also need to force restart the device and re-enter DFU mode before retrying."
@@ -9825,7 +9826,6 @@ main() {
                 print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
             fi
         ;;
-        "enterdfu" ) device_enter_mode DFU;;
         "dfuipswipsw" ) device_dfuipsw ipsw;;
         "customipsw" ) restore_customipsw;;
         "getversion" ) device_ramdisk getversion;;
