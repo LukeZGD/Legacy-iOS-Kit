@@ -4150,13 +4150,12 @@ ipsw_prepare_multipatch() {
     fi
     case $device_target_vers in
         4.3* ) vers="4.3.5"; build="8L1";;
-        5.0* ) vers="5.0.1"; build="9A405";;
-        5.1* ) vers="5.1.1"; build="9B206";;
+        5* ) vers="5.1.1"; build="9B206";;
         6* ) vers="6.1.3"; build="10B329";;
     esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         local ver2="${device_target_vers:0:1}"
-        if (( ver2 >= 7 )); then
+        if (( ver2 >= 5 )); then
             vers="6.1.3"
             build="10B329"
         fi
