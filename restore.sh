@@ -1597,7 +1597,7 @@ device_dfuhelper() {
         echo -n "$sec "
         device_find_all $1
         opt=$?
-        if [[ $opt == 1 ]]; then
+        if [[ $opt == 1 && $mode != "device_dfuhelper" ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
             device_mode="DFU"
             return
