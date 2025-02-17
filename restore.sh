@@ -7349,24 +7349,19 @@ menu_restore() {
             esac
             menu_items+=("Other (powdersn0w $text2 blobs)")
         fi
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
+            menu_items+=("Other (Use SHSH Blobs)")
+            if (( device_proc < 7 )); then
+                menu_items+=("Other (Tethered)")
+            fi
+        fi
         if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
         fi
-        if [[ $device_proc != 1 ]]; then
-            if [[ $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
-                menu_items+=("Other (Use SHSH Blobs)")
-            fi
-            if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
-                menu_items+=("Set Nonce Only")
-            elif [[ $device_proc == 5 || $device_proc == 6 ]]; then
-                menu_items+=("Other (Tethered)")
-            fi
-            case $device_type in
-                iPhone3,[23] | iPod[34],1 ) menu_items+=("Other (Tethered)");;
-            esac
-        fi
         if (( device_proc < 7 )); then
             menu_items+=("DFU IPSW")
+        elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+            menu_items+=("Set Nonce Only")
         fi
         menu_items+=("IPSW Downloader" "Go Back")
         menu_print_info
@@ -7375,14 +7370,13 @@ menu_restore() {
         else
             print " > Main Menu > Restore/Downgrade"
             if [[ $device_proc == 1 ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.0 to 3.1.2)"
+                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.0 to 3.1.2) (1.x will not work)"
                 echo
-            elif [[ $device_type == "iPod2,1" ]]; then
+            elif [[ $device_type == "iPod2,1" && $device_newbr == 0 ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.1.1 to 3.0)"
                 echo
-            fi
-            if [[ $device_type == "iPod2,1" || $device_type == "iPhone2,1" ]] && [[ $device_newbr != 0 ]]; then
-                print "* New bootrom devices might be incompatible with older iOS versions"
+            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
+                print "* Some new bootrom devices might be incompatible with older iOS versions"
                 echo
             fi
         fi
