@@ -1815,21 +1815,32 @@ device_enter_mode() {
             if [[ $device_mode == "DFU" ]]; then
                 device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
             fi
-            if [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                  $device_boot4 != 1 && $device_proc == 5 ]]; then
-                print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                print "* Select N if this is not the case. (pwned using checkm8-a5)"
-                print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
-                select_yesno "Is your device already in pwned iBSS/kDFU mode?" 0
-                if [[ $? != 0 ]]; then
-                    log "Pwned iBSS/kDFU mode specified by user."
-                    return
-                fi
-            elif [[ -n $device_pwnd ]]; then
+            if [[ -n $device_pwnd ]]; then
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
                     4 ) return;;
+                    5 )
+                        if [[ $device_boot4 != 1 ]]; then
+                            device_ipwndfu send_ibss
+                        fi
+                        return
+                    ;;
+                    6 )
+                        if [[ $device_pwnd == "iPwnder" ]]; then
+                            "../bin/macos/ipwnder2" --upload-iboot
+                            sleep 1
+                            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+                            if [[ -z $device_pwnd ]]; then
+                                log "Device should now be in pwned iBSS mode."
+                            else
+                                warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
+                            fi
+                        elif [[ $device_pwnd == "checkm8" ]]; then
+                            device_ipwndfu send_ibss
+                        fi
+                        return
+                    ;;
                     7 )
                         if [[ $device_pwnd != "ipwnder" ]]; then
                             device_ipwndfu rmsigchks
@@ -1842,12 +1853,20 @@ device_enter_mode() {
                         return
                     ;;
                 esac
+            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
+                  $device_boot4 != 1 && $device_proc == 5 ]]; then
+                print "* Select Y if your device is in pwned iBSS/kDFU mode."
+                print "* Select N if this is not the case. (pwn using checkm8-a5)"
+                print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
+                select_yesno "Is your device already in pwned iBSS/kDFU mode?" 0
+                if [[ $? != 0 ]]; then
+                    log "Pwned iBSS/kDFU mode specified by user."
+                    return
+                fi
             fi
 
             if [[ $device_proc == 5 ]]; then
-                local device_todfu
                 if [[ $device_mode != "DFU" ]]; then
-                    device_todfu=1
                     device_enter_mode DFU
                     log "Device is now in DFU mode. Now put your device in PWNED DFU mode using checkm8-a5."
                 fi
@@ -1860,10 +1879,8 @@ device_enter_mode() {
                 print "* If you do not know what you are doing, restart your device in normal mode."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
                 echo
-                if [[ $device_todfu == 1 ]]; then
-                    log "* After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
-                    pause
-                fi
+                log "* After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
+                pause
                 echo
                 log "Checking for device"
                 device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
@@ -1972,6 +1989,7 @@ device_enter_mode() {
             if [[ $tool_pwned == 2 ]]; then
                 return
             fi
+            sleep 1
             log "Checking for device"
             irec_pwned=$($irecovery -q | grep -c "PWND")
             device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
@@ -1984,7 +2002,7 @@ device_enter_mode() {
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
             fi
-            if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" ]]; then
+            if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" && -n $device_pwnd ]]; then
                 device_ipwndfu send_ibss
             elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" ]]; then
                 device_ipwndfu rmsigchks
@@ -2141,6 +2159,13 @@ device_ipwndfu() {
                 error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
             fi
             print "* ipwndfu should have \"done!\" as output. If not, sending iBEC will fail."
+            sleep 1
+            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+            if [[ -z $device_pwnd ]]; then
+                log "Device should now be in pwned iBSS mode."
+            else
+                warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
+            fi
         ;;
 
         "pwn" )
