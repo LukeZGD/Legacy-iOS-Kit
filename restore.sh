@@ -753,7 +753,7 @@ device_entry() {
 
 device_get_name() {
     # all devices that run iOS/iPhoneOS/iPadOS
-    device_name=$device_type
+    # adding more entries here is no longer necessary since AppleDB is now used as fallback
     case $device_type in
         "iPhone1,1") device_name="iPhone 2G";;
         "iPhone1,2") device_name="iPhone 3G";;
@@ -812,6 +812,7 @@ device_get_name() {
         "iPhone17,2") device_name="iPhone 16 Pro Max";;
         "iPhone17,3") device_name="iPhone 16";;
         "iPhone17,4") device_name="iPhone 16 Plus";;
+        "iPhone17,5") device_name="iPhone 16e";;
         "iPad1,1") device_name="iPad 1";;
         "iPad2,1") device_name="iPad 2 (Wi-Fi)";;
         "iPad2,2") device_name="iPad 2 (GSM)";;
@@ -911,6 +912,13 @@ device_get_name() {
         "iPod7,1") device_name="iPod touch 6";;
         "iPod9,1") device_name="iPod touch 7";;
     esac
+    if [[ -z $device_name ]]; then
+        log "Getting device name"
+        device_name="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" | $jq -r ".name")"
+    fi
+    if [[ -z $device_name ]]; then
+        device_name=$device_type
+    fi
 }
 
 device_manufacturing() {
