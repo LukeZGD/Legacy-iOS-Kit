@@ -1819,12 +1819,10 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    4 ) return;;
                     5 )
                         if [[ $device_boot4 != 1 ]]; then
                             device_ipwndfu send_ibss
                         fi
-                        return
                     ;;
                     6 )
                         if [[ $device_pwnd == "iPwnder" ]]; then
@@ -1839,20 +1837,18 @@ device_enter_mode() {
                         elif [[ $device_pwnd == "checkm8" ]]; then
                             device_ipwndfu send_ibss
                         fi
-                        return
                     ;;
                     7 )
                         if [[ $device_pwnd != "ipwnder" ]]; then
                             device_ipwndfu rmsigchks
                         fi
-                        return
                     ;;
                     [89] | 10 )
                         log "gaster reset"
                         $gaster reset
-                        return
                     ;;
                 esac
+                return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
                   $device_boot4 != 1 && $device_proc == 5 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
@@ -3816,7 +3812,8 @@ ipsw_bbreplace() {
     local sbl_latest
     local bbfw="Print BuildIdentities:0:Manifest:BasebandFirmware"
     local ubid
-    if [[ $device_use_bb == 0 || $device_target_vers == "$device_latest_vers" ]] || (( device_proc < 5 )); then
+    if [[ $device_use_bb == 0 || $device_target_vers == "$device_latest_vers" ||
+          $device_type == "$device_disable_bbupdate" ]] || (( device_proc < 5 )); then
         return
     fi
 
@@ -8873,11 +8870,6 @@ device_jailbreak_confirm() {
         ;;
     esac
     echo
-    if [[ $device_type == "iPhone2,1" && $device_vers == "3"* ]]; then
-        warn "For 3.x versions on the 3GS, the \"Jailbreak Device\" option will only work on devices restored with Legacy iOS Kit."
-        print "* This applies to all 3.x versions on the 3GS only. They require usage of the \"Restore/Downgrade\" option first."
-        echo
-    fi
     print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
     print "* Before continuing, make sure that your device does not have a jailbreak yet."
     print "* No data will be lost, but please back up your data just in case."
