@@ -5539,7 +5539,8 @@ ipsw_prepare() {
         4 )
             if [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
-            elif [[ $device_target_other == 1 ]] || [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
+            elif [[ $device_target_other == 1 || $ipsw_gasgauge_patch == 1 ]] ||
+                 [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
                 case $device_type in
                     iPhone2,1 ) ipsw_prepare_jailbreak;;
                     iPod2,1 ) ipsw_prepare_custom;;
