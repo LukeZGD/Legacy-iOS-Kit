@@ -6915,13 +6915,13 @@ menu_appmanage() {
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
+        menu_items=("Install IPA" "List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
-            "Install IPA (AppSync)" ) menu_ipa "$selected";;
+            "Install IPA" ) menu_ipa "$selected";;
             "List User Apps"   ) $ideviceinstaller list --user;;
             "List System Apps" ) $ideviceinstaller list --system;;
             "List All Apps"    ) $ideviceinstaller list --all;;
@@ -7063,19 +7063,21 @@ menu_ipa() {
         menu_items=("Select IPA")
         menu_print_info
         if [[ $1 == "Install"* ]]; then
-            print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
-            print "* Install IPA (AppSync) will not work if your device is not activated."
+            print "* Make sure that AppSync Unified (iOS 5+) or some other variant of AppSync"
+            print "  is installed on your device, if the IPA you are installing is cracked."
+            print "* Install IPA will not work if your device is not activated."
         else
             print "* Sideload IPA is for iOS 9 and newer only. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
-            print "* If you have AppSync installed, go to App Management -> Install IPA (AppSync) instead."
+            print "* If you have AppSync installed, or are installing an app with a valid"
+            print "  signature, go to App Management -> Install IPA instead."
             if [[ $platform == "macos" ]]; then
                 echo
                 warn "\"Sideload IPA\" is not supported on macOS."
                 print "* Use Sideloadly or AltServer instead for this."
-                print "* You also might be looking for the \"Install IPA (AppSync)\" option instead."
+                print "* You also might be looking for the \"Install IPA\" option instead."
                 print "* You can find it by going to App Management."
                 pause
                 break
