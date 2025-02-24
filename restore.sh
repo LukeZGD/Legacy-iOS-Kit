@@ -1372,11 +1372,10 @@ device_find_mode() {
     local i=0
     local device_in
     local mode="$1"
+    local mode2
     local wtfreal
 
-    if [[ $mode == "Restore" ]]; then
-        :
-    elif [[ $mode == "Recovery" ]]; then
+    if [[ $mode == "Recovery" ]]; then
         usb=1281
     elif [[ $device_proc == 1 ]]; then
         usb=1222
@@ -1401,27 +1400,24 @@ device_find_mode() {
 
     log "Finding device in $mode mode..."
     while (( i < timeout )); do
-        if [[ $mode == "Restore" ]]; then
-            if [[ $platform == "macos" ]]; then
-                opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r | head -n 1)"
-            elif [[ $platform == "linux" ]]; then
-                opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
-            fi
-            case $opt in
-                12[9a][0123456789abcdef] ) device_in=1;; # normal
-            esac
-        elif [[ $platform == "linux" ]]; then
+        if [[ $platform == "linux" ]]; then
             device_in=$(lsusb | grep -c "05ac:$usb")
-        elif [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "$mode" ]]; then
-            device_in=1
+        fi
+        if [[ $mode == "Recovery" && $device_proc != 1 ]]; then
+            mode2="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
+            if [[ -n $mode2 ]]; then
+                device_in=1
+                mode="$mode2"
+            fi
+        elif [[ $platform != "linux" ]]; then
+            mode2="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
+            if [[ $mode2 == "$mode" ]]; then
+                device_in=1
+            fi
         fi
 
         if [[ $device_in == 1 ]]; then
             log "Found device in $mode mode."
-            if [[ $mode == "Restore" ]]; then
-                log "Giving the device some time to start up SSH..."
-                sleep 5
-            fi
             device_mode="$mode"
             break
         fi
@@ -1480,7 +1476,7 @@ device_iproxy() {
 device_find_all() {
     # find device stuff from palera1n legacy
     local opt
-    if [[ $1 == "norec" || $platform == "macos" ]]; then
+    if [[ $1 == "norec" || $platform == "macos" || $mode == "device_dfuhelper" ]]; then
         return
     fi
     if [[ $platform == "macos" ]]; then
@@ -1573,7 +1569,7 @@ device_dfuhelper() {
     fi
     device_find_all $1
     opt=$?
-    if [[ $opt == 1 && $mode != "device_dfuhelper" ]]; then
+    if [[ $opt == 1 ]]; then
         log "Found device in DFU mode."
         device_mode="DFU"
         return
@@ -1605,7 +1601,7 @@ device_dfuhelper() {
         echo -n "$sec "
         device_find_all $1
         opt=$?
-        if [[ $opt == 1 && $mode != "device_dfuhelper" ]]; then
+        if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
             device_mode="DFU"
             return
@@ -1618,7 +1614,7 @@ device_dfuhelper() {
         echo -n "$i "
         device_find_all $1
         opt=$?
-        if [[ $opt == 1 && $mode != "device_dfuhelper" ]]; then
+        if [[ $opt == 1 ]]; then
             echo -e "\n$(log 'Found device in DFU mode.')"
             device_mode="DFU"
             return
@@ -1827,11 +1823,7 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    5 )
-                        if [[ $device_boot4 != 1 ]]; then
-                            device_ipwndfu send_ibss
-                        fi
-                    ;;
+                    5 ) device_ipwndfu send_ibss;;
                     6 )
                         if [[ $device_pwnd == "iPwnder" ]]; then
                             "../bin/macos/ipwnder2" --upload-iboot
@@ -3405,6 +3397,9 @@ ipsw_prepare_bundle() {
         "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.plist
         mv options.plist options.$device_model.plist
     fi
+    if [[ ! -s options.$device_model.plist ]]; then
+        error "Failed to extract options plist from restore ramdisk. Probably an issue with firmware keys."
+    fi
     if [[ $device_target_vers == "3.2"* ]]; then
         RootSize=1000
     elif [[ $device_target_vers == "3"* ]]; then
@@ -3634,6 +3629,9 @@ ipsw_prepare_32bit() {
                 JBFiles+=("everuntether.tar")
             ;;
         esac
+    elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_target_vers == "8.4" && $ipsw_jailbreak == 1 ]]; then
+        ipsw_everuntether=1
+        JBFiles+=("everuntether.tar")
     fi
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak; return;;
@@ -3728,7 +3726,9 @@ ipsw_prepare_32bit() {
             ;;
         esac
         JBFiles+=("$jelbrek/freeze.tar")
-        if [[ $device_target_vers == "9"* || $ipsw_everuntether == 1 ]]; then
+        if [[ $device_target_vers == "9.0"* ]]; then
+            JBFiles+=("$jelbrek/launchctl.tar")
+        elif [[ $device_target_vers == "9"* ]]; then
             JBFiles+=("$jelbrek/daemonloader.tar" "$jelbrek/launchctl.tar")
         elif [[ $device_target_vers == "5"* ]]; then
             JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
@@ -5867,11 +5867,12 @@ device_ramdisk64() {
 
     print "* Mount filesystems with this command (for iOS 11.3 and newer):"
     print "    /usr/bin/mount_filesystems"
-    print "* Mount filesystems with this command (for iOS 10.3.x):"
-    print "    /sbin/mount_apfs /dev/disk0s1s1 /mnt1; /sbin/mount_apfs /dev/disk0s1s2 /mnt2"
-    print "* Mount filesystems with this command (for iOS 10.2.1 and older):"
-    print "    /sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
-    warn "Mounting and/or modifying data (/mnt2) might not work for 64-bit iOS"
+    print "* Mount root filesystem with this command (for iOS 10.3.x/11.x):"
+    print "    /sbin/mount_apfs /dev/disk0s1s1 /mnt1"
+    print "* Mount root filesystem with this command (for iOS 10.2.1 and older):"
+    print "    /sbin/mount_hfs /dev/disk0s1s1 /mnt1"
+    warn "Mounting and/or modifying data partition (/mnt2) might not work for 64-bit iOS"
+    warn "Mount filesystems at your own risk: there is a chance of bootlooping! Especially on versions older than iOS 11.3."
 
     menu_ramdisk $build_id
 }
@@ -5949,10 +5950,15 @@ device_ramdisk() {
         log "$getcomp"
         if [[ -n $ipsw_justboot_path ]]; then
             unzip -o -j "$ipsw_justboot_path.ipsw" "${path}$name" -d .
-        elif [[ -e $ramdisk_path/$name ]]; then
+        elif [[ -s $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
             "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
+        fi
+        if [[ ! -s $name ]]; then
+            error "Failed to get $name. Please run the script again."
+        fi
+        if [[ ! -s $ramdisk_path/$name ]]; then
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
@@ -6189,6 +6195,9 @@ device_ramdisk() {
                         untether="everuntether.tar"
                     ;;
                 esac
+            elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $vers == "8.4" ]]; then
+                ipsw_everuntether=1
+                untether="everuntether.tar"
             fi
             log "Nice, iOS $vers is compatible."
             log "Sending $untether"
@@ -7063,14 +7072,16 @@ menu_ipa() {
         menu_items=("Select IPA")
         menu_print_info
         if [[ $1 == "Install"* ]]; then
-            print "* Make sure that AppSync Unified (iOS 5+) is installed on your device."
+            print "* Make sure that AppSync Unified (iOS 5+) or some other variant of AppSync"
+            print "  is installed on your device, if the IPA you are installing is cracked."
             print "* Install IPA (AppSync) will not work if your device is not activated."
         else
             print "* Sideload IPA is for iOS 9 and newer only. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
-            print "* If you have AppSync installed, go to App Management -> Install IPA (AppSync) instead."
+            print "* If you have AppSync installed, or are installing an app with a valid"
+            print "  signature, go to App Management -> Install IPA (AppSync) instead."
             if [[ $platform == "macos" ]]; then
                 echo
                 warn "\"Sideload IPA\" is not supported on macOS."
