@@ -2257,17 +2257,18 @@ device_fw_key_check() {
     log "Checking firmware keys in $keys_path"
     if [[ -e "$keys_path/index.html" ]]; then
         if [[ $(cat "$keys_path/index.html" | grep -c "$build") != 1 ]]; then
-            log "Existing firmware keys are not valid. Deleting"
             rm "$keys_path/index.html"
         fi
         case $build in
             1[23]* )
                 if [[ $(cat "$keys_path/index.html" | sed "s|DeviceTree.${device_model}ap||g" | grep -c "${device_model}ap") != 0 ]]; then
-                    log "Existing firmware keys seem to have incorrect filenames. Deleting"
                     rm "$keys_path/index.html"
                 fi
             ;;
         esac
+        if [[ $(cat "$keys_path/index.html" | grep -c "2025-02-25") != 1 ]]; then
+            rm "$keys_path/index.html"
+        fi
     fi
 
     if [[ ! -e "$keys_path/index.html" ]]; then
@@ -2290,6 +2291,7 @@ device_fw_key_check() {
         fi
         mv index.html "$keys_path/"
     fi
+
     if [[ $1 == "base" ]]; then
         device_fw_key_base="$(cat $keys_path/index.html)"
     elif [[ $1 == "temp" ]]; then
@@ -6618,7 +6620,7 @@ menu_ramdisk() {
                     continue
                 fi
                 log "Sending command for erasing all content and settings..."
-                $ssh -p $ssh_port root@127.0.0.1 "nvram oblit-inprogress=5"
+                $ssh -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram oblit-inprogress=5"
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
             "remove4" ) device_ramdisk_setnvram;;
