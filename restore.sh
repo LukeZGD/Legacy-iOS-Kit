@@ -3399,12 +3399,13 @@ ipsw_prepare_bundle() {
         "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.plist
         mv options.plist options.$device_model.plist
     fi
-    if [[ ! -s options.$device_model.plist ]]; then
+    local ver2="${device_target_vers:0:1}"
+    if [[ ! -s options.$device_model.plist ]] && (( ver2 >= 4 )); then
         error "Failed to extract options plist from restore ramdisk. Probably an issue with firmware keys."
     fi
     if [[ $device_target_vers == "3.2"* ]]; then
         RootSize=1000
-    elif [[ $device_target_vers == "3"* ]]; then
+    elif [[ $vers == 3 ]]; then
         case $device_type in
             iPhone1* | iPod1,1 ) RootSize=420;;
             iPod2,1 ) RootSize=450;;
