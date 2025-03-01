@@ -2474,7 +2474,7 @@ ipsw_preference_set() {
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
         esac
-        if [[ $device_type == "iPod2,1" && $device_newbr != 0 && $device_target_vers == "3.1.3" ]]; then
+        if [[ $ipsw_24o != 1 && $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then # new bootrom ipod2,1 3.1.3
             warn "Assuming device is new bootrom. Disabling jailbreak option"
             ipsw_canjailbreak=
             ipsw_nojailbreak_message
