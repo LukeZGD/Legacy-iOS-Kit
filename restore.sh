@@ -2267,7 +2267,10 @@ device_fw_key_check() {
             ;;
         esac
         if [[ $(cat "$keys_path/index.html" | grep -c "2025-02-25") != 1 ]]; then
-            rm "$keys_path/index.html"
+            case $build in
+                8[GHJKL]* | 9A406 ) :;;
+                * ) rm "$keys_path/index.html";;
+            esac
         fi
     fi
 
