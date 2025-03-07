@@ -1805,6 +1805,7 @@ device_enter_mode() {
         "pwnDFU" )
             local irec_pwned
             local tool_pwned
+            local opt2
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -2000,7 +2001,7 @@ device_enter_mode() {
             fi
             if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" && -n $device_pwnd ]]; then
                 device_ipwndfu send_ibss
-            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" ]]; then
+            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" && $opt2 != "ipwnder"* ]]; then
                 device_ipwndfu rmsigchks
             fi
         ;;
@@ -5315,6 +5316,7 @@ device_buttons() {
     fi
     input "Select your option:"
     select_option "${selection[@]}"
+    local opt2
     opt2="${selection[$?]}"
     if [[ $opt2 == *"DFU" ]]; then
         device_enter_mode $opt2
@@ -5337,6 +5339,7 @@ device_buttons2() {
     fi
     input "Select your option:"
     select_option "${selection[@]}"
+    local opt2
     opt2="${selection[$?]}"
     if [[ $opt2 == *"DFU" ]]; then
         device_enter_mode $opt2
@@ -9301,7 +9304,8 @@ device_dfuipsw() {
     ipsw_extract
     log "Running idevicerestore with command: $idevicerestore -e \"$ipsw_path.ipsw\""
     $idevicerestore -e "$ipsw_path.ipsw"
-    log "Restoring done! Device should now be in DFU mode"
+    log "Device should now be stuck in DFU mode"
+    print "* You may now restore the device. Run the script again and select Restore/Downgrade"
 }
 
 device_enter_build() {
@@ -9528,7 +9532,6 @@ device_altserver() {
 restore_latest64() {
     local idevicerestore2="${idevicerestore}2"
     local opt="-l"
-    local opt2
     warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
     input "Restore/Update Select Option"
     print "* Restore will do factory reset and update the device, all data will be cleared"
