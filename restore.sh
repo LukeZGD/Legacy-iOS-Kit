@@ -2498,11 +2498,17 @@ ipsw_preference_set() {
         ipsw_nskip=1
     fi
 
-    # make jailbreak version available for all of 8.x-9.x if the restore is a powdersn0w one.
+    # make jailbreak option enabled for all of 8.x-9.x if the restore is a powdersn0w one.
     # meanwhile, exit this function if ipsw_canjailbreak is not set to 1 and/or other options will not be used.
+    local jbpowder
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
-            [98]* ) ipsw_canjailbreak=1;;
+            [98]* )
+                ipsw_canjailbreak=1
+                ipsw_jailbreak=1
+                jbpowder=1
+                log "iOS 8.x-9.x powdersn0w detected. Enabling jailbreak option"
+            ;;
         esac
     elif [[ $device_target_other == 1 && $ipsw_canjailbreak != 1 && $ipsw_nskip != 1 ]]; then
         return
@@ -2514,14 +2520,16 @@ ipsw_preference_set() {
         case $device_target_vers in
             8* )
                 if [[ $device_target_build == "12A4265u" || $device_target_build == "12A4297e" ]]; then
-                    warn "iOS beta detected. Disabling jailbreak option"
+                    warn "iOS 8 beta 1-2 detected. Disabling jailbreak option"
                     ipsw_canjailbreak=
+                    ipsw_jailbreak=
                 fi
             ;;
-            [76]* ) :;;
+            9.[123]* | [76]* ) :;;
             * )
                 warn "iOS beta detected. Disabling jailbreak option"
                 ipsw_canjailbreak=
+                ipsw_jailbreak=
             ;;
         esac
         if [[ $ipsw_canjailbreak == 1 ]]; then
@@ -2531,7 +2539,7 @@ ipsw_preference_set() {
 
     if [[ $ipsw_fourthree == 1 ]]; then
         ipsw_jailbreak=1
-    elif [[ $ipsw_jailbreak == 1 ]]; then
+    elif [[ $ipsw_jailbreak == 1 && $jbpowder != 1 ]]; then
         warn "Jailbreak flag detected, jailbreak option enabled by user."
     elif [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
@@ -3409,7 +3417,7 @@ ipsw_prepare_bundle() {
     fi
     if [[ $device_target_vers == "3.2"* ]]; then
         RootSize=1000
-    elif [[ $vers == 3 ]]; then
+    elif [[ $ver2 == 3 ]]; then
         case $device_type in
             iPhone1* | iPod1,1 ) RootSize=420;;
             iPod2,1 ) RootSize=450;;
