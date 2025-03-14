@@ -2267,7 +2267,11 @@ device_fw_key_check() {
                 fi
             ;;
         esac
-        if [[ $(cat "$keys_path/index.html" | grep -c "2025-02-25") != 1 ]]; then
+        if [[ $(cat "$keys_path/index.html" | grep -c "2025-02-25") == 1 ]]; then
+            case $build in
+                8[GHJKL]* | 9A406 ) rm "$keys_path/index.html";;
+            esac
+        else
             case $build in
                 8[GHJKL]* | 9A406 ) :;;
                 * ) rm "$keys_path/index.html";;
@@ -3401,7 +3405,8 @@ ipsw_prepare_bundle() {
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     if [[ -z $ramdisk_name ]]; then
-        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
+        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy" \
+        "For iOS 4.3.x/5.0.x, you may also try to delete and re-download your copy of Legacy iOS Kit."
     fi
     unzip -o -j "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
