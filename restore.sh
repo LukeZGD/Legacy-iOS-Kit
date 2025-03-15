@@ -1403,7 +1403,7 @@ device_find_mode() {
         if [[ $platform == "linux" ]]; then
             device_in=$(lsusb | grep -c "05ac:$usb")
         fi
-        if [[ $mode == "Recovery" && $device_proc != 1 ]]; then
+        if [[ $mode == "Recovery" && $timeout == 50 ]]; then # find recovery/dfu instead of just recovery, only if timeout is 50
             mode2="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
             if [[ -n $mode2 ]]; then
                 device_in=1
@@ -1658,7 +1658,7 @@ device_enter_mode() {
                     fi
                 fi
                 log "Entering recovery mode..."
-                print "* If the device does not enter recovery mode automatically, press Ctrl+C to cancel and try putting the device in DFU/Recovery mode manually"
+                print "* If the device does not enter recovery mode automatically, try putting the device in Recovery/DFU mode manually. You may also press Ctrl+C to cancel"
                 "$dir/ideviceenterrecovery" "$device_udid" >/dev/null
                 device_find_mode Recovery 50
             fi
