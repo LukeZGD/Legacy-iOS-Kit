@@ -417,7 +417,7 @@ set_tool_paths() {
                 elif [[ $(command -v rc-service) ]]; then
                     sudo rc-service usbmuxd zap
                 else
-                    sudo killall -9 usbmuxd
+                    sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
                 fi
                 #sudo killall usbmuxd 2>/dev/null
                 #sleep 1
@@ -2498,7 +2498,9 @@ ipsw_preference_set() {
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
     esac
-    if [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    if [[ $ipsw_gasgauge_patch != 1 && $ipsw_jailbreak != 1 && $device_target_vers == "$device_latest_vers" ]]; then
+        ipsw_nskip=
+    elif [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         ipsw_nskip=1
     fi
 
@@ -3641,6 +3643,10 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
+    # redirect to ipsw_prepare_jailbreak for 4.1 and lower
+    case $device_target_vers in
+        [23]* | 4.[01]* ) ipsw_prepare_jailbreak; return;;
+    esac
     # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -3653,9 +3659,6 @@ ipsw_prepare_32bit() {
         ipsw_everuntether=1
         JBFiles+=("everuntether.tar")
     fi
-    case $device_target_vers in
-        [23]* | 4.[01]* ) ipsw_prepare_jailbreak; return;;
-    esac
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -5328,8 +5331,8 @@ device_buttons() {
         print "* Selecting kDFU is for those that prefer the jailbroken method instead (have OpenSSH installed)."
     fi
     input "Select your option:"
-    select_option "${selection[@]}"
     local opt2
+    select_option "${selection[@]}"
     opt2="${selection[$?]}"
     if [[ $opt2 == *"DFU" ]]; then
         device_enter_mode $opt2
@@ -5351,8 +5354,8 @@ device_buttons2() {
         print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     fi
     input "Select your option:"
-    select_option "${selection[@]}"
     local opt2
+    select_option "${selection[@]}"
     opt2="${selection[$?]}"
     if [[ $opt2 == *"DFU" ]]; then
         device_enter_mode $opt2
@@ -8176,7 +8179,8 @@ ipsw_print_1415warn() {
 
 ipsw_print_16warn() {
     warn "Please read: You will have some issues after the restore itself. Broken features include:"
-    print "* SMS/iMessage, Face ID, and potentially other features"
+    print "* SMS/iMessage, Face ID, and potentially other features."
+    print "* There is a fix for Messages available. Go to FutureRestore Support Discord server for more details."
 }
 
 menu_ipsw_browse() {
@@ -8280,6 +8284,9 @@ menu_ipsw_browse() {
             1[234567]* )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
+                if (( device_proc >= 9 )); then
+                    print "* Use turdus merula instead: https://sep.lol/"
+                fi
                 pause
                 return
             ;;
@@ -8288,7 +8295,15 @@ menu_ipsw_browse() {
         case $device_target_build in
             1[89]* )
                 ipsw_print_1415warn
-                pause
+                echo
+                print "* Use turdus merula instead: https://sep.lol/"
+                if [[ $platform == "macos" ]]; then
+                    pause
+                    return
+                else
+                    print "* However turdus merula is currently for macOS only, so you may still continue here if you want."
+                    pause
+                fi
             ;;
             20[GH]* ) # 16.6-16.7.x only in 16.x
                 ipsw_print_16warn
@@ -8297,6 +8312,7 @@ menu_ipsw_browse() {
             * )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 print "* Latest SEP/BB is not compatible."
+                print "* Use turdus merula instead: https://sep.lol/"
                 pause
                 return
             ;;

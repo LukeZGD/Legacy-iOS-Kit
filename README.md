@@ -84,11 +84,12 @@
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
 - Restoring with SHSH blobs and using SSH Ramdisks are also supported on some 64-bit devices:
-    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
     - iPhone 5S, 6, 6S, SE 2016, 7 (including Plus variants)
     - iPad Air 1, 2
     - iPad mini 2, 3, 4
     - iPod touch 6, 7
+    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
+    - Although SEP/BB compatibility mostly does not matter anymore for A9(X)/A10(X) devices thanks to [turdus merula](https://sep.lol)
 - Restoring with iOS 16.6.x SHSH blobs using futurerestore is also supported on these devices (SSH ramdisks not supported):
     - iPhone 8, X
     - iPad 5
