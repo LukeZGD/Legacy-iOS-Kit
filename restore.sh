@@ -1304,12 +1304,12 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5* | iPhone[89]* | iPod9,1 )
-            device_latest_vers="15.8.3"
-            device_latest_build="19H386"
+            device_latest_vers="15.8.4"
+            device_latest_build="19H390"
         ;;
         iPad6* | iPhone10* )
-            device_latest_vers="16.7.10"
-            device_latest_build="20H350"
+            device_latest_vers="16.7.11"
+            device_latest_build="20H360"
         ;;
         iPad7* )
             log "Getting latest iOS version for $device_type"
