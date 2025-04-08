@@ -57,9 +57,9 @@ clean() {
     kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
     popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
-    if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 ]]; then
-        # ill disable this for now since finder is annoying, ill just keep them in a stopped state.
-        : killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
+    if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 &&
+          $no_finder != 1 ]]; then
+        killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
     fi
 }
 
@@ -668,7 +668,7 @@ version_update() {
         sudo rm -rf resources/
     fi
     rm -r resources/ saved/ipwndfu/ 2>/dev/null
-    unzip -q tmp$$/latest.zip -d .
+    unzip -oq tmp$$/latest.zip -d .
     cp tmp$$/firstrun resources 2>/dev/null
     pushd "$(dirname "$0")/tmp$$" >/dev/null
     log "Done! Please run the script again"
@@ -1206,9 +1206,11 @@ device_get_info() {
         iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
     esac
 
-    device_fw_dir="../resources/firmware/$device_type"
-    if [[ -s $device_fw_dir/hwmodel ]]; then
-        device_model="$(cat $device_fw_dir/hwmodel)"
+    device_fw_dir="../saved/firmware/$device_type"
+    mkdir -p $device_fw_dir 2>/dev/null
+    device_fw_dir_old="../resources/firmware/$device_type"
+    if [[ -s "$device_fw_dir_old/hwmodel" ]]; then
+        device_model="$(cat $device_fw_dir_old/hwmodel)"
     fi
     all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     device_use_bb=0
@@ -1851,7 +1853,7 @@ device_enter_mode() {
                 esac
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                  $device_boot4 != 1 && $device_proc == 5 ]]; then
+                    $device_boot4 != 1 && $device_proc == 5 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N if this is not the case. (pwn using checkm8-a5)"
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
@@ -2256,27 +2258,8 @@ device_fw_key_check() {
     local keys_path="$device_fw_dir/$build"
 
     log "Checking firmware keys in $keys_path"
-    if [[ -e "$keys_path/index.html" ]]; then
-        if [[ $(cat "$keys_path/index.html" | grep -c "$build") != 1 ]]; then
-            rm "$keys_path/index.html"
-        fi
-        case $build in
-            1[23]* )
-                if [[ $(cat "$keys_path/index.html" | sed "s|DeviceTree.${device_model}ap||g" | grep -c "${device_model}ap") != 0 ]]; then
-                    rm "$keys_path/index.html"
-                fi
-            ;;
-        esac
-        if [[ $(cat "$keys_path/index.html" | grep -c "2025-02-25") == 1 ]]; then
-            case $build in
-                8[GHJKL]* | 9A406 ) rm "$keys_path/index.html";;
-            esac
-        else
-            case $build in
-                8[GHJKL]* | 9A406 ) :;;
-                * ) rm "$keys_path/index.html";;
-            esac
-        fi
+    if [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "$build") != 1 ]]; then
+        rm -f "$keys_path/index.html"
     fi
 
     if [[ ! -e "$keys_path/index.html" ]]; then
@@ -2681,8 +2664,9 @@ shsh_save() {
                 log "Extracting BuildManifest from $version IPSW..."
                 unzip -o -j "$ipsw_base_path.ipsw" BuildManifest.plist -d .
             else
+                ipsw_get_url $build_id
                 log "Downloading BuildManifest for $version..."
-                "$dir/pzb" -g BuildManifest.plist -o BuildManifest.plist "$(cat "$device_fw_dir/$build_id/url")"
+                "$dir/pzb" -g BuildManifest.plist -o BuildManifest.plist "$ipsw_url"
             fi
             mv BuildManifest.plist $buildmanifest
         fi
@@ -3407,8 +3391,7 @@ ipsw_prepare_bundle() {
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     if [[ -z $ramdisk_name ]]; then
-        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy" \
-        "For iOS 4.3.x/5.0.x, you may also try to delete and re-download your copy of Legacy iOS Kit."
+        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
     unzip -o -j "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
@@ -4000,7 +3983,8 @@ ipsw_prepare_ios4multipart() {
     local vers="5.1.1"
     local build="9B206"
     local saved_path="../saved/$device_type/$build"
-    local url="$(cat $device_fw_dir/$build/url)"
+    ipsw_get_url $build
+    local url="$ipsw_url"
     device_fw_key_check temp $build
 
     mkdir -p $saved_path
@@ -4960,6 +4944,7 @@ restore_download_bbsep() {
         restore_baseband="$device_latest_bb"
         baseband_sha1="$device_latest_bb_sha1"
     fi
+    ipsw_get_url $build_id
 
     mkdir tmp
     # BuildManifest
@@ -4968,7 +4953,7 @@ restore_download_bbsep() {
             cp ../resources/manifest/BuildManifest_${device_type}_10.3.3.plist $build_id.plist
         else
             log "Downloading $build_id BuildManifest"
-            "$dir/pzb" -g BuildManifest.plist -o $build_id.plist "$(cat $device_fw_dir/$build_id/url)"
+            "$dir/pzb" -g BuildManifest.plist -o $build_id.plist "$ipsw_url"
         fi
         mv $build_id.plist ../saved/$device_type
     fi
@@ -4990,7 +4975,7 @@ restore_download_bbsep() {
         fi
         if [[ ! -e $restore_baseband_check ]]; then
             log "Downloading $build_id Baseband"
-            "$dir/pzb" -g Firmware/$restore_baseband -o $restore_baseband "$(cat $device_fw_dir/$build_id/url)"
+            "$dir/pzb" -g Firmware/$restore_baseband -o $restore_baseband "$ipsw_url"
             if [[ $baseband_sha1 != "$($sha1sum $restore_baseband | awk '{print $1}')" ]]; then
                 error "Downloading/verifying baseband failed. Please run the script again"
             fi
@@ -5010,7 +4995,7 @@ restore_download_bbsep() {
         restore_sep="sep-firmware.$device_model.RELEASE"
         if [[ ! -e ../saved/$device_type/$restore_sep-$build_id.im4p ]]; then
             log "Downloading $build_id SEP"
-            "$dir/pzb" -g Firmware/all_flash/$restore_sep.im4p -o $restore_sep.im4p "$(cat $device_fw_dir/$build_id/url)"
+            "$dir/pzb" -g Firmware/all_flash/$restore_sep.im4p -o $restore_sep.im4p "$ipsw_url"
             mv $restore_sep.im4p ../saved/$device_type/$restore_sep-$build_id.im4p
         fi
         restore_sep="$restore_sep-$build_id.im4p"
@@ -7137,10 +7122,11 @@ menu_ipa() {
             "Select IPA" ) menu_ipa_browse;;
             "Install IPA" )
                 if [[ $1 == "Install"* ]]; then
-                    mode="device_ideviceinstaller"
+                    device_ideviceinstaller
                 else
-                    mode="device_altserver"
+                    device_altserver
                 fi
+                pause
             ;;
             "Use Dadoum Sideloader" )
                 local arch="$platform_arch"
@@ -7249,7 +7235,7 @@ menu_shsh() {
             ;;
         esac
         case $selected in
-            "iOS"* ) mode="save-ota-blobs";;
+            "iOS"* ) save-ota-blobs; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Onboard Blobs (Raw Dump)" )
                 print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
@@ -7268,7 +7254,8 @@ menu_shsh() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                mode="save-cydia-blobs"
+                save-cydia-blobs
+                pause
             ;;
             "Convert Raw Dump" ) menu_shsh_convert;;
             "Go Back" ) back=1;;
@@ -7367,7 +7354,7 @@ menu_shsh_convert() {
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Select Raw Dump" ) menu_shshdump_browse;;
-            "Convert Raw Dump" ) mode="convert-onboard-blobs";;
+            "Convert Raw Dump" ) convert-onboard-blobs; pause;;
             "Go Back" ) back=1;;
         esac
     done
@@ -9944,6 +9931,7 @@ for i in "$@"; do
         "--run-as-root" ) run_as_root=1;;
         "--no-internet-check" ) no_internet_check=1;;
         "--no-version-check" ) no_version_check=1;;
+        "--no-finder" ) no_finder=1;;
     esac
 done
 

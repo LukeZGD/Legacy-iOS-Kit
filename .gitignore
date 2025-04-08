@@ -23,3 +23,6 @@ sudoloop
 tmp*/
 version.xml
 *.DS_Store
+index.html
+sha1sum
+url

@@ -26,13 +26,13 @@ jobs:
 
       - name: Download some files
         run: |
-          mkdir saved
+          mkdir -p saved/firmware
           pushd resources
           curl -L https://github.com/LukeZGD/ipwndfu/archive/1d22fd01b0daf52bbcf1ce730022d4212d87f967.zip -o ipwndfu.zip
           curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
           unzip keys.zip -d .
           unzip ipwndfu.zip -d .
-          cp -r Legacy-iOS-Kit-Keys-master/* firmware
+          cp -r Legacy-iOS-Kit-Keys-master/* ../saved/firmware
           mv ipwndfu*/ ../saved/ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
           echo "30f0802078ab6ff83d6b918e13f09a652a96d6dc" > ../saved/ipwndfu/sha1check
