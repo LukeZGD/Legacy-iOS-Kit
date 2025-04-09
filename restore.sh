@@ -1965,7 +1965,7 @@ device_enter_mode() {
                 # A7 mac uses ipwnder32/ipwnder_lite/other
                 local selection
                 if [[ $platform_arch == "x86_64" ]]; then
-                    selection=("ipwnder32" "ipwnder_lite" "ipwndfu" "gaster")
+                    selection=("gaster" "ipwnder32" "ipwnder_lite" "ipwndfu")
                 else
                     selection=("ipwnder_lite" "gaster")
                 fi
@@ -2073,7 +2073,7 @@ device_ipwndfu() {
             fi
         fi
         log "Installing python2 using pyenv"
-        print "* This may take a while, but should not take longer than a few minutes."
+        print "* This step may take some time - Be patient and let it run."
         "$pyenv" install 2.7.18
         if [[ ! -e "$pyenv2" ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
