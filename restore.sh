@@ -7272,6 +7272,7 @@ menu_shsh_onboard() {
     ipsw_path=
     if (( device_proc >= 7 )); then
         shsh_save_onboard
+        pause
         return
     fi
     while [[ -z "$mode" && -z "$back" ]]; do
