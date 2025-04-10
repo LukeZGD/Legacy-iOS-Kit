@@ -7235,7 +7235,7 @@ menu_shsh() {
             ;;
         esac
         case $selected in
-            "iOS"* ) save-ota-blobs; pause;;
+            "iOS"* ) shsh_save; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Onboard Blobs (Raw Dump)" )
                 print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
@@ -7245,7 +7245,8 @@ menu_shsh() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                mode="save-onboard-dump"
+                shsh_save_onboard dump
+                pause
             ;;
 
             "Cydia Blobs" )
@@ -7254,7 +7255,7 @@ menu_shsh() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                save-cydia-blobs
+                shsh_save_cydia
                 pause
             ;;
             "Convert Raw Dump" ) menu_shsh_convert;;
@@ -7270,7 +7271,8 @@ menu_shsh_onboard() {
 
     ipsw_path=
     if (( device_proc >= 7 )); then
-        mode="save-onboard-blobs"
+        shsh_save_onboard
+        return
     fi
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Select IPSW")
@@ -7304,7 +7306,7 @@ menu_shsh_onboard() {
         selected="${menu_items[$?]}"
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
-            "Save Onboard Blobs" ) mode="save-onboard-blobs";;
+            "Save Onboard Blobs" ) shsh_save_onboard;;
             "Go Back" ) back=1;;
         esac
     done
@@ -7354,7 +7356,12 @@ menu_shsh_convert() {
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Select Raw Dump" ) menu_shshdump_browse;;
-            "Convert Raw Dump" ) convert-onboard-blobs; pause;;
+            "Convert Raw Dump" )
+                rm -f dump.raw
+                cp "$shsh_path" dump.raw
+                shsh_convert_onboard
+                pause
+            ;;
             "Go Back" ) back=1;;
         esac
     done
@@ -9864,13 +9871,9 @@ main() {
                 print "    > ./restore.sh --activation-records"
             fi
         ;;
-        "save-ota-blobs" ) shsh_save;;
         "kdfu" ) device_enter_mode kDFU;;
         "ramdisknvram" ) device_ramdisk clearnvram;;
         "pwned-ibss" ) device_enter_mode pwnDFU;;
-        "save-onboard-blobs" ) shsh_save_onboard;;
-        "save-onboard-dump" ) shsh_save_onboard dump;;
-        "save-cydia-blobs" ) shsh_save_cydia;;
         "enterrecovery" ) device_enter_mode Recovery;;
         "exitrecovery" )
             log "Attempting to exit Recovery mode."
@@ -9887,7 +9890,6 @@ main() {
         "shutdown" ) $idevicediagnostics shutdown;;
         "restart" ) $idevicediagnostics restart;;
         "restore-latest" ) restore_latest64;;
-        "convert-onboard-blobs" ) cp "$shsh_path" dump.raw; shsh_convert_onboard;;
         "remove4" ) device_ramdisk setnvram $rec;;
         "device"* ) $mode;;
         * ) :;;
