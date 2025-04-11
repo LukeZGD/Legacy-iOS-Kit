@@ -1291,11 +1291,11 @@ device_get_info() {
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-        iPad3,[56] | iPhone5,[12] )
+        iPad3,[56] | iPhone5,[1234] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
-        iPad3,4 | iPad4,[12345] | iPhone5,[34] | iPhone6,[12] )
+        iPad3,4 | iPad4,[12345] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
         ;;
@@ -2304,10 +2304,15 @@ ipsw_get_url() {
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
-        url="$(curl "https://api.ipsw.me/v4/ipsw/$device_type/$build_id" | $jq -j ".url")"
-        if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
-            url="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[] | select(.buildid == \"$build_id\") | .url")"
+        case $build_id in
+            1[AC]* | [23457]* ) phone="Phone";; # iPhoneOS
+        esac
+        if [[ $device_type == "iPad"* ]]; then
+            case $build_id in
+                1[789]* | [23]* ) phone="Pad";; # iPadOS
+            esac
         fi
+        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone}OS;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
             if [[ -n $url_local ]]; then
                 url="$url_local"
