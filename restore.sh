@@ -5067,7 +5067,7 @@ restore_futurerestore() {
 
     if [[ $1 == "--use-pwndfu" ]]; then
         device_fw_key_check
-        pushd ../resources >/dev/null
+        pushd ../saved >/dev/null
         if [[ $platform == "macos" ]]; then
             if (( mac_majver >= 12 )); then
                 opt="/usr/bin/python3 -m http.server -b 127.0.0.1 $port"
@@ -6442,6 +6442,9 @@ menu_ramdisk() {
     if [[ $device_canpowder == 1 ]]; then
         menu_items+=("Disable/Enable Exploit")
     fi
+    if (( device_proc >= 7 )) && [[ $device_proc != 10 ]]; then
+        menu_items+=("Install Bootstrap (iOS 7/8/9)")
+    fi
     menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime" "Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
@@ -6476,6 +6479,7 @@ menu_ramdisk() {
                 "Dump SEP Firmware" ) mode="dump-sep";;
                 "Disable/Enable Exploit" ) menu_remove4;;
                 "Update DateTime" ) mode="datetime";;
+                "Install Bootstrap (iOS 7/8/9)" ) mode="bootstrap";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -6633,6 +6637,21 @@ menu_ramdisk() {
             ;;
             "remove4" ) device_ramdisk_setnvram;;
             "datetime" ) device_datetime_cmd;;
+            "bootstrap" )
+                log "Please read the message below:"
+                warn "This will install the jailbreak bootstrap with Cydia installed to your device."
+                warn "Do NOT continue if your device is not a 64-bit device on iOS 7/8/9! Also do this at your own risk."
+                warn "You might also need your device to be freshly restored/erased and never booted for this to work."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
+                $scp -P $ssh_port $jelbrek/freeze.tar $jelbrek/launchctl.tar root@127.0.0.1:/mnt1
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; tar -xf launchctl.tar -C .; rm *.tar; mkdir privatevar; mv private/var/lib privatevar"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist privatevar; rm -r private/var/*; touch .cydia_no_stash"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /privatevar/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /privatevar/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
+            ;;
         esac
     done
 }
