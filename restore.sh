@@ -2382,12 +2382,10 @@ patch_ibec() {
     case $device_type in
         iPad1,1 | iPod3,1 )
             build_id="9B206";;
-        iPhone2,1 | iPhone3,[123] | iPod4,1 )
+        iPhone2,1 | iPhone3,[123] | iPod4,1 | iPad3,1 )
             build_id="10A403";;
         iPad2,[367] | iPad3,[25] )
             build_id="12H321";;
-        iPad3,1 )
-            build_id="10B146";;
         iPhone5,3 )
             build_id="11B511";;
         iPhone5,4 )
@@ -2411,7 +2409,7 @@ patch_ibec() {
     log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $device_proc == 4 || -n $device_rd_build ]]; then
+    if [[ $device_proc == 4 || -n $device_rd_build || $device_type == "iPad3,1" ]]; then
         "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/$download_targetfile.patch"
@@ -6705,7 +6703,7 @@ shsh_save_onboard() {
         log "Sending iBSS..."
         $irecovery -f pwnediBSS.dfu
     fi
-    sleep 1
+    sleep 2
     patch_ibec
     log "Sending iBEC..."
     $irecovery -f pwnediBEC.dfu
