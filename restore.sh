@@ -2159,7 +2159,8 @@ device_ipwndfu() {
             fi
             print "* ipwndfu should have \"done!\" as output. If not, sending iBEC will fail."
             sleep 1
-            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+            log "Checking for device"
+            device_pwnd="$($irecovery3 -q | grep "PWND" | cut -c 7-)"
             if [[ -z $device_pwnd ]]; then
                 log "Device should now be in pwned iBSS mode."
             else
