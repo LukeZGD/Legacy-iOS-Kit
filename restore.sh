@@ -1454,6 +1454,7 @@ device_sshpass() {
     if [[ -z $pass ]]; then
         pass="alpine"
     fi
+    ssh_pass="$pass"
     scp="$dir/sshpass -p $pass $scp2"
     ssh="$dir/sshpass -p $pass $ssh2"
 }
@@ -6675,7 +6676,16 @@ shsh_save_onboard64() {
     device_iproxy
     device_sshpass
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh"
-    $ssh -p $ssh_port root@127.0.0.1 "cat /dev/disk1" | dd of=dump.raw bs=256 count=$((0x4000))
+    local disk
+    if [[ $ssh_user == "mobile" ]]; then
+        disk="echo $ssh_pass | sudo -S "
+    fi
+    if (( device_det2 >= 16 )); then
+        disk+="cat /dev/disk2"
+    else
+        disk+="cat /dev/disk1"
+    fi
+    $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "$disk" | dd of=dump.raw bs=256 count=$((0x4000))
     "$dir/img4tool" --convert -s $shsh dump.raw
     if [[ ! -s $shsh ]]; then
         warn "Failed to convert raw dump to SHSH."
