@@ -7341,7 +7341,7 @@ menu_shsh_onboard() {
         selected="${menu_items[$?]}"
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
-            "Save Onboard Blobs" ) shsh_save_onboard;;
+            "Save Onboard Blobs" ) mode="shsh_save_onboard";;
             "Go Back" ) back=1;;
         esac
     done
@@ -9926,7 +9926,7 @@ main() {
         "restart" ) $idevicediagnostics restart;;
         "restore-latest" ) restore_latest64;;
         "remove4" ) device_ramdisk setnvram $rec;;
-        "device"* ) $mode;;
+        "device"* | "shsh"* ) $mode;;
         * ) :;;
     esac
 
