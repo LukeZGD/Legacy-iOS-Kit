@@ -284,8 +284,6 @@ set_tool_paths() {
         # architecture check
         if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
             platform_arch="arm64"
-        elif [[ $(uname -m) == "a"* ]]; then
-            platform_arch="armhf"
         elif [[ $(uname -m) == "x86_64" ]]; then
             platform_arch="x86_64"
         else
@@ -343,12 +341,10 @@ set_tool_paths() {
             pause
         fi
         bspatch="$dir/bspatch"
-        if [[ $platform_arch != "armhf" ]]; then
-            dir_env="env LD_LIBRARY_PATH=$dir/lib "
-            ideviceactivation="$dir_env"
-            idevicediagnostics="$dir_env"
-            ideviceinstaller="$dir_env"
-        fi
+        dir_env="env LD_LIBRARY_PATH=$dir/lib "
+        ideviceactivation="$dir_env"
+        idevicediagnostics="$dir_env"
+        ideviceinstaller="$dir_env"
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
@@ -456,7 +452,7 @@ set_tool_paths() {
             # go here if need to disable os x 10.11 support for now
             if (( mac_minver < 11 )); then
                 warn "Your macOS version ($platform_ver - $platform_arch) is not supported. Expect features to not work properly."
-                print "* Supported versions are macOS 10.11 and newer. (10.12 and newer recommended)"
+                print "* Supported macOS versions are 10.11 and newer. (10.12 and newer recommended)"
                 pause
             fi
             if (( mac_minver <= 11 )); then
@@ -1830,7 +1826,10 @@ device_enter_mode() {
                     5 ) device_ipwndfu send_ibss;;
                     6 )
                         if [[ $device_pwnd == "iPwnder" ]]; then
+                            mkdir image3 ../saved/image3 2>/dev/null
+                            cp ../saved/image3/* image3/ 2>/dev/null
                             "../bin/macos/ipwnder2" --upload-iboot
+                            cp image3/* ../saved/image3/
                             sleep 1
                             device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
                             if [[ -z $device_pwnd ]]; then
@@ -1957,6 +1956,7 @@ device_enter_mode() {
             elif [[ $device_proc == 6 ]]; then
                 # A6 asi mac uses ipwnder_lite
                 log "Placing device to pwnDFU mode using ipwnder_lite"
+                print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\", the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
                 $ipwnder -d
@@ -6962,13 +6962,18 @@ menu_main() {
 }
 
 menu_appmanage() {
-    local menu_items
+    local menu_items=()
     local selected
     local back
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
+        if [[ $device_unactivated == 1 ]]; then
+            warn "Device is not activated. Install IPA (AppSync) option is not available."
+        else
+            menu_items+=("Install IPA (AppSync)")
+        fi
+        menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
         select_option "${menu_items[@]}"
@@ -7165,14 +7170,9 @@ menu_ipa() {
             "Use Dadoum Sideloader" )
                 local arch="$platform_arch"
                 local sideloader="sideloader-gtk-"
-                case $arch in
-                    "armhf" )
-                        warn "Dadoum Sideloader does not support armhf/armv7. arm64 or x86_64 only."
-                        pause
-                        continue
-                    ;;
-                    "arm64" ) arch="aarch64";;
-                esac
+                if [[ $arch == "arm64" ]]; then
+                    arch="aarch64"
+                fi
                 sideloader+="$arch-linux-gnu"
                 log "Checking for latest Sideloader"
                 local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases | $jq -r ".[0].tag_name")"
@@ -8059,6 +8059,9 @@ ipsw_print_warnings() {
         warn "Selected Target IPSW is a beta version, proceed with caution"
     else
         warn "Selected Target IPSW failed validation, proceed with caution"
+    fi
+    if [[ $device_target_vers == "9.3"* && $device_actrec == 1 ]]; then
+        warn "Activation records stitching does not work for iOS 9.3+ versions. Use iOS 9.2.1 or lower instead."
     fi
     if [[ $1 == "powder" ]]; then
         case $device_target_build in
@@ -9530,10 +9533,10 @@ device_altserver() {
     local sha1="4bca48e9cda0517cc965250a797f97d5e8cc2de6"
     local anisette="../saved/anisette-server-$platform"
     local arch="$platform_arch"
-    case $arch in
-        "armhf" ) arch="armv7"; sha1="20e9ea770dbedb5c3c20f8b966be977efa2fa4cc";;
-        "arm64" ) arch="aarch64"; sha1="535926e5a14dc8f59f3f99197ca4122c7af8dfaf";;
-    esac
+    if [[ $arch == "arm64" ]]; then
+        arch="aarch64"
+        sha1="535926e5a14dc8f59f3f99197ca4122c7af8dfaf"
+    fi
     altserver+="_$arch"
     anisette+="_$arch"
     if [[ $($sha1sum $altserver 2>/dev/null | awk '{print $1}') != "$sha1" ]]; then
@@ -9888,21 +9891,16 @@ main() {
         "baseband" )
             device_dump baseband
             log "Baseband dumping is done"
-            print "* To stitch baseband to IPSW, run Legacy iOS Kit with --disable-bbupdate argument:"
+            print "* To stitch baseband to IPSW, run Legacy iOS Kit with --disable-bbupdate flag:"
             print "    > ./restore.sh --disable-bbupdate"
         ;;
         "actrec" )
-            if (( device_proc >= 7 )); then
-                warn "Activation records dumping is experimental for 64-bit devices."
-                print "* It may not work on newer iOS versions and/or have incomplete files."
-                print "* For more info of the files, go here: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/a9ios9activation"
-                print "* You may also look into here: https://gist.github.com/pixdoet/2b58cce317a3bc7158dfe10c53e3dd32"
-                pause
-            fi
             device_dump activation
             log "Activation records dumping is done"
+            print "* The output tar file contains the plist file(s) dumped. activation_record.plist is all you need for activation"
+            print "* Note: Using the activation records only works on iOS 9.2.1 or lower. It will not work on iOS 9.3+"
             if (( device_proc < 7 )); then
-                print "* To stitch records to IPSW, run Legacy iOS Kit with --activation-records argument:"
+                print "* To stitch activation to IPSW, run Legacy iOS Kit with --activation-records flag:"
                 print "    > ./restore.sh --activation-records"
             fi
         ;;
@@ -9913,7 +9911,9 @@ main() {
         "exitrecovery" )
             log "Attempting to exit Recovery mode."
             $irecovery -n
-            print "* Note: For tether downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
+            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+                print "* Note: For tethered downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
+            fi
             if [[ $device_canpowder == 1 ]]; then
                 print "* Note 2: If your device is stuck in recovery mode, it may have been restored with powdersn0w before."
                 print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
