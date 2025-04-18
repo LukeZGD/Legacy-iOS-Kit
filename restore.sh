@@ -908,7 +908,7 @@ device_get_name() {
         "iPod7,1") device_name="iPod touch 6";;
         "iPod9,1") device_name="iPod touch 7";;
     esac
-    if [[ -z $device_name ]]; then
+    if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
         device_name="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" | $jq -r ".name")"
     fi
@@ -939,6 +939,7 @@ device_manufacturing() {
         fi
     elif [[ $device_type == "iPod2,1" && $device_mode == "Recovery" ]]; then
         device_newbr=2
+        print "* Cannot check $device_name bootrom model in Recovery mode. Enter DFU mode to get bootrom model"
         return
     fi
     case $device_newbr in
@@ -1236,6 +1237,17 @@ device_get_info() {
         iPad[67]* ) device_checkm8ipad=1;;
     esac
     device_get_name
+    if [[ -z $device_name && $device_mode == "Normal" ]]; then
+        device_name=$($ideviceinfo -s -k DeviceName)
+        if [[ -n $device_name ]]; then
+            warn "Unable to detect device model and iOS version. Is your device on 2.x or lower?"
+            warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
+            print "* To fix this, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
+            pause
+            device_proc=1
+            device_det=1
+        fi
+    fi
     if (( device_proc > 10 )); then
         print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
@@ -6648,7 +6660,7 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
                 log "Installing bootstrap done."
                 if [[ $device_proc == 7 ]]; then
-                    print "* If your device is on iOS 7, proceed to Install Bootstrap next."
+                    print "* If your device is on iOS 7, proceed to Install Untether next."
                 fi
             ;;
             "untether7" )
@@ -9209,7 +9221,7 @@ device_activate() {
         esac
     fi
     $ideviceactivation activate
-    if [[ $device_type == "iPod"* ]] && (( device_det <= 3 )); then
+    if [[ $device_name == "iPod"* ]] && (( device_det <= 3 )); then
         $ideviceactivation itunes
     fi
     print "* If it returns an error, just try again."
@@ -9927,7 +9939,7 @@ main() {
         "exitrecovery" )
             log "Attempting to exit Recovery mode."
             $irecovery -n
-            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+            if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 7 )); then
                 print "* Note: For tethered downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
             fi
             if [[ $device_canpowder == 1 ]]; then
@@ -9980,6 +9992,16 @@ for i in "$@"; do
         "--bootargs"* ) device_bootargs="${i#*=}";;
         "--old-menu" ) menu_old=1;;
         "--use-usbmuxd2" ) use_usbmuxd2=1;;
+        # main_argmode setters here
+        "--dfuhelper" ) main_argmode="device_dfuhelper";;
+        "--exit-recovery" ) main_argmode="exitrecovery";;
+        "--pwn" ) main_argmode="pwned-ibss";;
+        "--sshrd" ) main_argmode="device_enter_ramdisk";;
+        "--sshrd-menu" )
+            device_argmode="entry"
+            main_argmode="device_enter_ramdisk_menu"
+        ;;
+        "--kdfu" ) main_argmode="kdfu";;
         # please dont use these, unless you know what youre doing
         "--run-as-root" ) run_as_root=1;;
         "--no-internet-check" ) no_internet_check=1;;
@@ -9998,8 +10020,6 @@ if [[ $no_color != 1 ]]; then
 fi
 
 case $1 in
-    "--dfuhelper" ) main_argmode="device_dfuhelper";;
-    "--exit-recovery" ) main_argmode="exitrecovery";;
     "--just-boot" )
         print "* Just Boot usage: --just-boot --build-id=<id>"
         print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
@@ -10014,13 +10034,6 @@ case $1 in
         log "Just Boot arguments: $justboot_args"
         main_argmode="device_justboot"
     ;;
-    "--pwn" ) main_argmode="pwned-ibss";;
-    "--sshrd" ) main_argmode="device_enter_ramdisk";;
-    "--sshrd-menu" )
-        device_argmode="entry"
-        main_argmode="device_enter_ramdisk_menu"
-    ;;
-    "--kdfu" ) main_argmode="kdfu";;
 esac
 
 trap "clean" EXIT
