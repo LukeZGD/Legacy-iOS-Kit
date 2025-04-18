@@ -1560,7 +1560,7 @@ device_dfuhelper() {
     print "* If you already know how to enter DFU mode, you may do so right now before continuing."
     select_yesno "Select Y to continue, N to exit$rec" 1
     if [[ $? != 1 ]]; then
-        if [[ -z $1 ]]; then
+        if [[ -z $1 && $device_mode == "Recovery" ]]; then
             log "Attempting to exit Recovery mode."
             $irecovery -n
         fi
@@ -1878,7 +1878,7 @@ device_enter_mode() {
                 print "* If you do not know what you are doing, restart your device in normal mode."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
                 echo
-                log "* After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
+                log "After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
                 pause
                 echo
                 log "Checking for device"
@@ -1889,11 +1889,9 @@ device_enter_mode() {
                 else
                     local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU, and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-                        echo
                         error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
                         error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
                         error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
-                        echo
                     fi
                     error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
                     error_msg+=$'\n* For more info about kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
@@ -5393,7 +5391,7 @@ restore_prepare() {
                             restore_idevicerestore first
                             log "Do not disconnect your device, not done yet"
                             print "* Please put the device in DFU mode after it reboots!"
-                            sleep 10
+                            sleep 20
                             device_mode=
                             log "Press Enter/Return when the device reboots and is on black screen, Apple logo, or iTunes logo."
                             device_enter_mode DFU
@@ -5403,6 +5401,7 @@ restore_prepare() {
                             device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
                         done
                         ipsw_custom="../$ipsw_custom_part2"
+                        print "* If pwning fails here, re-enter DFU and run the script again with --skip-first flag enabled to continue the process."
                         device_enter_mode pwnDFU
                         restore_idevicerestore norflash
                     ;;
@@ -6152,12 +6151,6 @@ device_ramdisk() {
 
         "getversion" )
             device_ramdisk_iosvers
-            log "Retrieved the current iOS version"
-            if [[ -n $device_vers ]]; then
-                print "* iOS Version: $device_vers ($device_build)"
-            else
-                warn "Something wrong happened. Failed to get iOS version."
-            fi
             log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
             pause
         ;;
@@ -6423,6 +6416,12 @@ device_ramdisk_iosvers() {
         device_vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         device_build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     fi
+    if [[ -n $device_vers ]]; then
+        log "Retrieved the current iOS version"
+        print "* iOS Version: $device_vers ($device_build)"
+    else
+        warn "Something wrong happened. Failed to get iOS version."
+    fi
 }
 
 menu_ramdisk() {
@@ -6430,7 +6429,6 @@ menu_ramdisk() {
     local menu_items=("Connect to SSH" "Dump Blobs")
     local reboot="reboot_bak"
     if (( device_proc >= 7 )); then
-        menu_items+=("Dump SEP Firmware")
         reboot="/sbin/reboot"
     else
         menu_items+=("Dump Baseband/Activation")
@@ -6439,7 +6437,8 @@ menu_ramdisk() {
         menu_items+=("Install TrollStore")
     elif [[ $device_proc == 7 && $1 == "12"* ]]; then
         log "Ramdisk should now boot and fix iOS 7 not booting."
-    elif (( device_proc <= 8 )); then
+    fi
+    if (( device_proc <= 8 )); then
         menu_items+=("Erase All (iOS 7 and 8)")
     fi
     if (( device_proc >= 5 )); then
@@ -6450,6 +6449,9 @@ menu_ramdisk() {
     fi
     if (( device_proc >= 7 )) && [[ $device_proc != 10 ]]; then
         menu_items+=("Install Bootstrap (iOS 7/8/9)")
+    fi
+    if [[ $device_proc == 7 ]]; then
+        menu_items+=("Install Untether (iOS 7)")
     fi
     menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime" "Reboot Device" "Exit")
 
@@ -6482,10 +6484,10 @@ menu_ramdisk() {
                 "Erase All (iOS 7 and 8)" ) mode="erase78";;
                 "Erase All (iOS 9+)" ) mode="erase9";;
                 "Clear NVRAM" ) mode="clearnvram";;
-                "Dump SEP Firmware" ) mode="dump-sep";;
                 "Disable/Enable Exploit" ) menu_remove4;;
                 "Update DateTime" ) mode="datetime";;
                 "Install Bootstrap (iOS 7/8/9)" ) mode="bootstrap";;
+                "Install Untether (iOS 7)" ) mode="untether7";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -6553,12 +6555,6 @@ menu_ramdisk() {
                     fi
                 fi
                 device_ramdisk_iosvers
-                if [[ -n $device_vers ]]; then
-                    log "Retrieved the current iOS version"
-                    print "* iOS Version: $device_vers ($device_build)"
-                else
-                    warn "Something wrong happened. Failed to get iOS version."
-                fi
             ;;
             "dump-bbactrec" ) device_dumprd;;
             "trollstore" )
@@ -6617,14 +6613,6 @@ menu_ramdisk() {
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
             ;;
-            "dump-sep" )
-                log "Please read the message below:"
-                print "* To dump SEP Firmware, do the following:"
-                print "    - Mount filesystems using the appropriate command for your iOS version (scroll up to see the commands)"
-                print "    - Grab the file sep-firmware.img4 from /mnt1/usr/standalone or /mnt1/usr/standalone/firmware"
-                print "* Better do this process manually since Legacy iOS Kit does not know your iOS version"
-                pause
-            ;;
             "clearnvram" )
                 log "Sending command for clearing NVRAM..."
                 $ssh -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram -c"
@@ -6648,15 +6636,42 @@ menu_ramdisk() {
                 warn "This will install the jailbreak bootstrap with Cydia installed to your device."
                 warn "Do NOT continue if your device is not a 64-bit device on iOS 7/8/9! Also do this at your own risk."
                 warn "You might also need your device to be freshly restored/erased and never booted for this to work."
+                print "* This procedure will do the commands in this post: https://www.reddit.com/r/LegacyJailbreak/comments/1jwo0gr/tutorial_manually_install_bootstrap_to_64bit/"
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
                 fi
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
                 $scp -P $ssh_port $jelbrek/freeze.tar $jelbrek/launchctl.tar root@127.0.0.1:/mnt1
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; tar -xf launchctl.tar -C .; rm *.tar; mkdir privatevar; mv private/var/lib privatevar"
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist privatevar; rm -r private/var/*; touch .cydia_no_stash"
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /privatevar/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /privatevar/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; tar -xf launchctl.tar -C .; rm *.tar; mv private/var/lib private"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
+                log "Installing bootstrap done."
+                if [[ $device_proc == 7 ]]; then
+                    print "* If your device is on iOS 7, proceed to Install Bootstrap next."
+                fi
+            ;;
+            "untether7" )
+                log "Please read the message below:"
+                warn "This will install the iOS 7 untether for your device and iOS version. Make sure that bootstrap is already installed."
+                warn "Do NOT continue if your device is not on iOS 7! Also do this at your own risk."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1"
+                device_ramdisk_iosvers
+                if [[ -z $device_vers ]]; then
+                    continue
+                fi
+                local untether
+                case $device_vers in
+                    "7.1"* ) untether="panguaxe.tar";;
+                    "7.0"  ) untether="evasi0n7-untether-70.tar";;
+                    "7.0"* ) untether="evasi0n7-untether.tar";;
+                esac
+                $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf $untether -C .; rm *.tar"
             ;;
         esac
     done
@@ -6962,12 +6977,13 @@ menu_main() {
 }
 
 menu_appmanage() {
-    local menu_items=()
+    local menu_items
     local selected
     local back
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=()
         if [[ $device_unactivated == 1 ]]; then
             warn "Device is not activated. Install IPA (AppSync) option is not available."
         else
