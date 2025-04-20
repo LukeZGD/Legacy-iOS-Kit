@@ -294,10 +294,10 @@ set_tool_paths() {
         # version check
         if [[ -n $UBUNTU_CODENAME ]]; then
             case $UBUNTU_CODENAME in
-                "jammy" | "kinetic"  ) ubuntu_ver=22;;
-                "lunar" | "mantic"   ) ubuntu_ver=23;;
-                "noble" | "oracular" ) ubuntu_ver=24;;
-                "plucky"             ) ubuntu_ver=25;;
+                "jammy" | "kinetic"   ) ubuntu_ver=22;;
+                "lunar" | "mantic"    ) ubuntu_ver=23;;
+                "noble" | "oracular"  ) ubuntu_ver=24;;
+                "plucky" | "questing" ) ubuntu_ver=25;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
@@ -1205,10 +1205,6 @@ device_get_info() {
 
     device_fw_dir="../saved/firmware/$device_type"
     mkdir -p $device_fw_dir 2>/dev/null
-    device_fw_dir_old="../resources/firmware/$device_type"
-    if [[ -s "$device_fw_dir_old/hwmodel" ]]; then
-        device_model="$(cat $device_fw_dir_old/hwmodel)"
-    fi
     all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     device_use_bb=0
     device_latest_bb=0
@@ -4054,7 +4050,6 @@ ipsw_prepare_ios4multipart() {
         "$dir/pzb" -g "${path}BuildManifest.plist" -o "BuildManifest.plist" "$url"
         cp BuildManifest.plist $saved_path/
     fi
-    cp ../resources/patch/old/$device_type/$vers/* .
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
@@ -4087,6 +4082,7 @@ ipsw_prepare_ios4multipart() {
     "$dir/hfsplus" ramdisk.dec add $options_plist usr/local/share/restore/$options_plist
 
     log "Patch ASR"
+    cp ../resources/patch/old/$device_type/$vers/* .
     ipsw_patch_file ramdisk.dec usr/sbin asr asr.patch
 
     log "Repack Restore Ramdisk"
