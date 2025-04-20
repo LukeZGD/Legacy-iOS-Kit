@@ -2702,8 +2702,7 @@ shsh_save() {
     $tsschecker $ExtraArgs
     shsh_path="$(ls $shsh_check)"
     if [[ -z "$shsh_path" ]]; then
-        error "Saving $version blobs failed. Please run the script again" \
-        "* It is also possible that $version for $device_type is no longer signed"
+        error "Saving $version blobs failed. Please run the script again"
     fi
     if [[ -z $apnonce ]]; then
         cp "$shsh_path" ../saved/shsh/
@@ -6993,7 +6992,9 @@ menu_appmanage() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
         if [[ $device_unactivated == 1 ]]; then
-            warn "Device is not activated. Install IPA (AppSync) option is not available."
+            warn "Device is not activated. App Management options including Install IPA (AppSync) are not available."
+            pause
+            break
         else
             menu_items+=("Install IPA (AppSync)")
         fi
@@ -7155,12 +7156,9 @@ menu_ipa() {
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
             print "* If you have AppSync installed, or are installing an app with a valid"
             print "  signature, go to App Management -> Install IPA (AppSync) instead."
-            if [[ $platform == "macos" ]]; then
+            if [[ $device_unactivated == 1 ]]; then
                 echo
-                warn "\"Sideload IPA\" is not supported on macOS."
-                print "* Use Sideloadly or AltServer instead for this."
-                print "* You also might be looking for the \"Install IPA (AppSync)\" option instead."
-                print "* You can find it by going to App Management."
+                warn "Device is not activated. Sideload IPA option is not available."
                 pause
                 break
             fi
@@ -7169,11 +7167,16 @@ menu_ipa() {
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
             menu_items+=("Install IPA")
+            if [[ $1 != "Install"* ]]; then
+                menu_items+=("Install IPA using Sideloader")
+            fi
         elif [[ $1 == "Install"* ]]; then
             print "* Select IPA file(s) to install (multiple selection)"
         else
-            print "* Select IPA file to install (or select Use Dadoum Sideloader)"
-            menu_items+=("Use Dadoum Sideloader")
+            print "* Select IPA file to install"
+        fi
+        if [[ $1 != "Install"* ]]; then
+            menu_items+=("List Certificates" "Revoke Certificate")
         fi
         menu_items+=("Go Back")
         echo
@@ -7191,33 +7194,59 @@ menu_ipa() {
                 fi
                 pause
             ;;
-            "Use Dadoum Sideloader" )
-                local arch="$platform_arch"
-                local sideloader="sideloader-gtk-"
-                if [[ $arch == "arm64" ]]; then
-                    arch="aarch64"
-                fi
-                sideloader+="$arch-linux-gnu"
-                log "Checking for latest Sideloader"
-                local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases | $jq -r ".[0].tag_name")"
-                local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
-                log "Latest version: $latest, current version: $current"
-                if [[ $current != "$latest" ]]; then
-                    rm -f ../saved/$sideloader
-                fi
-                if [[ ! -e ../saved/$sideloader ]]; then
-                    download_file https://github.com/Dadoum/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
-                    unzip -o -j $sideloader.zip $sideloader -d ../saved
-                fi
-                echo "$latest" > ../saved/Sideloader_version
-                device_pair
-                log "Launching Dadoum Sideloader"
-                chmod +x ../saved/$sideloader
-                ../saved/$sideloader
+            "Install IPA using Sideloader" )
+                device_sideloader
+                ../saved/$sideloader install "$ipa_path" -i
+                print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
+                print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
+                pause
+            ;;
+            "List Certificates" )
+                device_sideloader
+                ../saved/$sideloader cert list -i
+                print "* Take note of the serial number if you want to revoke a certificate."
+                pause
+            ;;
+            "Revoke Certificate" )
+                local revoke
+                while [[ -z $revoke ]]; do
+                    read -p "$(input 'Certificate Serial Number: ')" revoke
+                done
+                device_sideloader
+                ../saved/$sideloader cert revoke $revoke -i
+                print "* If you see no error, the certificate should be revoked successfully."
+                pause
             ;;
             "Go Back" ) back=1;;
         esac
     done
+}
+
+device_sideloader() {
+    local arch="$platform_arch"
+    sideloader="sideloader-cli-"
+    if [[ $arch == "arm64" ]]; then
+        arch="aarch64"
+    fi
+    sideloader+="$arch-linux-gnu"
+    log "Checking for latest Sideloader"
+    local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases | $jq -r ".[0].tag_name")"
+    local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
+    log "Latest version: $latest, current version: $current"
+    if [[ $current != "$latest" ]]; then
+        rm -f ../saved/$sideloader
+    fi
+    if [[ ! -e ../saved/$sideloader ]]; then
+        download_file https://github.com/Dadoum/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
+        unzip -o -j $sideloader.zip $sideloader -d ../saved
+    fi
+    echo "$latest" > ../saved/Sideloader_version
+    device_pair
+    log "Launching Dadoum Sideloader"
+    log "Enter Apple ID details to continue."
+    print "* Your Apple ID and password will only be sent to Apple servers."
+    print "* Your password input will not be visible, but it is still being entered."
+    chmod +x ../saved/$sideloader
 }
 
 menu_zenity_check() {
@@ -8812,7 +8841,9 @@ menu_usefulutilities() {
 }
 
 device_update_datetime() {
-    device_buttons2
+    if [[ $device_proc != 1 ]]; then
+        device_buttons2
+    fi
     if [[ $device_mode == "Normal" ]]; then
         log "Proceeding on Normal mode."
         device_ssh_message
@@ -8820,6 +8851,9 @@ device_update_datetime() {
         device_sshpass
         device_datetime_cmd
         kill $iproxy_pid
+    elif [[ $device_proc == 1 ]]; then # s5l8900 device not in normal mode
+        error "Device is not in normal mode, cannot continue." \
+        "* Place your device in normal mode and jailbroken to use Update DateTime, since SSH Ramdisk is not supported for this device."
     else
         mode="getversion"
     fi
@@ -9193,7 +9227,7 @@ device_dumprd() {
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
     if [[ ! -s activation.tar ]]; then
         error "Dumping activation record tar failed. Please run the script again" \
-        "If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
+        "* If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
     fi
     mv activation.tar activation-$device_ecid.tar
     if [[ -s $dump/activation-$device_ecid.tar ]]; then
@@ -9635,7 +9669,7 @@ restore_latest64() {
 device_fourthree_step2() {
     if [[ $device_mode != "Normal" ]]; then
         error "Device is not in normal mode. Place the device in normal mode to proceed." \
-        "The device must also be restored already with Step 1: Restore."
+        "* The device must also be restored already with Step 1: Restore."
     fi
     print "* Make sure that the device is already restored with Step 1: Restore before proceeding."
     pause
@@ -9672,7 +9706,7 @@ device_fourthree_step2() {
 device_fourthree_step3() {
     if [[ $device_mode != "Normal" ]]; then
         error "Device is not in normal mode. Place the device in normal mode to proceed." \
-        "The device must also be set up already with Step 2: Partition."
+        "* The device must also be set up already with Step 2: Partition."
     fi
     print "* Make sure that the device is set up with Step 2: Partition before proceeding."
     pause
