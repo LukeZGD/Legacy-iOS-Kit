@@ -26,7 +26,7 @@
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
 - Install IPA files for supported devices with AppSync Unified installed
-- Sideload IPA files for supported devices on Linux
+- Sideload IPA files for supported devices on Linux (and macOS)
 - Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
@@ -153,7 +153,7 @@
 - [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only)
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
-- [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux)
+- [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux and macOS)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices

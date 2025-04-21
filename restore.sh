@@ -6955,7 +6955,7 @@ menu_main() {
         if [[ $device_mode == "Normal" ]]; then
             case $device_vers in
                 [12].*  ) :;;
-                [1289]* ) [[ $platform == "linux" ]] && menu_items+=("Sideload IPA");;
+                [12789]* ) menu_items+=("Sideload IPA");;
             esac
             menu_items+=("App Management" "Data Management")
         fi
@@ -7150,7 +7150,7 @@ menu_ipa() {
             print "  is installed on your device, if the IPA you are installing is cracked."
             print "* Install IPA (AppSync) will not work if your device is not activated."
         else
-            print "* Sideload IPA is for iOS 9 and newer only. Sideloading will require an Apple ID."
+            print "* Sideload IPA is for iOS 7 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
@@ -7166,8 +7166,14 @@ menu_ipa() {
         echo
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
-            menu_items+=("Install IPA")
-            if [[ $1 != "Install"* ]]; then
+            if [[ $1 == "Sideload"* && $platform == "macos" ]]; then
+                :
+            elif [[ $1 == "Sideload"* ]] && (( device_det <= 8 )); then
+                :
+            else
+                menu_items+=("Install IPA")
+            fi
+            if [[ $1 == "Sideload"* ]]; then
                 menu_items+=("Install IPA using Sideloader")
             fi
         elif [[ $1 == "Install"* ]]; then
@@ -7175,7 +7181,7 @@ menu_ipa() {
         else
             print "* Select IPA file to install"
         fi
-        if [[ $1 != "Install"* ]]; then
+        if [[ $1 == "Sideload"* ]]; then
             menu_items+=("List Certificates" "Revoke Certificate")
         fi
         menu_items+=("Go Back")
@@ -7196,24 +7202,34 @@ menu_ipa() {
             ;;
             "Install IPA using Sideloader" )
                 device_sideloader
-                ../saved/$sideloader install "$ipa_path" -i
+                $sideloader install "$ipa_path" -i -d
+                local ipa_base="$(basename "$ipa_path")"
+                local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision")"
+                if [[ -s "$ipa_check" && $platform == "linux" ]] && (( device_det <= 8 )); then
+                    log "Attempting workaround for iOS 8 and lower..."
+                    pushd "/tmp/$ipa_base"
+                    zip -r0 Payload.ipa Payload
+                    popd
+                    $ideviceinstaller install "/tmp/$ipa_base/Payload.ipa"
+                fi
                 print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
                 print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
                 pause
             ;;
             "List Certificates" )
                 device_sideloader
-                ../saved/$sideloader cert list -i
+                $sideloader cert list -i
                 print "* Take note of the serial number if you want to revoke a certificate."
                 pause
             ;;
             "Revoke Certificate" )
                 local revoke
+                revoke=
                 while [[ -z $revoke ]]; do
                     read -p "$(input 'Certificate Serial Number: ')" revoke
                 done
                 device_sideloader
-                ../saved/$sideloader cert revoke $revoke -i
+                $sideloader cert revoke $revoke -i
                 print "* If you see no error, the certificate should be revoked successfully."
                 pause
             ;;
@@ -7225,19 +7241,25 @@ menu_ipa() {
 device_sideloader() {
     local arch="$platform_arch"
     sideloader="sideloader-cli-"
-    if [[ $arch == "arm64" ]]; then
-        arch="aarch64"
+    if [[ $platform == "macos" && $arch == "arm64" ]]; then
+        arch="arm64-apple-macos"
+    elif [[ $platform == "macos" ]]; then
+        arch="arm64-apple-darwin"
+    elif [[ $arch == "arm64" ]]; then
+        arch="aarch64-linux-gnu"
+    else
+        arch="x86_64-linux-gnu"
     fi
-    sideloader+="$arch-linux-gnu"
+    sideloader+="$arch"
     log "Checking for latest Sideloader"
-    local latest="$(curl https://api.github.com/repos/Dadoum/Sideloader/releases | $jq -r ".[0].tag_name")"
+    local latest="$(curl https://api.github.com/repos/LukeZGD/Sideloader/releases/latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
     if [[ $current != "$latest" ]]; then
         rm -f ../saved/$sideloader
     fi
     if [[ ! -e ../saved/$sideloader ]]; then
-        download_file https://github.com/Dadoum/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
+        download_file https://github.com/LukeZGD/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
         unzip -o -j $sideloader.zip $sideloader -d ../saved
     fi
     echo "$latest" > ../saved/Sideloader_version
@@ -7247,6 +7269,7 @@ device_sideloader() {
     print "* Your Apple ID and password will only be sent to Apple servers."
     print "* Your password input will not be visible, but it is still being entered."
     chmod +x ../saved/$sideloader
+    sideloader="../saved/$sideloader"
 }
 
 menu_zenity_check() {
