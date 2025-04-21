@@ -2443,18 +2443,8 @@ ipsw_nojailbreak_message() {
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
-
-    if (( device_proc >= 7 )); then
+    if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
-    fi
-
-    case $device_latest_vers in
-        [76543]* ) ipsw_canjailbreak=1;;
-    esac
-    if [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
-        return
-    elif [[ $device_target_vers != "$device_latest_vers" ]]; then
-        ipsw_canjailbreak=
     fi
 
     # jailbreak option: available for versions 3.1.3 to 9.3.4, with some exceptions:
@@ -2463,6 +2453,7 @@ ipsw_preference_set() {
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
     # for 3.x 3gs, and old br 3.1.3 touch 2, kernel is patched so its also enabled for those.
+    ipsw_canjailbreak=
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3.1.3 )
@@ -2470,6 +2461,11 @@ ipsw_preference_set() {
                 iPhone1* | iPod[12],1 | iPhone2,1 ) ipsw_canjailbreak=1;;
                 * ) ipsw_nojailbreak_message;;
             esac
+        ;;
+        3* )
+            if [[ $device_type == "iPhone2,1" ]]; then
+                ipsw_canjailbreak=1
+            fi
         ;;
     esac
 
@@ -2489,7 +2485,7 @@ ipsw_preference_set() {
     fi
 
     # ipsw_nskip being 1 means that it will always create/use a custom ipsw.
-    # useful for disabling baseband update, or in the case of macos arm64, not having to use futurerestore.
+    # useful for disabling baseband update, or in the case of macos arm64, not having to use futurerestore for 32-bit.
     case $device_type in
         iPad[23],[23] | "$device_disable_bbupdate" ) ipsw_nskip=1;;
     esac
@@ -2500,7 +2496,7 @@ ipsw_preference_set() {
     fi
 
     # make jailbreak option enabled for all of 8.x-9.x if the restore is a powdersn0w one.
-    # meanwhile, exit this function if ipsw_canjailbreak is not set to 1 and/or other options will not be used.
+    # also, exit this function if ipsw_canjailbreak is not set to 1 and/or other options will not be used.
     local jbpowder
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
@@ -9026,12 +9022,13 @@ device_jailbreak_confirm() {
         ;;
         [765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
         3.[10]* )
-            if [[ $device_type != "iPhone2,1" ]]; then
-                warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
-                print "* Supported versions are: 3.1.3 to 9.3.4"
-                pause
-                return
+            warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
+            print "* Supported versions are: 3.1.3 to 9.3.4"
+            if [[ $device_type == "iPhone2,1" ]]; then
+                print "* To jailbreak versions 3.0 to 3.1.2 for 3GS, go to \"Restore/Downgrade\" instead, then enable the jailbreak option."
             fi
+            pause
+            return
         ;;
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
