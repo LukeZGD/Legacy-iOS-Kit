@@ -1199,6 +1199,88 @@ device_get_info() {
             n112 ) device_type="iPod9,1";;
         esac
     fi
+    if [[ -n $device_type && -z $device_model ]]; then
+        # device_model fallback that should only happen on no device mode
+        case $device_type in
+            iPad1,1  ) device_model="k48";;
+            iPad2,1  ) device_model="k93";;
+            iPad2,2  ) device_model="k94";;
+            iPad2,3  ) device_model="k95";;
+            iPad2,4  ) device_model="k93a";;
+            iPad2,5  ) device_model="p105";;
+            iPad2,6  ) device_model="p106";;
+            iPad2,7  ) device_model="p107";;
+            iPad3,1  ) device_model="j1";;
+            iPad3,2  ) device_model="j2";;
+            iPad3,3  ) device_model="j2a";;
+            iPad3,4  ) device_model="p101";;
+            iPad3,5  ) device_model="p102";;
+            iPad3,6  ) device_model="p103";;
+            iPad4,1  ) device_model="j71";;
+            iPad4,2  ) device_model="j72";;
+            iPad4,3  ) device_model="j73";;
+            iPad4,4  ) device_model="j85";;
+            iPad4,5  ) device_model="j86";;
+            iPad4,6  ) device_model="j87";;
+            iPad4,7  ) device_model="j85m";;
+            iPad4,8  ) device_model="j86m";;
+            iPad4,9  ) device_model="j87m";;
+            iPad5,1  ) device_model="j96";;
+            iPad5,2  ) device_model="j97";;
+            iPad5,3  ) device_model="j81";;
+            iPad5,4  ) device_model="j82";;
+            iPad6,3  ) device_model="j127";;
+            iPad6,4  ) device_model="j128";;
+            iPad6,7  ) device_model="j98a";;
+            iPad6,8  ) device_model="j99a";;
+            iPad6,11 ) device_model="j71s";;
+            iPad6,12 ) device_model="j72s";;
+            iPad7,1  ) device_model="j120";;
+            iPad7,2  ) device_model="j121";;
+            iPad7,3  ) device_model="j207";;
+            iPad7,4  ) device_model="j208";;
+            iPad7,5  ) device_model="j71b";;
+            iPad7,6  ) device_model="j72b";;
+            iPad7,11 ) device_model="j171";;
+            iPad7,12 ) device_model="j172";;
+            iPhone1,1) device_model="m68";;
+            iPhone1,2) device_model="n82";;
+            iPhone2,1) device_model="n88";;
+            iPhone3,1) device_model="n90";;
+            iPhone3,2) device_model="n90b";;
+            iPhone3,3) device_model="n92";;
+            iPhone4,1) device_model="n94";;
+            iPhone5,1) device_model="n41";;
+            iPhone5,2) device_model="n42";;
+            iPhone5,3) device_model="n48";;
+            iPhone5,4) device_model="n49";;
+            iPhone6,1) device_model="n51";;
+            iPhone6,2) device_model="n53";;
+            iPhone7,1) device_model="n56";;
+            iPhone7,2) device_model="n61";;
+            iPhone8,1) device_model="n71";;
+            iPhone8,2) device_model="n66";;
+            iPhone8,4) device_model="n69";;
+            iPhone9,1) device_model="d10";;
+            iPhone9,2) device_model="d11";;
+            iPhone9,3) device_model="d101";;
+            iPhone9,4) device_model="d111";;
+            iPhone10,1) device_model="d20";;
+            iPhone10,2) device_model="d21";;
+            iPhone10,3) device_model="d22";;
+            iPhone10,4) device_model="d201";;
+            iPhone10,5) device_model="d211";;
+            iPhone10,6) device_model="d221";;
+            iPod1,1 ) device_model="n45";;
+            iPod2,1 ) device_model="n72";;
+            iPod3,1 ) device_model="n18";;
+            iPod4,1 ) device_model="n81";;
+            iPod5,1 ) device_model="n78";;
+            iPod7,1 ) device_model="n102";;
+            iPod9,1 ) device_model="n112";;
+        esac
+    fi
+
     case $device_type in
         iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
     esac
@@ -2435,14 +2517,19 @@ ipsw_nojailbreak_message() {
         iPhone[23],1 ) hac=" (and hacktivate)"; tohac=1;;
     esac
     log "Jailbreak option is not available for this version. You may jailbreak$hac later after the restore"
-    print "* To jailbreak, select \"Jailbreak Device\" in the main menu"
+    print "* To jailbreak after the restore, select \"Jailbreak Device\" in the main menu"
     if [[ $tohac == 1 ]]; then
         print "* To hacktivate, go to \"Useful Utilities -> Hacktivate Device\" after jailbreaking"
     fi
+    print "* For advanced users, you may enable the jailbreak option for the IPSW by enabling the --jailbreak flag, but this may have issues regarding ASR errors on iOS 3.x during restore."
+    echo
 }
 
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
+    case $device_latest_vers in
+        [76543]* ) ipsw_canjailbreak=1;;
+    esac
     if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
     fi
@@ -2452,20 +2539,16 @@ ipsw_preference_set() {
     # it should be in system, but restore puts it in data instead due to it being in var.
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
-    # for 3.x 3gs, and old br 3.1.3 touch 2, kernel is patched so its also enabled for those.
+    # for 3.x 3gs, and old br 3.1.3 touch 2, kernel is patched so its also supposed to be enabled for those
+    # but since there is an issue with ios 3 asr when fs is modified, they are disabled for now
     ipsw_canjailbreak=
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
-        3.1.3 )
-            case $device_type in
-                iPhone1* | iPod[12],1 | iPhone2,1 ) ipsw_canjailbreak=1;;
+        3* )
+            case $device_proc in
+                1 ) ipsw_canjailbreak=1;;
                 * ) ipsw_nojailbreak_message;;
             esac
-        ;;
-        3* )
-            if [[ $device_type == "iPhone2,1" ]]; then
-                ipsw_canjailbreak=1
-            fi
         ;;
     esac
 
@@ -2473,11 +2556,6 @@ ipsw_preference_set() {
         case $device_target_vers in
             4* ) ipsw_canjailbreak=1;;
         esac
-        if [[ $ipsw_24o != 1 && $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then # new bootrom ipod2,1 3.1.3
-            warn "Assuming device is new bootrom. Disabling jailbreak option"
-            ipsw_canjailbreak=
-            ipsw_nojailbreak_message
-        fi
     else
         case $device_target_vers in
             4.[10]* ) ipsw_nojailbreak_message;;
@@ -6187,14 +6265,14 @@ device_ramdisk() {
                 6* )         untether="evasi0n6-untether.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
                 5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
+                3* )
+                    if [[ $device_type == "iPhone2,1" ]]; then
+                        untether=1
+                    fi
+                ;;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
-                    return
-                ;;
-                * )
-                    warn "iOS $vers is not supported for jailbreaking with SSHRD."
                     $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
                     return
                 ;;
@@ -6211,17 +6289,26 @@ device_ramdisk() {
                 ipsw_everuntether=1
                 untether="everuntether.tar"
             fi
+            if [[ -z $untether ]]; then
+                warn "iOS $vers is not supported for jailbreaking with SSHRD."
+                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                return
+            fi
             log "Nice, iOS $vers is compatible."
-            log "Sending $untether"
-            $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
-            # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
-            case $vers in
-                4.[10]* | 3.[21]* )
-                    untether="${device_type}_${build}.tar"
-                    log "Extracting $untether"
-                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-                ;;
-            esac
+            if [[ $device_type == "iPhone2,1" && $vers == "3"* ]]; then
+                :
+            else
+                log "Sending $untether"
+                $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
+                # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
+                case $vers in
+                    4.[10]* | 3.2* | 3.1.3 )
+                        untether="${device_type}_${build}.tar"
+                        log "Extracting $untether"
+                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    ;;
+                esac
+            fi
             log "Mounting data partition"
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
@@ -7491,7 +7578,7 @@ menu_restore() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
             iPhone2,1 )
-                menu_items+=("5.1.1" "4.3.3" "4.1" "3.1.3" "More versions");;
+                menu_items+=("5.1.1" "4.3.5" "4.1" "3.1.3" "More versions");;
             iPod3,1 )
                 menu_items+=("4.1");;
             iPhone1,2 | iPod2,1 )
@@ -7641,7 +7728,7 @@ menu_restore_more() {
         case $device_type in
             iPhone2,1 )
                 menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-                menu_items+=("4.3.5" "4.3.4" "4.3.2" "4.3.1" "4.3" "4.2.1")
+                menu_items+=("4.3.4" "4.3.3" "4.3.2" "4.3.1" "4.3" "4.2.1")
                 menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
             ;;
             iPod2,1 ) menu_items+=("4.0.2" "4.0" "3.1.2" "3.1.1");;
@@ -7791,7 +7878,9 @@ menu_ipsw() {
                 fi
                 if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $1 == "3.1.3" ]]; then
                     ipsw_cancustomlogo=1
-                    ipsw_24o=1
+                    if [[ $ipsw_jailbreak == 1 ]]; then
+                        ipsw_24o=1
+                    fi
                 fi
             ;;
         esac
@@ -9020,15 +9109,22 @@ device_jailbreak_confirm() {
             pause
             return
         ;;
-        [765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) :;;
-        3.[10]* )
-            warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
-            print "* Supported versions are: 3.1.3 to 9.3.4"
-            if [[ $device_type == "iPhone2,1" ]]; then
-                print "* To jailbreak versions 3.0 to 3.1.2 for 3GS, go to \"Restore/Downgrade\" instead, then enable the jailbreak option."
+        [765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
+            if [[ $device_type == "iPhone2,1" && $device_vers == "3.1.3" ]]; then
+                warn "To jailbreak iOS 3.x for the 3GS, make sure your device is restored with Legacy iOS Kit's \"Restore/Downgrade\" first."
+                print "* If you have not done this, do not continue."
             fi
-            pause
-            return
+        ;;
+        3.[10]* )
+            if [[ $device_type == "iPhone2,1" ]]; then
+                warn "To jailbreak iOS 3.x for the 3GS, make sure your device is restored with Legacy iOS Kit's \"Restore/Downgrade\" first."
+                print "* If you have not done this, do not continue."
+            else
+                warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
+                print "* Supported versions are: 3.1.3 to 9.3.4"
+                pause
+                return
+            fi
         ;;
         * )
             warn "This version ($device_vers) is not supported for jailbreaking with ramdisk method."
@@ -9293,15 +9389,22 @@ device_hacktivate() {
         $ideviceactivation activate
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
-    print "* Note: This is for hacktivating devices that are already restored, jailbroken, and have OpenSSH installed."
+    print "* Note: This is for hacktivating devices that are already restored and jailbroken with Legacy iOS Kit."
     print "* If this is not what you want, you might be looking for the \"Restore/Downgrade\" option instead."
     print "* From there, enable both \"Jailbreak Option\" and \"Hacktivate Option.\""
     echo
-    print "* Hacktivate Device: This will use SSH to patch lockdownd on your device."
+    print "* Hacktivate Device: This will patch lockdownd on your device."
     print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
     pause
     device_iproxy
     device_sshpass
+    log "Checking lockdownd"
+    local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls /usr/libexec/lockdownd.orig 2>/dev/null")"
+    if [[ -n $lock ]]; then
+        warn "Device is already hacktivated. Cannot continue."
+        print "* If you want to revert, you may want to select \"Revert Hacktivation\" instead."
+        return
+    fi
     log "Getting lockdownd"
     $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd .
     log "Patching lockdownd"
