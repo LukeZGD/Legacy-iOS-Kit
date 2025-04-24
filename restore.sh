@@ -152,6 +152,9 @@ select_option() {
         return $selected
     fi
 
+    # clear input buffer to prevent error
+    while read -s -t 0.01 -n 1; do :; done
+
     # little helpers for terminal print control and key input
     ESC=$( printf "\033")
     cursor_blink_on()  { printf "$ESC[?25h"; }
@@ -7073,15 +7076,12 @@ menu_appmanage() {
 
     menu_print_info
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=()
         if [[ $device_unactivated == 1 ]]; then
             warn "Device is not activated. App Management options including Install IPA (AppSync) are not available."
             pause
             break
-        else
-            menu_items+=("Install IPA (AppSync)")
         fi
-        menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
+        menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
         select_option "${menu_items[@]}"
@@ -8896,7 +8896,7 @@ menu_usefulutilities() {
             menu_items+=("Clear NVRAM")
             if [[ $device_canpowder == 1 ]]; then
                 menu_items+=("Disable/Enable Exploit")
-            elif [[ $device_type == "iPhone2,1" ]]; then
+            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
             if [[ $device_type != "iPod2,1" && $device_mode == "Normal" ]]; then
