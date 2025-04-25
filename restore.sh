@@ -13,9 +13,6 @@ if [ "$bash_test" != "1" ] || [ -z $BASH_VERSION ]; then
     exit 1
 fi
 bash_ver=$(/usr/bin/env bash -c 'echo ${BASH_VERSINFO[0]}')
-if (( bash_ver > 3 )); then
-    shopt -s compat32
-fi
 
 print() {
     echo "${color_B}${1}${color_N}"
@@ -153,7 +150,14 @@ select_option() {
     fi
 
     # clear input buffer to prevent error
-    while read -s -t 0.01 -n 1; do :; done
+    if (( bash_ver > 3 )); then
+        while read -s -t 0.01 -n 1; do :; done
+    else
+        local old=$(stty -g)
+        stty -icanon -echo min 0 time 1
+        dd bs=1 count=1000 if=/dev/tty of=/dev/null 2>/dev/null
+        stty "$old"
+    fi
 
     # little helpers for terminal print control and key input
     ESC=$( printf "\033")
@@ -641,7 +645,7 @@ version_update() {
         log "Running git pull..."
         print "* If this fails for some reason, run: git reset --hard"
         print "* To clean more files if needed, run: git clean -df"
-        git pull
+        git pull origin $(git rev-parse --abbrev-ref HEAD)
         pushd "$(dirname "$0")/tmp$$" >/dev/null
         log "Done! Please run the script again"
         exit
@@ -914,9 +918,6 @@ device_get_name() {
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
         device_name="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" | $jq -r ".name")"
-    fi
-    if [[ -z $device_name ]]; then
-        device_name=$device_type
     fi
 }
 
@@ -1329,6 +1330,9 @@ device_get_info() {
             device_det=1
         fi
     fi
+    if [[ -z $device_name || -z $device_proc ]]; then
+        error "Unrecognized device $device_type. Enter the device type properly."
+    fi
     if (( device_proc > 10 )); then
         print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
@@ -1337,8 +1341,6 @@ device_get_info() {
         warn "This device is mostly not supported by Legacy iOS Kit."
         print "* You may still continue but options will be limited to sideloading and other basic features."
         pause
-    elif [[ -z $device_proc ]]; then
-        error "Unrecognized device $device_type. Enter the device type properly."
     fi
 
     if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
@@ -10176,15 +10178,10 @@ case $1 in
     "--just-boot" )
         print "* Just Boot usage: --just-boot --build-id=<id>"
         print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
-        print "* Example: --just-boot --device=iPhone5,2 --build-id=12H321"
+        print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
         if [[ -z $device_rd_build ]]; then
             error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
         fi
-        justboot_args="Just Boot arguments: --just-boot --device=$device_type --build-id=$device_rd_build"
-        if [[ -n $device_bootargs ]]; then
-            justboot_args+=" --bootargs=\"$device_bootargs\""
-        fi
-        log "Just Boot arguments: $justboot_args"
         main_argmode="device_justboot"
     ;;
 esac
