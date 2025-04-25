@@ -7329,7 +7329,7 @@ device_sideloader() {
     if [[ $platform == "macos" && $arch == "arm64" ]]; then
         arch="arm64-apple-macos"
     elif [[ $platform == "macos" ]]; then
-        arch="arm64-apple-darwin"
+        arch="x86_64-apple-darwin"
     elif [[ $arch == "arm64" ]]; then
         arch="aarch64-linux-gnu"
     else
