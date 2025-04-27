@@ -1044,7 +1044,6 @@ device_get_info() {
     log "Getting device info..."
     if [[ $device_mode == "WTF" ]]; then
         device_proc=1
-        device_wtfexit=1
         device_s5l8900xall
     fi
     case $device_mode in
@@ -1343,12 +1342,19 @@ device_get_info() {
         pause
     fi
 
-    if [[ $device_mode == "DFU" && $device_proc == 1 && $device_wtfexit != 1 ]]; then
-        log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
-        print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
-        print "* You can enter WTF mode by doing the DFU mode procedure."
-        device_dfuhelper norec WTFreal
-        device_find_mode WTFreal 100
+    if [[ $device_proc == 1 && $device_mode == "DFU" ]]; then
+        device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
+        log "SRTG: $device_srtg"
+        if [[ $device_srtg == "iBoot-636.66.3x" ]]; then
+            device_pwnd="Pwnage 2.0"
+        else
+            log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
+            print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
+            print "* You can enter WTF mode by doing the DFU mode procedure."
+            echo
+            device_dfuhelper norec WTFreal
+            device_find_mode WTFreal 100
+        fi
     fi
 
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
@@ -1647,7 +1653,7 @@ device_dfuhelper() {
     if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         rec=
     fi
-    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
+    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" && $device_proc != 1 ]]; then
         log "Device is already in DFU mode"
         return
     fi
@@ -1737,6 +1743,7 @@ device_enter_mode() {
             log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
             print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
             print "* You can enter WTF mode by doing the DFU mode procedure."
+            echo
             device_dfuhelper norec WTFreal
             device_find_mode WTFreal 100
         ;;
@@ -4866,7 +4873,7 @@ ipsw_prepare_patchcomp() {
 ipsw_prepare_s5l8900() {
     local rname="018-6494-014.dmg"
     local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
-    local sha1L
+    local sha1L="none"
     ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/"
     if [[ $device_target_vers == "4.1" ]]; then
         rname="018-7079-079.dmg"
@@ -5319,6 +5326,10 @@ restore_latest() {
         else
             ExtraArgs="-e"
         fi
+    elif [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
+        log "Sending iBSS..."
+        $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+        device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
@@ -7043,7 +7054,7 @@ menu_main() {
         if [[ $device_mode == "Normal" ]]; then
             case $device_vers in
                 [12].*  ) :;;
-                [12789]* ) menu_items+=("Sideload IPA");;
+                [126789]* ) menu_items+=("Sideload IPA");;
             esac
             menu_items+=("App Management" "Data Management")
         fi
@@ -7235,7 +7246,7 @@ menu_ipa() {
             print "  is installed on your device, if the IPA you are installing is cracked."
             print "* Install IPA (AppSync) will not work if your device is not activated."
         else
-            print "* Sideload IPA is for iOS 7 and newer. Sideloading will require an Apple ID."
+            print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
             print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
@@ -7289,7 +7300,7 @@ menu_ipa() {
                 device_sideloader
                 $sideloader install "$ipa_path" -i -d
                 local ipa_base="$(basename "$ipa_path")"
-                local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision")"
+                local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision" 2>/dev/null)"
                 if [[ -s "$ipa_check" && $platform == "linux" ]] && (( device_det <= 8 )); then
                     log "Attempting workaround for iOS 8 and lower..."
                     pushd "/tmp/$ipa_base"
@@ -8962,8 +8973,9 @@ device_update_datetime() {
         device_datetime_cmd
         kill $iproxy_pid
     elif [[ $device_proc == 1 ]]; then # s5l8900 device not in normal mode
-        error "Device is not in normal mode, cannot continue." \
-        "* Place your device in normal mode and jailbroken to use Update DateTime, since SSH Ramdisk is not supported for this device."
+        warn "Device is not in normal mode, cannot continue."
+        print "* Place your device in normal mode and jailbroken to use Update DateTime, since SSH Ramdisk is not supported for this device."
+        pause
     else
         mode="getversion"
     fi
@@ -9467,7 +9479,11 @@ restore_customipsw() {
         error "No IPSW selected, cannot continue."
     fi
     if [[ $device_proc == 1 ]]; then
-        device_enter_mode WTFreal
+        if [[ $device_target_vers == "3.1.3" ]]; then
+            device_enter_mode DFU
+        else
+            device_enter_mode WTFreal
+        fi
     else
         device_enter_mode pwnDFU
     fi
