@@ -978,10 +978,20 @@ device_s5l8900xall() {
     rm -f "$wtf_patched"
     log "Patching WTF.s5l8900xall"
     $bspatch $wtf_saved $wtf_patched $wtf_patch
-    log "Sending patched WTF.s5l8900xall (Pwnage)"
+    log "Sending patched WTF.s5l8900xall (Pwnage 2.0)"
     $irecovery -f "$wtf_patched"
     device_find_mode DFUreal
     sleep 1
+    device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
+    log "SRTG: $device_srtg"
+    if [[ $device_srtg == "iBoot-636.66.3x" ]]; then
+        device_argmode=
+        device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
+        device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
+        device_model="${device_model%??}"
+        device_get_name
+        device_pwnd="Pwnage 2.0"
+    fi
 }
 
 device_get_info() {
@@ -1042,28 +1052,34 @@ device_get_info() {
     fi
 
     log "Getting device info..."
-    if [[ $device_mode == "WTF" ]]; then
-        device_proc=1
-        device_s5l8900xall
-    fi
     case $device_mode in
-        "DFU" | "Recovery" )
+        "WTF" | "DFU" | "Recovery" )
             if [[ -n $device_argmode ]]; then
                 device_entry
             else
                 device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
-            if [[ $device_type == "iPhone1,1" && -z $device_argmode ]]; then
-                print "* Device Type Option"
-                print "* Select Y if the device is an iPhone 2G, or N if it is an iPod touch 1"
-                select_yesno "Is this device an iPhone 2G?" 1
-                if [[ $? != 1 ]]; then
-                    device_type="iPod1,1"
-                fi
+            if [[ $device_mode != "WTF" ]]; then
+                device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             fi
-            device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
-            device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
+            if [[ $device_mode == "WTF" && -z $device_argmode ]]; then
+                device_argmode="entry"
+                print "* Device Type Option"
+                print "* Select your device in the options below. Make sure to select correctly."
+                local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
+                input "Select your option:"
+                select_option "${selection[@]}"
+                local opt2="${selection[$?]}"
+                case $opt2 in
+                    "iPhone 2G"    ) device_type="iPhone1,1";;
+                    "iPhone 3G"    ) device_type="iPhone1,2";;
+                    "iPod touch 1" ) device_type="iPod1,1";;
+                esac
+            fi
+            if [[ $device_mode == "Recovery" ]]; then
+                device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
+            fi
             if [[ -z $device_vers ]]; then
                 device_vers="Unknown"
                 if [[ $device_mode == "Recovery" ]]; then
@@ -1635,7 +1651,7 @@ device_dfuhelper3() {
         sleep 1
     done
     echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-    for i in {10..1}; do
+    for i in {11..1}; do
         echo -n "$i "
         sleep 1
     done
@@ -2397,6 +2413,7 @@ device_fw_key_check() {
 
 ipsw_get_url() {
     local build_id="$1"
+    local version="$2"
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
     local url_local="$url"
     ipsw_url=
@@ -2404,6 +2421,11 @@ ipsw_get_url() {
     if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
         rm -f "$device_fw_dir/$build_id/url"
         url=
+    fi
+    if [[ $device_type == "iPod1,1" ]] && [[ $build_id == "5"* || $build_id == "7"* ]]; then
+        url="https://invoxiplaygames.uk/ipsw/${device_type}_${version}_${build_id}_Restore.ipsw"
+    elif [[ $device_type == "iPod2,1" && $build_id == "7"* ]]; then
+        url="https://invoxiplaygames.uk/ipsw/${device_type}_${version}_${build_id}_Restore.ipsw"
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
@@ -2800,7 +2822,7 @@ ipsw_download() {
     local version="$device_target_vers"
     local build_id="$device_target_build"
     local ipsw_dl="$1"
-    ipsw_get_url $build_id
+    ipsw_get_url $build_id $version
     if [[ -z $ipsw_dl ]]; then
         ipsw_dl="../${ipsw_url##*/}"
         ipsw_dl="${ipsw_dl%?????}"
@@ -5108,7 +5130,6 @@ restore_download_bbsep() {
 restore_idevicerestore() {
     local ExtraArgs="-ew"
     local idevicerestore2="$idevicerestore"
-    local re
 
     mkdir shsh 2>/dev/null
     cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
@@ -5135,7 +5156,7 @@ restore_idevicerestore() {
         ExtraArgs+="d"
     fi
 
-    log "Running idevicere${re}store with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
+    log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_custom.ipsw"
     opt=$?
     if [[ $1 == "first" ]]; then
@@ -5998,6 +6019,7 @@ device_ramdisk() {
     local url
     local decrypt
     local ramdisk_path
+    local version
     local build_id
     local mode="$1"
     local rec=2
@@ -6009,7 +6031,7 @@ device_ramdisk() {
         comps+=("RestoreRamdisk")
     fi
     case $device_type in
-        iPhone1,[12] | iPod1,1 ) device_target_build="7E18";;
+        iPhone1,[12] | iPod1,1 ) device_target_build="7E18"; device_target_vers="3.1.3";;
         iPod2,1 ) device_target_build="8C148";;
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
@@ -6020,9 +6042,10 @@ device_ramdisk() {
         device_target_build=$device_rd_build
         device_rd_build=
     fi
+    version=$device_target_vers
     build_id=$device_target_build
     device_fw_key_check
-    ipsw_get_url $build_id
+    ipsw_get_url $build_id $version
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
@@ -6074,7 +6097,7 @@ device_ramdisk() {
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
-        if [[ $getcomp == "Kernelcache" || $getcomp == "iBSS" ]] && [[ $device_type == "iPod2,1" ]]; then
+        if [[ $getcomp == "Kernelcache" || $getcomp == "iBSS" ]] && [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
             decrypt="-iv $iv -k $key"
             "$dir/xpwntool" $getcomp.orig $getcomp.dec $decrypt
         elif [[ $build_id == "14"* ]]; then
@@ -6091,20 +6114,24 @@ device_ramdisk() {
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
     fi
 
-    if [[ $device_type == "iPod2,1" ]]; then
+    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
-        log "Patch iBSS"
-        $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
-        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.orig
-        log "Patch Kernelcache"
         mv Kernelcache.dec Kernelcache0.dec
+        log "Patch iBSS"
         if [[ $device_proc == 1 ]]; then
+            $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
+            log "Patch Kernelcache"
             $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.s5l8900x.patch
+            "$dir/xpwntool" Kernelcache.patched Kernelcache1.dec -t Kernelcache.orig $decrypt
+            $bspatch Kernelcache1.dec Kernelcache.dec ../resources/patch/kernelcache.release.s5l8900x.p2.patch
         else
+            $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
+            "$dir/xpwntool" iBSS.patched iBSS -t iBSS.orig
+            log "Patch Kernelcache"
             $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.patch
+            "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
         fi
-        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
         rm DeviceTree.dec
         mv DeviceTree.orig DeviceTree.dec
     else
@@ -7043,6 +7070,8 @@ menu_main() {
                 menu_items+=("Attempt Activation")
             elif [[ $device_mode == "Recovery" ]]; then
                 menu_items+=("Exit Recovery Mode")
+            elif [[ $device_mode == "WTF" ]]; then
+                menu_items+=("Enter pwnDFU Mode")
             fi
             case $device_type in
                 iPad2,[123] ) menu_items+=("FourThree Utility");;
@@ -7077,6 +7106,7 @@ menu_main() {
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "Just Boot" ) menu_justboot;;
+            "Enter pwnDFU Mode" ) device_s5l8900xall;;
             "Exit" ) mode="exit";;
         esac
     done
@@ -8933,7 +8963,7 @@ menu_usefulutilities() {
         if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
             menu_items+=("Enter pwnDFU Mode")
         fi
-        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_proc != 1 ]]; then
+        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
             menu_items+=("SSH Ramdisk")
         fi
         menu_items+=("Update DateTime" "DFU Mode Helper")
@@ -8962,9 +8992,7 @@ menu_usefulutilities() {
 }
 
 device_update_datetime() {
-    if [[ $device_proc != 1 ]]; then
-        device_buttons2
-    fi
+    device_buttons2
     if [[ $device_mode == "Normal" ]]; then
         log "Proceeding on Normal mode."
         device_ssh_message
@@ -8972,10 +9000,6 @@ device_update_datetime() {
         device_sshpass
         device_datetime_cmd
         kill $iproxy_pid
-    elif [[ $device_proc == 1 ]]; then # s5l8900 device not in normal mode
-        warn "Device is not in normal mode, cannot continue."
-        print "* Place your device in normal mode and jailbroken to use Update DateTime, since SSH Ramdisk is not supported for this device."
-        pause
     else
         mode="getversion"
     fi
@@ -9024,12 +9048,7 @@ device_alloc8() {
 }
 
 device_jailbreak_confirm() {
-    if [[ $device_proc == 1 ]]; then
-        print "* The \"Jailbreak Device\" option (ramdisk method) is not supported for this device."
-        print "* To jailbreak, go to \"Restore/Downgrade\" instead, select 4.2.1, 4.1, or 3.1.3, then enable the jailbreak option."
-        pause
-        return
-    elif [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
+    if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         device_vers=
         while [[ -z $device_vers ]]; do
             read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
@@ -9065,6 +9084,15 @@ device_jailbreak_confirm() {
                 pause
             ;;
         esac
+    elif [[ $device_proc == 1 ]]; then
+        warn "If you jailbreak with this option (ramdisk method), you will not be able to Bootlace or potentially other similar tools."
+        print "* If you want to use the mentioned tools, go to \"Restore/Downgrade\" instead, and enable the jailbreak option."
+        if [[ $device_vers == "4.2.1" ]]; then
+            warn "Jailbreaking using the ramdisk method is not supported for the iPhone 3G on iOS 4.2.1."
+            print "* You will need to go to \"Restore/Downgrade\" instead."
+            pause
+            return
+        fi
     elif [[ $device_proc == 5 ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
         print "* Especially since this method may require the usage of checkm8-a5."
@@ -10125,6 +10153,13 @@ main() {
         "restart" ) $idevicediagnostics restart;;
         "restore-latest" ) restore_latest64;;
         "remove4" ) device_ramdisk setnvram $rec;;
+        "device_dfuhelper" )
+            if [[ $device_proc == 1 ]]; then
+                device_dfuhelper norec WTFreal
+            else
+                device_dfuhelper
+            fi
+        ;;
         "device"* | "shsh"* ) $mode;;
         * ) :;;
     esac

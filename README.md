@@ -9,7 +9,6 @@
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10/A11) devices
     - Devices that received iOS 16 and newer will only have limited functionality (such as sideload on Linux etc.)
-    - For S5L8900 devices (iPhone 2G, 3G, touch 1), some features like SSH ramdisk are not available
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Restore supported devices to unsigned versions with SHSH blobs
@@ -79,7 +78,7 @@
 </table>
 
 - Restoring with SHSH blobs, jailbreaking, and using SSH ramdisks are supported on the following devices:
-    - iPhone 2G, 3G, iPod touch 1 (SSH ramdisks not supported for these)
+    - iPhone 2G, 3G, iPod touch 1
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
