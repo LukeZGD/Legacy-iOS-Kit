@@ -1059,9 +1059,9 @@ device_get_info() {
             else
                 device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
-            fi
-            if [[ $device_mode != "WTF" ]]; then
-                device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
+                if [[ $device_mode != "WTF" ]]; then
+                    device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
+                fi
             fi
             if [[ $device_mode == "WTF" && -z $device_argmode ]]; then
                 device_argmode="entry"
@@ -1107,9 +1107,9 @@ device_get_info() {
                 device_type=$($ideviceinfo -s -k ProductType)
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
                 device_ecid=$($ideviceinfo -s -k UniqueChipID)
+                device_model=$($ideviceinfo -s -k HardwareModel)
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
-                device_model=$($ideviceinfo -s -k HardwareModel)
                 device_vers=$($ideviceinfo -s -k ProductVersion)
                 device_det=$(echo "$device_vers" | cut -c 1)
                 device_det2=$(echo "$device_vers" | cut -c -2)
@@ -6110,28 +6110,33 @@ device_ramdisk() {
     if [[ $1 != "justboot" ]]; then
         log "Patch RestoreRamdisk"
         "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
-        "$dir/hfsplus" Ramdisk.raw grow 30000000
-        "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
+        if [[ $device_proc != 1 ]]; then
+            "$dir/hfsplus" Ramdisk.raw grow 30000000
+            "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
+        fi
     fi
 
-    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
+    if [[ $device_proc == 1 ]]; then
+        $bspatch Ramdisk.raw Ramdisk.patched ../resources/patch/018-6494-014.patch
+        "$dir/xpwntool" Ramdisk.patched Ramdisk.dmg -t RestoreRamdisk.orig -iv 25e713dd5663badebe046d0ffa164fee -k 7029389c2dadaaa1d1e51bf579493824
+        log "Patch iBSS"
+        $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
+        log "Patch Kernelcache"
+        mv Kernelcache.dec Kernelcache0.dec
+        $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.s5l8900x.patch
+        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
+        rm DeviceTree.dec
+        mv DeviceTree.orig DeviceTree.dec
+    elif [[ $device_type == "iPod2,1" ]]; then
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/ssh_old.tar
         "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
-        mv Kernelcache.dec Kernelcache0.dec
         log "Patch iBSS"
-        if [[ $device_proc == 1 ]]; then
-            $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
-            log "Patch Kernelcache"
-            $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.s5l8900x.patch
-            "$dir/xpwntool" Kernelcache.patched Kernelcache1.dec -t Kernelcache.orig $decrypt
-            $bspatch Kernelcache1.dec Kernelcache.dec ../resources/patch/kernelcache.release.s5l8900x.p2.patch
-        else
-            $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
-            "$dir/xpwntool" iBSS.patched iBSS -t iBSS.orig
-            log "Patch Kernelcache"
-            $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.patch
-            "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
-        fi
+        $bspatch iBSS.dec iBSS.patched ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
+        "$dir/xpwntool" iBSS.patched iBSS -t iBSS.orig
+        log "Patch Kernelcache"
+        mv Kernelcache.dec Kernelcache0.dec
+        $bspatch Kernelcache0.dec Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.patch
+        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache.orig $decrypt
         rm DeviceTree.dec
         mv DeviceTree.orig DeviceTree.dec
     else
@@ -6353,7 +6358,11 @@ device_ramdisk() {
                 esac
             fi
             log "Mounting data partition"
-            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+            if [[ $device_proc == 1 ]]; then
+                $ssh -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs /dev/disk0s2; /sbin/mount_hfs /dev/disk0s2 /mnt1/private/var"
+            else
+                $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+            fi
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;; # remove for lyncis
@@ -6532,7 +6541,13 @@ device_ramdisk_iosvers() {
     device_vers=
     device_build=
     device_datetime_cmd nopause
-    if (( device_proc < 7 )); then
+    if [[ $device_proc == 1 ]]; then
+        log "Waiting for disks..."
+        $ssh -p $ssh_port root@127.0.0.1 'while [[ ! $(ls /dev/rdisk* 2>/dev/null) ]]; do :; done'
+        log "Mounting root filesystem"
+        $ssh -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs /dev/disk0s1; /sbin/mount_hfs /dev/disk0s1 /mnt1"
+        sleep 1
+    elif (( device_proc < 7 )); then
         log "Mounting root filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
         sleep 1
