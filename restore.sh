@@ -653,7 +653,7 @@ version_update() {
     git clone --filter=blob:none "https://github.com/LukeZGD/Legacy-iOS-Kit"
     if [[ $? != 0 ]]; then
         error "git clone failed. Please run the script again" \
-        "If you have not installed/updated git, please install git from your package manager."
+        "* If you have not installed/updated git, please install git from your package manager."
     fi
     popd >/dev/null
     log "Updating..."
@@ -678,7 +678,7 @@ version_get() {
             git fetch --unshallow --filter=blob:none
             if [[ $? != 0 ]]; then
                 error "git fetch failed. Please run the script again" \
-                "If you have not installed/updated git, please install git from your package manager."
+                "* If you have not installed/updated git, please install git from your package manager."
             fi
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
@@ -6786,8 +6786,21 @@ menu_ramdisk() {
                     continue
                 fi
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
-                $scp -P $ssh_port $jelbrek/freeze.tar $jelbrek/launchctl.tar root@127.0.0.1:/mnt1
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; tar -xf launchctl.tar -C .; rm *.tar; mv private/var/lib private"
+                device_ramdisk_iosvers
+                case $device_vers in
+                    [789].* ) :;;
+                    * ) continue;;
+                esac
+                $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/mnt1
+                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; rm freeze.tar; mv private/var/lib private"
+                if [[ $device_vers == "9"* ]]; then
+                    $scp -P $ssh_port $jelbrek/launchctl.tar root@127.0.0.1:/mnt1
+                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf launchctl.tar -C .; rm launchctl.tar"
+                fi
+                case $device_vers in
+                    9.3.[45] ) :;;
+                    9.[23]*  ) $scp -P $ssh_port $jelbrek/io.pangu93.loader.plist root@127.0.0.1:/mnt1/Library/LaunchDaemons;;
+                esac
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
                 log "Installing bootstrap done."
@@ -6805,7 +6818,7 @@ menu_ramdisk() {
                 fi
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1"
                 device_ramdisk_iosvers
-                if [[ -z $device_vers ]]; then
+                if [[ $device_vers != "7."* ]]; then
                     continue
                 fi
                 local untether
