@@ -634,8 +634,6 @@ version_update_check() {
 }
 
 version_update() {
-    local url
-    local req
     select_yesno "Do you want to update now?" 1
     if [[ $? != 1 ]]; then
         log "User selected N, cannot continue. Exiting."
@@ -649,19 +647,13 @@ version_update() {
         pushd "$(dirname "$0")/tmp$$" >/dev/null
         log "Done! Please run the script again"
         exit
-    elif (( $(ls bin | wc -l) > 1 )); then
-        req=".assets[] | select (.name|test(\"complete\")) | .browser_download_url"
-    elif [[ $platform == "linux" ]]; then
-        req=".assets[] | select (.name|test(\"${platform}_$platform_arch\")) | .browser_download_url"
-    else
-        req=".assets[] | select (.name|test(\"${platform}\")) | .browser_download_url"
     fi
     pushd "$(dirname "$0")/tmp$$" >/dev/null
-    url="$(echo "$github_api" | $jq -r "$req")"
-    log "Downloading: $url"
-    curl -L $url -o latest.zip
-    if [[ ! -s latest.zip ]]; then
-        error "Download failed. Please run the script again"
+    log "Downloading..."
+    git clone --filter=blob:none "https://github.com/LukeZGD/Legacy-iOS-Kit"
+    if [[ $? != 0 ]]; then
+        error "git clone failed. Please run the script again" \
+        "If you have not installed/updated git, please install git from your package manager."
     fi
     popd >/dev/null
     log "Updating..."
@@ -670,8 +662,8 @@ version_update() {
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm -rf resources/
     fi
-    rm -r resources/ saved/ipwndfu/ 2>/dev/null
-    unzip -oq tmp$$/latest.zip -d .
+    rm -r resources/ 2>/dev/null
+    mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git .
     cp tmp$$/firstrun resources 2>/dev/null
     pushd "$(dirname "$0")/tmp$$" >/dev/null
     log "Done! Please run the script again"
@@ -683,7 +675,11 @@ version_get() {
     if [[ -d .git ]]; then
         if [[ -e .git/shallow ]]; then
             log "Shallow git repository detected. Unshallowing..."
-            git fetch --unshallow
+            git fetch --unshallow --filter=blob:none
+            if [[ $? != 0 ]]; then
+                error "git fetch failed. Please run the script again" \
+                "If you have not installed/updated git, please install git from your package manager."
+            fi
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
         local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
@@ -8030,13 +8026,14 @@ menu_ipsw() {
                 local hi
                 case $device_type in
                     iPhone3,1 ) lo=4.0; hi=7.1.1;;
-                    iPhone3,3 ) lo=5.0; hi=7.1.1;;
-                    iPhone4,1 | iPad2,[123]    ) lo=5.0; hi=9.3.5;;
-                    iPad2,4 | iPad3,[123]      ) lo=5.1; hi=9.3.5;;
-                    iPhone5,[12] | iPad3,[456] ) lo=6.0; hi=9.3.5;;
+                    iPhone3,2 ) lo=6.0; hi=7.1.1;; # lol
+                    iPhone3,3 ) lo=5.0; hi=7.1.1;; # lo=4.2.6 if 4.2.x didnt have issues
+                    iPhone4,1 | iPad2,[123] ) lo=5.0; hi=9.3.5;;
+                    iPad2* | iPad3,[123]    ) lo=5.1; hi=9.3.5;;
+                    iPhone5,[12] | iPad3*   ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
-                    iPod3,1 ) lo=4.0; hi=5.1;;
+                    iPod3,1 ) lo=4.0; hi=5.1;; # lo=3.1.1 if 3.1.x didnt have issues
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
             fi
@@ -8505,6 +8502,11 @@ menu_ipsw_browse() {
     log "Selected IPSW file: $newpath.ipsw"
     ipsw_version_set "$newpath" "$1"
 
+    if [[ $platform == "macos" && $device_target_vers == "$device_latest_vers" ]] && (( device_proc >= 7 )); then
+        log "Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
+        pause
+        return
+    fi
     if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
         pause
