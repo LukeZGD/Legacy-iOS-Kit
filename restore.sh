@@ -2459,7 +2459,9 @@ ipsw_get_url() {
                 ipsw_url="$url"
                 return
             fi
-            error "Unable to get URL for $device_type-$build_id"
+            if [[ $ipsw_isbeta != 1 ]]; then
+                error "Unable to get URL for $device_type-$build_id"
+            fi
         fi
         mkdir -p $device_fw_dir/$build_id 2>/dev/null
         echo "$url" > $device_fw_dir/$build_id/url
