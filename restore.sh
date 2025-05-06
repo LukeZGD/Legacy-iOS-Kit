@@ -479,6 +479,23 @@ set_tool_paths() {
                 error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
                 error "Outdated curl detected, cannot continue." "$error_msg"
             fi
+            case $mac_minver in
+                11 ) mac_name="El Capitan";;
+                12 ) mac_name="Sierra";;
+                13 ) mac_name="High Sierra";;
+                14 ) mac_name="Mojave";;
+                15 ) mac_name="Catalina";;
+            esac
+        fi
+        case $mac_majver in
+            11 ) mac_name="Big Sur";;
+            12 ) mac_name="Monterey";;
+            13 ) mac_name="Ventura";;
+            14 ) mac_name="Sonoma";;
+            15 ) mac_name="Sequoia";;
+        esac
+        if [[ -n $mac_name ]]; then
+            platform_ver="$mac_name $platform_ver"
         fi
 
         bspatch="$(command -v bspatch)"
