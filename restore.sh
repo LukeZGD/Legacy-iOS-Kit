@@ -2451,7 +2451,9 @@ ipsw_get_url() {
             esac
         fi
         url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone}OS;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
-        if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
+        local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
+        local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
+        if [[ $(echo "$url" | grep -c '<') != 0 || $url2 != *"$build_id2"* ]]; then
             if [[ -n $url_local ]]; then
                 url="$url_local"
                 log "Using saved URL for this IPSW: $url"
@@ -9649,18 +9651,17 @@ device_enter_build() {
     while true; do
         device_rd_build=
         read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
-        case $device_rd_build in
-            *[A-Z]* )
-                if [[ $device_rd_build != *.* ]]; then
-                    break
-                fi
-            ;;
-            "" )
-                if [[ $1 != "required" ]]; then
-                    break
-                fi
-            ;;
-        esac
+
+        local last_char=$(echo "$device_rd_build" | rev | cut -c1)
+        device_rd_build=$(echo "$device_rd_build" | tr '[:lower:]' '[:upper:]') # to uppercase
+        # If last char was a lowercase letter, make it lowercase again
+        if echo "$last_char" | grep -Eq '^[a-z]$'; then
+            device_rd_build=$(echo "$device_rd_build" | rev | cut -c2- | rev)
+            device_rd_build=${device_rd_build}${last_char}
+        fi
+        # Match pattern: digits + uppercase letters + digits + optional lowercase letter
+        echo "$device_rd_build" | grep -Eq '^[0-9]+[A-Z]+[0-9]+[a-z]?$' && break
+
         log "Build version input is not valid. Please try again"
     done
 }
