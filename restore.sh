@@ -8266,7 +8266,7 @@ menu_ipsw() {
             if [[ $device_target_vers == "$device_latest_vers" ]]; then
                 print "* This restore will use $device_use_vers baseband if the jailbreak option is disabled"
                 echo
-            elif [[ $device_proc == 1 || $device_target_vers == "4.1" ]] && [[ $device_type != "iPhone3"* ]]; then
+            elif [[ $device_proc == 1 || $device_target_vers == "4.1" ]] && [[ $device_type != "iPhone3,"* ]]; then
                 print "* This restore will have baseband update disabled if the jailbreak option is enabled"
                 echo
             else
@@ -8325,7 +8325,7 @@ ipsw_print_warnings() {
         return
     fi
     case $device_type in
-        "iPhone3"* )
+        "iPhone3,"* )
             if [[ $device_target_vers == "4.2"* ]]; then
                 warn "iOS 4.2.x for $device_type might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select another version instead."
@@ -8688,8 +8688,8 @@ menu_ipsw_browse() {
                 esac
                 pause
                 return
-            elif [[ $device_target_build == "11D257" && $device_type == "iPhone3"* ]] ||
-                 [[ $device_target_build == "9B206" && $device_proc == 4 && $device_type != "iPhone3"* ]]; then
+            elif [[ $device_target_build == "11D257" && $device_type == "iPhone3,"* ]] ||
+                 [[ $device_target_build == "9B206" && $device_proc == 4 && $device_type != "iPhone3,"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version. You need to select it as base IPSW."
                 pause
                 return
@@ -8998,12 +8998,12 @@ menu_usefulutilities() {
             fi
             if [[ $device_mode == "Normal" ]]; then
                 case $device_type in
-                    iPhone1* )
+                    iPhone1,* )
                         case $device_vers in
                             3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
                     ;;
-                    iPhone[23],1 )
+                    iPhone[23],* )
                         case $device_vers in
                             3.1* | [456]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
@@ -9471,7 +9471,7 @@ device_activate() {
 device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
-    if [[ $device_type == "iPhone3,1" ]]; then
+    if [[ $device_type == "iPhone3,"* ]]; then
         type="iPhone2,1"
         case $device_vers in
             4.2.1 ) build="8C148a";;
