@@ -5489,15 +5489,16 @@ device_buttons2() {
 restore_prepare() {
     case $device_proc in
         1 )
-            if [[ $device_target_vers == "4"* && $ipsw_jailbreak != 1 ]]; then
-                restore_latest
-                return
-            elif [[ $device_target_vers == "3.1.3" ]]; then
+            if [[ $device_target_vers == "4"* ]]; then
+                if [[ $ipsw_jailbreak != 1 ]]; then
+                    restore_latest
+                    return
+                fi
+                device_enter_mode WTFreal
+            elif [[ $ipsw_jailbreak == 1 ]]; then
                 device_enter_mode DFU
             else
-                device_enter_mode WTFreal
-            fi
-            if [[ $ipsw_jailbreak != 1 ]]; then
+                device_enter_mode Recovery
                 ipsw_custom="$ipsw_path"
             fi
             restore_latest custom
@@ -6135,7 +6136,7 @@ device_ramdisk() {
 
     if [[ $device_proc == 1 ]]; then
         $bspatch Ramdisk.raw Ramdisk.patched ../resources/patch/018-6494-014.patch
-        "$dir/xpwntool" Ramdisk.patched Ramdisk.dmg -t RestoreRamdisk.orig -iv 25e713dd5663badebe046d0ffa164fee -k 7029389c2dadaaa1d1e51bf579493824
+        "$dir/xpwntool" Ramdisk.patched Ramdisk.dmg -t RestoreRamdisk.dec
         log "Patch iBSS"
         $bspatch iBSS.orig iBSS ../resources/patch/iBSS.${device_model}ap.RELEASE.patch
         log "Patch Kernelcache"
@@ -6279,6 +6280,13 @@ device_ramdisk() {
         found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
         sleep 1
     done
+    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
+        log "Transferring some files"
+        tar -xvf ../resources/sshrd/ssh.tar bin/chmod bin/chown bin/cp bin/dd bin/mount.sh bin/tar usr/bin/date usr/bin/df usr/bin/du
+        $ssh -p $ssh_port root@127.0.0.1 "rm -f /bin/mount.sh /usr/bin/date"
+        $scp -P $ssh_port bin/* root@127.0.0.1:/bin
+        $scp -P $ssh_port usr/bin/* root@127.0.0.1:/usr/bin
+    fi
 
     case $mode in
         "activation" | "baseband" )
@@ -6375,11 +6383,7 @@ device_ramdisk() {
                 esac
             fi
             log "Mounting data partition"
-            if [[ $device_proc == 1 ]]; then
-                $ssh -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs /dev/disk0s2; /sbin/mount_hfs /dev/disk0s2 /mnt1/private/var"
-            else
-                $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
-            fi
+            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
                 7* ) device_send_rdtar fstab7.tar;; # remove for lyncis
@@ -6558,13 +6562,7 @@ device_ramdisk_iosvers() {
     device_vers=
     device_build=
     device_datetime_cmd nopause
-    if [[ $device_proc == 1 ]]; then
-        log "Waiting for disks..."
-        $ssh -p $ssh_port root@127.0.0.1 'while [[ ! $(ls /dev/rdisk* 2>/dev/null) ]]; do :; done'
-        log "Mounting root filesystem"
-        $ssh -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs /dev/disk0s1; /sbin/mount_hfs /dev/disk0s1 /mnt1"
-        sleep 1
-    elif (( device_proc < 7 )); then
+    if (( device_proc < 7 )); then
         log "Mounting root filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
         sleep 1
@@ -9454,10 +9452,9 @@ device_activate() {
     log "Attempting to activate device with ideviceactivation"
     if [[ $device_type == "iPhone"* ]] && (( device_proc <= 4 )); then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        case $device_type in
-            iPhone2,1 ) print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead.";;
-            iPhone1*  ) print "* For hacktivation, go to \"Restore/Downgrade\" instead.";;
-        esac
+        if (( device_det <= 6 )); then
+            print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
+        fi
     fi
     $ideviceactivation activate
     if [[ $device_name == "iPod"* ]] && (( device_det <= 3 )); then
