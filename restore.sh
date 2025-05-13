@@ -760,7 +760,7 @@ device_entry() {
     done
     if [[ $main_argmode == "device_justboot" || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
-    elif [[ $device_type != "iPhone1"* && $device_type != "iPod1,1" ]]; then
+    elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" ]]; then
         until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
         done
@@ -1314,7 +1314,7 @@ device_get_info() {
     fi
 
     case $device_type in
-        iPhone3,[13] | iPhone[45]* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
+        iPhone3,[13] | iPhone[45],* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
     esac
 
     device_fw_dir="../saved/firmware/$device_type"
@@ -1324,27 +1324,27 @@ device_get_info() {
     device_latest_bb=0
     # set device_proc (what processor the device has)
     case $device_type in
-        iPhone1,[12] | iPod1,1 )
+        iPhone1,* | iPod1,1 )
             device_proc=1;; # S5L8900
-        iPhone3,[123] | iPhone2,1 | iPad1,1 | iPod[234],1 )
+        iPad1,1 | iPhone[23],* | iPod[234],1 )
             device_proc=4;; # A4/S5L8720/8920/8922
-        iPad2,[1234567] | iPad3,[123] | iPhone4,1 | iPod5,1 )
+        iPad2,* | iPad3,[123] | iPhone4,1 | iPod5,1 )
             device_proc=5;; # A5
-        iPad3,[456] | iPhone5,[1234] )
+        iPad3,* | iPhone5,* )
             device_proc=6;; # A6
-        iPad4,[123456789] | iPhone6,[12] )
+        iPad4,* | iPhone6,* )
             device_proc=7;; # A7
-        iPhone7,[12] | iPad5,[1234] | iPod7,1 )
+        iPad5,* | iPhone7,* | iPod7,1 )
             device_proc=8;; # A8
-        iPhone8,[124] | iPad6* )
+        iPad6,* | iPhone8,* )
             device_proc=9;; # A9
-        iPhone9,[1234] | iPhone10* | iPad7* | iPod9,1 )
+        iPad7,* | iPhone9,* | iPhone10,* | iPod9,1 )
             device_proc=10;; # A10 or A11
-        iPhone* | iPad* )
+        iPad* | iPhone* )
             device_proc=11;; # Newer devices
     esac
     case $device_type in
-        iPad[67]* ) device_checkm8ipad=1;;
+        iPad[67],* ) device_checkm8ipad=1;;
     esac
     device_get_name
     if [[ -z $device_name && $device_mode == "Normal" ]]; then
@@ -1427,19 +1427,19 @@ device_get_info() {
         ;;
     esac
     case $device_type in
-        iPad4,[123456789] | iPhone6,[12] | iPhone7,[12] | iPod7,1 )
+        iPad4,* | iPhone[67],* | iPod7,1 )
             device_latest_vers="12.5.7"
             device_latest_build="16H81"
         ;;
-        iPad5* | iPhone[89]* | iPod9,1 )
+        iPad5,* | iPhone[89],* | iPod9,1 )
             device_latest_vers="15.8.4"
             device_latest_build="19H390"
         ;;
-        iPad6* | iPhone10* )
+        iPad6,* | iPhone10,* )
             device_latest_vers="16.7.11"
             device_latest_build="20H360"
         ;;
-        iPad7* )
+        iPad7,* )
             log "Getting latest iOS version for $device_type"
             local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
@@ -1716,9 +1716,9 @@ device_dfuhelper() {
     local top="TOP"
     local home="HOME"
     case $device_type in
-        iPhone[79]* | iPhone8,[12] ) top="SIDE";;
+        iPhone[79],* | iPhone8,[12] ) top="SIDE";;
     esac
-    if [[ $device_type == "iPhone9"* || $device_type == "iPod9,1" ]]; then
+    if [[ $device_type == "iPhone9,"* || $device_type == "iPod9,1" ]]; then
         home="VOL DOWN"
     fi
     local sec=10
@@ -1842,7 +1842,7 @@ device_enter_mode() {
             elif (( device_det <= 5 )); then
                 opt="kloader_axi0mX"
                 case $device_type in
-                    iPad2,4 | iPad3* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
+                    iPad2,4 | iPad3,* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
                 esac
                 log "Using $opt for $device_type iOS $device_det"
                 echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
@@ -2959,7 +2959,7 @@ ipsw_prepare_1033() {
     mv $iBEC.im4p $iBEC.orig
     $bspatch $iBSS.orig $iBSS.im4p ../resources/patch/$iBSS.patch
     $bspatch $iBEC.orig $iBEC.im4p ../resources/patch/$iBEC.patch
-    if [[ $device_type == "iPad4"* ]]; then
+    if [[ $device_type == "iPad4,"* ]]; then
         unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBSSb.im4p
         unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBECb.im4p
         mv $iBSSb.im4p $iBSSb.orig
@@ -3545,7 +3545,7 @@ ipsw_prepare_bundle() {
         RootSize=1000
     elif [[ $ver2 == 3 ]]; then
         case $device_type in
-            iPhone1* | iPod1,1 ) RootSize=420;;
+            iPhone1,* | iPod1,1 ) RootSize=420;;
             iPod2,1 ) RootSize=450;;
             *       ) RootSize=750;;
         esac
@@ -4074,7 +4074,7 @@ patch_iboot() {
     "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
     "$dir/iBoot32Patcher" iBoot.dec iBoot.pwned $rsa "$@"
     "$dir/xpwntool" iBoot.pwned iBoot -t iBoot.orig
-    if [[ $device_type == "iPad1,1" || $device_type == "iPhone5"* ]]; then
+    if [[ $device_type == "iPad1,1" || $device_type == "iPhone5,"* ]]; then
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
         return
@@ -4498,27 +4498,37 @@ ipsw_prepare_multipatch() {
 
     # 3.2 fs workaround
     if [[ $device_target_vers == "3.2"* ]]; then
-        local ipsw_name="${device_type}_${device_target_vers}_${device_target_build}_FS"
-        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS.ipsw"
-        local sha1E="123d8717b1accbf43c03d2fbd6e82aa5ca3533c9"
+        local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
+        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS2.ipsw"
+        local sha1E="f4660666ce9d7bd9312d761c850fa3a1615899e9"
+        local sha1L="none"
         if [[ $device_target_vers == "3.2.1" ]]; then
-            sha1E="e1b2652aee400115b0b83c97628f90c3953e7eaf"
+            sha1E="896c0344435615aee7f52fc75739241022e38fe7"
         elif [[ $device_target_vers == "3.2" ]]; then
-            sha1E="5763a6f9d5ead3675535c6f7037192e8611206bc"
+            sha1E="47fdfe04ad9b65da009c834902eda3f141feac28"
         fi
-        if [[ ! -s ../$ipsw_name.ipsw ]]; then
+        if [[ -s "$ipsw_name.ipsw" ]]; then
+            log "Verifying FS IPSW..."
+            sha1L=$($sha1sum "$ipsw_name.ipsw" | awk '{print $1}')
+            if [[ $sha1L != "$sha1E" ]]; then
+                log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
+                log "Deleting existing custom IPSW"
+                rm "$ipsw_name.ipsw"
+            fi
+        fi
+        if [[ ! -s "$ipsw_name.ipsw" ]]; then
             log "Downloading FS IPSW..."
             curl -L "$ipsw_url" -o temp2.ipsw
             log "Getting SHA1 hash for FS IPSW..."
-            local sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
+            sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
             if [[ $sha1L != "$sha1E" ]]; then
                 error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
                 "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
             fi
-            mv temp2.ipsw ../$ipsw_name.ipsw
+            mv temp2.ipsw "$ipsw_name.ipsw"
         fi
         log "Extract RootFS from FS IPSW"
-        unzip -o -j ../$ipsw_name.ipsw $rootfs_name
+        unzip -o -j "$ipsw_name.ipsw" $rootfs_name
         log "Add RootFS to IPSW"
         zip -r0 temp.ipsw $rootfs_name
     fi
@@ -4921,14 +4931,14 @@ ipsw_prepare_s5l8900() {
         rname="038-0029-002.dmg"
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
-        ipsw_url+="iPhone1.1_3.1.3_7E18_Custom_Hacktivate.ipsw"
-        sha1E="3def867e6e386a044ec3bad58dda05a45f6405b8"
+        ipsw_url+="iPhone1.1_3.1.3_7E18_CustomHJ.ipsw"
+        sha1E="8140ed162c6712a6e8d1608d3a36257998253d82"
     elif [[ $device_type == "iPhone1,1" ]]; then
-        ipsw_url+="iPhone1.1_3.1.3_7E18_Custom.ipsw"
-        sha1E="617020bbae1579d1ee34267fab85bf8dd29fedda"
+        ipsw_url+="iPhone1.1_3.1.3_7E18_CustomJ.ipsw"
+        sha1E="4aa139672835d95bebdd2945f713321dcc4965b5"
     elif [[ $device_type == "iPod1,1" ]]; then
-        ipsw_url+="iPod1.1_3.1.3_7E18_Custom.ipsw"
-        sha1E="bf61225e8da8cc35b03a9ca898f830d3066be2f6"
+        ipsw_url+="iPod1.1_3.1.3_7E18_CustomJ.ipsw"
+        sha1E="39d0e16536c281c3f98db91923e3d53b6fad6c6c"
     fi
 
     if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
@@ -5886,7 +5896,7 @@ device_ramdisk64() {
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-        if [[ $device_type == "iPhone8"* && $getcomp == "iB"* ]]; then
+        if [[ $device_type == "iPhone8,"* && $getcomp == "iB"* ]]; then
             name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
             iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
             key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith ("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
@@ -6490,7 +6500,7 @@ device_ramdisk_setnvram() {
             iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
             iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
             iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
-            iPhone5*  )
+            iPhone5,* )
                 local selection=("iOS 7.1.x" "iOS 7.0.x")
                 input "Select this device's base version:"
                 select_option "${selection[@]}"
@@ -6536,6 +6546,7 @@ device_ramdisk_ios3exploit() {
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
         log "Extracting $untether"
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+        : '
         log "Mounting data partition"
         $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
         device_send_rdtar cydiasubstrate.tar
@@ -6546,6 +6557,7 @@ device_ramdisk_ios3exploit() {
         if [[ $ipsw_openssh == 1 ]]; then
             device_send_rdtar sshdeb.tar
         fi
+        '
     fi
 }
 
@@ -7877,11 +7889,11 @@ ipsw_hwmodel_set() {
         iPhone5,[12] ) hwmodel="iphone5";;
         iPhone5,[34] ) hwmodel="iphone5b";;
         iPad3,[456] ) hwmodel="ipad3b";;
-        iPhone6*    ) hwmodel="iphone6";;
-        iPhone7*    ) hwmodel="iphone7";;
+        iPhone6,*   ) hwmodel="iphone6";;
+        iPhone7,*   ) hwmodel="iphone7";;
         iPhone8,4   ) hwmodel="iphone8b";;
-        iPhone8*    ) hwmodel="iphone8";;
-        iPhone9*    ) hwmodel="iphone9";;
+        iPhone8,*   ) hwmodel="iphone8";;
+        iPhone9,*   ) hwmodel="iphone9";;
         iPad4,[123] ) hwmodel="ipad4";;
         iPad4,[456] ) hwmodel="ipad4b";;
         iPad4,[789] ) hwmodel="ipad4bm";;
@@ -8062,7 +8074,7 @@ menu_ipsw() {
                     iPhone3,3 ) lo=5.0; hi=7.1.1;; # lo=4.2.6 if 4.2.x didnt have issues
                     iPhone4,1 | iPad2,[123] ) lo=5.0; hi=9.3.5;;
                     iPad2* | iPad3,[123]    ) lo=5.1; hi=9.3.5;;
-                    iPhone5,[12] | iPad3*   ) lo=6.0; hi=9.3.5;;
+                    iPhone5,[12] | iPad3,*  ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
                     iPod3,1 ) lo=4.0; hi=5.1;; # lo=3.1.1 if 3.1.x didnt have issues
@@ -8476,7 +8488,7 @@ menu_ipsw_browse() {
          case $device_type in
             iPhone3,[13] ) menu_items=($(ls ../${device_type}_7.1.2*Restore.ipsw 2>/dev/null));;
             iPad1,1 | iPod3,1 ) menu_items=($(ls ../${device_type}_5.1.1*Restore.ipsw 2>/dev/null));;
-            iPhone5* ) menu_items=($(ls ../${device_type}_7*Restore.ipsw 2>/dev/null));;
+            iPhone5,* ) menu_items=($(ls ../${device_type}_7*Restore.ipsw 2>/dev/null));;
             * ) menu_items=($(ls ../${device_type}_7.1*Restore.ipsw 2>/dev/null));;
         esac
     fi
@@ -8637,11 +8649,11 @@ menu_ipsw_browse() {
                     check_vers="7"
                     base_vers="7.x"
                 ;;
-                iPad3* )
+                iPad3,* )
                     check_vers="7.0"
                     base_vers="7.0.x"
                 ;;
-                iPhone3* )
+                iPhone3,* )
                     check_vers="7.1.2"
                     base_vers="$check_vers"
                 ;;
