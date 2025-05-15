@@ -9661,6 +9661,9 @@ device_enter_build() {
         device_rd_build=
         read -p "$(input 'Enter build version (eg. 10B329): ')" device_rd_build
 
+        if [[ -z $device_rd_build ]]; then
+            return
+        fi
         local last_char=$(echo "$device_rd_build" | rev | cut -c1)
         device_rd_build=$(echo "$device_rd_build" | tr '[:lower:]' '[:upper:]') # to uppercase
         # If last char was a lowercase letter, make it lowercase again
@@ -9777,12 +9780,14 @@ device_enter_ramdisk() {
             fi
         fi
     elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
+        log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
         device_rd_build="13A452"
     elif (( device_proc >= 5 )) && (( device_det <= 8 )) && [[ $device_mode == "Normal" ]]; then
         :
     elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
-        print "* To mount /var (/mnt2) for iOS 9-10, I recommend using 9.0.2 (13A452)."
-        print "* If not sure, just press Enter/Return. This will select the default version."
+        print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
+        print "* Do not use iOS 9+ ramdisks if your device is on iOS 8 or lower, and vice versa."
+        print "* If not sure, just leave it blank and press Enter/Return. This will select the default version."
         device_enter_build
     fi
 
