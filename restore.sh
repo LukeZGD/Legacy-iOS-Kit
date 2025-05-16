@@ -5194,14 +5194,13 @@ restore_idevicerestore() {
     case $device_target_vers in
         [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
     esac
+    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
+        echo
+    fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        case $device_target_vers in
-            [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
-        esac
-    fi
 }
 
 restore_futurerestore() {
@@ -5338,6 +5337,10 @@ restore_futurerestore() {
     $futurerestore2 "${ExtraArr[@]}"
     opt=$?
     log "Restoring done! Read the message below if any error has occurred:"
+    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
+        echo
+    fi
     if [[ $opt != 0 ]] && (( device_proc < 7 )); then
         print "* If you are getting the error: \"could not retrieve device serial number\","
         print " -> Try restoring with the jailbreak option enabled"
@@ -5385,6 +5388,10 @@ restore_latest() {
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
     opt=$?
+    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
+        echo
+    fi
     if [[ $2 == "first" ]]; then
         return $opt
     fi
@@ -5397,11 +5404,6 @@ restore_latest() {
     case $device_target_vers in
         [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
     esac
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        case $device_target_vers in
-            [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
-        esac
-    fi
 }
 
 restore_prepare_pwnrec64() {
@@ -5995,6 +5997,11 @@ device_ramdisk64() {
     mv $ramdisk_path/iBEC.img4 $ramdisk_path/iBEC.im4p
     iBSS="$ramdisk_path/iBSS"
     iBEC="$ramdisk_path/iBEC"
+
+    if [[ $device_argmode == "none" ]]; then
+        log "Done creating SSH ramdisk files: saved/$device_type/ramdisk_$build_id"
+        return
+    fi
     restore_prepare_pwnrec64
 
     log "Booting, please wait..."
@@ -6224,6 +6231,11 @@ device_ramdisk() {
     fi
 
     mv iBSS iBEC DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
+
+    if [[ $device_argmode == "none" ]]; then
+        log "Done creating SSH ramdisk files: saved/$device_type/ramdisk_$build_id"
+        return
+    fi
 
     if [[ $1 == "jailbreak" || $1 == "justboot" ]]; then
         device_enter_mode pwnDFU
@@ -6464,9 +6476,6 @@ device_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             fi
             log "Cool, done and jailbroken (hopefully)"
-            case $vers in
-                [543]* ) warn "Do not uninstall Cydia Substrate and Substrate Safe Mode in Cydia!";;
-            esac
             return
         ;;
 
@@ -8934,6 +8943,9 @@ menu_miscutilities() {
                 esac
             fi
         fi
+        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_argmode == "none" ]]; then
+            menu_items+=("SSH Ramdisk")
+        fi
         if [[ $device_proc != 1 ]] && (( device_proc < 11 )); then
             menu_items+=("Enable Flags")
         fi
@@ -8977,6 +8989,7 @@ menu_miscutilities() {
             "(Re-)Install Dependencies" ) install_depends;;
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Get iOS Version" ) mode="getversion";;
+            "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "Go Back" ) back=1;;
         esac
     done
