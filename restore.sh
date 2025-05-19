@@ -501,7 +501,6 @@ set_tool_paths() {
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
         gaster+="../bin/macos/gaster"
-        ipwnder32="$dir/ipwnder32"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
@@ -1935,7 +1934,6 @@ device_enter_mode() {
         "pwnDFU" )
             local irec_pwned
             local tool_pwned
-            local opt2
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -1972,15 +1970,8 @@ device_enter_mode() {
                             device_ipwndfu send_ibss
                         fi
                     ;;
-                    7 )
-                        if [[ $device_pwnd != "ipwnder" ]]; then
-                            device_ipwndfu rmsigchks
-                        fi
-                    ;;
-                    [89] | 10 )
-                        log "gaster reset"
-                        $gaster reset
-                    ;;
+                    7 ) [[ $device_pwnd != "ipwnder" ]] && device_ipwndfu rmsigchks;;
+                    [89] | 10 ) log "gaster reset"; $gaster reset;;
                 esac
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
@@ -2044,12 +2035,25 @@ device_enter_mode() {
                 log "gaster reset"
                 $gaster reset
             elif [[ $device_type == "iPod2,1" || $2 == "alloc8" ]]; then
-                # touch 2 uses ipwndfu
-                # also installing alloc8 requires pwning with ipwndfu
+                # touch 2 uses ipwndfu, also installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
-                # A6 intel mac/A4/3gs/touch 3 uses ipwndfu/ipwnder
+            elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+                # A7/A6/A4/3gs/touch 3 asi mac uses ipwnder
+                log "Placing device to pwnDFU mode using ipwnder"
+                opt="$ipwnder -d"
+                if [[ $device_proc == 7 ]]; then
+                    opt="${ipwnder}2 -p"
+                elif [[ $device_proc == 6 ]]; then
+                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
+                fi
+                mkdir image3 ../saved/image3 2>/dev/null
+                cp ../saved/image3/* image3/ 2>/dev/null
+                $opt
+                tool_pwned=$?
+                cp image3/* ../saved/image3/ 2>/dev/null
+            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+                # A6/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
                     selection=("ipwndfu" "ipwnder (limera1n)")
@@ -2061,59 +2065,36 @@ device_enter_mode() {
                 print "* Select tool to be used for entering pwned DFU mode."
                 print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
                 print "* If the first option does not work, try the other option and do multiple attempts."
-                print "* Note: Some Intel Macs may have better success rates with ipwndfu than ipwnder."
                 input "Select your option:"
                 select_option "${selection[@]}"
-                opt2="${selection[$?]}"
-                log "Placing device to pwnDFU mode using $opt2"
-                case $opt2 in
+                opt="${selection[$?]}"
+                log "Placing device to pwnDFU mode using $opt"
+                case $opt in
                     "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?;;
                     "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?;;
                     "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?;;
                     "ipwnder" )
+                        if [[ $device_proc == 6 ]]; then
+                            print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
+                        fi
                         mkdir image3 ../saved/image3 2>/dev/null
                         cp ../saved/image3/* image3/ 2>/dev/null
                         $ipwnder -d
                         tool_pwned=$?
-                        cp image3/* ../saved/image3/
+                        cp image3/* ../saved/image3/ 2>/dev/null
                     ;;
                 esac
             elif [[ $platform == "linux" ]]; then
                 # A6/A7 linux uses ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            elif [[ $device_proc == 6 ]]; then
-                # A6 asi mac uses ipwnder_lite
-                log "Placing device to pwnDFU mode using ipwnder_lite"
-                print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\", the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
-                mkdir image3 ../saved/image3 2>/dev/null
-                cp ../saved/image3/* image3/ 2>/dev/null
-                $ipwnder -d
-                tool_pwned=$?
-                cp image3/* ../saved/image3/
             else
-                # A7 mac uses ipwnder32/ipwnder_lite/other
-                local selection
-                if [[ $platform_arch == "x86_64" ]]; then
-                    selection=("gaster" "ipwnder32" "ipwnder_lite" "ipwndfu")
-                else
-                    selection=("ipwnder_lite" "gaster")
-                fi
-                input "PwnDFU Tool Option"
-                print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
-                print "* If the first option does not work, try many times and/or try the other option(s)."
-                print "* Note: Some Intel Macs have very low success rates for A7 checkm8."
-                input "Select your option:"
-                select_option "${selection[@]}"
-                opt2="${selection[$?]}"
-                log "Placing device to pwnDFU mode using $opt"
-                case $opt2 in
-                    "ipwnder32" ) $ipwnder32 -p; tool_pwned=$?;;
-                    "ipwndfu"   ) device_ipwndfu pwn; tool_pwned=$?;;
-                    "ipwnder"*  ) ${ipwnder}2 -p; tool_pwned=$?;;
-                    "gaster"    ) $gaster pwn; tool_pwned=$?;;
-                esac
+                # A7 intel mac uses gaster
+                log "Placing device to pwnDFU mode using gaster"
+                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
+                opt="$gaster pwn"
+                $opt
+                tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
@@ -2133,7 +2114,7 @@ device_enter_mode() {
             fi
             if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" && -n $device_pwnd ]]; then
                 device_ipwndfu send_ibss
-            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" && $opt2 != "ipwnder"* ]]; then
+            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" && $opt != *"ipwnder"* ]]; then
                 device_ipwndfu rmsigchks
             fi
         ;;
@@ -2158,10 +2139,6 @@ device_pwnerror() {
     elif [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
         if [[ $device_proc == 4 || $device_proc == 6 ]]; then
             error_msg+=$'\n* Try to do attempts with ipwndfu selected if ipwnder does not work.'
-        elif [[ $device_proc == 7 ]]; then
-            error_msg+=$'\n* Some Intel Macs have very low success rates for A7 checkm8.'
-            error_msg+=$'\n* Particularly Core 2 Duo Macs, but may include some newer Intel Macs as well.'
-            error_msg+=$'\n* Pwning using another Mac or iOS device using iPwnder Lite are better options if needed.'
         fi
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
