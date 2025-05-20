@@ -328,7 +328,7 @@ set_tool_paths() {
             distro="arch"
         elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
             distro="debian"
-        elif (( fedora_ver >= 37 )); then
+        elif (( fedora_ver >= 40 )); then
             distro="fedora"
             if [[ $(command -v rpm-ostree) ]]; then
                 distro="fedora-atomic"
@@ -494,6 +494,7 @@ set_tool_paths() {
             14 ) mac_name="Sonoma";;
             15 ) mac_name="Sequoia";;
         esac
+        mac_ver="$platform_ver"
         if [[ -n $mac_name ]]; then
             platform_ver="$mac_name $platform_ver"
         fi
@@ -515,6 +516,13 @@ set_tool_paths() {
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
     fi
     log "Running on platform: $platform ($platform_ver - $platform_arch)"
+    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        if [[ $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
+        fi
+    elif [[ $mac_cocoa == 1 ]]; then
+        warn "Updating to macOS 10.12 or newer is recommended for full support."
+    fi
     if [[ ! -d $dir ]]; then
         error "Failed to find bin directory ($dir), cannot continue." \
         "* Re-download Legacy iOS Kit from releases (or do a git clone/reset)"
@@ -2092,8 +2100,7 @@ device_enter_mode() {
                 # A7 intel mac uses gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
-                opt="$gaster pwn"
-                $opt
+                $gaster pwn
                 tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
@@ -3776,7 +3783,7 @@ ipsw_prepare_32bit() {
     elif [[ $ipsw_nskip == 1 ]]; then
         :
     elif [[ $ipsw_jailbreak != 1 && $device_target_build != "9A406" && # 9a406 needs custom ipsw
-            $device_proc != 4 && $device_actrec != 1 && $device_target_tethered != 1 ]]; then
+            $device_proc != 4 && $device_actrec != 1 && $device_target_tethered != 1 && $ipsw_isbeta != 1 ]]; then
         log "No need to create custom IPSW for non-jailbroken restores on $device_type-$device_target_build"
         return
     fi
@@ -4379,7 +4386,7 @@ ipsw_prepare_multipatch() {
     mv $ramdisk_name ramdisk2.orig
     "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
 
-    log "Checking"
+    log "Checking multipatch"
     "$dir/hfsplus" ramdisk2.dec extract multipatched
     if [[ -s multipatched ]]; then
         log "Already multipatched"
@@ -7020,6 +7027,13 @@ menu_print_info() {
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+        if [[ $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
+        fi
+    elif [[ $mac_cocoa == 1 ]]; then
+        warn "Updating to macOS 10.12 or newer is recommended for full support."
+    fi
     echo
     if [[ $device_argmode == "entry" ]]; then
         warn "Device type and/or ECID manually specified"

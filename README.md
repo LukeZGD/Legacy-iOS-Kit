@@ -120,11 +120,13 @@
 
 ## Supported OS versions/distros
 
-#### Supported architectures: x86_64, arm64 (armhf deprecated)
+#### Supported architectures: x86_64, arm64
 
-- **macOS** 10.11 and newer (10.12 and newer recommended for full support)
+- **macOS** 10.11 and newer
+    - macOS 10.12 and newer recommended for full support
+    - macOS 14.6 and newer recommended for Apple Silicon Macs
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
-- [**Fedora**](https://getfedora.org/) 37 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
+- [**Fedora**](https://getfedora.org/) 40 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [EndeavourOS](https://endeavouros.com/)
 - Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
