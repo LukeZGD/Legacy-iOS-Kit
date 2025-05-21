@@ -2232,26 +2232,28 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
     fi
-    # create a lib symlink in the home directory for macos, needed by ipwndfu/pyusb
-    # no need to do this for homebrew x86_64 since /usr/local/lib is being checked along with ~/lib, but lets do the symlink anyway
+    # copy libusb dylibs to /usr/local/lib directory for macos, needed by ipwndfu/pyusb
+    # no need to do this for homebrew x86_64 since it already uses /usr/local/lib
     if [[ $platform == "macos" ]]; then
-        if [[ -e "$HOME/lib" && -e "$HOME/lib.bak" ]]; then
-            rm -rf "$HOME/lib"
-        elif [[ -e "$HOME/lib" ]]; then
-            mv "$HOME/lib" "$HOME/lib.bak"
-        fi
         # prioritize macports here since it has longer support
-        if [[ -e /opt/local/lib/libusb-1.0.dylib ]]; then
+        local libusb
+        if [[ -s /opt/local/lib/libusb-1.0.dylib ]]; then
             log "Detected libusb installed via MacPorts"
-            ln -sf /opt/local/lib "$HOME/lib"
-        elif [[ -e /opt/homebrew/lib/libusb-1.0.dylib ]]; then
+            libusb="/opt/local/lib"
+        elif [[ -s /opt/homebrew/lib/libusb-1.0.dylib ]]; then
             log "Detected libusb installed via Homebrew (arm64)"
-            ln -sf /opt/homebrew/lib "$HOME/lib"
-        elif [[ -e /usr/local/lib/libusb-1.0.dylib ]]; then
+            libusb="/opt/homebrew/lib"
+        elif [[ -s /usr/local/lib/libusb-1.0.dylib ]]; then
             log "Detected libusb installed via Homebrew (x86_64)"
-            ln -sf /usr/local/lib "$HOME/lib"
         else
             warn "No libusb detected. ipwndfu might fail especially on arm64 (Apple Silicon) devices."
+        fi
+        if [[ ! -f /usr/local/lib/libusb-1.0.dylib || ! -f /usr/local/lib/libusb-1.0.0.dylib ]] &&
+           [[ -n $libusb ]]; then
+            log "Transferring libusb dylibs to /usr/local/lib"
+            print "* Enter your user password when prompted"
+            sudo rm -f /usr/local/lib/libusb-1.0.dylib /usr/local/lib/libusb-1.0.0.dylib
+            sudo cp -L $libusb/libusb-1.0.dylib $libusb/libusb-1.0.0.dylib /usr/local/lib
         fi
     fi
 
@@ -6344,11 +6346,7 @@ device_ramdisk() {
                 6* )         untether="evasi0n6-untether.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
                 5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
-                3* )
-                    if [[ $device_type == "iPhone2,1" ]]; then
-                        untether=1
-                    fi
-                ;;
+                3* ) [[ $device_type == "iPhone2,1" ]] && untether=1;;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
