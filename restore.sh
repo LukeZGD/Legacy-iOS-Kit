@@ -2221,8 +2221,8 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_comm="1d22fd01b0daf52bbcf1ce730022d4212d87f967"
-    local ipwndfu_sha1="30f0802078ab6ff83d6b918e13f09a652a96d6dc"
+    local ipwndfu_comm="5a99b29164a57db025516f4f6c38728654de5276"
+    local ipwndfu_sha1="3dd3bfa287a51a05da346fb1e3f8b6f27c03d6d9"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu-*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
@@ -2231,30 +2231,6 @@ device_ipwndfu() {
         mv ../saved/ipwndfu-* ../saved/ipwndfu
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
         rm -rf ../saved/ipwndfu-*
-    fi
-    # copy libusb dylibs to /usr/local/lib directory for macos, needed by ipwndfu/pyusb
-    # no need to do this for homebrew x86_64 since it already uses /usr/local/lib
-    if [[ $platform == "macos" ]]; then
-        # prioritize macports here since it has longer support
-        local libusb
-        if [[ -s /opt/local/lib/libusb-1.0.dylib ]]; then
-            log "Detected libusb installed via MacPorts"
-            libusb="/opt/local/lib"
-        elif [[ -s /opt/homebrew/lib/libusb-1.0.dylib ]]; then
-            log "Detected libusb installed via Homebrew (arm64)"
-            libusb="/opt/homebrew/lib"
-        elif [[ -s /usr/local/lib/libusb-1.0.dylib ]]; then
-            log "Detected libusb installed via Homebrew (x86_64)"
-        else
-            warn "No libusb detected. ipwndfu might fail especially on arm64 (Apple Silicon) devices."
-        fi
-        if [[ ! -f /usr/local/lib/libusb-1.0.dylib || ! -f /usr/local/lib/libusb-1.0.0.dylib ]] &&
-           [[ -n $libusb ]]; then
-            log "Transferring libusb dylibs to /usr/local/lib"
-            print "* Enter your user password when prompted"
-            sudo rm -f /usr/local/lib/libusb-1.0.dylib /usr/local/lib/libusb-1.0.0.dylib
-            sudo cp -L $libusb/libusb-1.0.dylib $libusb/libusb-1.0.0.dylib /usr/local/lib
-        fi
     fi
 
     pushd ../saved/ipwndfu/ >/dev/null
