@@ -6941,6 +6941,7 @@ shsh_convert_onboard() {
         "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
         if [[ $? != 0 ]]; then
             warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
+            print "* If you selected the correct IPSW and the error is not LLB and/or iBoot, the blob should be usable."
         fi
     else
         "$dir/img4tool" --convert -s dump.shsh dump.raw
@@ -7468,19 +7469,17 @@ menu_shsh() {
         if (( device_proc < 7 )); then
             menu_items+=("Cydia Blobs")
         fi
-        if [[ $device_mode != "none" ]]; then
-            menu_items+=("Onboard Blobs")
-            if (( device_proc < 7 )); then
-                menu_items+=("Onboard Blobs (Raw Dump)")
+        if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" && $device_type != "iPad1,1" ]]; then
+            if [[ $device_mode != "none" ]]; then
+                menu_items+=("Onboard Blobs")
+                if (( device_proc < 7 )); then
+                    menu_items+=("Onboard Blobs (Raw Dump)")
+                fi
             fi
+            menu_items+=("Convert Raw Dump")
         fi
-        menu_items+=("Convert Raw Dump" "Go Back")
+        menu_items+=("Go Back")
         menu_print_info
-        if [[ $device_mode != "none" && $device_proc == 4 ]]; then
-            warn "Dumping onboard blobs might not work for this device, proceed with caution"
-            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
-            echo
-        fi
         print " > Main Menu > Save SHSH Blobs"
         input "Select an option:"
         select_option "${menu_items[@]}"
@@ -7505,7 +7504,7 @@ menu_shsh() {
             "Onboard Blobs (Raw Dump)" )
                 print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
                 print "* This option is useful for determining the iBoot version of your device first, to get the correct IPSW for conversion."
-                print "* See the Convert Raw Dump option for converting raw dumps to usable SHSH blobs."
+                print "* Use the Convert Raw Dump option for converting raw dumps to usable SHSH blobs."
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
