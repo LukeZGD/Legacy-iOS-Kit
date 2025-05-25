@@ -3724,9 +3724,9 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
-    # redirect to ipsw_prepare_jailbreak for 4.2.1 and lower
+    # redirect to ipsw_prepare_jailbreak for 4.1 and lower
     case $device_target_vers in
-        [23]* | 4.[01]* | 4.2.1 ) ipsw_prepare_jailbreak; return;;
+        [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
     esac
     # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
@@ -4241,7 +4241,7 @@ ipsw_prepare_ios4multipart() {
     fi
 
     # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
-    ipsw_prepare_jailbreak $iboot
+    ipsw_prepare_32bit $iboot
 
     ipsw_prepare_ios4multipart_patch=1
     ipsw_prepare_multipatch
@@ -4286,11 +4286,8 @@ ipsw_prepare_multipatch() {
         6* ) vers="6.1.3"; build="10B329";;
     esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
-        local ver2="${device_target_vers:0:1}"
-        if (( ver2 >= 5 )); then
-            vers="6.1.3"
-            build="10B329"
-        fi
+        vers="6.1.3"
+        build="10B329"
     else
         case $device_target_vers in
             7* ) vers="7.1.2"; build="11D257";;
@@ -4377,16 +4374,18 @@ ipsw_prepare_multipatch() {
     if [[ -s "$asrpatch" ]]; then
         cp "$asrpatch" .
         ipsw_patch_file RestoreRamdisk.dec usr/sbin asr asr.patch
-    else
+    elif [[ $ipsw_gasgauge_patch == 1 ]]; then
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/asr usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
-    fi
-    if [[ $ipsw_gasgauge_patch == 1 ]]; then
         log "Patch restored_external"
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/bin/restored_external
         "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/re usr/local/bin/restored_external
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/local/bin/restored_external
+    else
+        "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
+        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
     if [[ $device_target_vers == "3.2"* ]]; then
@@ -5493,7 +5492,7 @@ restore_prepare() {
                     * ) device_buttons;;
                 esac
                 case $device_target_vers in
-                    "3"* | "4.0"* | "4.1" | "4.2"* )
+                    3* | 4.[012]* )
                         if [[ $ipsw_skip_first != 1 ]]; then
                             restore_idevicerestore first
                             log "Do not disconnect your device, not done yet"
