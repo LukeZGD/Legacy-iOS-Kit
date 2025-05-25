@@ -2874,7 +2874,7 @@ ipsw_verify() {
         warn "Local SHA1 hash mismatch. Overwriting local hash."
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     elif [[ -z $IPSWSHA1E ]]; then
-        warn "Local SHA1 hash does not exist. Creating local hash."
+        log "Local SHA1 hash does not exist. Creating local hash."
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
 
@@ -3724,9 +3724,9 @@ ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
     local JBFiles=()
-    # redirect to ipsw_prepare_jailbreak for 4.1 and lower
+    # redirect to ipsw_prepare_jailbreak for 4.2.1 and lower
     case $device_target_vers in
-        [23]* | 4.[01]* ) ipsw_prepare_jailbreak; return;;
+        [23]* | 4.[01]* | 4.2.1 ) ipsw_prepare_jailbreak; return;;
     esac
     # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
@@ -4066,8 +4066,8 @@ ipsw_prepare_ios4multipart() {
     if [[ -e "../$ipsw_custom_part2.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSWs. Skipping IPSW creation."
         return
-    elif [[ -e "../$ipsw_custom_part2.ipsw" || -e "$ipsw_custom.ipsw" ]]; then
-        rm "../$ipsw_custom_part2.ipsw" "$ipsw_custom.ipsw" 2>/dev/null
+    elif [[ -e "../$ipsw_custom_part2.ipsw" ]]; then
+        rm -f "../$ipsw_custom_part2.ipsw"
     fi
 
     log "Preparing NOR flash IPSW..."
@@ -4241,10 +4241,7 @@ ipsw_prepare_ios4multipart() {
     fi
 
     # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
-    case $device_target_vers in
-        4.2* ) ipsw_prepare_32bit $iboot;;
-        *    ) ipsw_prepare_jailbreak $iboot;;
-    esac
+    ipsw_prepare_jailbreak $iboot
 
     ipsw_prepare_ios4multipart_patch=1
     ipsw_prepare_multipatch
@@ -10084,7 +10081,9 @@ device_erase() {
 }
 
 main() {
-    clear
+    if [[ $debug_mode != 1 ]]; then
+        clear
+    fi
     print " *** Legacy iOS Kit ***"
     print " - Script by LukeZGD -"
     echo
