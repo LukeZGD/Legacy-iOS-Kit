@@ -348,10 +348,6 @@ set_tool_paths() {
             pause
         fi
         bspatch="$dir/bspatch"
-        dir_env="env LD_LIBRARY_PATH=$dir/lib "
-        ideviceactivation="$dir_env"
-        idevicediagnostics="$dir_env"
-        ideviceinstaller="$dir_env"
         PlistBuddy="$dir/PlistBuddy"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
@@ -360,6 +356,7 @@ set_tool_paths() {
         ssh2="$dir/ssh"
         cp $ssh2 .
         chmod +x ssh
+        export LD_LIBRARY_PATH="$dir/lib"
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
@@ -2170,11 +2167,13 @@ device_ipwndfu() {
         print "* You may also install python2 from pyenv if something is wrong with system python2"
         print "* Install pyenv by running: curl https://pyenv.run | bash"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
+        print "* Also run this if it errors on pyenv install: export CFLAGS=\"-std=c17\""
     elif [[ -n "$python2" && $device_sudoloop == 1 ]]; then
         p2_sudo="sudo"
     elif [[ -z "$python2" && ! -e "$pyenv2" ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
+        print "* Also run this if it errors on pyenv install: export CFLAGS=\"-std=c17\""
         if [[ -z "$pyenv" ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
             print "* Install pyenv by running: curl https://pyenv.run | bash"
@@ -2188,7 +2187,7 @@ device_ipwndfu() {
         fi
         log "Installing python2 using pyenv"
         print "* This step may take some time - Be patient and let it run."
-        "$pyenv" install 2.7.18
+        CFLAGS="-std=c17" "$pyenv" install 2.7.18
         if [[ ! -e "$pyenv2" ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
             print "* Try installing pyenv and/or python2 manually:"
@@ -7178,7 +7177,7 @@ menu_datamanage() {
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
-        warn "Device is on lower than iOS 4. Backup and Restore options are not available."
+        warn "Device is on lower than iOS 4. Backup and Restore options are not available." # remove/enable when ios 3 idevicebackup stuff is fully working
     else
         menu_items+=("Backup" "Restore")
     fi
@@ -7229,7 +7228,11 @@ menu_backup_restore() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_print_info
-        local backupdir="../saved/backups/${device_ecid}_${device_type}"
+        local backups="backups"
+        if (( device_det <= 3 )); then
+            backups+="1"
+        fi
+        local backupdir="../saved/$backups/${device_ecid}_${device_type}"
         if [[ ! -d $backupdir ]]; then
             mkdir -p $backupdir
         fi
@@ -10040,29 +10043,41 @@ device_fourthree_check() {
 }
 
 device_backup_create() {
-    print "* A backup of your device will be created using idevicebackup2. Please see the notes above."
+    local backups="backups"
+    local idevicebackup="idevicebackup2"
+    local args="--full"
+    if (( device_det <= 3 )); then
+        backups+="1"
+        idevicebackup="idevicebackup"
+        args=
+    fi
+    print "* A backup of your device will be created. Please see the notes above."
     pause
-    device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
+    device_backup="../saved/$backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
     mkdir -p $device_backup
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
-    if [[ -n $dir_env ]]; then
-        dir_env="env LD_LIBRARY_PATH=$dir/lib "
-    fi
-    $dir_env "$dir/idevicebackup2" backup --full "$(basename $device_backup)"
+    export LD_LIBRARY_PATH="$dir/lib"
+    "$dir/$idevicebackup" backup $args "$(basename $device_backup)"
     popd
 }
 
 device_backup_restore() {
+    local backups="backups"
+    local idevicebackup="idevicebackup2"
+    local args="--system --settings"
+    if (( device_det <= 3 )); then
+        backups+="1"
+        idevicebackup="idevicebackup"
+        args=
+    fi
     print "* The selected backup $device_backup will be restored to the device."
     pause
-    device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
+    device_backup="../saved/$backups/${device_ecid}_${device_type}/$device_backup"
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
-    if [[ -n $dir_env ]]; then
-        dir_env="env LD_LIBRARY_PATH=$dir/lib "
-    fi
-    $dir_env "$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
+    export LD_LIBRARY_PATH="$dir/lib"
+    "$dir/$idevicebackup" restore $args "$(basename $device_backup)"
     popd
 }
 
@@ -10076,7 +10091,7 @@ device_erase() {
         error "Not proceeding."
     fi
     log "Proceeding."
-    $dir_env "$dir/idevicebackup2" erase
+    "$dir/idevicebackup2" erase
 }
 
 main() {
