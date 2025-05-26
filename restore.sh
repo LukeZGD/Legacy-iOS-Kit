@@ -400,7 +400,7 @@ set_tool_paths() {
             sudoloop_pid=$!
             futurerestore="sudo "
             gaster="sudo "
-            idevicerestore="sudo LD_LIBRARY_PATH=$dir/lib "
+            idevicerestore="sudo "
             ipwnder="sudo "
             irecovery="sudo "
             irecovery2="sudo "
