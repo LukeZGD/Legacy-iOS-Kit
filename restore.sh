@@ -400,7 +400,7 @@ set_tool_paths() {
             sudoloop_pid=$!
             futurerestore="sudo "
             gaster="sudo "
-            idevicerestore="sudo "
+            idevicerestore="sudo LD_LIBRARY_PATH=$dir/lib "
             ipwnder="sudo "
             irecovery="sudo "
             irecovery2="sudo "
@@ -643,7 +643,7 @@ install_depends() {
 }
 
 version_update_check() {
-    pushd "$(dirname "$0")/tmp$$" >/dev/null
+    pushd "tmp$$" >/dev/null
     if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
         xattr -cr ../bin/macos
     fi
@@ -665,11 +665,11 @@ version_update() {
         print "* If this fails for some reason, run: git reset --hard"
         print "* To clean more files if needed, run: git clean -df"
         git pull origin $(git rev-parse --abbrev-ref HEAD)
-        pushd "$(dirname "$0")/tmp$$" >/dev/null
+        pushd "tmp$$" >/dev/null
         log "Done! Please run the script again"
         exit
     fi
-    pushd "$(dirname "$0")/tmp$$" >/dev/null
+    pushd "tmp$$" >/dev/null
     log "Downloading..."
     git clone --filter=blob:none "https://github.com/LukeZGD/Legacy-iOS-Kit"
     if [[ $? != 0 ]]; then
@@ -686,7 +686,7 @@ version_update() {
     rm -r resources/ 2>/dev/null
     mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git .
     cp tmp$$/firstrun resources 2>/dev/null
-    pushd "$(dirname "$0")/tmp$$" >/dev/null
+    pushd "tmp$$" >/dev/null
     log "Done! Please run the script again"
     exit
 }
@@ -9090,7 +9090,7 @@ device_jailbreak_confirm() {
         while [[ -z $device_vers ]]; do
             read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
         done
-    else
+    elif [[ $device_mode == "Normal" ]]; then
         case $device_vers in
             5* | 6.0* | 6.1 | 6.1.[12] )
                 print "* Your device on iOS $device_vers will be jailbroken using g1lbertJB."
