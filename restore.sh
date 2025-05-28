@@ -2209,7 +2209,16 @@ device_ipwndfu() {
         python2="$pyenv2"
     fi
 
-    mkdir ../saved/ipwndfu 2>/dev/null
+    local ipwndfu_comm="5a99b29164a57db025516f4f6c38728654de5276"
+    local ipwndfu_sha1="3dd3bfa287a51a05da346fb1e3f8b6f27c03d6d9"
+    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
+        rm -rf ../saved/ipwndfu*
+        download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
+        unzip -q ipwndfu.zip -d ../saved
+        mv ../saved/ipwndfu-* ../saved/ipwndfu
+        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
+    fi
+
     rm -f ../saved/ipwndfu/pwnediBSS
     if [[ $1 == "send_ibss" && $device_boot4 == 1 ]]; then
         cp iBSS.patched ../saved/ipwndfu/pwnediBSS
@@ -2220,17 +2229,6 @@ device_ipwndfu() {
     fi
 
     device_enter_mode DFU
-    local ipwndfu_comm="5a99b29164a57db025516f4f6c38728654de5276"
-    local ipwndfu_sha1="3dd3bfa287a51a05da346fb1e3f8b6f27c03d6d9"
-    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
-        rm -rf ../saved/ipwndfu-*
-        download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
-        unzip -q ipwndfu.zip -d ../saved
-        rm -rf ../saved/ipwndfu
-        mv ../saved/ipwndfu-* ../saved/ipwndfu
-        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
-        rm -rf ../saved/ipwndfu-*
-    fi
 
     pushd ../saved/ipwndfu/ >/dev/null
     case $1 in
