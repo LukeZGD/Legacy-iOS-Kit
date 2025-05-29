@@ -87,7 +87,7 @@ display_help() {
 Usage: ./restore.sh [Options]
 
 List of options:
-    --debug                   For script debugging (set -x and debug mode)
+    --debug                   Enable script debugging (set -x and debug mode)
     --device=<type>           Specify device type
     --dfuhelper               Launch to DFU Mode Helper only
     --disable-sudoloop        Disable running tools as root for Linux
@@ -97,23 +97,26 @@ List of options:
     --kdfu                    Enter kDFU mode with the connected device
     --help                    Display this help message
     --no-color                Disable colors for script output
+    --no-finder               Disable Finder device detection and keep it disabled after script exit
+                              To re-enable it, run the script without this flag and exit
     --no-device               Enable no device mode
     --old-menu                Use the old menus with number select and y/n
     --pwn                     Pwn the connected device
-    --sshrd                   Enter SSH ramdisk mode (requires additional arguments)
+    --sshrd                   Enter SSH ramdisk mode
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
-    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd
+    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd for Linux
 
 For 32-bit devices compatible with restores/downgrades (see README):
+    --build-id=<build>        Specify iOS build ID for SSH ramdisk/tether boot
     --activation-records      Enable dumping/stitching activation records
     --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
-    --gasgauge-patch          Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
-                              This patch also attempts to get past "invalid ticket" error
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
-    --just-boot               Tether boot the device (requires additional arguments)
+    --just-boot               Tether boot the device (requires --build-id)
+    --multipatch              Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
+                              This patch also attempts to get past "invalid ticket" error
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
     --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
@@ -6641,7 +6644,7 @@ menu_ramdisk() {
             "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
-                local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh"
+                local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
                 if [[ $1 == "12"* ]]; then
                     warn "Dumping blobs may fail on iOS 8 ramdisk."
                     print "* It is recommended to do this on iOS $device_ramdiskver ramdisk instead."
@@ -6839,7 +6842,7 @@ shsh_save_onboard64() {
     device_ssh_message
     device_iproxy
     device_sshpass
-    local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh"
+    local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
     local disk
     if [[ $ssh_user == "mobile" ]]; then
         disk="echo $ssh_pass | sudo -S "
@@ -7040,7 +7043,7 @@ menu_print_info() {
             warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
         fi
         if [[ $ipsw_gasgauge_patch == 1 ]]; then
-            warn "gasgauge-patch flag detected. multipatch enabled."
+            warn "gasgauge-patch/multipatch flag detected. multipatch enabled."
         fi
         if [[ $ipsw_skip_first == 1 ]]; then
             warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
@@ -8774,7 +8777,7 @@ menu_flags() {
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Enable skip-first flag");;
         esac
-        menu_items+=("Go Back")
+        menu_items+=("Enable no-finder flag" "Go Back")
         menu_print_info
         print " > Main Menu > Misc Utilities > Enable Flags"
         input "Select an option:"
@@ -8864,6 +8867,17 @@ menu_flags() {
                 select_yesno "Do you want to enable the skip-blob flag?" 0
                 if [[ $? != 0 ]]; then
                     restore_useskipblob=1
+                    back=1
+                fi
+            ;;
+            "Enable no-finder flag" )
+                warn "This will enable the --no-finder flag."
+                print "* This will disable Finder device detection and keep it disabled after script exit."
+                print "* To re-enable it, run the script without this flag enabled and exit."
+                local opt
+                select_yesno "Do you want to enable the no-finder flag?" 0
+                if [[ $? != 0 ]]; then
+                    no_finder=1
                     back=1
                 fi
             ;;
@@ -10239,7 +10253,7 @@ for i in "$@"; do
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--skip-ibss" ) device_skip_ibss=1;;
         "--pwned-recovery" ) device_pwnrec=1;;
-        "--gasgauge-patch" ) ipsw_gasgauge_patch=1;;
+        "--gasgauge-patch" | "--multipatch" ) ipsw_gasgauge_patch=1;;
         "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
         "--skip-first" ) ipsw_skip_first=1;;
         "--skip-blob" ) restore_useskipblob=1;;
