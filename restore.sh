@@ -2170,13 +2170,11 @@ device_ipwndfu() {
         print "* You may also install python2 from pyenv if something is wrong with system python2"
         print "* Install pyenv by running: curl https://pyenv.run | bash"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-        print "* Also run this if it errors on pyenv install: export CFLAGS=\"-std=c17\""
     elif [[ -n "$python2" && $device_sudoloop == 1 ]]; then
         p2_sudo="sudo"
     elif [[ -z "$python2" && ! -e "$pyenv2" ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-        print "* Also run this if it errors on pyenv install: export CFLAGS=\"-std=c17\""
         if [[ -z "$pyenv" ]]; then
             warn "pyenv is not installed. Attempting to install pyenv before continuing"
             print "* Install pyenv by running: curl https://pyenv.run | bash"
@@ -2188,9 +2186,12 @@ device_ipwndfu() {
                 "* Try installing pyenv manually before retrying."
             fi
         fi
+        log "Updating pyenv"
+        "$pyenv" update
         log "Installing python2 using pyenv"
         print "* This step may take some time - Be patient and let it run."
-        CFLAGS="-std=c17" "$pyenv" install 2.7.18
+        export CFLAGS="-std=gnu17"
+        "$pyenv" install 2.7.18
         if [[ ! -e "$pyenv2" ]]; then
             warn "Cannot detect python2 from pyenv, its installation may have failed."
             print "* Try installing pyenv and/or python2 manually:"
@@ -2200,6 +2201,8 @@ device_ipwndfu() {
                 print "* For Fedora Atomic, you will also need to set up toolbox and build environment."
                 print "* Follow the commands here under Fedora Silverblue: https://github.com/pyenv/pyenv/wiki#suggested-build-environment"
                 print "* Run the pyenv install commands while in the toolbox container."
+            elif [[ $platform == "macos" ]]; then
+                print "* For macOS, make sure to have openssl installed from Homebrew/MacPorts."
             fi
             error "Cannot detect python2 for ipwndfu, cannot continue."
         fi
@@ -2212,8 +2215,8 @@ device_ipwndfu() {
         python2="$pyenv2"
     fi
 
-    local ipwndfu_comm="5a99b29164a57db025516f4f6c38728654de5276"
-    local ipwndfu_sha1="3dd3bfa287a51a05da346fb1e3f8b6f27c03d6d9"
+    local ipwndfu_comm="ba271dfd446b1cb3307c869d60b959a4adcf518f"
+    local ipwndfu_sha1="ee5327893defc1842513083734d1731779f0f1fd"
     if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/ipwndfu*
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
