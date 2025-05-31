@@ -408,6 +408,7 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             irecovery3="sudo "
+            steaks4uce="sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
                 log "Running on platform: $platform ($platform_ver - $platform_arch)"
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
@@ -549,6 +550,7 @@ set_tool_paths() {
     irecovery2+="$dir/irecovery2"
     irecovery3+="../$dir/irecovery"
     jq="$dir/jq"
+    steaks4uce+="$dir/steaks4uce"
 
     cp ../resources/ssh_config .
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
@@ -2053,8 +2055,13 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_type == "iPod2,1" || $2 == "alloc8" ]]; then
-                # touch 2 uses ipwndfu, also installing alloc8 requires pwning with ipwndfu
+            elif [[ $device_type == "iPod2,1" ]]; then
+                # touch 2 uses steaks4uce-c
+                log "Placing device to pwnDFU mode using steaks4uce-c"
+                $steaks4uce
+                tool_pwned=$?
+            elif [[ $2 == "alloc8" ]]; then
+                # installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
@@ -2068,7 +2075,7 @@ device_enter_mode() {
                 $ipwnder -d
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
-            elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
+            else
                 # A6/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
