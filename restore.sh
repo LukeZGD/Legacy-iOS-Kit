@@ -498,6 +498,7 @@ set_tool_paths() {
         if [[ -n $mac_name ]]; then
             platform_ver="$mac_name $platform_ver"
         fi
+        xattr -cr ../bin/macos
 
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
@@ -1978,7 +1979,13 @@ device_enter_mode() {
                             device_ipwndfu send_ibss
                         fi
                     ;;
-                    7 ) [[ $device_pwnd != "ipwnder" ]] && device_ipwndfu rmsigchks;;
+                    7 )
+                        if [[ $device_pwnd == "checkm8" ]]; then
+                            device_ipwndfu rmsigchks
+                        fi
+                        log "gaster reset"
+                        $gaster reset
+                    ;;
                     [89] | 10 ) log "gaster reset"; $gaster reset;;
                 esac
                 return
@@ -2034,8 +2041,8 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if (( device_proc > 7 )); then
-                # A8/A9/A10 uses gaster
+            if (( device_proc >= 7 )); then
+                # A7/A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
                 $gaster pwn
@@ -2047,17 +2054,14 @@ device_enter_mode() {
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-                # A7/A6/A4/3gs/touch 3 asi mac uses ipwnder
+                # A6/A4/3gs/touch 3 asi mac uses ipwnder
                 log "Placing device to pwnDFU mode using ipwnder"
-                opt="$ipwnder -d"
-                if [[ $device_proc == 7 ]]; then
-                    opt="${ipwnder}2 -p"
-                elif [[ $device_proc == 6 ]]; then
+                if [[ $device_proc == 6 ]]; then
                     print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
-                $opt
+                $ipwnder -d
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
             elif [[ $device_proc == 4 ]] || [[ $device_proc == 6 && $platform == "macos" ]]; then
@@ -2096,12 +2100,6 @@ device_enter_mode() {
                 # A6/A7 linux uses ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
-            else
-                # A7 intel mac uses gaster
-                log "Placing device to pwnDFU mode using gaster"
-                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
-                $gaster pwn
-                tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
@@ -2121,8 +2119,10 @@ device_enter_mode() {
             fi
             if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" && -n $device_pwnd ]]; then
                 device_ipwndfu send_ibss
-            elif [[ $device_proc == 7 && $device_pwnd != "ipwnder" && $opt != *"ipwnder"* ]]; then
+            elif [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                 device_ipwndfu rmsigchks
+                log "gaster reset"
+                $gaster reset
             fi
         ;;
     esac
@@ -5375,10 +5375,6 @@ restore_prepare_pwnrec64() {
     fi
 
     device_enter_mode pwnDFU
-    if [[ $device_proc == 7 ]]; then
-        log "gaster reset"
-        $gaster reset
-    fi
     sleep 1
     while (( attempt <= 5 )); do
         log "Entering pwnREC mode... (Attempt $attempt of 5)"
@@ -5624,10 +5620,6 @@ restore_pwned64() {
     fi
     rm -f /tmp/firmwares.json
     cp ../saved/firmwares.json /tmp
-    if [[ $device_proc == 7 ]]; then
-        log "gaster reset"
-        $gaster reset
-    fi
     local opt
     if [[ $device_proc == 7 && $device_target_other != 1 &&
           $device_target_vers == "10.3.3" ]] || [[ $restore_useskipblob == 1 ]]; then
