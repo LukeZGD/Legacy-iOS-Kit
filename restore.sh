@@ -2041,7 +2041,11 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if (( device_proc >= 7 )); then
+            if [[ $platform == "linux" ]] && [[ $device_proc == 6 || $device_proc == 7 ]]; then
+                # A6/A7 linux uses ipwndfu
+                device_ipwndfu pwn
+                tool_pwned=$?
+            elif (( device_proc >= 7 )); then
                 # A7/A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
@@ -2096,10 +2100,6 @@ device_enter_mode() {
                         cp image3/* ../saved/image3/ 2>/dev/null
                     ;;
                 esac
-            elif [[ $platform == "linux" ]]; then
-                # A6/A7 linux uses ipwndfu
-                device_ipwndfu pwn
-                tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
