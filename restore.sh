@@ -408,7 +408,7 @@ set_tool_paths() {
             irecovery="sudo "
             irecovery2="sudo "
             irecovery3="sudo "
-            steaks4uce="sudo "
+            primepwn="sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
                 log "Running on platform: $platform ($platform_ver - $platform_arch)"
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
@@ -519,7 +519,7 @@ set_tool_paths() {
     fi
     log "Running on platform: $platform ($platform_ver - $platform_arch)"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_majver == "14" && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     elif [[ $mac_cocoa == 1 ]]; then
@@ -550,7 +550,7 @@ set_tool_paths() {
     irecovery2+="$dir/irecovery2"
     irecovery3+="../$dir/irecovery"
     jq="$dir/jq"
-    steaks4uce+="$dir/steaks4uce"
+    primepwn+="$dir/primepwn"
 
     cp ../resources/ssh_config .
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
@@ -1963,7 +1963,7 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    5 ) device_ipwndfu send_ibss;;
+                    5 ) device_send_unpacked_ibss;;
                     6 )
                         if [[ $device_pwnd == "iPwnder" ]]; then
                             mkdir image3 ../saved/image3 2>/dev/null
@@ -1978,7 +1978,7 @@ device_enter_mode() {
                                 warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
                             fi
                         elif [[ $device_pwnd == "checkm8" ]]; then
-                            device_ipwndfu send_ibss
+                            device_send_unpacked_ibss
                         fi
                     ;;
                     7 )
@@ -2037,7 +2037,7 @@ device_enter_mode() {
                     error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-a5x-pwndfu-mode-with-arduino-and-usb-host-shield'
                     error "32-bit A5 device is NOT in PWNED DFU mode. Already pwned iBSS mode?" "$error_msg"
                 fi
-                device_ipwndfu send_ibss
+                device_send_unpacked_ibss
                 return
             fi
 
@@ -2045,6 +2045,10 @@ device_enter_mode() {
 
             if [[ $platform == "linux" ]] && [[ $device_proc == 6 || $device_proc == 7 ]]; then
                 # A6/A7 linux uses ipwndfu
+                device_ipwndfu pwn
+                tool_pwned=$?
+            elif [[ $2 == "alloc8" ]]; then
+                # installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
             elif (( device_proc >= 7 )); then
@@ -2055,58 +2059,25 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_type == "iPod2,1" ]]; then
-                # touch 2 uses steaks4uce-c
-                log "Placing device to pwnDFU mode using steaks4uce-c"
-                $steaks4uce
-                tool_pwned=$?
-            elif [[ $2 == "alloc8" ]]; then
-                # installing alloc8 requires pwning with ipwndfu
-                device_ipwndfu pwn
-                tool_pwned=$?
-            elif [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-                # A6/A4/3gs/touch 3 asi mac uses ipwnder
+            elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+                # A6/3gs/touch 3 uses ipwnder
                 log "Placing device to pwnDFU mode using ipwnder"
+                opt="$ipwnder -d"
                 if [[ $device_proc == 6 ]]; then
                     print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
+                elif [[ $platform == "linux" ]]; then
+                    opt="$ipwnder -p"
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
-                $ipwnder -d
+                $opt
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
             else
-                # A6/A4/3gs/touch 3 uses ipwndfu/ipwnder
-                local selection=("ipwnder" "ipwndfu")
-                if [[ $platform == "linux" ]]; then
-                    selection=("ipwnder (limera1n)" "ipwndfu")
-                    if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" ]]; then
-                        selection+=("ipwnder (SHAtter)")
-                    fi
-                fi
-                input "PwnDFU Tool Option"
-                print "* Select tool to be used for entering pwned DFU mode."
-                print "* This option is set to ${selection[0]} by default (1). Select this option if unsure."
-                print "* If the first option does not work, try the other option and do multiple attempts."
-                input "Select your option:"
-                select_option "${selection[@]}"
-                opt="${selection[$?]}"
-                log "Placing device to pwnDFU mode using $opt"
-                case $opt in
-                    "ipwndfu" ) device_ipwndfu pwn; tool_pwned=$?;;
-                    "ipwnder (SHAtter)"  ) $ipwnder -s; tool_pwned=$?;;
-                    "ipwnder (limera1n)" ) $ipwnder -p; tool_pwned=$?;;
-                    "ipwnder" )
-                        if [[ $device_proc == 6 ]]; then
-                            print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
-                        fi
-                        mkdir image3 ../saved/image3 2>/dev/null
-                        cp ../saved/image3/* image3/ 2>/dev/null
-                        $ipwnder -d
-                        tool_pwned=$?
-                        cp image3/* ../saved/image3/ 2>/dev/null
-                    ;;
-                esac
+                # A4/touch 2 uses primepwn
+                log "Placing device to pwnDFU mode using primepwn"
+                $primepwn
+                tool_pwned=$?
             fi
             if [[ $tool_pwned == 2 ]]; then
                 return
@@ -2124,8 +2095,8 @@ device_enter_mode() {
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
             fi
-            if [[ $device_proc == 6 && $tool_pwndfu == "ipwndfu" && -n $device_pwnd ]]; then
-                device_ipwndfu send_ibss
+            if [[ $device_proc == 6 && $device_pwnd == "checkm8" ]]; then
+                device_send_unpacked_ibss
             elif [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                 device_ipwndfu rmsigchks
                 log "gaster reset"
@@ -2160,6 +2131,32 @@ device_pwnerror() {
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
     error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
+}
+
+device_send_unpacked_ibss() {
+    if [[ $device_boot4 == 1 ]]; then
+        cp iBSS.patched pwnediBSS
+    else
+        device_rd_build=
+        patch_ibss
+    fi
+    log "Sending unpacked iBSS..."
+    $primepwn pwnediBSS
+    tool_pwned=$?
+    rm pwnediBSS
+    if [[ $tool_pwned != 0 ]]; then
+        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
+        "* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
+    fi
+    sleep 1
+    log "Checking for device"
+    local irec="$($irecovery -q 2>&1)"
+    device_pwnd="$(echo "$irec" | grep "PWND" | cut -c 7-)"
+    if [[ -z $device_pwnd && $irec != "ERROR"* ]]; then
+        log "Device should now be in pwned iBSS mode."
+    else
+        warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
+    fi
 }
 
 device_ipwndfu() {
@@ -2232,71 +2229,34 @@ device_ipwndfu() {
         echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
     fi
 
-    rm -f ../saved/ipwndfu/pwnediBSS
-    if [[ $1 == "send_ibss" && $device_boot4 == 1 ]]; then
-        cp iBSS.patched ../saved/ipwndfu/pwnediBSS
-    elif [[ $1 == "send_ibss" ]]; then
-        device_rd_build=
-        patch_ibss
-        cp pwnediBSS ../saved/ipwndfu/
-    fi
-
     device_enter_mode DFU
 
     pushd ../saved/ipwndfu/ >/dev/null
     case $1 in
-        "send_ibss" )
-            log "Sending iBSS using ipwndfu..."
-            $p2_sudo "$python2" ipwndfu -l pwnediBSS
-            tool_pwned=$?
-            rm pwnediBSS
-            if [[ $tool_pwned != 0 ]]; then
-                popd >/dev/null
-                local error_msg
-                if [[ $platform == "macos" ]]; then
-                    error_msg+=$'\n* If you get the error "No backend available," install libusb in Homebrew/MacPorts\n'
-                fi
-                error_msg+="* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
-                error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "$error_msg"
-            fi
-            print "* ipwndfu should have \"done!\" as output. If not, sending iBEC will fail."
-            sleep 1
-            log "Checking for device"
-            local irec="$($irecovery3 -q 2>&1)"
-            device_pwnd="$(echo "$irec" | grep "PWND" | cut -c 7-)"
-            if [[ -z $device_pwnd && $irec != "ERROR"* ]]; then
-                log "Device should now be in pwned iBSS mode."
-            else
-                warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
-            fi
-        ;;
-
         "pwn" )
             tool_pwndfu="ipwndfu"
             log "Placing device to pwnDFU Mode using ipwndfu"
             $p2_sudo "$python2" ipwndfu -p
             tool_pwned=$?
-            if [[ $tool_pwned != 0 && $tool_pwned != 2 ]]; then
-                if (( device_proc >= 6 )) && [[ $tool_pwned != 2 && $platform == "linux" ]]; then
-                    log "You may see the langid error above. This is normal, let's try to make it work"
-                    print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
-                    log "Please read the message below:"
-                    print "* Unplug and replug the device 2 times"
-                    print "* After doing this, continue by pressing Enter/Return"
-                    pause
-                    log "Checking for device"
-                    device_pwnd="$($irecovery3 -q | grep "PWND" | cut -c 7-)"
-                    if [[ -n $device_pwnd ]]; then
-                        log "Success!"
-                        print "* Pwned: $device_pwnd"
-                    else
-                        popd >/dev/null
-                        device_pwnerror
-                    fi
+            if [[ $tool_pwned != 0 && $tool_pwned != 2 && $platform == "linux" ]] && (( device_proc >= 6 )); then
+                log "You may see the langid error above. This is normal, let's try to make it work"
+                print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
+                log "Please read the message below:"
+                print "* Unplug and replug the device 2 times"
+                print "* After doing this, continue by pressing Enter/Return"
+                pause
+                log "Checking for device"
+                device_pwnd="$($irecovery3 -q | grep "PWND" | cut -c 7-)"
+                if [[ -n $device_pwnd ]]; then
+                    log "Success!"
+                    print "* Pwned: $device_pwnd"
                 else
                     popd >/dev/null
                     device_pwnerror
                 fi
+            else
+                popd >/dev/null
+                device_pwnerror
             fi
         ;;
 
@@ -7001,7 +6961,7 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_majver == "14" && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     elif [[ $mac_cocoa == 1 ]]; then

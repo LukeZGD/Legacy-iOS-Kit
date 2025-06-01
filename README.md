@@ -143,7 +143,8 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
 - [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite) - dora2ios (used on macOS); LukeZGD fork
 - [iPwnder32](https://github.com/dora2-iOS/iPwnder32/tree/243ea5c6d1bd15f8bdd0b3a1ff4a7729bc14bac4) - dora2ios (old version with libusb used on Linux)
-- [gaster](https://github.com/verygenericname/gaster) - 0x7ff; verygenericname/Nathan fork
+- [gaster](https://github.com/LukeZGD/gaster) - 0x7ff; LukeZGD fork
+- [primepwn](https://github.com/LukeZGD/primepwn)
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/LukeeGD/libimobiledevice) - libimobiledevice
