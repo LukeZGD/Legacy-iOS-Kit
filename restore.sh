@@ -519,7 +519,7 @@ set_tool_paths() {
     fi
     log "Running on platform: $platform ($platform_ver - $platform_arch)"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if [[ $mac_majver == "14" && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     elif [[ $mac_cocoa == 1 ]]; then
@@ -2079,7 +2079,7 @@ device_enter_mode() {
                 # A6/A4/3gs/touch 3 uses ipwndfu/ipwnder
                 local selection=("ipwnder" "ipwndfu")
                 if [[ $platform == "linux" ]]; then
-                    selection=("ipwndfu" "ipwnder (limera1n)")
+                    selection=("ipwnder (limera1n)" "ipwndfu")
                     if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" ]]; then
                         selection+=("ipwnder (SHAtter)")
                     fi
@@ -7001,7 +7001,7 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if [[ $mac_majver == "14" && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     elif [[ $mac_cocoa == 1 ]]; then
