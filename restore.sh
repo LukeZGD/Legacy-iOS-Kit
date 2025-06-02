@@ -2119,12 +2119,6 @@ device_pwnerror() {
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
             echo
         fi
-    elif [[ $platform == "macos" && $tool_pwndfu == "ipwndfu" ]]; then
-        error_msg+=$'\n* If you get the error "No backend available" in ipwndfu, install libusb in Homebrew/MacPorts'
-    elif [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
-        if [[ $device_proc == 4 || $device_proc == 6 ]]; then
-            error_msg+=$'\n* Try to do attempts with ipwndfu selected if ipwnder does not work.'
-        fi
     fi
     error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
@@ -2266,9 +2260,6 @@ device_ipwndfu() {
             log "Running rmsigchks..."
             $p2_sudo "$python2" rmsigchks.py
             tool_pwned=$?
-            if [[ $platform == "macos" ]]; then
-                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
-            fi
             if [[ $tool_pwned != 0 ]]; then
                 error "ipwndfu $1 failed. Please run the script again"
             fi
@@ -2282,9 +2273,6 @@ device_ipwndfu() {
             log "Installing alloc8 to device"
             $p2_sudo "$python2" ipwndfu -x
             tool_pwned=$?
-            if [[ $platform == "macos" ]]; then
-                print "* If you get the error \"No backend available,\" install libusb in Homebrew/MacPorts"
-            fi
         ;;
     esac
     if [[ $device_sudoloop == 1 ]]; then
