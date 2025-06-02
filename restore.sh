@@ -2134,7 +2134,9 @@ device_pwnerror() {
 }
 
 device_send_unpacked_ibss() {
+    local pwnrec="pwned iBSS"
     if [[ $device_boot4 == 1 ]]; then
+        pwnrec="pwned recovery"
         cp iBSS.patched pwnediBSS
     else
         device_rd_build=
@@ -2153,9 +2155,9 @@ device_send_unpacked_ibss() {
     local irec="$($irecovery -q 2>&1)"
     device_pwnd="$(echo "$irec" | grep "PWND" | cut -c 7-)"
     if [[ -z $device_pwnd && $irec != "ERROR"* ]]; then
-        log "Device should now be in pwned iBSS mode."
+        log "Device should now be in $pwnrec mode."
     else
-        warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
+        error "Device failed to enter $pwnrec mode."
     fi
 }
 
@@ -5337,14 +5339,14 @@ restore_latest() {
 restore_prepare_pwnrec64() {
     local attempt=1
     if [[ $device_pwnrec == 1 ]]; then
-        warn "Pwned recovery flag detected, skipping pwnREC mode procedure. Proceed with caution"
+        warn "Pwned recovery flag detected, skipping pwned recovery mode procedure. Proceed with caution"
         return
     fi
 
     device_enter_mode pwnDFU
     sleep 1
     while (( attempt <= 5 )); do
-        log "Entering pwnREC mode... (Attempt $attempt of 5)"
+        log "Entering pwned recovery mode... (Attempt $attempt of 5)"
         log "Sending iBSS..."
         $irecovery -f $iBSS.im4p
         sleep 1
@@ -5365,7 +5367,7 @@ restore_prepare_pwnrec64() {
     fi
 
     if (( attempt > 5 )); then
-        error "Failed to enter pwnREC mode. You might have to force restart your device and start over entering pwnDFU mode again"
+        error "Failed to enter pwned recovery mode. You might have to force restart your device and start over entering pwnDFU mode again"
     fi
 }
 
@@ -6278,8 +6280,14 @@ device_ramdisk() {
                 ;;
                 6.1.[6543] ) untether="p0sixspwn.tar";;
                 6* )         untether="evasi0n6-untether.tar";;
+                5* )         untether="g1lbertJB/${device_type}_${build}.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
-                5* | 4.[32]* ) untether="g1lbertJB/${device_type}_${build}.tar";;
+                4.[32]* )
+                    case $device_type in
+                        iPad2,* | iPhone3,3 ) untether=1;;
+                        * ) untether="g1lbertJB/${device_type}_${build}.tar";;
+                    esac
+                ;;
                 3* ) [[ $device_type == "iPhone2,1" ]] && untether=1;;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
@@ -6308,7 +6316,7 @@ device_ramdisk() {
             log "Nice, iOS $vers is compatible."
             if [[ $device_type == "iPhone2,1" && $vers == "3"* ]]; then
                 :
-            else
+            elif [[ $untether != 1 ]]; then
                 log "Sending $untether"
                 $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
                 # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
@@ -6328,7 +6336,7 @@ device_ramdisk() {
                 #7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
-                5* | 4.[32]* ) untether="${device_type}_${build}.tar";;
+                5* | 4.[32]* ) [[ $untether != 1 ]] && untether="${device_type}_${build}.tar";;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
@@ -6347,8 +6355,10 @@ device_ramdisk() {
                 8* ) :;; # do not extract, will extract later below
                 4.[10]* | 3* ) :;; # do not extract, already extracted above
                 * )
-                    log "Extracting $untether"
-                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    if [[ $untether != 1 ]]; then
+                        log "Extracting $untether"
+                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    fi
                 ;;
             esac
             case $vers in
@@ -9162,7 +9172,7 @@ device_jailbreak_confirm() {
             pause
             return
         ;;
-        [765]* | 4.3* | 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
+        [7654]* | 3.2* | 3.1.3 )
             if [[ $device_type == "iPhone2,1" && $device_vers == "3.1.3" ]]; then
                 warn "To jailbreak iOS 3.x for the 3GS, make sure your device is restored with Legacy iOS Kit's \"Restore/Downgrade\" first."
                 print "* If you have not done this, do not continue."
