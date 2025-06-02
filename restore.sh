@@ -6336,12 +6336,11 @@ device_ramdisk() {
                 #7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
                 6* ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
-                5* | 4.[32]* ) [[ $untether != 1 ]] && untether="${device_type}_${build}.tar";;
+                * ) [[ $untether != 1 ]] && untether="${device_type}_${build}.tar";;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
-                4.2.[8761] | 4.[10]* | 3* )
-                    untether="${device_type}_${build}.tar"
+                [43]* )
                     log "fstab"
                     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
                         $scp -P $ssh_port $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
