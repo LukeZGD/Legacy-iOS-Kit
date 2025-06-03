@@ -2138,7 +2138,7 @@ device_send_unpacked_ibss() {
     fi
     log "Sending unpacked iBSS..."
     $primepwn pwnediBSS
-    tool_pwned=$?
+    local tool_pwned=$?
     rm pwnediBSS
     if [[ $tool_pwned != 0 ]]; then
         error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
@@ -5220,20 +5220,8 @@ restore_futurerestore() {
             unzip -q "$file" -d .
             tar -xJvf futurerestore*.xz
             mv futurerestore ${futurerestore2}-${fr_branch}
-            #perl -pi -e 's/nightly/nightlo/' $futurerestore2 # disable update check for now since it segfaults
             chmod +x ${futurerestore2}-${fr_branch}
-            if [[ $platform == "macos" ]]; then
-                : '
-                ldid="../saved/ldid_${platform}_${platform_arch}"
-                if [[ ! -e $ldid ]]; then
-                    download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_$platform_arch ldid
-                    chmod +x ldid
-                    mv ldid $ldid
-                fi
-                $ldid -S $futurerestore2
-                '
-                xattr -cr ${futurerestore2}-${fr_branch}
-            fi
+            [[ $platform == "macos" ]] && xattr -cr ${futurerestore2}-${fr_branch}
             echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
         fi
         futurerestore2+="-${fr_branch}"
@@ -6288,6 +6276,7 @@ device_ramdisk() {
                     return
                 ;;
             esac
+
             # use everuntether instead of daibutsu+dsc haxx for A5(X) 8.0-8.2 and 5C 8.4
             if [[ $device_proc == 5 ]]; then
                 case $vers in
@@ -6333,6 +6322,7 @@ device_ramdisk() {
             # do stuff
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
+                7* )    device_send_rdtar fstab7.tar;;
                 6* )    device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] )
                     log "launchd to punchd"
@@ -6343,18 +6333,23 @@ device_ramdisk() {
                 5* ) device_send_rdtar g1lbertJB.tar;;
                 [43]* )
                     log "fstab"
+                    local fstab="fstab_new" # disk0s2s1 data
                     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
-                        $scp -P $ssh_port $jelbrek/fstab_old root@127.0.0.1:/mnt1/private/etc/fstab
-                    else
-                        $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
+                        fstab="fstab_old" # disk0s2 data
                     fi
-                    $ssh -p $ssh_port root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
+                    $scp -P $ssh_port $jelbrek/$fstab root@127.0.0.1:/mnt1/private/etc/fstab
+                    $ssh -p $ssh_port root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist" # idk if this is really needed but ill keep it
                 ;;
             esac
 
             # untether extraction
             case $vers in
-                8* ) :;; # extract later
+                8* ) # extract now if everuntether, later if daibutsu+dsc haxx
+                    if [[ $ipsw_everuntether == 1 ]]; then
+                        log "Extracting $untether"
+                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    fi
+                ;;
                 4.[10]* | 3* ) :;; # already extracted
                 * )
                     if [[ $untether != 1 ]]; then
@@ -6373,12 +6368,13 @@ device_ramdisk() {
             fi
 
             # extras extraction
+            if [[ $vers == "9"* ]]; then
+                # required stuff for everuntether and untetherhomedepot
+                [[ $vers != "9.0"* ]] && device_send_rdtar daemonloader.tar
+                device_send_rdtar launchctl.tar
+            fi
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
-            fi
-            if [[ $vers == "9"* || $ipsw_everuntether == 1 ]]; then
-                device_send_rdtar daemonloader.tar
-                device_send_rdtar launchctl.tar
             fi
             case $vers in
                 [543]* ) device_send_rdtar cydiasubstrate.tar;;
@@ -6387,7 +6383,7 @@ device_ramdisk() {
                 3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
 
-            # final setup for ios 8.x, and/or reboot
+            # final setup for ios 8.x daibutsu, and/or reboot
             if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then # || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
@@ -6439,19 +6435,20 @@ device_ramdisk() {
 device_ramdisk_setnvram() {
     log "Sending commands for setting NVRAM variables..."
     $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
+    local nvram="nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i"
     if [[ $rec == 2 ]]; then
         case $device_type in
-            iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/disk.dmg";;
-            iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
-            iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
-            iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
+            iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/disk.dmg";;
+            iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
+            iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/j/k/l/m/n/o/p/q/r/disk.dmg";;
+            iPod5,1   ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/j/k/l/m/disk.dmg";;
             iPhone5,* )
                 local selection=("iOS 7.1.x" "iOS 7.0.x")
                 input "Select this device's base version:"
                 select_option "${selection[@]}"
                 case $? in
-                    1 ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
-                    * ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg";;
+                    1 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/j/k/l/m/disk.dmg";;
+                    * ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg";;
                 esac
             ;;
             iPad1,1 | iPod3,1 )
