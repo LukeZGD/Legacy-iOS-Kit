@@ -6248,12 +6248,16 @@ device_ramdisk() {
             device_ramdisk_iosvers
             vers=$device_vers
             build=$device_build
+
             case $vers in
                 9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
-                9.2* | 9.1 ) untether="untetherhomedepot921.tar";;
-                9.0* )       untether="everuntether.tar";;
-                8* )         untether="daibutsu/untether.tar";;
-                7.1* ) # remove for lyncis
+                9.2* | 9.1 )       untether="untetherhomedepot921.tar";;
+                9.0* )             untether="everuntether.tar";;
+                8* )               untether="daibutsu/untether.tar";;
+                6.1.[6543] )       untether="p0sixspwn.tar";;
+                6* )               untether="evasi0n6-untether.tar";;
+                5* )               untether="g1lbertJB/${device_type}_${build}.tar";;
+                7.1* )
                     case $device_type in
                         iPod* ) untether="panguaxe-ipod.tar";;
                         *     ) untether="panguaxe.tar";;
@@ -6266,12 +6270,12 @@ device_ramdisk() {
                         untether="evasi0n7-untether-70.tar"
                     fi
                 ;;
-                6.1.[6543] ) untether="p0sixspwn.tar";;
-                6* )         untether="evasi0n6-untether.tar";;
-                5* )         untether="g1lbertJB/${device_type}_${build}.tar";;
-                4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 ) untether="greenpois0n/${device_type}_${build}.tar";;
+                4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
+                    untether="greenpois0n/${device_type}_${build}.tar"
+                ;;
                 4.[32]* )
                     case $device_type in
+                        # untether=1 means no untether package, but the var still needs to be set
                         iPad2,* | iPhone3,3 ) untether=1;;
                         * ) untether="g1lbertJB/${device_type}_${build}.tar";;
                     esac
@@ -6284,7 +6288,7 @@ device_ramdisk() {
                     return
                 ;;
             esac
-            # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
+            # use everuntether instead of daibutsu+dsc haxx for A5(X) 8.0-8.2 and 5C 8.4
             if [[ $device_proc == 5 ]]; then
                 case $vers in
                     8.[012]* )
@@ -6296,35 +6300,44 @@ device_ramdisk() {
                 ipsw_everuntether=1
                 untether="everuntether.tar"
             fi
+
+            # untether var must be set by now
             if [[ -z $untether ]]; then
                 warn "iOS $vers is not supported for jailbreaking with SSHRD."
                 $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
                 return
             fi
             log "Nice, iOS $vers is compatible."
+
+            # skip untether stuff for 3gs 3.x, kernel is patched for those
             if [[ $device_type == "iPhone2,1" && $vers == "3"* ]]; then
                 :
             elif [[ $untether != 1 ]]; then
                 log "Sending $untether"
                 $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
-                # 3.1.3-4.1 untether needs to be extracted early (before data partition is mounted)
+                case $vers in
+                    [543]* ) untether="${device_type}_${build}.tar";; # remove folder name after sending tar
+                esac
+                # 3.1.3–4.1 untether must be extracted before data partition mount
                 case $vers in
                     4.[10]* | 3.2* | 3.1.3 )
-                        untether="${device_type}_${build}.tar"
                         log "Extracting $untether"
                         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                     ;;
                 esac
             fi
+
             log "Mounting data partition"
             $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+
+            # do stuff
             case $vers in
                 [98]* ) device_send_rdtar fstab8.tar;;
-                7* ) device_send_rdtar fstab7.tar;; # remove for lyncis
-                #7.0* ) device_send_rdtar fstab7.tar;; # remove for lyncis 7.0.x
-                6* ) device_send_rdtar fstab_rw.tar;;
-                4.2.[8761] ) $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd";;
-                * ) [[ $untether != 1 ]] && untether="${device_type}_${build}.tar";;
+                6* )    device_send_rdtar fstab_rw.tar;;
+                4.2.[8761] )
+                    log "launchd to punchd"
+                    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
+                ;;
             esac
             case $vers in
                 5* ) device_send_rdtar g1lbertJB.tar;;
@@ -6338,9 +6351,11 @@ device_ramdisk() {
                     $ssh -p $ssh_port root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist"
                 ;;
             esac
+
+            # untether extraction
             case $vers in
-                8* ) :;; # do not extract, will extract later below
-                4.[10]* | 3* ) :;; # do not extract, already extracted above
+                8* ) :;; # extract later
+                4.[10]* | 3* ) :;; # already extracted
                 * )
                     if [[ $untether != 1 ]]; then
                         log "Extracting $untether"
@@ -6348,18 +6363,16 @@ device_ramdisk() {
                     fi
                 ;;
             esac
-            case $vers in
-                [543]* ) device_send_rdtar cydiasubstrate.tar;;
-            esac
-            case $vers in
-                3* ) device_send_rdtar cydiahttpatch.tar;;
-            esac
+
+            # bootstrap extraction
             if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
                 # 4.3.x 3gs'es have little free space in rootfs. workaround: extract an older strap that takes less space
                 device_send_rdtar freeze5.tar data
             else
                 device_send_rdtar freeze.tar data
             fi
+
+            # extras extraction
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
             fi
@@ -6367,11 +6380,20 @@ device_ramdisk() {
                 device_send_rdtar daemonloader.tar
                 device_send_rdtar launchctl.tar
             fi
+            case $vers in
+                [543]* ) device_send_rdtar cydiasubstrate.tar;;
+            esac
+            case $vers in
+                3* ) device_send_rdtar cydiahttpatch.tar;;
+            esac
+
+            # final setup for ios 8.x, and/or reboot
             if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then # || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
                 $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh $vers; rm /mnt1/move.sh"
+
                 if [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x. but this portion is unused anyway since ramdisk method is disabled for 7.x
                     log "Symlinking lyncis"
                     $ssh -p $ssh_port root@127.0.0.1 "mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup; ln -s /lyncis /mnt1/usr/libexec/CrashHousekeeping"
@@ -6388,6 +6410,7 @@ device_ramdisk() {
                 log "Rebooting"
                 $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             fi
+
             log "Cool, done and jailbroken (hopefully)"
             return
         ;;
@@ -9109,7 +9132,8 @@ device_jailbreak_confirm() {
     fi
     if [[ $device_vers == "7"* ]]; then
         warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
-        print "* It is recommended to use evasi0n7/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
+        print "* It is recommended to use evasi0n7/Pangu/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
+        [[ $ipsw_jailbreak == 1 ]] && warn "Jailbreak flag enabled. You may encounter issues when jailbreaking 7.x with ramdisk method, especially baseband issues."
         echo
     fi
     if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
@@ -9129,13 +9153,14 @@ device_jailbreak_confirm() {
             print "* For this version, evasi0n7 on Windows/Mac can be used instead of this option."
             print "* https://ios.cfw.guide/installing-evasi0n7/"
             pause
-            return
+            [[ $ipsw_jailbreak != 1 ]] && return
         ;;
         7.1* )
-            print "* For this version, use Lyncis to jailbreak your device."
+            print "* For this version, use Pangu or Lyncis to jailbreak your device."
+            print "* https://ios.cfw.guide/installing-pangu7/"
             print "* https://ios.cfw.guide/using-lyncis/"
             pause
-            return
+            [[ $ipsw_jailbreak != 1 ]] && return
         ;;
         8* | 9.0* )
             print "* For this version, you can use EverPwnage and sideload it to your device."
