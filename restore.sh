@@ -5979,16 +5979,6 @@ device_ramdisk() {
     local mode="$1"
     local rec=2
 
-    if [[ $device_argmode != "none" ]]; then
-        if [[ $1 == "jailbreak" || $1 == "justboot" ]]; then
-            device_enter_mode pwnDFU
-        elif [[ $device_proc == 1 ]]; then
-            device_enter_mode DFU
-        else
-            device_buttons
-        fi
-    fi
-
     if [[ $1 == "setnvram" ]]; then
         rec=$2
     fi
@@ -6126,14 +6116,13 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        if [[ $device_type == "iPhone3,3" ]]; then
+        if [[ $device_type == "iPad2,"* || $device_type == "iPhone3,3" ]]; then
             case $build_id in
-                8E600 | 8E501 ) device_boot4=1;;
+                8[FGHJKL]* | 8E600 | 8E501 ) device_boot4=1;;
             esac
         fi
-        if [[ $build_id == "8"* && $device_type == "iPad2"* ]] || [[ $device_boot4 == 1 ]]; then
+        if [[ $device_boot4 == 1 ]]; then
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "-v amfi=0xff cs_enforcement_disable=1"
-            device_boot4=1
         else
             "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "$device_bootargs"
         fi
@@ -6165,6 +6154,14 @@ device_ramdisk() {
     if [[ $device_argmode == "none" ]]; then
         log "Done creating SSH ramdisk files: saved/$device_type/ramdisk_$build_id"
         return
+    fi
+
+    if [[ $1 == "jailbreak" || $1 == "justboot" ]]; then
+        device_enter_mode pwnDFU
+    elif [[ $device_proc == 1 ]]; then
+        device_enter_mode DFU
+    else
+        device_buttons
     fi
 
     if [[ $device_type == "iPad1,1" && $build_id != "9"* ]]; then
