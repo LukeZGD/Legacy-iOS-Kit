@@ -596,6 +596,9 @@ install_depends() {
         fi
         sudo apt update
         sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        if [[ $UBUNTU_CODENAME == "jammy" ]]; then
+            sudo apt install -y python2
+        fi
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -2043,11 +2046,7 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if [[ $platform == "linux" ]] && [[ $device_proc == 6 || $device_proc == 7 ]]; then
-                # A6/A7 linux uses ipwndfu
-                device_ipwndfu pwn
-                tool_pwned=$?
-            elif [[ $2 == "alloc8" ]]; then
+            if [[ $2 == "alloc8" ]]; then
                 # installing alloc8 requires pwning with ipwndfu
                 device_ipwndfu pwn
                 tool_pwned=$?
@@ -2067,6 +2066,7 @@ device_enter_mode() {
                     print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
                 elif [[ $platform == "linux" ]]; then
                     opt="$ipwnder -p"
+                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
@@ -2234,23 +2234,7 @@ device_ipwndfu() {
             log "Placing device to pwnDFU Mode using ipwndfu"
             $p2_sudo "$python2" ipwndfu -p
             tool_pwned=$?
-            if [[ $tool_pwned != 0 && $tool_pwned != 2 && $platform == "linux" ]] && (( device_proc >= 6 )); then
-                log "You may see the langid error above. This is normal, let's try to make it work"
-                print "* If it is any other error, it may have failed. Just continue, re-enter DFU, and retry"
-                log "Please read the message below:"
-                print "* Unplug and replug the device 2 times"
-                print "* After doing this, continue by pressing Enter/Return"
-                pause
-                log "Checking for device"
-                device_pwnd="$($irecovery3 -q | grep "PWND" | cut -c 7-)"
-                if [[ -n $device_pwnd ]]; then
-                    log "Success!"
-                    print "* Pwned: $device_pwnd"
-                else
-                    popd >/dev/null
-                    device_pwnerror
-                fi
-            else
+            if [[ $tool_pwned != 0 ]]; then
                 popd >/dev/null
                 device_pwnerror
             fi
@@ -2261,6 +2245,7 @@ device_ipwndfu() {
             $p2_sudo "$python2" rmsigchks.py
             tool_pwned=$?
             if [[ $tool_pwned != 0 ]]; then
+                popd >/dev/null
                 error "ipwndfu $1 failed. Please run the script again"
             fi
         ;;
@@ -5953,14 +5938,16 @@ device_ramdisk64() {
         sleep 1
     done
 
+    echo
     print "* Mount filesystems with this command (for iOS 11.3 and newer):"
-    print "    /usr/bin/mount_filesystems"
+    print "    mount_filesystems"
     print "* Mount root filesystem with this command (for iOS 10.3.x/11.x):"
-    print "    /sbin/mount_apfs /dev/disk0s1s1 /mnt1"
+    print "    mount_apfs /dev/disk0s1s1 /mnt1"
     print "* Mount root filesystem with this command (for iOS 10.2.1 and older):"
-    print "    /sbin/mount_hfs /dev/disk0s1s1 /mnt1"
+    print "    mount_hfs /dev/disk0s1s1 /mnt1"
     warn "Mounting and/or modifying data partition (/mnt2) might not work for 64-bit iOS"
     warn "Mount filesystems at your own risk: there is a chance of bootlooping! Especially on versions older than iOS 11.3."
+    print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/SSH-Ramdisk"
 
     menu_ramdisk $build_id
 }
@@ -6447,9 +6434,12 @@ device_ramdisk() {
 
         * ) log "Device should now boot to SSH ramdisk mode.";;
     esac
+
     echo
     print "* Mount filesystems with this command:"
     print "    mount.sh"
+    print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/SSH-Ramdisk"
+
     menu_ramdisk
 }
 
@@ -6696,7 +6686,7 @@ menu_ramdisk() {
             ;;
             "dump-bbactrec" ) device_dumprd;;
             "trollstore" )
-                print "* Make sure that your device is on iOS 14 or 15 before continuing."
+                print "* Make sure that your device is on iOS 14 or 15 before continuing, and have the Tips app installed."
                 print "* If your device is on iOS 13 or below, TrollStore will NOT work."
                 select_yesno
                 if [[ $? != 1 ]]; then
