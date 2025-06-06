@@ -33,9 +33,9 @@ jobs:
           unzip keys.zip -d .
           unzip ipwndfu.zip -d .
           cp -r Legacy-iOS-Kit-Keys-master/* ../saved/firmware
-          mv ipwndfu*/ ../saved/ipwndfu
+          mv ipwndfu*/ ../saved/ipwndfu_python3
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
-          echo "9b24f33910d5b7e42825cc1df0ca98a08109f3b3" > ../saved/ipwndfu/sha1check
+          echo "9b24f33910d5b7e42825cc1df0ca98a08109f3b3" > ../saved/ipwndfu_python3/sha1check
           popd
 
       - name: Move linux binaries

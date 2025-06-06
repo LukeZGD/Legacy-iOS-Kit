@@ -499,7 +499,7 @@ set_tool_paths() {
         if [[ -n $mac_name ]]; then
             platform_ver="$mac_name $platform_ver"
         fi
-        xattr -cr ../bin/macos
+        /usr/bin/xattr -cr ../bin/macos
 
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
@@ -596,9 +596,6 @@ install_depends() {
         fi
         sudo apt update
         sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
-        if [[ $UBUNTU_CODENAME == "jammy" ]]; then
-            sudo apt install -y python2
-        fi
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -626,7 +623,7 @@ install_depends() {
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
-        xattr -cr ../bin/macos
+        /usr/bin/xattr -cr ../bin/macos
         log "Installing Xcode Command Line Tools"
         xcode-select --install
         print "* Make sure to install requirements from Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
@@ -654,7 +651,7 @@ install_depends() {
 version_update_check() {
     pushd "tmp$$" >/dev/null
     if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
-        xattr -cr ../bin/macos
+        /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
     github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
@@ -2131,67 +2128,29 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local python="$(command -v python2)" # change to python3 if alloc8 gets fixed on python3
-    local ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
-    local ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
-    local ipwndfu="ipwndfu" # ipwndfu_python3
+    local python="$(command -v python3)"
+    local ipwndfu_comm="e40a57a0c64f255f74be460faad9b34dc0a88e98"
+    local ipwndfu_sha1="bbf00a7fe77f1520d8eb9d6174e4865ac22f40d2"
+    local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
         psudo="sudo"
     fi
 
-    # this entire section of pyenv/python2 stuff can/will be removed but not now (son)
-    local pyenv="$(command -v pyenv)"
-    local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
-    if [[ -z "$pyenv" && -e "$HOME/.pyenv/bin/pyenv" ]]; then
-        pyenv="$HOME/.pyenv/bin/pyenv"
-    fi
-    if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
+    device_enter_mode pwnDFU
+
+    if [[ $platform == "macos" ]] && (( mac_majver >= 12 )); then
+        python="/usr/bin/python3"
+    elif [[ $platform == "macos" ]]; then
         python="/usr/bin/python"
-        log "Using macOS system python2"
-        print "* You may also install python2 from pyenv if something is wrong with system python2"
-        print "* Install pyenv by running: curl https://pyenv.run | bash"
-        print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-    elif [[ -n "$python" && $device_sudoloop == 1 ]]; then
-        p2_sudo="sudo"
-    elif [[ -z "$python" && ! -e "$pyenv2" ]]; then
-        warn "python2 is not installed. Attempting to install python2 before continuing"
-        print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-        if [[ -z "$pyenv" ]]; then
-            warn "pyenv is not installed. Attempting to install pyenv before continuing"
-            print "* Install pyenv by running: curl https://pyenv.run | bash"
-            log "Installing pyenv"
-            curl https://pyenv.run | bash
-            pyenv="$HOME/.pyenv/bin/pyenv"
-            if [[ ! -e "$pyenv" ]]; then
-                error "Cannot detect pyenv, its installation may have failed." \
-                "* Try installing pyenv manually before retrying."
-            fi
-        fi
-        log "Updating pyenv"
-        "$pyenv" update
-        log "Installing python2 using pyenv"
-        print "* This step may take some time - Be patient and let it run."
-        export CFLAGS="-std=gnu17"
-        "$pyenv" install 2.7.18
-        if [[ ! -e "$pyenv2" ]]; then
-            warn "Cannot detect python2 from pyenv, its installation may have failed."
-            print "* Try installing pyenv and/or python2 manually:"
-            print "    pyenv:   > curl https://pyenv.run | bash"
-            print "    python2: > \"$pyenv\" install 2.7.18"
-            if [[ $distro == "fedora-atomic" ]]; then
-                print "* For Fedora Atomic, you will also need to set up toolbox and build environment."
-                print "* Follow the commands here under Fedora Silverblue: https://github.com/pyenv/pyenv/wiki#suggested-build-environment"
-                print "* Run the pyenv install commands while in the toolbox container."
-            elif [[ $platform == "macos" ]]; then
-                print "* For macOS, make sure to have openssl installed from Homebrew/MacPorts."
-            fi
-            error "Cannot detect python2 for ipwndfu, cannot continue."
-        fi
+        ipwndfu="ipwndfu"
+        ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
+        ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
+    elif [[ -z $python3 ]]; then
+        error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
     fi
-    if [[ -e "$pyenv2" ]]; then
-        log "python2 from pyenv detected, this will be used"
-        python="$pyenv2"
+    if [[ $device_sudoloop == 1 ]]; then
+        psudo="sudo"
     fi
 
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
@@ -2213,8 +2172,6 @@ device_ipwndfu_alloc8() {
         mv n88ap-iBSS-4.3.5.img3 ../saved/
     fi
     cp ../saved/n88ap-iBSS-4.3.5.img3 ../saved/$ipwndfu/
-
-    device_enter_mode pwnDFU
 
     pushd ../saved/$ipwndfu/ >/dev/null
     log "Installing alloc8 to device"
@@ -5173,7 +5130,7 @@ restore_futurerestore() {
             tar -xJvf futurerestore*.xz
             mv futurerestore ${futurerestore2}-${fr_branch}
             chmod +x ${futurerestore2}-${fr_branch}
-            [[ $platform == "macos" ]] && xattr -cr ${futurerestore2}-${fr_branch}
+            [[ $platform == "macos" ]] && /usr/bin/xattr -cr ${futurerestore2}-${fr_branch}
             echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
         fi
         futurerestore2+="-${fr_branch}"
