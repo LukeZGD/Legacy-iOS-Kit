@@ -2149,9 +2149,6 @@ device_ipwndfu_alloc8() {
     elif [[ -z $python3 ]]; then
         error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
     fi
-    if [[ $device_sudoloop == 1 ]]; then
-        psudo="sudo"
-    fi
 
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
