@@ -1966,32 +1966,14 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    5 ) device_send_unpacked_ibss;;
-                    6 )
-                        if [[ $device_pwnd == "iPwnder" ]]; then
-                            mkdir image3 ../saved/image3 2>/dev/null
-                            cp ../saved/image3/* image3/ 2>/dev/null
-                            "../bin/macos/ipwnder2" --upload-iboot
-                            cp image3/* ../saved/image3/
-                            sleep 1
-                            device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
-                            if [[ -z $device_pwnd ]]; then
-                                log "Device should now be in pwned iBSS mode."
-                            else
-                                warn "Device may have failed to enter pwned iBSS mode. Sending iBEC will fail."
-                            fi
-                        elif [[ $device_pwnd == "checkm8" ]]; then
-                            device_send_unpacked_ibss
-                        fi
-                    ;;
-                    7 )
-                        if [[ $device_pwnd == "checkm8" ]]; then
-                            device_ipwndfu rmsigchks
+                    [56] ) device_send_unpacked_ibss;;
+                    [789] | 10 )
+                        if [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
+                            warn "Device is not pwned with ipwnder or updated gaster. Restoring/ramdisk booting will fail."
                         fi
                         log "gaster reset"
                         $gaster reset
                     ;;
-                    [89] | 10 ) log "gaster reset"; $gaster reset;;
                 esac
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
@@ -2029,7 +2011,7 @@ device_enter_mode() {
                     log "Found device in pwned DFU mode."
                     print "* Pwned: $device_pwnd"
                 else
-                    local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU, and retry.'
+                    local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
                         error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
                         error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
@@ -2046,11 +2028,7 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
-            if [[ $2 == "alloc8" ]]; then
-                # installing alloc8 requires pwning with ipwndfu
-                device_ipwndfu pwn
-                tool_pwned=$?
-            elif (( device_proc >= 7 )); then
+            if (( device_proc >= 7 )); then
                 # A7/A8/A9/A10 uses gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
@@ -2063,10 +2041,10 @@ device_enter_mode() {
                 log "Placing device to pwnDFU mode using ipwnder"
                 opt="$ipwnder -d"
                 if [[ $device_proc == 6 ]]; then
-                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C, re-enter DFU, and retry."
+                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
                 elif [[ $platform == "linux" ]]; then
                     opt="$ipwnder -p"
-                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
+                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
@@ -2097,10 +2075,6 @@ device_enter_mode() {
             fi
             if [[ $device_proc == 6 && $device_pwnd == "checkm8" ]]; then
                 device_send_unpacked_ibss
-            elif [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
-                device_ipwndfu rmsigchks
-                log "gaster reset"
-                $gaster reset
             fi
         ;;
     esac
@@ -2155,24 +2129,32 @@ device_send_unpacked_ibss() {
     fi
 }
 
-device_ipwndfu() {
+device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local python2="$(command -v python2)"
+    local python="$(command -v python2)" # change to python3 if alloc8 gets fixed on python3
+    local ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
+    local ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
+    local ipwndfu="ipwndfu" # ipwndfu_python3
+    local psudo
+    if [[ $device_sudoloop == 1 ]]; then
+        psudo="sudo"
+    fi
+
+    # this entire section of pyenv/python2 stuff can/will be removed but not now (son)
     local pyenv="$(command -v pyenv)"
     local pyenv2="$HOME/.pyenv/versions/2.7.18/bin/python2"
-
     if [[ -z "$pyenv" && -e "$HOME/.pyenv/bin/pyenv" ]]; then
         pyenv="$HOME/.pyenv/bin/pyenv"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver < 12 )); then
-        python2="/usr/bin/python"
+        python="/usr/bin/python"
         log "Using macOS system python2"
         print "* You may also install python2 from pyenv if something is wrong with system python2"
         print "* Install pyenv by running: curl https://pyenv.run | bash"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
-    elif [[ -n "$python2" && $device_sudoloop == 1 ]]; then
+    elif [[ -n "$python" && $device_sudoloop == 1 ]]; then
         p2_sudo="sudo"
-    elif [[ -z "$python2" && ! -e "$pyenv2" ]]; then
+    elif [[ -z "$python" && ! -e "$pyenv2" ]]; then
         warn "python2 is not installed. Attempting to install python2 before continuing"
         print "* Install python2 from pyenv by running: pyenv install 2.7.18"
         if [[ -z "$pyenv" ]]; then
@@ -2209,62 +2191,47 @@ device_ipwndfu() {
     fi
     if [[ -e "$pyenv2" ]]; then
         log "python2 from pyenv detected, this will be used"
-        if [[ $device_sudoloop == 1 ]]; then
-            p2_sudo="sudo"
-        fi
-        python2="$pyenv2"
+        python="$pyenv2"
     fi
 
-    local ipwndfu_comm="ba271dfd446b1cb3307c869d60b959a4adcf518f"
-    local ipwndfu_sha1="ee5327893defc1842513083734d1731779f0f1fd"
-    if [[ ! -s ../saved/ipwndfu/ipwndfu || $(cat ../saved/ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
-        rm -rf ../saved/ipwndfu*
+    if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
+        rm -rf ../saved/$ipwndfu
         download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
         unzip -q ipwndfu.zip -d ../saved
-        mv ../saved/ipwndfu-* ../saved/ipwndfu
-        echo "$ipwndfu_sha1" > ../saved/ipwndfu/sha1check
+        mv ../saved/ipwndfu-* ../saved/$ipwndfu
+        echo "$ipwndfu_sha1" > ../saved/$ipwndfu/sha1check
     fi
 
-    device_enter_mode DFU
+    if [[ ! -s ../saved/n88ap-iBSS-4.3.5.img3 ]]; then
+        log "Downloading iOS 4.3.5 iBSS"
+        "$dir/pzb" -g "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" -o n88ap-iBSS-4.3.5.img3 http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw
+        local ibss_sha="eb90af5310a958e6186f32c1440002962d1f975d"
+        local ibss_sha_local="$($sha1sum "n88ap-iBSS-4.3.5.img3" | awk '{print $1}')"
+        if [[ $ibss_sha_local != "$ibss_sha" ]]; then
+            error "SHA1sum mismatch. Expected $ibss_sha, got $ibss_sha_local. Please run the script again"
+        fi
+        mv n88ap-iBSS-4.3.5.img3 ../saved/
+    fi
+    cp ../saved/n88ap-iBSS-4.3.5.img3 ../saved/$ipwndfu/
 
-    pushd ../saved/ipwndfu/ >/dev/null
-    case $1 in
-        "pwn" )
-            tool_pwndfu="ipwndfu"
-            log "Placing device to pwnDFU Mode using ipwndfu"
-            $p2_sudo "$python2" ipwndfu -p
-            tool_pwned=$?
-            if [[ $tool_pwned != 0 ]]; then
-                popd >/dev/null
-                device_pwnerror
-            fi
-        ;;
+    device_enter_mode pwnDFU
 
-        "rmsigchks" )
-            log "Running rmsigchks..."
-            $p2_sudo "$python2" rmsigchks.py
-            tool_pwned=$?
-            if [[ $tool_pwned != 0 ]]; then
-                popd >/dev/null
-                error "ipwndfu $1 failed. Please run the script again"
-            fi
-        ;;
-
-        "alloc8" )
-            if [[ ! -s n88ap-iBSS-4.3.5.img3 ]]; then
-                log "Downloading iOS 4.3.5 iBSS"
-                "../$dir/pzb" -g "Firmware/dfu/iBSS.n88ap.RELEASE.dfu" -o n88ap-iBSS-4.3.5.img3 http://appldnld.apple.com/iPhone4/041-1965.20110721.gxUB5/iPhone2,1_4.3.5_8L1_Restore.ipsw
-            fi
-            log "Installing alloc8 to device"
-            $p2_sudo "$python2" ipwndfu -x
-            tool_pwned=$?
-        ;;
-    esac
+    pushd ../saved/$ipwndfu/ >/dev/null
+    log "Installing alloc8 to device"
+    $psudo "$python" ipwndfu -x
+    tool_pwned=$?
     if [[ $device_sudoloop == 1 ]]; then
         sudo rm *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
     fi
     popd >/dev/null
-    return $tool_pwned
+
+    if [[ $tool_pwned == 0 ]]; then
+        log "Done!"
+    else
+        warn "ipwndfu alloc8 seems to have failed. Just force restart the device, enter DFU, and try again."
+        print "* You may also need to force restart the device and re-enter DFU mode before retrying."
+        print "* To retry, just go back to: Useful Utilities -> Install alloc8 Exploit"
+    fi
 }
 
 download_file() {
@@ -5513,7 +5480,7 @@ restore_prepare() {
                     print " -> Go to: Useful Utilities -> Install alloc8 Exploit"
                     log "Do not disconnect your device, not done yet"
                     device_find_mode DFU 50
-                    device_alloc8
+                    device_ipwndfu_alloc8
                 else
                     restore_latest custom
                 fi
@@ -9006,7 +8973,7 @@ menu_usefulutilities() {
                             3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
                     ;;
-                    iPhone[23],* )
+                    iPhone[23],* | iPod4,1 )
                         case $device_vers in
                             3.1* | [456]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
@@ -9036,7 +9003,7 @@ menu_usefulutilities() {
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
-            "Install alloc8 Exploit" ) mode="device_alloc8";;
+            "Install alloc8 Exploit" ) mode="device_ipwndfu_alloc8";;
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
             "DFU Mode Helper" ) mode="device_dfuhelper";;
@@ -9085,20 +9052,6 @@ device_ssh() {
     fi
     $ssh -p $ssh_port ${ssh_user}@127.0.0.1
     kill $iproxy_pid
-}
-
-device_alloc8() {
-    device_enter_mode pwnDFU alloc8
-    device_ipwndfu alloc8
-    if [[ $tool_pwned == 0 ]]; then
-        log "Done!"
-    else
-        warn "ipwndfu alloc8 seems to have failed. Just force restart the device, enter DFU, and try again."
-    fi
-    print "* This may take several tries. It can fail a lot with \"Operation timed out\" error."
-    print "* If it fails, try to unplug and replug your device then run the script again."
-    print "* You may also need to force restart the device and re-enter DFU mode before retrying."
-    print "* To retry, just go back to: Useful Utilities -> Install alloc8 Exploit"
 }
 
 device_jailbreak_confirm() {
@@ -9475,7 +9428,7 @@ device_activate() {
 device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
-    if [[ $device_type == "iPhone3,"* ]]; then
+    if [[ $device_type == "iPhone3,"* || $device_type == "iPod4,1" ]]; then
         type="iPhone2,1"
         case $device_vers in
             4.2.1 ) build="8C148a";;
