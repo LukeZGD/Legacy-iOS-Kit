@@ -1956,6 +1956,7 @@ device_enter_mode() {
                 device_enter_mode DFU
                 return
             fi
+
             if [[ $device_mode == "DFU" ]]; then
                 device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
             fi
@@ -2026,7 +2027,7 @@ device_enter_mode() {
             device_enter_mode DFU
 
             if (( device_proc >= 7 )); then
-                # A7/A8/A9/A10 uses gaster
+                # 64-bit checkm8 devices use gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
                 $gaster pwn
@@ -2034,13 +2035,13 @@ device_enter_mode() {
                 log "gaster reset"
                 $gaster reset
             elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
-                # A6/3gs/touch 3 uses ipwnder
+                # A6/3gs/touch 3 use ipwnder
                 log "Placing device to pwnDFU mode using ipwnder"
-                opt="$ipwnder -d"
+                opt="$ipwnder -d" # ipwnder_lite
                 if [[ $device_proc == 6 ]]; then
                     print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
                 elif [[ $platform == "linux" ]]; then
-                    opt="$ipwnder -p"
+                    opt="$ipwnder -p" # ipwnder32 libusb
                     print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
@@ -2049,15 +2050,13 @@ device_enter_mode() {
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
             else
-                # A4/touch 2 uses primepwn
+                # A4/touch 2 use primepwn
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
                 tool_pwned=$?
             fi
-            if [[ $tool_pwned == 2 ]]; then
-                return
-            fi
             sleep 1
+
             log "Checking for device"
             irec_pwned=$($irecovery -q | grep -c "PWND")
             device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
@@ -2080,18 +2079,16 @@ device_enter_mode() {
 device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
-        error_msg+=$'\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
+        error_msg+=$'\n\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
         error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-            echo
-            error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
+            error_msg+=$'\n\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
             error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Zebra.'
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
-            echo
         fi
     fi
-    error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub'
+    error_msg+=$'\n\n* For more details, read the "Troubleshooting" wiki page in GitHub'
     error_msg+=$'\n* Troubleshooting links:
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
@@ -2147,7 +2144,7 @@ device_ipwndfu_alloc8() {
         ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
         ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
     elif [[ -z $python3 ]]; then
-        error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
+        error "Python 3 is not installed, cannot continue. Make sure to have python3 installed from your package manager."
     fi
 
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
@@ -3724,6 +3721,9 @@ ipsw_prepare_32bit() {
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
+        if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+        fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
@@ -4489,6 +4489,9 @@ ipsw_prepare_ios4powder() {
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs ${JBFiles[@]}
 
     if [[ ! -e temp.ipsw ]]; then
+        if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+        fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
@@ -4611,6 +4614,9 @@ ipsw_prepare_powder() {
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs
 
     if [[ ! -e temp.ipsw ]]; then
+        if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+        fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
     fi
@@ -5044,7 +5050,7 @@ restore_futurerestore() {
             fi
         else
             if [[ -z $(command -v python3) ]]; then
-                error "Python 3 is not installed, cannot continue. Make sure to have python3 installed."
+                error "Python 3 is not installed, cannot continue. Make sure to have python3 installed from your package manager."
             fi
             opt="$(command -v python3) -m http.server -b 127.0.0.1 $port"
         fi
@@ -5841,7 +5847,7 @@ device_ramdisk64() {
     fi
     $irecovery -f $ramdisk_path/Kernelcache.img4
     $irecovery -c bootx
-    sleep 10
+    sleep 6
 
     if [[ $ios8 == 1 ]]; then
         device_iproxy no-logging 44
@@ -6114,7 +6120,7 @@ device_ramdisk() {
         return
     fi
     log "Booting, please wait..."
-    sleep 10
+    sleep 6
 
     if [[ -n $1 ]]; then
         device_iproxy
@@ -7089,7 +7095,7 @@ menu_datamanage() {
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
-        warn "Device is on lower than iOS 4. Backup and Restore options are not available." # remove/enable when ios 3 idevicebackup stuff is fully working
+        warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
         menu_items+=("Backup" "Restore")
     fi
@@ -7140,11 +7146,7 @@ menu_backup_restore() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_print_info
-        local backups="backups"
-        if (( device_det <= 3 )); then
-            backups+="1"
-        fi
-        local backupdir="../saved/$backups/${device_ecid}_${device_type}"
+        local backupdir="../saved/backups/${device_ecid}_${device_type}"
         if [[ ! -d $backupdir ]]; then
             mkdir -p $backupdir
         fi
@@ -9068,9 +9070,9 @@ device_jailbreak_confirm() {
     fi
     if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
         case $device_vers in
-            6.1.[3456] )
-                print "* For this version, p0sixspwn on Windows/Mac can also be used instead of this option."
-                print "* https://ios.cfw.guide/installing-p0sixspwn/"
+            6* )
+                print "* For this version, Aquila on Windows/Mac can also be used instead of this option."
+                print "* https://ios.cfw.guide/installing-aquila/"
             ;;
             9* | 10* )
                 print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
@@ -9969,41 +9971,25 @@ device_fourthree_check() {
 }
 
 device_backup_create() {
-    local backups="backups"
-    local idevicebackup="idevicebackup2"
-    local args="--full"
-    if (( device_det <= 3 )); then
-        backups+="1"
-        idevicebackup="idevicebackup"
-        args=
-    fi
     print "* A backup of your device will be created. Please see the notes above."
     pause
-    device_backup="../saved/$backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
+    device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
     mkdir -p $device_backup
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     export LD_LIBRARY_PATH="$dir/lib"
-    "$dir/$idevicebackup" backup $args "$(basename $device_backup)"
+    "$dir/idevicebackup2" backup --full "$(basename $device_backup)"
     popd
 }
 
 device_backup_restore() {
-    local backups="backups"
-    local idevicebackup="idevicebackup2"
-    local args="--system --settings"
-    if (( device_det <= 3 )); then
-        backups+="1"
-        idevicebackup="idevicebackup"
-        args=
-    fi
     print "* The selected backup $device_backup will be restored to the device."
     pause
-    device_backup="../saved/$backups/${device_ecid}_${device_type}/$device_backup"
+    device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     export LD_LIBRARY_PATH="$dir/lib"
-    "$dir/$idevicebackup" restore $args "$(basename $device_backup)"
+    "$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
     popd
 }
 
@@ -10194,6 +10180,7 @@ for i in "$@"; do
         "--no-internet-check" ) no_internet_check=1;;
         "--no-version-check" ) no_version_check=1;;
         "--no-finder" ) no_finder=1;;
+        "--just-boot" ) main_argmode="device_justboot";;
     esac
 done
 
@@ -10206,17 +10193,14 @@ if [[ $no_color != 1 ]]; then
     color_N=$(tput sgr0)
 fi
 
-case $1 in
-    "--just-boot" )
-        print "* Just Boot usage: --just-boot --build-id=<id>"
-        print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
-        print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
-        if [[ -z $device_rd_build ]]; then
-            error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
-        fi
-        main_argmode="device_justboot"
-    ;;
-esac
+if [[ $main_argmode == "device_justboot" && -z $device_rd_build ]]; then
+    print "* Just Boot usage: --just-boot --build-id=<id>"
+    print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
+    print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
+    if [[ -z $device_rd_build ]]; then
+        error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
+    fi
+fi
 
 trap "clean" EXIT
 trap "exit 1" INT TERM
