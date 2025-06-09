@@ -587,7 +587,7 @@ install_depends() {
     fi
 
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git ifuse libimobiledevice libxml2 openssh pyenv python udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git ifuse libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
@@ -595,14 +595,13 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libssl-dev libxml2 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git ifuse libimobiledevice libxml2 libzstd openssl openssl-devel patch python3 systemd udev usbmuxd vim-common zenity zip zlib-devel
-        sudo dnf group install -y c-development
+        sudo dnf install -y ca-certificates git ifuse libimobiledevice libzstd openssl patch python3 systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
@@ -611,15 +610,14 @@ install_depends() {
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libopenssl-3-devel libxml2 libzstd1 openssl-3 patch pyenv python3 usbmuxd unzip vim zenity zip zlib-devel
-        sudo zypper -n install -t pattern devel_basis
+        sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 usbmuxd unzip vim zenity zip
         prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse dev-libs/libxml2 libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "void" ]]; then
-        sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip base-devel libffi-devel bzip2-devel openssl openssl-devel readline readline-devel sqlite-devel xz liblzma-devel zlib zlib-devel
+        sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip
 
     elif [[ $platform == "macos" ]]; then
         print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
@@ -2267,15 +2265,18 @@ ipsw_get_url() {
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
+        local phone="OS" # iOS
         case $build_id in
-            1[AC]* | [23457]* ) phone="Phone";; # iPhoneOS
+            2[0123]* | 7B405 | 7B500 ) :;;
+            1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
+            7* ) phone="Phone%20OS";; # iPhone OS
         esac
         if [[ $device_type == "iPad"* ]]; then
             case $build_id in
-                1[789]* | [23]* ) phone="Pad";; # iPadOS
+                1[789]* | [23]* ) phone="PadOS";; # iPadOS
             esac
         fi
-        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone}OS;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
+        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
         if [[ $(echo "$url" | grep -c '<') != 0 || $url2 != *"$build_id2"* ]]; then
@@ -5042,20 +5043,8 @@ restore_futurerestore() {
     if [[ $1 == "--use-pwndfu" ]]; then
         device_fw_key_check
         pushd ../saved >/dev/null
-        if [[ $platform == "macos" ]]; then
-            if (( mac_majver >= 12 )); then
-                opt="/usr/bin/python3 -m http.server -b 127.0.0.1 $port"
-            else
-                opt="/usr/bin/python -m SimpleHTTPServer $port"
-            fi
-        else
-            if [[ -z $(command -v python3) ]]; then
-                error "Python 3 is not installed, cannot continue. Make sure to have python3 installed from your package manager."
-            fi
-            opt="$(command -v python3) -m http.server -b 127.0.0.1 $port"
-        fi
-        log "Starting local server for firmware keys: $opt"
-        $opt &
+        log "Starting local server for firmware keys"
+        "$dir/darkhttpd" . --port $port &
         httpserver_pid=$!
         log "httpserver PID: $httpserver_pid"
         popd >/dev/null
@@ -9070,7 +9059,7 @@ device_jailbreak_confirm() {
     fi
     if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
         case $device_vers in
-            6* )
+            6.1.[3456] )
                 print "* For this version, Aquila on Windows/Mac can also be used instead of this option."
                 print "* https://ios.cfw.guide/installing-aquila/"
             ;;
