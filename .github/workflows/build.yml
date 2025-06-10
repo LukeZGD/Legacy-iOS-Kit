@@ -37,8 +37,9 @@ jobs:
           mv ipwndfu*/ ../saved/ipwndfu_python3
           unzip ipwndfu.zip -d .
           mv ipwndfu*/ ../saved/ipwndfu
-          rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu.zip keys.zip
-          echo "bbf00a7fe77f1520d8eb9d6174e4865ac22f40d2" > ../saved/ipwndfu_python3/sha1check
+          rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu*.zip keys.zip
+          echo "acb79aaebbabd1050a8e8de6d1a4175441dd24ce" > ../saved/ipwndfu_python3/sha1check
+          echo "9b24f33910d5b7e42825cc1df0ca98a08109f3b3" > ../saved/ipwndfu/sha1check
           popd
 
       - name: Move linux binaries
