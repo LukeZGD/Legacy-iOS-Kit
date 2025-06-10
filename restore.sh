@@ -2123,27 +2123,20 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local python="$(command -v python3)"
-    local ipwndfu_comm="e40a57a0c64f255f74be460faad9b34dc0a88e98"
-    local ipwndfu_sha1="bbf00a7fe77f1520d8eb9d6174e4865ac22f40d2"
+    local ipwndfu_comm="cb62c8a4f367dcb61e45cc276401a00349642a7c"
+    local ipwndfu_sha1="acb79aaebbabd1050a8e8de6d1a4175441dd24ce"
     local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
         psudo="sudo"
     fi
-
-    device_enter_mode pwnDFU
-
-    if [[ $platform == "macos" ]] && (( mac_majver >= 12 )); then
-        python="/usr/bin/python3"
-    elif [[ $platform == "macos" ]]; then
-        python="/usr/bin/python"
+    if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
         ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
         ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
-    elif [[ -z $python3 ]]; then
-        error "Python 3 is not installed, cannot continue. Make sure to have python3 installed from your package manager."
     fi
+
+    device_enter_mode pwnDFU
 
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
@@ -2167,10 +2160,10 @@ device_ipwndfu_alloc8() {
 
     pushd ../saved/$ipwndfu/ >/dev/null
     log "Installing alloc8 to device"
-    $psudo "$python" ipwndfu -x
+    $psudo ./ipwndfu -x
     tool_pwned=$?
     if [[ $device_sudoloop == 1 ]]; then
-        sudo rm *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
+        sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
     fi
     popd >/dev/null
 
@@ -6160,6 +6153,12 @@ device_ramdisk() {
             device_ramdisk_iosvers
             vers=$device_vers
             build=$device_build
+
+            if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+                warn "Your device seems to be already jailbroken. Cannot continue."
+                $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
+                return
+            fi
 
             case $vers in
                 9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
