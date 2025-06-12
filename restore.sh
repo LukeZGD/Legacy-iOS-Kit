@@ -107,8 +107,9 @@ List of options:
     --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd for Linux
 
 For 32-bit devices compatible with restores/downgrades (see README):
-    --build-id=<build>        Specify iOS build ID for SSH ramdisk/tether boot
     --activation-records      Enable dumping/stitching activation records
+    --build-id=<build>        Specify iOS build ID for SSH ramdisk/tether boot
+    --bootargs=<bootargs>     Specify custom bootargs for SSH ramdisk/tether boot
     --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
@@ -362,7 +363,7 @@ set_tool_paths() {
         export LD_LIBRARY_PATH="$dir/lib"
 
         # live cd/usb check
-        if [[ $(id -u $USER) == 999 || $USER == "liveuser" ]]; then
+        if [[ $(id -u $USER) == 999 || $USER == "liveuser" || $(df | grep -c "/cow") != 0 ]]; then
             live_cdusb=1
             live_cdusb_str="Live session"
             log "Linux Live session detected."
@@ -7562,12 +7563,8 @@ menu_restore() {
         esac
         if (( device_proc < 7 )); then
             menu_items+=("Latest iOS ($device_latest_vers)")
-        elif [[ $platform == "linux" ]]; then
-            if (( device_proc > 10 )); then
-                menu_items+=("Latest iOS")
-            else
-                menu_items+=("Latest iOS ($device_latest_vers)")
-            fi
+        elif [[ $platform == "linux" ]] && (( device_proc <= 10 )); then
+            menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
@@ -7638,7 +7635,6 @@ menu_restore() {
                 fi
             ;;
             "More versions" ) menu_restore_more "$1";;
-            "Latest iOS" ) mode="restore-latest";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             * ) menu_ipsw "$selected" "$1";;
         esac
@@ -8105,7 +8101,7 @@ menu_ipsw() {
                 print "* Hacktivation is supported for this restore"
             fi
             if [[ $device_latest_vers == "18"* ]]; then
-                warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
+                warn "Restoring to iOS 18 is not supported. Try using latest idevicerestore or pymobiledevice3 instead for that"
                 pause
                 return
             fi
@@ -9773,24 +9769,6 @@ device_altserver() {
     popd >/dev/null
 }
 
-restore_latest64() {
-    local idevicerestore2="${idevicerestore}2"
-    local opt="-l"
-    warn "Restoring to iOS 18 or newer is not supported. Try using pymobiledevice3 instead for that"
-    input "Restore/Update Select Option"
-    print "* Restore will do factory reset and update the device, all data will be cleared"
-    print "* Update will only update the device to the latest version"
-    print "* Or press Ctrl+C to cancel"
-    local selection=("Restore" "Update")
-    input "Select your option:"
-    select_option "${selection[@]}"
-    case $? in
-        1 ) opt+="e";;
-    esac
-    $idevicerestore2 $opt
-    mv *.ipsw ..
-}
-
 device_fourthree_step2() {
     if [[ $device_mode != "Normal" ]]; then
         error "Device is not in normal mode. Place the device in normal mode to proceed." \
@@ -10086,10 +10064,10 @@ main() {
                 print "    > ./restore.sh --activation-records"
             fi
         ;;
-        "kdfu" ) device_enter_mode kDFU;;
+        "kdfu"         ) device_enter_mode kDFU;;
         "ramdisknvram" ) device_ramdisk clearnvram;;
-        "pwned-ibss" ) device_enter_mode pwnDFU;;
-        "enterrecovery" ) device_enter_mode Recovery;;
+        "pwned-ibss"   ) device_enter_mode pwnDFU;;
+        "enterrecovery") device_enter_mode Recovery;;
         "exitrecovery" )
             log "Attempting to exit Recovery mode."
             $irecovery -n
@@ -10101,13 +10079,12 @@ main() {
                 print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
             fi
         ;;
-        "dfuipswipsw" ) device_dfuipsw ipsw;;
-        "customipsw" ) restore_customipsw;;
-        "getversion" ) device_ramdisk getversion;;
-        "shutdown" ) $idevicediagnostics shutdown;;
-        "restart" ) $idevicediagnostics restart;;
-        "restore-latest" ) restore_latest64;;
-        "remove4" ) device_ramdisk setnvram $rec;;
+        "dfuipswipsw"  ) device_dfuipsw ipsw;;
+        "customipsw"   ) restore_customipsw;;
+        "getversion"   ) device_ramdisk getversion;;
+        "shutdown"     ) $idevicediagnostics shutdown;;
+        "restart"      ) $idevicediagnostics restart;;
+        "remove4"      ) device_ramdisk setnvram $rec;;
         "device_dfuhelper" )
             if [[ $device_proc == 1 ]]; then
                 device_dfuhelper norec WTFreal
@@ -10128,47 +10105,55 @@ main() {
 
 for i in "$@"; do
     case $i in
-        "--no-color" ) no_color=1;;
-        "--no-device" ) device_argmode="none";;
-        "--entry-device" ) device_argmode="entry";;
-        "--debug" ) set -x; debug_mode=1; menu_old=1;;
-        "--help" ) display_help; exit;;
-        "--ipsw-verbose" ) ipsw_verbose=1;;
-        "--jailbreak" ) ipsw_jailbreak=1;;
-        "--memory" ) ipsw_memory=1;;
-        "--disable-bbupdate" ) device_disable_bbupdate=1;;
-        "--disable-sudoloop" ) device_disable_sudoloop=1;;
-        "--activation-records" ) device_actrec=1;;
+        # general options
+        "--debug"           ) set -x; debug_mode=1; menu_old=1;;
+        "--disable-sudoloop") device_disable_sudoloop=1;;
+        "--help"            ) display_help; exit;;
+        "--no-color"        ) no_color=1;;
+        "--no-finder"       ) no_finder=1;;
+        "--old-menu"        ) menu_old=1;;
+        "--use-usbmuxd2"    ) use_usbmuxd2=1;;
+
+        # options for 32-bit devices
+        "--activation-records") device_actrec=1;;
+        "--build-id="*      ) device_rd_build="${i#*=}";;
+        "--bootargs="*      ) device_bootargs="${i#*=}";;
+        "--dead-bb"         ) device_deadbb=1; device_disable_bbupdate=1;;
+        "--disable-bbupdate") device_disable_bbupdate=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
-        "--skip-ibss" ) device_skip_ibss=1;;
-        "--pwned-recovery" ) device_pwnrec=1;;
-        "--gasgauge-patch" | "--multipatch" ) ipsw_gasgauge_patch=1;;
-        "--dead-bb" ) device_deadbb=1; device_disable_bbupdate=1;;
-        "--skip-first" ) ipsw_skip_first=1;;
-        "--skip-blob" ) restore_useskipblob=1;;
-        "--use-pwndfu" ) restore_usepwndfu64=1;;
-        "--device"* ) device_type="${i#*=}"; device_argmode="entry";;
-        "--ecid"* ) device_ecid="${i#*=}"; device_argmode="entry";;
-        "--build-id"* ) device_rd_build="${i#*=}";;
-        "--bootargs"* ) device_bootargs="${i#*=}";;
-        "--old-menu" ) menu_old=1;;
-        "--use-usbmuxd2" ) use_usbmuxd2=1;;
-        # main_argmode setters here
-        "--dfuhelper" ) main_argmode="device_dfuhelper";;
-        "--exit-recovery" ) main_argmode="exitrecovery";;
-        "--pwn" ) main_argmode="pwned-ibss";;
-        "--sshrd" ) main_argmode="device_enter_ramdisk";;
-        "--sshrd-menu" )
-            device_argmode="entry"
-            main_argmode="device_enter_ramdisk_menu"
-        ;;
-        "--kdfu" ) main_argmode="kdfu";;
+        "--ipsw-verbose"    ) ipsw_verbose=1;;
+        "--jailbreak"       ) ipsw_jailbreak=1;;
+        "--gasgauge-patch" | "--multipatch") ipsw_gasgauge_patch=1;;
+        "--memory"          ) ipsw_memory=1;;
+        "--pwned-recovery"  ) device_pwnrec=1;;
+        "--skip-first"      ) ipsw_skip_first=1;;
+        "--skip-ibss"       ) device_skip_ibss=1;;
+
+        # options for 64-bit devices
+        "--skip-blob"       ) restore_useskipblob=1;;
+        "--use-pwndfu"      ) restore_usepwndfu64=1;;
+
+        # device_argmode setters
+        "--entry-device"    ) device_argmode="entry";;
+        "--no-device"       ) device_argmode="none";;
+
+        # entry parameters
+        "--device="*        ) device_type="${i#*=}"; device_argmode="entry";;
+        "--ecid="*          ) device_ecid="${i#*=}"; device_argmode="entry";;
+
+        # main_argmode setters
+        "--dfuhelper"       ) main_argmode="device_dfuhelper";;
+        "--exit-recovery"   ) main_argmode="exitrecovery";;
+        "--just-boot"       ) main_argmode="device_justboot";;
+        "--kdfu"            ) main_argmode="kdfu";;
+        "--pwn"             ) main_argmode="pwned-ibss";;
+        "--sshrd"           ) main_argmode="device_enter_ramdisk";;
+        "--sshrd-menu"      ) device_argmode="entry"; main_argmode="device_enter_ramdisk_menu";;
+
         # please dont use these, unless you know what youre doing
-        "--run-as-root" ) run_as_root=1;;
-        "--no-internet-check" ) no_internet_check=1;;
+        "--no-internet-check") no_internet_check=1;;
         "--no-version-check" ) no_version_check=1;;
-        "--no-finder" ) no_finder=1;;
-        "--just-boot" ) main_argmode="device_justboot";;
+        "--run-as-root"      ) run_as_root=1;;
     esac
 done
 
