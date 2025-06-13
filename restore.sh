@@ -453,7 +453,13 @@ set_tool_paths() {
             dir+="/arm64"
         fi
 
-        # macos version check
+        # macos checks
+        if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
+            local error_msg="* You need to install Xcode Command Line Tools: xcode-select --install"
+            error_msg+=$'\n* This is also required for installing Homebrew/MacPorts and the needed dependencies.'
+            error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+            error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
+        fi
         mac_majver="${platform_ver:0:2}"
         if [[ $mac_majver == 10 ]]; then
             mac_minver=${platform_ver:3}
@@ -571,7 +577,6 @@ prepare_udev_rules() {
 }
 
 install_depends() {
-    log "Installing dependencies..."
     rm -f "../resources/firstrun"
 
     if [[ $platform == "linux" ]]; then
@@ -587,6 +592,7 @@ install_depends() {
         prepare_udev_rules usbmux plugdev
     fi
 
+    log "Installing dependencies..."
     if [[ $distro == "arch" ]]; then
         sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git ifuse libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
@@ -619,14 +625,6 @@ install_depends() {
 
     elif [[ $distro == "void" ]]; then
         sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip
-
-    elif [[ $platform == "macos" ]]; then
-        print "* Legacy iOS Kit will be installing dependencies and setting up permissions of tools"
-        /usr/bin/xattr -cr ../bin/macos
-        log "Installing Xcode Command Line Tools"
-        xcode-select --install
-        print "* Make sure to install requirements from Homebrew/MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use"
-        pause
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
@@ -643,7 +641,7 @@ install_depends() {
     fi
 
     log "Install script done! Please run the script again to proceed"
-    log "If your iOS device is plugged in, unplug and replug your device"
+    log "If your iOS device is plugged in, you may need to unplug and replug your device"
     exit
 }
 
