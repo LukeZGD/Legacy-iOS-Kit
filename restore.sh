@@ -2065,9 +2065,9 @@ device_enter_mode() {
             if [[ -n $device_pwnd ]]; then
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
-            fi
-            if [[ $device_proc == 6 && $device_pwnd == "checkm8" ]]; then
-                device_send_unpacked_ibss
+                if [[ $device_proc == 6 ]]; then
+                    device_send_unpacked_ibss
+                fi
             fi
         ;;
     esac
