@@ -30,6 +30,7 @@
 - Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
+    - This also saves onboard Cryptex APTicket and seed for iOS 16+ (x8A4)
 - Install [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) using SSH Ramdisk for supported 64-bit devices on iOS 14/15
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (especially useful for iOS 4 and lower)
@@ -153,14 +154,16 @@
 - [ideviceinstaller](https://github.com/LukeeGD/ideviceinstaller) - libimobiledevice
 - [ifuse](https://github.com/LukeeGD/ifuse) - libimobiledevice
 - [static-cross-openssh](https://github.com/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
-- [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only)
+- [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only, optional)
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
 - [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux and macOS)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
+- [darkhttpd](https://github.com/emikulic/darkhttpd)
+- [x8A4](https://github.com/Cryptiiiic/x8A4) - x8A4 - Cryptiiiic (for getting Cryptex seed)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices
+    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macos arm64)
+    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices (mostly not used though)
     - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
 - [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork

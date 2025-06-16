@@ -501,6 +501,7 @@ set_tool_paths() {
             13 ) mac_name="Ventura";;
             14 ) mac_name="Sonoma";;
             15 ) mac_name="Sequoia";;
+            26 ) mac_name="Tahoe";;
         esac
         mac_ver="$platform_ver"
         if [[ -n $mac_name ]]; then
@@ -1446,11 +1447,10 @@ device_get_info() {
             device_latest_vers="16.7.11"
             device_latest_build="20H360"
         ;;
+        iPad7,1[12] ) :;;
         iPad7,* )
-            log "Getting latest iOS version for $device_type"
-            local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
-            device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
-            device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+            device_latest_vers="17.7.8"
+            device_latest_build="21H440"
         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
@@ -6733,9 +6733,16 @@ menu_ramdisk() {
 }
 
 shsh_save_onboard64() {
-    print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
-    print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
-    print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+    if [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
+        print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
+        print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
+        print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+    elif (( device_det2 >= 16 )); then
+        print "* Make sure to have the following installed for Cryptex:"
+        print "    libkrw0 1.1.2, libkrw0-tfp0 1.1.2, libx8a4-1, x8A4"
+        print "* You may install these from this repo: https://cydia.ichitaso.com/secret-repo"
+        print "* You may also install debs from here: https://github.com/Cryptiiiic/x8A4/releases"
+    fi
     echo
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
@@ -6747,18 +6754,36 @@ shsh_save_onboard64() {
     device_iproxy
     device_sshpass
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
+    local shsh2
     local disk
     if [[ $ssh_user == "mobile" ]]; then
         disk="echo $ssh_pass | sudo -S "
     fi
     if (( device_det2 >= 16 )); then
+        shsh2="$shsh"
+        shsh="temp.shsh2"
         disk+="cat /dev/disk2"
     else
         disk+="cat /dev/disk1"
     fi
     $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "$disk" | dd of=dump.raw bs=256 count=$((0x4000))
     "$dir/img4tool" --convert -s $shsh dump.raw
-    if [[ ! -s $shsh ]]; then
+    if [[ -s $shsh && -n $shsh2 ]]; then
+        log "Grabbing Cryptex APTicket"
+        $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cat /private/preboot/cryptex1/current/apticket*" > apticket.im4m
+        log "Getting Cryptex seed using x8A4"
+        local seed="$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo $ssh_pass | sudo -S /var/jb/usr/bin/x8A4 -x | grep 0x | cut -c 19- | cut -c -34")"
+        echo
+        if [[ -z $seed ]]; then
+            error "Failed to get Cryptex seed. Make sure x8A4 and dependencies are installed."
+        fi
+        cat $shsh | sed '$d' | sed '$d' > temp2.shsh2
+        echo -e "<key>cryptexTicket</key><dict>\n<key>Cryptex1,Ticket</key><data>" >> temp2.shsh2
+        cat apticket.im4m | base64 >> temp2.shsh2
+        echo -e "</data></dict>\n<key>cryptexSeed</key>\n<string>$seed</string>\n</dict></plist>" >> temp2.shsh2
+        shsh="$shsh2"
+        mv temp2.shsh2 $shsh
+    elif [[ ! -s $shsh ]]; then
         warn "Failed to convert raw dump to SHSH."
         if [[ -s dump.raw ]]; then
             local raw="../saved/shsh/rawdump_${device_ecid}-${device_type}-${device_vers}-${device_build}_$(date +%Y-%m-%d-%H%M).raw"
@@ -6767,7 +6792,11 @@ shsh_save_onboard64() {
             warn "This raw dump is not usable for restoring, you need to convert it first."
             print "* If unable to be converted, this dump is likely not usable for restoring."
         fi
-        error "Saving onboard SHSH blobs failed." "It is recommended to dump onboard SHSH blobs on SSH Ramdisk instead."
+        if [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
+            error "Saving onboard SHSH blobs failed. Make sure to have OpenSSH installed."
+        else
+            error "Saving onboard SHSH blobs failed. Make sure to have OpenSSH installed." "* It is recommended to dump onboard SHSH blobs on SSH Ramdisk instead."
+        fi
     fi
     log "Successfully saved $device_vers blobs: $shsh"
 }
@@ -8048,8 +8077,11 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
             fi
-            if (( device_proc > 6 )); then
+            if (( device_proc >= 7 )); then
                 print "* Check the SEP/BB compatibility chart: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
+                if (( device_proc >= 9 )) && [[ $device_type != "iPhone10"* ]]; then
+                    print "* It is recommended to use turdus merula instead: https://sep.lol/"
+                fi
             fi
             echo
             if [[ -n $shsh_path ]]; then
@@ -8460,18 +8492,12 @@ menu_ipsw_browse() {
         case $device_target_build in
             1[89]* )
                 ipsw_print_1415warn
-                echo
-                print "* Use turdus merula instead: https://sep.lol/"
-                if [[ $platform == "macos" ]]; then
-                    pause
-                    return
-                else
-                    print "* However turdus merula is currently for macOS only, so you may still continue here if you want."
-                    pause
-                fi
+                print "* It is recommended to use turdus merula instead: https://sep.lol/"
+                pause
             ;;
             20[GH]* ) # 16.6-16.7.x only in 16.x
                 ipsw_print_16warn
+                print "* It is recommended to use turdus merula instead: https://sep.lol/"
                 pause
             ;;
             * )
