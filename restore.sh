@@ -603,7 +603,7 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g-dev
+        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -2694,22 +2694,24 @@ ipsw_verify() {
             return
         ;;
     esac
-    case $build_id in
-        1[AC]* | [23457]* ) phone="Phone";; # iPhoneOS
-    esac
-    if [[ $device_type == "iPad"* ]]; then
-        case $build_id in
-            1[789]* | [23]* ) phone="Pad";; # iPadOS
-        esac
-    fi
 
     if [[ $(echo "$IPSWSHA1E" | grep -c '<') != 0 ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
     fi
 
     log "Getting SHA1 hash from AppleDB..."
-    # i cant seem to connect to appledb.dev, ill just use the github gh-pages
-    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone}OS;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
+    local phone="OS" # iOS
+    case $build_id in
+        2[0123]* | 7B405 | 7B500 ) :;;
+        1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
+        7* ) phone="Phone%20OS";; # iPhone OS
+    esac
+    if [[ $device_type == "iPad"* ]]; then
+        case $build_id in
+            1[789]* | [23]* ) phone="PadOS";; # iPadOS
+        esac
+    fi
+    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
@@ -5296,11 +5298,7 @@ device_buttons2() {
 restore_deviceprepare() {
     case $device_proc in
         1 )
-            if [[ $device_target_vers == "4"* ]]; then
-                if [[ $ipsw_jailbreak != 1 ]]; then
-                    device_enter_mode Recovery
-                    return
-                fi
+            if [[ $device_target_vers == "4"* && $ipsw_jailbreak == 1 ]]; then
                 device_enter_mode WTFreal
             elif [[ $ipsw_jailbreak == 1 ]]; then
                 device_enter_mode DFU
@@ -10194,9 +10192,7 @@ if [[ $main_argmode == "device_justboot" && -z $device_rd_build ]]; then
     print "* Just Boot usage: --just-boot --build-id=<id>"
     print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
     print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
-    if [[ -z $device_rd_build ]]; then
-        error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
-    fi
+    error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
 fi
 
 trap "clean" EXIT
