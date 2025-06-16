@@ -2122,8 +2122,8 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local ipwndfu_comm="cb62c8a4f367dcb61e45cc276401a00349642a7c"
-    local ipwndfu_sha1="acb79aaebbabd1050a8e8de6d1a4175441dd24ce"
+    local ipwndfu_comm="4f9899cc39c99f3ea356d5970c974c98477bcfa9"
+    local ipwndfu_sha1="ae4732572da51bd0d6040425c23d1e6417d90c01"
     local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
