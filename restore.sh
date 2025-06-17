@@ -2254,18 +2254,21 @@ ipsw_get_url() {
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
-        local phone="OS" # iOS
+        local device="iOS" # iOS
         case $build_id in
             2[0123]* | 7B405 | 7B500 ) :;;
-            1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-            7* ) phone="Phone%20OS";; # iPhone OS
+            1[AC]* | [2345]* ) device="iPhone%20Software";; # iPhone Software
+            7* ) device="iPhone%20OS";; # iPhone OS
         esac
         if [[ $device_type == "iPad"* ]]; then
             case $build_id in
-                1[789]* | [23]* ) phone="PadOS";; # iPadOS
+                1[789]* | [23]* ) device="iPadOS";; # iPadOS
             esac
         fi
-        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
+        if [[ $device_type == "Watch"* ]]; then
+            device="watchOS" # watchOS
+        fi
+        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/$device;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
         if [[ $(echo "$url" | grep -c '<') != 0 || $url2 != *"$build_id2"* ]]; then
@@ -2697,18 +2700,21 @@ ipsw_verify() {
     fi
 
     log "Getting SHA1 hash from AppleDB..."
-    local phone="OS" # iOS
+    local device="iOS" # iOS
     case $build_id in
         2[0123]* | 7B405 | 7B500 ) :;;
-        1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-        7* ) phone="Phone%20OS";; # iPhone OS
+        1[AC]* | [2345]* ) device="iPhone%20Software";; # iPhone Software
+        7* ) device="iPhone%20OS";; # iPhone OS
     esac
     if [[ $device_type == "iPad"* ]]; then
         case $build_id in
-            1[789]* | [23]* ) phone="PadOS";; # iPadOS
+            1[789]* | [23]* ) device="iPadOS";; # iPadOS
         esac
     fi
-    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
+    if [[ $device_type == "Watch"* ]]; then
+        device="watchOS" # watchOS
+    fi
+    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/$device;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
