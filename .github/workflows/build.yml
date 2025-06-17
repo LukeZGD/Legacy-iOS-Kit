@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p saved/firmware
           pushd resources
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/4f9899cc39c99f3ea356d5970c974c98477bcfa9.zip -o ipwndfu_python3.zip
+          curl -L https://github.com/LukeZGD/ipwndfu/archive/17a32ad63480ee6e3990ce85acbba4af143da0b3.zip -o ipwndfu_python3.zip
           curl -L https://github.com/LukeZGD/ipwndfu/archive/b8a9bfa65891f39cdfa155568f592eba8ef711b9.zip -o ipwndfu.zip
           curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
           unzip keys.zip -d .
@@ -38,7 +38,7 @@ jobs:
           unzip ipwndfu.zip -d .
           mv ipwndfu*/ ../saved/ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu*.zip keys.zip
-          echo "ae4732572da51bd0d6040425c23d1e6417d90c01" > ../saved/ipwndfu_python3/sha1check
+          echo "4d7ed14618fb7bfdee101a31b77513752e5fea7c" > ../saved/ipwndfu_python3/sha1check
           echo "9b24f33910d5b7e42825cc1df0ca98a08109f3b3" > ../saved/ipwndfu/sha1check
           popd
 

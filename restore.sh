@@ -464,13 +464,10 @@ set_tool_paths() {
         if [[ $mac_majver == 10 ]]; then
             mac_minver=${platform_ver:3}
             mac_minver=${mac_minver%.*}
-            # go here if need to disable os x 10.11 support for now
             if (( mac_minver < 11 )); then
-                warn "Your macOS version ($platform_ver - $platform_arch) is not supported. Expect features to not work properly."
-                print "* Supported macOS versions are 10.11 and newer. (10.12 and newer recommended)"
-                pause
-            fi
-            if (( mac_minver <= 11 )); then
+                error "Your macOS version ($platform_ver - $platform_arch) is not supported." \
+                "* Supported macOS versions are 10.11 and newer. (10.12 and newer recommended)"
+            elif [[ $mac_minver == 11 ]]; then
                 mac_cocoa=1
                 if [[ -z $(command -v cocoadialog) ]]; then
                     local error_msg="* You need to install cocoadialog from MacPorts."
@@ -603,7 +600,7 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y build-essential ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g
+        sudo apt install -m -y ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
@@ -2122,8 +2119,8 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local ipwndfu_comm="4f9899cc39c99f3ea356d5970c974c98477bcfa9"
-    local ipwndfu_sha1="ae4732572da51bd0d6040425c23d1e6417d90c01"
+    local ipwndfu_comm="17a32ad63480ee6e3990ce85acbba4af143da0b3"
+    local ipwndfu_sha1="4d7ed14618fb7bfdee101a31b77513752e5fea7c"
     local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
