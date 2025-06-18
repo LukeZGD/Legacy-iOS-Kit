@@ -2032,11 +2032,11 @@ device_enter_mode() {
                 # A6/3gs/touch 3 use ipwnder
                 log "Placing device to pwnDFU mode using ipwnder"
                 opt="$ipwnder -d" # ipwnder_lite
-                if [[ $device_proc == 6 ]]; then
-                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
-                elif [[ $platform == "linux" ]]; then
+                if [[ $platform == "linux" ]]; then
                     opt="$ipwnder -p" # ipwnder32 libusb
                     print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
+                elif [[ $device_proc == 6 ]]; then
+                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
                 fi
                 mkdir image3 ../saved/image3 2>/dev/null
                 cp ../saved/image3/* image3/ 2>/dev/null
