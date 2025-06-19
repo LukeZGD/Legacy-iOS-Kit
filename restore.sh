@@ -1448,18 +1448,19 @@ device_get_info() {
             device_latest_vers="17.7.8"
             device_latest_build="21H440"
         ;;
-#         iPad7,1[12] )
-        * )
+        iPad7,1[12] )
             device_latest_vers="18.5"
             device_latest_build="22F76"
         ;;
-#         * )
-#             log "Getting latest iOS version for $device_type"
-#             local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
-#             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
-#             device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
-#         ;;
     esac
+    if (( device_proc > 10 )); then
+        device_latest_vers="18.5"
+        device_latest_build="22F76"
+#         log "Getting latest iOS version for $device_type"
+#         local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+#         device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+#         device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+    fi
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
     case $device_type in
