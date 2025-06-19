@@ -1444,11 +1444,21 @@ device_get_info() {
             device_latest_vers="16.7.11"
             device_latest_build="20H360"
         ;;
-        iPad7,1[12] ) :;;
-        iPad7,* )
+        iPad7,[123456] )
             device_latest_vers="17.7.8"
             device_latest_build="21H440"
         ;;
+#         iPad7,1[12] )
+        * )
+            device_latest_vers="18.5"
+            device_latest_build="22F76"
+        ;;
+#         * )
+#             log "Getting latest iOS version for $device_type"
+#             local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+#             device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+#             device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+#         ;;
     esac
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
@@ -7583,9 +7593,7 @@ menu_restore() {
             iPhone3,[13] | iPad1,1 | iPod3,1 )
                 menu_items+=("powdersn0w (any iOS)");;
         esac
-        if (( device_proc < 7 )); then
-            menu_items+=("Latest iOS ($device_latest_vers)")
-        elif [[ $platform == "linux" ]] && (( device_proc <= 10 )); then
+        if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
@@ -8124,11 +8132,6 @@ menu_ipsw() {
             fi
             if [[ $ipsw_canhacktivate == 1 ]] && [[ $device_type == "iPhone2,1" || $device_proc == 1 ]]; then
                 print "* Hacktivation is supported for this restore"
-            fi
-            if [[ $device_latest_vers == "18"* ]]; then
-                warn "Restoring to iOS 18 is not supported. Try using latest idevicerestore or pymobiledevice3 instead for that"
-                pause
-                return
             fi
             echo
         fi
