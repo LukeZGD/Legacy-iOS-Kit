@@ -9822,50 +9822,49 @@ device_dumpapp() {
     fi
 
     if [[ $check == 0 ]]; then
-        local app_id_type="bundle ID"
-        if (( device_det == 5 )); then
-            print "* Available apps will be shown now."
-            $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary" &
-            app_id_type="app name"
-        fi
-        local app_id
-
-        while true; do
-            read -p "$(input "Enter the $app_id_type of the app to dump: ")" app_id
-            echo
-            if [[ -z $app_id ]]; then
-                error "The $app_id_type for an app cannot be empty."
-            else
-                break
-            fi
-        done
-
-        log "Running Clutch"
-        local ipa
-
         local dump_path="/private/var/mobile/Documents/Dumped/"
-        local dump_cmd="/tmp/$clutch_binary -d $app_id"
         if (( device_det == 5 )); then
             dump_path="/var/root/Documents/Cracked/"
-            dump_cmd="/tmp/$clutch_binary $app_id"
         fi
         mkdir -p ../saved/applications
 
-        $ssh -p $ssh_port root@127.0.0.1 "$dump_cmd" &>ssh.log
-        cat ssh.log
-        check=$?
-        if [[ $check == 0 ]]; then
-            ipa="$(cat ssh.log | grep "$dump_path" | cut -d ' ' -f2 | tr -d "\t")"
-            $scp -P $ssh_port root@127.0.0.1:"$ipa" "../saved/applications"
-            log "Dumped $app_id: saved/applications/$(basename "$ipa")"
+        while true; do
+            local available_apps_json="$($ideviceinstaller list --json --user)"
+            local available_apps=($(echo $available_apps_json | jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+            available_apps+=("Go Back")
 
-            select_yesno "Delete dumped IPA file from device?" 1
-            if [[ $? == 1 ]]; then
-                $ssh -p $ssh_port root@127.0.0.1 "rm \"$ipa\""
+            echo
+            print "* Select an app listed below to dump as IPA."
+            select_option "${available_apps[@]}"
+            local selected2="${available_apps[$?]}"
+            case $selected2 in
+                "Go Back" ) break;;
+            esac
+
+            log "Running Clutch"
+            if (( device_det == 5 )); then
+                $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary $(echo $available_apps_json | jq --argjson i $? -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+            else
+                $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary -d $selected2" &>ssh.log
             fi
-        else
-            error "Failed to dump $app_id_type: $app_id"
-        fi
+            cat ssh.log
+
+            check=$?
+            if [[ $check == 0 ]]; then
+                local ipa="$(cat ssh.log | grep "$dump_path" | cut -d ' ' -f2 | tr -d "\t")"
+                $scp -P $ssh_port root@127.0.0.1:"$ipa" "../saved/applications"
+                log "Dumped $selected2: saved/applications/$(basename "$ipa")"
+
+                select_yesno "Delete dumped IPA file from device?" 1
+                if [[ $? == 1 ]]; then
+                    $ssh -p $ssh_port root@127.0.0.1 "rm \"$ipa\""
+                fi
+            else
+                error "Failed to dump $selected2"
+                break
+            fi
+
+        done
     else
         error "Failed to connect to device via USB SSH."
         if (( device_det >= 10 )); then
