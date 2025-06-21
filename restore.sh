@@ -1129,8 +1129,7 @@ device_get_info() {
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
-                device_det=$(echo "$device_vers" | cut -c 1)
-                device_det2=$(echo "$device_vers" | cut -c -2)
+                device_det=$(echo "$device_vers" | cut -d. -f1)
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -1581,11 +1580,9 @@ device_find_mode() {
 device_sshpass() {
     # ask for device password and use sshpass for scp and ssh
     ssh_user="root"
-    if [[ $device_det == 1 ]]; then
-        if (( device_det2 >= 15 )); then
-            log "iOS 15+ device detected. Connecting to device SSH as mobile..."
-            ssh_user="mobile"
-        fi
+    if (( device_det >= 15 )); then
+        log "iOS 15+ device detected. Connecting to device SSH as mobile..."
+        ssh_user="mobile"
     fi
     local pass=$1
     if [[ -z $pass ]]; then
@@ -1836,7 +1833,7 @@ device_enter_mode() {
             log "Please read the message below:"
             print "* Follow these instructions to enter kDFU mode."
             print "1. Install \"OpenSSH\" in Cydia or Zebra."
-            if [[ $device_det == 1 ]]; then
+            if (( device_det >= 10 )); then
                 print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
                 print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
             fi
@@ -1850,7 +1847,7 @@ device_enter_mode() {
             pause
 
             echo "chmod +x /tmp/kloader*" > kloaders
-            if [[ $device_det == 1 ]]; then
+            if (( device_det >= 10 )); then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
@@ -1872,7 +1869,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             log "Sending files to device: ${sendfiles[*]}"
-            if [[ $device_det == 1 ]]; then
+            if (( device_det >= 10 )); then
                 for file in "${sendfiles[@]}"; do
                     cat $file | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
                 done
@@ -1888,7 +1885,7 @@ device_enter_mode() {
                 $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
-                if [[ $device_det == 1 ]]; then
+                if (( device_det >= 10 )); then
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
                     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
@@ -6743,7 +6740,7 @@ shsh_save_onboard64() {
         print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
         print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
         print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
-    elif (( device_det2 >= 16 )); then
+    elif (( device_det >= 16 )); then
         print "* Make sure to have the following installed for Cryptex:"
         print "    libkrw0 1.1.2, libkrw0-tfp0 1.1.2, libx8a4-1, x8A4"
         print "* You may install these from this repo: https://cydia.ichitaso.com/secret-repo"
@@ -6765,7 +6762,7 @@ shsh_save_onboard64() {
     if [[ $ssh_user == "mobile" ]]; then
         disk="echo $ssh_pass | sudo -S "
     fi
-    if (( device_det2 >= 16 )); then
+    if (( device_det >= 16 )); then
         shsh2="$shsh"
         shsh="temp.shsh2"
         disk+="cat /dev/disk2"
@@ -7116,7 +7113,7 @@ menu_datamanage() {
     print "* Note 3: You may need to select Pair Device first to get some options working."
     print "* Note 4: Backups do not include apps. Only some app data and settings"
     print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
-    if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
+    if (( device_det < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
         menu_items+=("Backup" "Restore")
@@ -7127,9 +7124,9 @@ menu_datamanage() {
         menu_items+=("Mount Device" "Mount Device (Raw File System)" "Unmount Device")
     fi
     menu_items+=("Connect to SSH" "Cydia App Install")
-    case $device_det in
-        [91] ) menu_items+=("Erase All Content and Settings");;
-    esac
+    if (( device_det >= 9 )); then
+        menu_items+=("Erase All Content and Settings")
+    fi
     menu_items+=("Pair Device" "Go Back")
     while [[ -z "$mode" && -z "$back" ]]; do
         echo
@@ -8832,12 +8829,12 @@ menu_miscutilities() {
         if [[ $device_mode != "none" ]]; then
             if [[ $device_mode == "Normal" ]]; then
                 menu_items+=("Pair Device" "Export Device Info")
-                if (( device_det < 5 )) && [[ $device_det != 1 ]]; then
+                if (( device_det < 5 )); then
                     warn "Device is on lower than iOS 5. Battery info is not available"
                 else
                     menu_items+=("Export Battery Info")
                 fi
-                if (( device_det < 4 )) && [[ $device_det != 1 ]]; then
+                if (( device_det < 4 )); then
                     warn "Device is on lower than iOS 4. Shutdown/Restart device options are not available"
                 else
                     menu_items+=("Shutdown Device" "Restart Device")
@@ -9174,7 +9171,7 @@ device_jailbreak_gilbert() {
 
 device_ssh_message() {
     print "* Make sure to have OpenSSH installed on your iOS device."
-    if [[ $device_det == 1 ]] && (( device_proc < 7 )); then
+    if (( device_det >= 10 )) && (( device_proc < 7 )); then
         print "* Install all updates in Cydia/Zebra."
         print "* Make sure to also have Dropbear installed from my repo."
         print "* Repo: https://lukezgd.github.io/repo"
