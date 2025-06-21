@@ -7088,7 +7088,7 @@ menu_appmanage() {
             break
         fi
         menu_items=("Install IPA (AppSync)")
-        if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
+        if (( device_det >= 4 )); then
             menu_items+=("Dump App as IPA")
         fi
         menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
@@ -9796,37 +9796,50 @@ device_altserver() {
 }
 
 device_dumpapp() {
-    local clutch_binary="clutch" # iOS 8+
-    if (( device_det == 6 || device_det == 7 )); then
-        clutch_binary="clutch204" # iOS 6 - 7
-    elif (( device_det == 5 )); then
-        clutch_binary="clutch13" # iOS 5
-    fi
-    local clutch="../resources/clutch/$clutch_binary"
-
     device_ssh_message
     device_iproxy
     print "* The default root password is: alpine"
     device_sshpass
 
-    local check
-    log "Sending Clutch to device"
+    local dumper_binary="ipainstaller"
+    local selected3="ipainstaller" # Default for everyone else
+    if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
+        available_dumpers=("ipainstaller" "Clutch" "Go Back")
+        echo
+        print "* You should choose ipainstaller over Clutch for dumping most apps."
+        print "* However, Clutch may dump some apps better, albeit with lower success rates."
+        print "* Choose one of the listed app dumper to use."
+        select_option "${available_dumpers[@]}"
+        selected3="${available_dumpers[$?]}"
+        case $selected3 in
+            "Clutch" )
+                if (( device_det == 6 || device_det == 7 )); then
+                    dumper_binary="clutch204" # iOS 6 - 7
+                elif (( device_det == 5 )); then
+                    dumper_binary="clutch13" # iOS 5
+                else
+                    dumper_binary="clutch" # iOS 8 - 12.0.x
+                fi
+                ;;
+            "Go Back" ) return;;
+            *) :;;
+        esac
+    fi
+    local dumper="../resources/appdump/$dumper_binary"
+
+    log "Sending $selected3 to device"
     if (( device_det >= 10 )); then
-        cat $clutch | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$clutch_binary" &>scp.log &
-        $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$clutch_binary"
+        cat $dumper | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
+        $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
         sleep 3
         cat scp.log
         check="$(cat scp.log | grep -c "Connection reset")"
     else
-        $scp -P $ssh_port $clutch root@127.0.0.1:/tmp
-        check=$?
+        $scp -P $ssh_port $dumper root@127.0.0.1:/tmp
+        local check=$?
     fi
 
     if [[ $check == 0 ]]; then
-        local dump_path="/private/var/mobile/Documents/Dumped/"
-        if (( device_det == 5 )); then
-            dump_path="/var/root/Documents/Cracked/"
-        fi
         mkdir -p ../saved/applications
 
         while true; do
@@ -9842,26 +9855,34 @@ device_dumpapp() {
                 "Go Back" ) break;;
             esac
 
-            log "Running Clutch"
+            log "Dumping $selected2 with $selected3"
             print "* This process may take up to 5 minutes depending on the hardware and app size."
             print "* If the dumping gets stuck, you can press Ctrl+C to cancel, then retry."
-            if (( device_det == 5 )); then
-                $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary $(echo $available_apps_json | jq --argjson i $? -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
-            else
-                $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary -d $selected2" &>ssh.log
-            fi
-            cat ssh.log
+            case $selected3 in
+                "ipainstaller" )
+                    $ssh -p $ssh_port root@127.0.0.1 "rm -f /tmp/$selected2.ipa" # Ensure target output path is empty
+                    $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -b $selected2 -o /tmp/$selected2.ipa"
+                    ;;
+
+                "Clutch" )
+                    local ipa
+                    if (( device_det == 5 )); then
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | jq --argjson i $? -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+                        ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
+                    else
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
+                        ipa="$(cat ssh.log | grep "/private/var/mobile/Documents/Dumped/" | cut -d ' ' -f2)"
+                    fi
+                    $ssh -p $ssh_port root@127.0.0.1 "mv \"$ipa\" /tmp/$selected2.ipa"
+                    cat ssh.log
+                    ;;
+            esac
 
             check=$?
             if [[ $check == 0 ]]; then
-                local ipa="$(cat ssh.log | grep "$dump_path" | cut -d ' ' -f2 | tr -d "\t")"
-                $scp -P $ssh_port root@127.0.0.1:"$ipa" "../saved/applications"
-                log "Dumped $selected2: saved/applications/$(basename "$ipa")"
-
-                select_yesno "Delete dumped IPA file from device?" 1
-                if [[ $? == 1 ]]; then
-                    $ssh -p $ssh_port root@127.0.0.1 "rm \"$ipa\""
-                fi
+                $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
+                $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
+                log "Dumped successfully: saved/applications/$selected2.ipa"
             else
                 error "Failed to dump $selected2"
                 break
