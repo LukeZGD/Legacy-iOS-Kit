@@ -9842,6 +9842,8 @@ device_dumpapp() {
             esac
 
             log "Running Clutch"
+            print "* This process may take up to 5 minutes depending on the hardware and app size."
+            print "* If the dumping gets stuck, you can press Ctrl+C to cancel, then retry."
             if (( device_det == 5 )); then
                 $ssh -p $ssh_port root@127.0.0.1 "/tmp/$clutch_binary $(echo $available_apps_json | jq --argjson i $? -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
             else
