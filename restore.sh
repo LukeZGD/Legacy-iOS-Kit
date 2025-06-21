@@ -932,6 +932,8 @@ device_get_name() {
         "iPod5,1") device_name="iPod touch 5";;
         "iPod7,1") device_name="iPod touch 6";;
         "iPod9,1") device_name="iPod touch 7";;
+        "Watch1,1") device_name="Apple Watch (1st generation) (38mm)";;
+        "Watch1,2") device_name="Apple Watch (1st generation) (42mm)";;
     esac
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
@@ -1233,6 +1235,8 @@ device_get_info() {
             n78  ) device_type="iPod5,1";;
             n102 ) device_type="iPod7,1";;
             n112 ) device_type="iPod9,1";;
+            n27a ) device_type="Watch1,1";;
+            n28a ) device_type="Watch1,2";;
         esac
     fi
     if [[ -n $device_type && -z $device_model ]]; then
@@ -1314,6 +1318,8 @@ device_get_info() {
             iPod5,1 ) device_model="n78";;
             iPod7,1 ) device_model="n102";;
             iPod9,1 ) device_model="n112";;
+            Watch1,1) device_model="n27a";;
+            Watch1,2) device_model="n28a";;
         esac
     fi
 
@@ -1332,7 +1338,7 @@ device_get_info() {
             device_proc=1;; # S5L8900
         iPad1,1 | iPhone[23],* | iPod[234],1 )
             device_proc=4;; # A4/S5L8720/8920/8922
-        iPad2,* | iPad3,[123] | iPhone4,1 | iPod5,1 )
+        iPad2,* | iPad3,[123] | iPhone4,1 | iPod5,1 | Watch1,[12] )
             device_proc=5;; # A5
         iPad3,* | iPhone5,* )
             device_proc=6;; # A6
@@ -1349,6 +1355,9 @@ device_get_info() {
     esac
     case $device_type in
         iPad[67],* ) device_checkm8ipad=1;;
+    esac
+    case $device_type in
+        Watch1,[12] ) device_checkm8a5=0;;
     esac
     device_get_name
     if [[ -z $device_name && $device_mode == "Normal" ]]; then
@@ -1428,6 +1437,10 @@ device_get_info() {
         iPad3,4 | iPad4,[12345] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
+        ;;
+        Watch1,[12] )
+            device_use_vers="4.3.2"
+            device_use_build="15U70"
         ;;
     esac
     case $device_type in
@@ -1977,7 +1990,7 @@ device_enter_mode() {
                 esac
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                    $device_boot4 != 1 && $device_proc == 5 ]]; then
+                    $device_boot4 != 1 && $device_proc == 5 && $device_checkm8a5 != 0 ]]; then
                 print "* Select Y if your device is in pwned iBSS/kDFU mode."
                 print "* Select N if this is not the case. (pwn using checkm8-a5)"
                 print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
@@ -1988,7 +2001,7 @@ device_enter_mode() {
                 fi
             fi
 
-            if [[ $device_proc == 5 ]]; then
+            if [[ $device_proc == 5 && $device_checkm8a5 != 0 ]]; then
                 if [[ $device_mode != "DFU" ]]; then
                     device_enter_mode DFU
                     log "Device is now in DFU mode. Now put your device in PWNED DFU mode using checkm8-a5."
@@ -2036,7 +2049,7 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+            elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" || $device_type == "Watch1,"* ]]; then
                 # A6/3gs/touch 3 use ipwnder
                 log "Placing device to pwnDFU mode using ipwnder"
                 opt="$ipwnder -d" # ipwnder_lite
@@ -2262,18 +2275,21 @@ ipsw_get_url() {
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
-        local phone="OS" # iOS
+        local device="iOS" # iOS
         case $build_id in
             2[0123]* | 7B405 | 7B500 ) :;;
-            1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-            7* ) phone="Phone%20OS";; # iPhone OS
+            1[AC]* | [2345]* ) device="iPhone%20Software";; # iPhone Software
+            7* ) device="iPhone%20OS";; # iPhone OS
         esac
         if [[ $device_type == "iPad"* ]]; then
             case $build_id in
-                1[789]* | [23]* ) phone="PadOS";; # iPadOS
+                1[789]* | [23]* ) device="iPadOS";; # iPadOS
             esac
         fi
-        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
+        if [[ $device_type == "Watch"* ]]; then
+            device="watchOS" # watchOS
+        fi
+        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/$device;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
         if [[ $(echo "$url" | grep -c '<') != 0 || $url2 != *"$build_id2"* ]]; then
@@ -2321,6 +2337,7 @@ patch_ibss() {
         iPad1,1 | iPod3,1 ) build_id="9B206";;
         iPhone2,1 | iPod4,1 ) build_id="10B500";;
         iPhone3,[123] ) build_id="11D257";;
+        Watch1,[12] ) build_id="15U70";;
         * ) build_id="12H321";;
     esac
     if [[ -n $device_rd_build ]]; then
@@ -2354,6 +2371,8 @@ patch_ibec() {
             build_id="11B511";;
         iPhone5,4 )
             build_id="11B651";;
+        Watch1,[12] )
+            build_id="15U70";;
         * )
             build_id="10B329";;
     esac
@@ -2705,18 +2724,21 @@ ipsw_verify() {
     fi
 
     log "Getting SHA1 hash from AppleDB..."
-    local phone="OS" # iOS
+    local device="iOS" # iOS
     case $build_id in
         2[0123]* | 7B405 | 7B500 ) :;;
-        1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-        7* ) phone="Phone%20OS";; # iPhone OS
+        1[AC]* | [2345]* ) device="iPhone%20Software";; # iPhone Software
+        7* ) device="iPhone%20OS";; # iPhone OS
     esac
     if [[ $device_type == "iPad"* ]]; then
         case $build_id in
-            1[789]* | [23]* ) phone="PadOS";; # iPadOS
+            1[789]* | [23]* ) device="iPadOS";; # iPadOS
         esac
     fi
-    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
+    if [[ $device_type == "Watch"* ]]; then
+        device="watchOS" # watchOS
+    fi
+    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/$device;$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
@@ -5259,7 +5281,7 @@ device_buttons() {
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
         print "* Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
-    elif [[ $device_proc == 5 ]]; then
+    elif [[ $device_proc == 5 && $device_checkm8a5 != 0 ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
         print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
@@ -5287,7 +5309,7 @@ device_buttons2() {
     print "* This device needs to be jailbroken/in pwnDFU mode before proceeding."
     print "* Selecting 1 (Jailbroken) is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
     print "* Selecting 2 (pwnDFU) is for those that prefer the ramdisk method instead."
-    if [[ $device_proc == 5 ]]; then
+    if [[ $device_proc == 5 && $device_checkm8a5 != 0 ]]; then
         warn "Selecting 2 will require usage of checkm8-a5."
         print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     fi
@@ -5889,6 +5911,7 @@ device_ramdisk() {
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,[34] ) device_target_build="11D257";;
+        Watch1,[12] ) device_target_build="15U70" ;;
         * ) device_target_build="10B329";;
     esac
     if [[ -n $device_rd_build ]]; then
@@ -9060,7 +9083,7 @@ device_jailbreak_confirm() {
             pause
             return
         fi
-    elif [[ $device_proc == 5 ]]; then
+    elif [[ $device_proc == 5 && $device_checkm8a5 != 0 ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
         print "* Especially since this method may require the usage of checkm8-a5."
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
