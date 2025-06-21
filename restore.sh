@@ -9857,8 +9857,12 @@ device_dumpapp() {
         if [[ $check == 0 ]]; then
             ipa="$(cat ssh.log | grep "$dump_path" | cut -d ' ' -f2 | tr -d "\t")"
             $scp -P $ssh_port root@127.0.0.1:"$ipa" "../saved/applications"
-            $ssh -p $ssh_port root@127.0.0.1 "rm \"$ipa\""
             log "Dumped $app_id: saved/applications/$(basename "$ipa")"
+
+            select_yesno "Delete dumped IPA file from device?" 1
+            if [[ $? == 1 ]]; then
+                $ssh -p $ssh_port root@127.0.0.1 "rm \"$ipa\""
+            fi
         else
             error "Failed to dump $app_id_type: $app_id"
         fi
