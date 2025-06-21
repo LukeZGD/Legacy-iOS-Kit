@@ -1130,6 +1130,7 @@ device_get_info() {
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
                 device_det=$(echo "$device_vers" | cut -d. -f1)
+                device_det2=$(echo "$device_vers" | cut -d. -f2)
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -7087,7 +7088,7 @@ menu_appmanage() {
             break
         fi
         menu_items=("Install IPA (AppSync)")
-        if (( device_det >= 5 && device_det <= 12 )); then
+        if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
             menu_items+=("Dump App as IPA")
         fi
         menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
