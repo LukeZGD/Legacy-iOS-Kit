@@ -9850,7 +9850,8 @@ device_dumpapp() {
             echo
             print "* Select an app listed below to dump as IPA."
             select_option "${available_apps[@]}"
-            local selected2="${available_apps[$?]}"
+            local app_index=$?
+            local selected2="${available_apps[$app_index]}"
             case $selected2 in
                 "Go Back" ) break;;
             esac
@@ -9867,7 +9868,7 @@ device_dumpapp() {
                 "Clutch" )
                     local ipa
                     if (( device_det == 5 )); then
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | jq --argjson i $? -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
                         $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
@@ -9880,9 +9881,11 @@ device_dumpapp() {
 
             check=$?
             if [[ $check == 0 ]]; then
+                local ipa_name="$(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
-                log "Dumped successfully: saved/applications/$selected2.ipa"
+                mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
+                log "Dumped successfully: saved/applications/$ipa_name"
             else
                 error "Failed to dump $selected2"
                 break
