@@ -8645,13 +8645,16 @@ menu_shsh_browse() {
         menu_zenity_check
         newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
     fi
+    log "Selected SHSH file: $newpath"
+    if [[ -n "$newpath" && ! -s "$newpath" ]]; then
+        warn "The selected SHSH blob file seems to be empty/invalid. It cannot be used for restoring."
+    fi
     if [[ ! -s "$newpath" ]]; then
         print "* Enter the full path to the SHSH file to be used."
         print "* You may also drag and drop the SHSH file to the Terminal window."
         read -p "$(input "Path to $text SHSH file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     fi
     [[ ! -s "$newpath" ]] && return
-    log "Selected SHSH file: $newpath"
     log "Validating..."
     if (( device_proc >= 7 )); then
         unzip -o -j "$val" BuildManifest.plist
