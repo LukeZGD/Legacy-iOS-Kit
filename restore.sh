@@ -1130,6 +1130,7 @@ device_get_info() {
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
                 device_det=$(echo "$device_vers" | cut -d. -f1)
+                device_det2=$(echo "$device_vers" | cut -d. -f2)
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -7086,13 +7087,18 @@ menu_appmanage() {
             pause
             break
         fi
-        menu_items=("Install IPA (AppSync)" "List User Apps" "List System Apps" "List All Apps" "Go Back")
+        menu_items=("Install IPA (AppSync)")
+        if (( device_det >= 4 )); then
+            menu_items+=("Dump App as IPA")
+        fi
+        menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
             "Install IPA (AppSync)" ) menu_ipa "$selected";;
+            "Dump App as IPA" ) device_dumpapp;;
             "List User Apps"   ) $ideviceinstaller list --user;;
             "List System Apps" ) $ideviceinstaller list --system;;
             "List All Apps"    ) $ideviceinstaller list --all;;
@@ -9790,6 +9796,115 @@ device_altserver() {
     pushd ../saved >/dev/null
     $altserver -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
     popd >/dev/null
+}
+
+device_dumpapp() {
+    device_ssh_message
+    device_iproxy
+    print "* The default root password is: alpine"
+    device_sshpass
+
+    local dumper_binary="ipainstaller"
+    local selected3="ipainstaller" # Default for everyone else
+    if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
+        available_dumpers=("ipainstaller" "Clutch" "Go Back")
+        echo
+        print "* You should choose ipainstaller over Clutch for dumping most apps."
+        print "* However, Clutch may dump some apps better, albeit with lower success rates."
+        print "* Choose one of the listed app dumper to use."
+        select_option "${available_dumpers[@]}"
+        selected3="${available_dumpers[$?]}"
+        case $selected3 in
+            "Clutch" )
+                if (( device_det == 6 || device_det == 7 )); then
+                    dumper_binary="clutch204" # iOS 6 - 7
+                elif (( device_det == 5 )); then
+                    dumper_binary="clutch13" # iOS 5
+                else
+                    dumper_binary="clutch" # iOS 8 - 12.0.x
+                fi
+                ;;
+            "Go Back" ) return;;
+            *) :;;
+        esac
+    fi
+    local dumper="../resources/appdump/$dumper_binary"
+
+    log "Sending $selected3 to device"
+    if (( device_det >= 10 )); then
+        cat $dumper | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
+        $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
+        sleep 3
+        cat scp.log
+        check="$(cat scp.log | grep -c "Connection reset")"
+    else
+        $scp -P $ssh_port $dumper root@127.0.0.1:/tmp
+        local check=$?
+    fi
+
+    if [[ $check == 0 ]]; then
+        mkdir -p ../saved/applications
+
+        while true; do
+            local available_apps_json="$($ideviceinstaller list --json --user)"
+            local available_apps=($(echo $available_apps_json | jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+            available_apps+=("Go Back")
+
+            echo
+            print "* Select an app listed below to dump as IPA."
+            select_option "${available_apps[@]}"
+            local app_index=$?
+            local selected2="${available_apps[$app_index]}"
+            case $selected2 in
+                "Go Back" ) break;;
+            esac
+
+            log "Dumping $selected2 with $selected3"
+            print "* This process may take up to 5 minutes depending on the hardware and app size."
+            print "* If the dumping gets stuck, you can press Ctrl+C to cancel, then retry."
+            case $selected3 in
+                "ipainstaller" )
+                    $ssh -p $ssh_port root@127.0.0.1 "rm -f /tmp/$selected2.ipa" # Ensure target output path is empty
+                    $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -b $selected2 -o /tmp/$selected2.ipa"
+                    ;;
+
+                "Clutch" )
+                    local ipa
+                    if (( device_det == 5 )); then
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+                        ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
+                    else
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
+                        ipa="$(cat ssh.log | grep "/private/var/mobile/Documents/Dumped/" | cut -d ' ' -f2)"
+                    fi
+                    $ssh -p $ssh_port root@127.0.0.1 "mv \"$ipa\" /tmp/$selected2.ipa"
+                    cat ssh.log
+                    ;;
+            esac
+
+            check=$?
+            if [[ $check == 0 ]]; then
+                local ipa_name="$(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
+                $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
+                $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
+                mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
+                log "Dumped successfully: saved/applications/$ipa_name"
+            else
+                error "Failed to dump $selected2"
+                break
+            fi
+
+        done
+    else
+        error "Failed to connect to device via USB SSH."
+        if (( device_det >= 10 )); then
+            print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
+        elif [[ $device_det == 5 ]]; then
+            print "* Try to re-install OpenSSH, reboot, and try again."
+        else
+            print "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."
+        fi
+    fi
 }
 
 device_fourthree_step2() {
