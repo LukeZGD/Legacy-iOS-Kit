@@ -1834,7 +1834,7 @@ device_enter_mode() {
             log "Please read the message below:"
             print "* Follow these instructions to enter kDFU mode."
             print "1. Install \"OpenSSH\" in Cydia or Zebra."
-            if (( device_det >= 10 )); then
+            if [[ $device_det == 10 ]]; then
                 print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
                 print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
             fi
@@ -1848,7 +1848,7 @@ device_enter_mode() {
             pause
 
             echo "chmod +x /tmp/kloader*" > kloaders
-            if (( device_det >= 10 )); then
+            if [[ $device_det == 10 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
@@ -1870,7 +1870,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             log "Sending files to device: ${sendfiles[*]}"
-            if (( device_det >= 10 )); then
+            if [[ $device_det == 10 ]]; then
                 for file in "${sendfiles[@]}"; do
                     cat $file | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
                 done
@@ -1886,7 +1886,7 @@ device_enter_mode() {
                 $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
-                if (( device_det >= 10 )); then
+                if [[ $device_det == 10 ]]; then
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
                     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
@@ -2128,8 +2128,8 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local ipwndfu_comm="17a32ad63480ee6e3990ce85acbba4af143da0b3"
-    local ipwndfu_sha1="4d7ed14618fb7bfdee101a31b77513752e5fea7c"
+    local ipwndfu_comm="a89956bc73f3c405520b36eb1829673600f27549"
+    local ipwndfu_sha1="396c47eeb7c647db3b57b70bfe11374d869f0cf4"
     local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
@@ -5097,8 +5097,8 @@ restore_futurerestore() {
         local fr_branch
         local device_det3=$(echo "$device_target_vers" | cut -c -2)
         if (( device_det3 > 15 )); then
-            fr_latest="21990ed74bff49937de8185d1209d8bace51b18f"
-            fr_branch="dev"
+            fr_latest="cd485661035e1748ec8ef9d0f9e4eaf9aaf1924e"
+            fr_branch="dev-2025"
         else
             fr_latest="cb5376bfd1b5deba512a80578b15daf47257262b"
             fr_branch="main"
@@ -9180,7 +9180,7 @@ device_jailbreak_gilbert() {
 
 device_ssh_message() {
     print "* Make sure to have OpenSSH installed on your iOS device."
-    if (( device_det >= 10 )) && (( device_proc < 7 )); then
+    if [[ $device_det == 10 ]] && (( device_proc < 7 )); then
         print "* Install all updates in Cydia/Zebra."
         print "* Make sure to also have Dropbear installed from my repo."
         print "* Repo: https://lukezgd.github.io/repo"
@@ -9823,7 +9823,7 @@ device_dumpapp() {
                 else
                     dumper_binary="clutch" # iOS 8 - 12.0.x
                 fi
-                ;;
+            ;;
             "Go Back" ) return;;
             *) :;;
         esac
@@ -9831,7 +9831,7 @@ device_dumpapp() {
     local dumper="../resources/appdump/$dumper_binary"
 
     log "Sending $selected3 to device"
-    if (( device_det >= 10 )); then
+    if [[ $device_det == 10 ]]; then
         cat $dumper | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
         $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
         sleep 3
@@ -9893,11 +9893,10 @@ device_dumpapp() {
                 error "Failed to dump $selected2"
                 break
             fi
-
         done
     else
         error "Failed to connect to device via USB SSH."
-        if (( device_det >= 10 )); then
+        if [[ $device_det == 10 ]]; then
             print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
         elif [[ $device_det == 5 ]]; then
             print "* Try to re-install OpenSSH, reboot, and try again."
