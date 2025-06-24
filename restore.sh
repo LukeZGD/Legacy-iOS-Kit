@@ -2128,8 +2128,8 @@ device_send_unpacked_ibss() {
 
 device_ipwndfu_alloc8() {
     local tool_pwned=0
-    local ipwndfu_comm="a89956bc73f3c405520b36eb1829673600f27549"
-    local ipwndfu_sha1="396c47eeb7c647db3b57b70bfe11374d869f0cf4"
+    local ipwndfu_comm="52fdaa27fc7c12cdca74bcaa344a91726be46cce"
+    local ipwndfu_sha1="5c98881c45d7b829579af6783bc9568cf5e426d7"
     local ipwndfu="ipwndfu_python3"
     local psudo
     if [[ $device_sudoloop == 1 ]]; then
@@ -2137,8 +2137,8 @@ device_ipwndfu_alloc8() {
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="b8a9bfa65891f39cdfa155568f592eba8ef711b9"
-        ipwndfu_sha1="9b24f33910d5b7e42825cc1df0ca98a08109f3b3"
+        ipwndfu_comm="21913d43a66d8a4b292efc9a8c87e26cde06ea36"
+        ipwndfu_sha1="cd5d889403705af058816fe0563111ce5adf729b"
     fi
 
     device_enter_mode pwnDFU
@@ -5081,7 +5081,9 @@ restore_futurerestore() {
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
-        ExtraArr+=("--no-rsep")
+        if [[ $device_target_vers != "16"* ]]; then
+            ExtraArr+=("--no-rsep")
+        fi
         if [[ $device_target_setnonce == 1 ]]; then
             ExtraArr+=("--set-nonce")
         fi
@@ -5194,7 +5196,7 @@ restore_latest() {
     fi
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
-    opt=$?
+    local opt=$?
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
@@ -5421,8 +5423,14 @@ restore_prepare() {
             else
                 if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
                     restore_latest custom first
+                    local opt=$?
                     print "* Proceed to install the alloc8 exploit for the device to boot:"
                     print " -> Go to: Useful Utilities -> Install alloc8 Exploit"
+                    if [[ $opt != 0 ]]; then
+                        warn "The restore seems to have failed. Will not continue with alloc8 install."
+                        print "* Do not attempt alloc8 install manually either. It will not work without a successful restore."
+                        return
+                    fi
                     log "Do not disconnect your device, not done yet"
                     device_find_mode DFU 50
                     device_ipwndfu_alloc8
@@ -8972,7 +8980,15 @@ menu_usefulutilities() {
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
-            "Install alloc8 Exploit" ) mode="device_ipwndfu_alloc8";;
+            "Install alloc8 Exploit" )
+                warn "This will install alloc8 exploit to the device. Only do this if your device is successfully restored already."
+                print "* If your device is not successfully restored/downgraded yet, this will not work."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                mode="device_ipwndfu_alloc8"
+            ;;
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
             "DFU Mode Helper" ) mode="device_dfuhelper";;
