@@ -2265,7 +2265,7 @@ ipsw_get_url() {
         log "Getting URL for $device_type-$build_id"
         local phone="OS" # iOS
         case $build_id in
-            2[0123]* | 7B405 | 7B500 ) :;;
+            [23][0123456789]* | 7B405 | 7B500 ) :;;
             1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
             7* ) phone="Phone%20OS";; # iPhone OS
         esac
@@ -2708,7 +2708,7 @@ ipsw_verify() {
     log "Getting SHA1 hash from AppleDB..."
     local phone="OS" # iOS
     case $build_id in
-        2[0123]* | 7B405 | 7B500 ) :;;
+        [23][0123456789]* | 7B405 | 7B500 ) :;;
         1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
         7* ) phone="Phone%20OS";; # iPhone OS
     esac
@@ -6123,7 +6123,7 @@ device_ramdisk() {
     done
     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
         log "Transferring some files"
-        tar -xvf ../resources/sshrd/ssh.tar bin/chmod bin/chown bin/cp bin/dd bin/mount.sh bin/tar usr/bin/date usr/bin/df usr/bin/du
+        tar -xvf ../resources/sshrd/ssh.tar ./bin/chmod ./bin/chown ./bin/cp ./bin/dd ./bin/mount.sh ./bin/tar ./usr/bin/date ./usr/bin/df ./usr/bin/du
         $ssh -p $ssh_port root@127.0.0.1 "rm -f /bin/mount.sh /usr/bin/date"
         $scp -P $ssh_port bin/* root@127.0.0.1:/bin
         $scp -P $ssh_port usr/bin/* root@127.0.0.1:/usr/bin
