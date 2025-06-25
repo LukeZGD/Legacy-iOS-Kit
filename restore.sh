@@ -1890,7 +1890,7 @@ device_enter_mode() {
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
                     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
-                elif [[ $device_det == 5 ]]; then
+                elif (( device_det <= 5 )); then
                     print "* Try to re-install OpenSSH, reboot, and try again."
                 else
                     print "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."
@@ -2903,16 +2903,11 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 [43]* ) JBFiles[0]="fstab_old.tar"
             esac
-            for i in {0..1}; do
+            for i in {0..2}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
             case $device_target_vers in
-                4.3* )
-                    JBFiles[2]=$jelbrek/${JBFiles[2]}
-                    if [[ $device_type == "iPad2"* ]]; then
-                        JBFiles[2]=
-                    fi
-                ;;
+                4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[2]=;;
                 4.2.[8761] )
                     if [[ $device_type == "iPhone1,2" ]]; then
                         JBFiles[2]=
@@ -2926,16 +2921,14 @@ ipsw_prepare_jailbreak() {
                         JBFiles[2]=
                     fi
                 ;;
-                3.0* | 4.2* ) :;;
-                * ) JBFiles[2]=$jelbrek/${JBFiles[2]};;
+                3.0* | 4.2* ) JBFiles[2]=;;
             esac
             case $device_target_vers in
                 [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
             esac
             if [[ $device_target_vers == "3"* ]]; then
                 JBFiles+=("$jelbrek/cydiahttpatch.tar")
-            fi
-            if [[ $device_target_vers == "5"* ]]; then
+            elif [[ $device_target_vers == "5"* ]]; then
                 JBFiles+=("$jelbrek/g1lbertJB.tar")
             fi
             if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
@@ -8937,7 +8930,8 @@ menu_usefulutilities() {
             menu_items+=("Clear NVRAM")
             if [[ $device_canpowder == 1 ]]; then
                 menu_items+=("Disable/Enable Exploit")
-            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
+            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 &&
+                    $device_vers != "6.1.6" && $device_vers != "4.1" ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
             if [[ $device_type != "iPod2,1" && $device_mode == "Normal" ]]; then
@@ -8983,6 +8977,7 @@ menu_usefulutilities() {
             "Install alloc8 Exploit" )
                 warn "This will install alloc8 exploit to the device. Only do this if your device is successfully restored already."
                 print "* If your device is not successfully restored/downgraded yet, this will not work."
+                print "* Also, this is not supposed to be used on iOS 6.1.6 or 4.1."
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
@@ -9817,7 +9812,6 @@ device_altserver() {
 device_dumpapp() {
     device_ssh_message
     device_iproxy
-    print "* The default root password is: alpine"
     device_sshpass
 
     local dumper_binary="ipainstaller"
@@ -9827,7 +9821,7 @@ device_dumpapp() {
         echo
         print "* You should choose ipainstaller over Clutch for dumping most apps."
         print "* However, Clutch may dump some apps better, albeit with lower success rates."
-        print "* Choose one of the listed app dumper to use."
+        input "Choose one of the listed app dumper to use."
         select_option "${available_dumpers[@]}"
         selected3="${available_dumpers[$?]}"
         case $selected3 in
@@ -9911,14 +9905,15 @@ device_dumpapp() {
             fi
         done
     else
-        error "Failed to connect to device via USB SSH."
+        warn "Failed to connect to device via USB SSH."
         if [[ $device_det == 10 ]]; then
             print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
-        elif [[ $device_det == 5 ]]; then
+        elif (( device_det <= 8 )); then
             print "* Try to re-install OpenSSH, reboot, and try again."
         else
             print "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."
         fi
+        error "Failed to connect to device via SSH, cannot continue."
     fi
 }
 
