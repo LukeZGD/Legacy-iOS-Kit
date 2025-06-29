@@ -1453,7 +1453,7 @@ device_get_info() {
             device_latest_build="22F76"
         ;;
     esac
-    if (( device_proc > 10 )); then
+    if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
         device_latest_vers="18.5"
         device_latest_build="22F76"
 #         log "Getting latest iOS version for $device_type"
@@ -7090,7 +7090,7 @@ menu_appmanage() {
         fi
         menu_items=("Install IPA (AppSync)")
         if (( device_det >= 4 )); then
-            menu_items+=("Dump App as IPA")
+            menu_items+=("Dump App as IPA" "Dump All Apps as IPA")
         fi
         menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
         print " > Main Menu > App Management"
@@ -7099,10 +7099,11 @@ menu_appmanage() {
         selected="${menu_items[$?]}"
         case $selected in
             "Install IPA (AppSync)" ) menu_ipa "$selected";;
-            "Dump App as IPA"  ) device_dumpapp;;
-            "List User Apps"   ) $ideviceinstaller list --user;;
-            "List System Apps" ) $ideviceinstaller list --system;;
-            "List All Apps"    ) $ideviceinstaller list --all;;
+            "Dump App as IPA"       ) device_dumpapp;;
+            "Dump All Apps as IPA"  ) device_dumpapp all;;
+            "List User Apps"        ) $ideviceinstaller list --user;;
+            "List System Apps"      ) $ideviceinstaller list --system;;
+            "List All Apps"         ) $ideviceinstaller list --all;;
             "Go Back" ) back=1;;
         esac
     done
@@ -9817,6 +9818,7 @@ device_dumpapp() {
     device_sshpass
 
     local dumper_binary="ipainstaller"
+    local selected2
     local selected3="ipainstaller" # Default for everyone else
     if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
         available_dumpers=("ipainstaller" "Clutch" "Go Back")
@@ -9836,7 +9838,7 @@ device_dumpapp() {
                     dumper_binary="clutch" # iOS 8 - 12.0.x
                 fi
             ;;
-            "Go Back" ) return;;
+            "Go Back" ) kill $iproxy_pid; return;;
             *) :;;
         esac
     fi
@@ -9854,22 +9856,32 @@ device_dumpapp() {
         local check=$?
     fi
 
+    local available_apps_json="$($ideviceinstaller list --json --user)"
+    local available_apps=($(echo $available_apps_json | jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+    local all_apps=("${available_apps[@]}")
+    available_apps+=("Go Back")
+    local app_index=0
+
     if [[ $check == 0 ]]; then
         mkdir -p ../saved/applications
 
         while true; do
-            local available_apps_json="$($ideviceinstaller list --json --user)"
-            local available_apps=($(echo $available_apps_json | jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
-            available_apps+=("Go Back")
 
-            echo
-            print "* Select an app listed below to dump as IPA."
-            select_option "${available_apps[@]}"
-            local app_index=$?
-            local selected2="${available_apps[$app_index]}"
-            case $selected2 in
-                "Go Back" ) break;;
-            esac
+            if [[ $1 == "all" ]]; then
+                selected2="${all_apps[$app_index]}"
+                if [[ -z $selected2 ]]; then
+                    break
+                fi
+            else
+                echo
+                print "* Select an app listed below to dump as IPA."
+                select_option "${available_apps[@]}"
+                app_index=$?
+                selected2="${available_apps[$app_index]}"
+                case $selected2 in
+                    "Go Back" ) break;;
+                esac
+            fi
 
             log "Dumping $selected2 with $selected3"
             print "* This process may take up to 5 minutes depending on the hardware and app size."
@@ -9878,7 +9890,8 @@ device_dumpapp() {
                 "ipainstaller" )
                     $ssh -p $ssh_port root@127.0.0.1 "rm -f /tmp/$selected2.ipa" # Ensure target output path is empty
                     $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -b $selected2 -o /tmp/$selected2.ipa"
-                    ;;
+                    check=$?
+                ;;
 
                 "Clutch" )
                     local ipa
@@ -9890,11 +9903,11 @@ device_dumpapp() {
                         ipa="$(cat ssh.log | grep "/private/var/mobile/Documents/Dumped/" | cut -d ' ' -f2)"
                     fi
                     $ssh -p $ssh_port root@127.0.0.1 "mv \"$ipa\" /tmp/$selected2.ipa"
+                    check=$?
                     cat ssh.log
-                    ;;
+                ;;
             esac
 
-            check=$?
             if [[ $check == 0 ]]; then
                 local ipa_name="$(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
@@ -9902,8 +9915,12 @@ device_dumpapp() {
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
                 log "Dumped successfully: saved/applications/$ipa_name"
             else
-                error "Failed to dump $selected2"
-                break
+                warn "Failed to dump $selected2"
+                pause
+            fi
+
+            if [[ $1 == "all" ]]; then
+                app_index=$((app_index+1))
             fi
         done
     else
@@ -9917,6 +9934,7 @@ device_dumpapp() {
         fi
         error "Failed to connect to device via SSH, cannot continue."
     fi
+    kill $iproxy_pid
 }
 
 device_fourthree_step2() {
