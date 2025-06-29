@@ -455,7 +455,7 @@ set_tool_paths() {
 
         # macos checks
         if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
-            local error_msg="* You need to install Xcode Command Line Tools: xcode-select --install"
+            local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
             error_msg+=$'\n* This is also required for installing Homebrew/MacPorts and the needed dependencies.'
             error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
             error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
@@ -7099,7 +7099,7 @@ menu_appmanage() {
         selected="${menu_items[$?]}"
         case $selected in
             "Install IPA (AppSync)" ) menu_ipa "$selected";;
-            "Dump App as IPA" ) device_dumpapp;;
+            "Dump App as IPA"  ) device_dumpapp;;
             "List User Apps"   ) $ideviceinstaller list --user;;
             "List System Apps" ) $ideviceinstaller list --system;;
             "List All Apps"    ) $ideviceinstaller list --all;;
@@ -8930,8 +8930,7 @@ menu_usefulutilities() {
             menu_items+=("Clear NVRAM")
             if [[ $device_canpowder == 1 ]]; then
                 menu_items+=("Disable/Enable Exploit")
-            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 &&
-                    $device_vers != "6.1.6" && $device_vers != "4.1" ]]; then
+            elif [[ $device_type == "iPhone2,1" && $device_newbr != 0 && $device_mode != "Normal" ]]; then
                 menu_items+=("Install alloc8 Exploit")
             fi
             if [[ $device_type != "iPod2,1" && $device_mode == "Normal" ]]; then
@@ -9015,6 +9014,9 @@ device_pair() {
         log "Attempting idevicepair"
     fi
     "$dir/idevicepair" pair
+    if [[ $? != 0 ]]; then
+        warn "Unable to pair with device..?"
+    fi
 }
 
 device_ssh() {

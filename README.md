@@ -25,7 +25,6 @@
 - [FourThree Utility](https://github.com/LukeZGD/FourThree-iPad2) - Dualboot iOS 4.3.x for the iPad 2
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
-- Install IPA files for supported devices with AppSync Unified installed
 - Sideload IPA files for supported devices on Linux (and macOS)
 - Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
@@ -38,6 +37,7 @@
     - For more info on baseband, go to [Baseband Update](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update) wiki page
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
 - Dumping and stitching activation records to IPSW (requires `--activation-records`)
+- [App Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/App-Management) - Install IPA (AppSync), dump apps as IPA, list installed apps
 - [Data Management](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management) - Backup and restore, mount device, erase all content and settings
 - [Misc Utilities](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Misc-Utilities) - Pair device, export data and battery info, shutdown/restart device, and more
 
@@ -196,3 +196,6 @@
 - 64-bit SSH Ramdisk stuff is based on Nathan's [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+), and exploit3dguy's iram tar from [iarchive.app](https://web.archive.org/web/20240324134204/https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)
     - [img4lib](https://github.com/xerub/img4lib) - xerub
     - [img4tool](https://github.com/tihmstar/img4tool) - tihmstar
+- Tools used for dumping IPA - forks by rcky844
+    - [ipainstaller](https://github.com/rcky844/ipainstaller)
+    - [Clutch](https://github.com/rcky844/Clutch)
