@@ -662,9 +662,9 @@ version_update() {
         exit
     fi
     if [[ -d .git ]]; then
+        log "Running git reset..."
+        git reset --hard
         log "Running git pull..."
-        print "* If this fails for some reason, run: git reset --hard"
-        print "* To clean more files if needed, run: git clean -df"
         git pull origin $(git rev-parse --abbrev-ref HEAD)
         pushd "tmp$$" >/dev/null
         log "Done! Please run the script again"
@@ -7482,11 +7482,6 @@ menu_shsh_onboard() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Select IPSW")
         menu_print_info
-        if [[ $device_mode != "none" && $device_proc == 4 ]]; then
-            warn "Dumping onboard blobs might not work for this device, proceed with caution"
-            print "* Legacy iOS Kit only fully supports dumping onboard blobs for A5(X) and A6(X) devices and newer"
-            echo
-        fi
         if [[ -n $ipsw_path ]]; then
             print "* Selected IPSW: $ipsw_path.ipsw"
             print "* IPSW Version: $device_target_vers-$device_target_build"
@@ -7495,9 +7490,6 @@ menu_shsh_onboard() {
                 if (( device_proc < 7 )); then
                     print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
                 fi
-            fi
-            if [[ $device_target_vers == "10"* ]]; then
-                warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
             fi
             menu_items+=("Save Onboard Blobs")
         else
@@ -7510,7 +7502,7 @@ menu_shsh_onboard() {
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
-            "Select IPSW" ) menu_ipsw_browse;;
+            "Select IPSW" ) menu_ipsw_browse onboard;;
             "Save Onboard Blobs" ) mode="shsh_save_onboard";;
             "Go Back" ) back=1;;
         esac
@@ -8539,6 +8531,13 @@ menu_ipsw_browse() {
     fi
 
     case $1 in
+        "onboard" )
+            if [[ $device_target_vers == "10"* ]]; then
+                log "Saving iOS 10 blobs is not supported for 32-bit devices."
+                pause
+                return
+            fi
+        ;;
         "base" )
             local check_vers="7.1"
             local base_vers="7.1.x"
