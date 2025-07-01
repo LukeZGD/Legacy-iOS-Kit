@@ -91,7 +91,7 @@
     - iPod touch 6, 7
     - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
     - Although SEP/BB compatibility mostly does not matter anymore for A9(X)/A10(X) devices thanks to [turdus merula](https://sep.lol)
-- Restoring with iOS 16.6.x SHSH blobs using futurerestore is also supported on these devices (SSH ramdisks not supported):
+- Restoring with iOS 14.3-15.x and 16.6+ SHSH blobs using futurerestore is also supported on these devices (SSH ramdisks not supported):
     - iPhone 8, X
     - iPad 5
     - iPad Pro 9.7/12.9 1st gen
@@ -201,6 +201,6 @@
     - [Clutch](https://github.com/rcky844/Clutch)
 - For iPhone X restore patches:
     - Method by Mineek and Nathan
-    - Mineek's [restored_external patcher](https://gist.github.com/mineek/16c2607c928477dcd273e680e40a1c90) for iPhone X downgrades to 14.3-15.7.2
+    - Mineek's [restored_external patcher](https://gist.github.com/mineek/16c2607c928477dcd273e680e40a1c90) for iPhone X downgrades to 14.3-15.x
     - [KPlooshFinder](https://github.com/plooshi/KPlooshFinder/tree/amfi-only)
-    - [kerneldiff](https://github.com/verygenericname/SSHRD_Script/commit/708ce254fea08e442ecb4cd20c3fdbfe6ce9ab66)
+    - [kerneldiff](https://gist.github.com/LukeZGD/8c719b613ca28d6883552437bdd500de)

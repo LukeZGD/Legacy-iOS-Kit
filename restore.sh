@@ -3741,40 +3741,30 @@ ipsw_bbdigest() {
     fi
     loc+="$2"
     local out="$1"
+    log "Replacing $2"
     if [[ $platform == "macos" ]]; then
         echo $out | base64 --decode > t
-        log "Replacing $2"
         $PlistBuddy -c "Import $loc t" BuildManifest.plist
         rm t
         return
     fi
     in=$($PlistBuddy -c "Print $loc" BuildManifest.plist | tr -d "<>" | xxd -r -p | base64)
-    echo "${in}<" > replace
-    #sed -i'' "s,AAAAAAAAAAAAAAAAAAAAAAA<,==," replace
-    #sed -i'' "s,AAAAAAAAAAAAA<,=," replace
-    #sed -i'' "s,AAAAAAAAA<,=," replace
-    cat replace | sed "s,AAAAAAAAAAAAAAAAAAAAAAA<,==," > t
-    cat t  | sed "s,AAAAAAAAAAAAA<,=," > tt
-    cat tt | sed "s,AAAAAAAAA<,=," > replace
-    in="$(cat replace)"
-    rm replace t tt
+    in="${in}<"
+    in="$(echo "$in" | sed -e 's,AAAAAAAAAAAAAAAAAAAAAAA<,==,' \
+                           -e 's,AAAAAAAAAAAAA<,=,' \
+                           -e 's,AAAAAAAAA<,=,')"
     case $2 in
         *"PartialDigest" )
             in="${in%????????????}"
-            in=$(cat BuildManifest.plist | grep "$in" -m1)
-            log "Replacing $2"
-            #sed -i'' "s,$in,replace," BuildManifest.plist
-            #sed -i'' "/replace/{n;d}" BuildManifest.plist
-            cat BuildManifest.plist | sed "s,$in,replace," > t
-            awk 'f{$0="";f=0}/replace/{f=1}1' t > tt
-            awk '/replace$/{printf("%s",$0);next}1' tt > tmp.plist
-            rm t tt
+            in=$(grep -m1 "$in" BuildManifest.plist)
+            sed "s,$in,replace," BuildManifest.plist | \
+            awk 'f{f=0; next} /replace/{f=1} 1' | \
+            awk '/replace$/{printf "%s", $0; next} 1' > tmp.plist
             in="replace"
         ;;
-        * ) log "Replacing $2"; mv BuildManifest.plist tmp.plist;;
+        * ) mv BuildManifest.plist tmp.plist;;
     esac
-    #sed -i'' "s,$in,$out," BuildManifest.plist
-    cat tmp.plist | sed "s,$in,$out," > BuildManifest.plist
+    sed "s,$in,$out," tmp.plist > BuildManifest.plist
     rm tmp.plist
 }
 
@@ -3864,15 +3854,12 @@ ipsw_bbreplace() {
     esac
 
     log "Replacing $rsb1 with $rsb_latest"
-    #sed -i'' "s,$rsb1,$rsb_latest," BuildManifest.plist
-    cat BuildManifest.plist | sed "s,$rsb1,$rsb_latest," > t
     log "Replacing $sbl1 with $sbl_latest"
-    #sed -i'' "s,$sbl1,$sbl_latest," BuildManifest.plist
-    cat t | sed "s,$sbl1,$sbl_latest," > tt
     log "Replacing $path with Firmware/$device_use_bb"
-    #sed -i'' "s,$path,Firmware/$device_use_bb," BuildManifest.plist
-    cat tt | sed "s,$path,Firmware/$device_use_bb," > BuildManifest.plist
-    rm t tt
+    sed -e "s,$rsb1,$rsb_latest," \
+        -e "s,$sbl1,$sbl_latest," \
+        -e "s,$path,Firmware/$device_use_bb," BuildManifest.plist > tmp.plist
+    mv tmp.plist BuildManifest.plist
 
     zip -r0 temp.ipsw Firmware/$device_use_bb BuildManifest.plist
 }
@@ -5571,17 +5558,12 @@ ipsw_prepare() {
         ;;
 
         [789] | 10 )
-            local target_det=$(echo "$device_target_vers" | cut -d. -f1)
-            local target_det2=$(echo "$device_target_vers" | cut -d. -f2)
-            if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then
-                # patch restored_external for iPhone X downgrades to 14.3-15.7.2
+            if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]] && (( target_det <= 15 )); then
+                # patch restored_external for iPhone X downgrades to 14.3-15.x
                 ipsw_ipx=1
-                restore_usepwndfu64=1
                 ipsw_prepare_ipx
             elif [[ $ipsw_ipx == 1 && $target_det == 14 ]] && (( target_det2 >= 2 )); then
                 # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
-                ipsw_ipx=1
-                restore_usepwndfu64=1
                 ipsw_prepare_ipx
             fi
             restore_usepwndfu64_option
@@ -5641,9 +5623,7 @@ restore_usepwndfu64_option() {
 }
 
 ipsw_prepare_ipx() {
-    local target_det=$(echo "$device_target_vers" | cut -d. -f1)
-    local target_det2=$(echo "$device_target_vers" | cut -d. -f2)
-
+    restore_usepwndfu64=1
     log "Extracting BuildManifest.plist from IPSW"
     unzip -o -j "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
@@ -5701,7 +5681,7 @@ ipsw_prepare_ipx() {
     fi
     chmod +x $ldid
 
-    # patch restored_external for iPhone X downgrades to 14.3-15.7.2
+    # patch restored_external for iPhone X downgrades to 14.3-15.x
     log "Processing RestoreRamDisk"
     "$dir/img4" -i $restoreramdisk -o ramdisk.raw
     log "Extracting restored_external"
@@ -5711,6 +5691,9 @@ ipsw_prepare_ipx() {
     "$dir/ipx_restored_patcher" restored_external.orig restored_external
     $ldid -e restored_external.orig > ent.xml
     $ldid -Sent.xml restored_external
+    if [[ ! -s restored_external ]]; then
+        error "Failed to patch restored_external (???) Please run the script again."
+    fi
     log "Replacing restored_external"
     "$dir/hfsplus" ramdisk.raw rm usr/local/bin/restored_external
     "$dir/hfsplus" ramdisk.raw add restored_external usr/local/bin/restored_external
@@ -7122,6 +7105,9 @@ menu_print_info() {
         if [[ $restore_usepwndfu64 == 1 ]]; then
             warn "use-pwndfu flag detected. futurerestore will have --use-pwndfu enabled."
         fi
+        if [[ $ipsw_ipx == 1 ]]; then
+            warn "enable-ipx flag detected, 14.1 ramdisk will be used. Proceed with caution"
+        fi
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -8406,6 +8392,8 @@ ipsw_version_set() {
     else
         device_target_vers="$vers"
         device_target_build="$build"
+        target_det=$(echo "$device_target_vers" | cut -d. -f1)
+        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
     fi
 }
 
