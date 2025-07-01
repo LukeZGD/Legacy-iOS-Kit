@@ -5718,12 +5718,15 @@ ipsw_prepare_ipx() {
     log "Repacking RestoreRamDisk"
     "$dir/img4" -i ramdisk.raw -o rdsk.im4p -T rdsk -A
 
-    # replace restoresep with latest
+    # check for existing custom ipsw
+    ipsw_latest_set
     if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing custom IPSW: $ipsw_custom.ipsw"
         ipsw_path="$ipsw_custom"
         return
     fi
+
+    # replace restoresep with latest
     ipsw_get_url $device_latest_build
     if [[ -s ../saved/$device_type/restoresep.im4p ]]; then
         cp ../saved/$device_type/restoresep.im4p .
@@ -5739,11 +5742,11 @@ ipsw_prepare_ipx() {
     chmod 644 BuildManifest.plist
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreSEP:Info:Path restoresep.im4p" BuildManifest.plist
 
+    # add latest restoresep to new custom ipsw
     log "Copying IPSW"
     cp "$ipsw_path.ipsw" temp.ipsw
     log "Replacing BuildManifest and RestoreSEP in IPSW"
     zip -r0 temp.ipsw BuildManifest.plist restoresep.im4p
-    ipsw_latest_set
     mv temp.ipsw "$ipsw_custom.ipsw"
     log "Custom IPSW done: $ipsw_custom.ipsw"
     ipsw_path="$ipsw_custom"
