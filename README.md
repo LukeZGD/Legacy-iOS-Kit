@@ -199,3 +199,8 @@
 - Tools used for dumping IPA - forks by rcky844
     - [ipainstaller](https://github.com/rcky844/ipainstaller)
     - [Clutch](https://github.com/rcky844/Clutch)
+- For iPhone X restore patches:
+    - Method by Mineek and Nathan
+    - Mineek's [restored_external patcher](https://gist.github.com/mineek/16c2607c928477dcd273e680e40a1c90) for iPhone X downgrades to 14.3-15.7.2
+    - [KPlooshFinder](https://github.com/plooshi/KPlooshFinder/tree/amfi-only)
+    - [kerneldiff](https://github.com/verygenericname/SSHRD_Script/commit/708ce254fea08e442ecb4cd20c3fdbfe6ce9ab66)

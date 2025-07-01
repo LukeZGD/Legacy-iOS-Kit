@@ -124,6 +124,8 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --skip-ibss               Assume that pwned iBSS has already been sent to the device
 
 For 64-bit checkm8 devices compatible with pwned restores:
+    --enable-ipx              Use iOS 14.1 ramdisk for 14.2-14.8 restores to avoid root seal
+                              Likely needs --skip-blob too but not sure
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
     --use-pwndfu              Enable futurerestore pwned restore option
 
@@ -5074,11 +5076,13 @@ restore_futurerestore() {
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
-        if [[ $device_target_vers != "16"* ]]; then
+        if [[ $device_target_vers != "16"* && $ipsw_ipx != 1 ]]; then
             ExtraArr+=("--no-rsep")
         fi
         if [[ $device_target_setnonce == 1 ]]; then
             ExtraArr+=("--set-nonce")
+        elif [[ $ipsw_ipx == 1 ]]; then
+            ExtraArr+=("--rdsk" "rdsk.im4p" "--rkrn" "kcache.im4p")
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
         print "* Builds from here: https://github.com/LukeeGD/futurerestore"
@@ -5567,9 +5571,22 @@ ipsw_prepare() {
         ;;
 
         [789] | 10 )
+            local target_det=$(echo "$device_target_vers" | cut -d. -f1)
+            local target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+            if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then
+                # patch restored_external for iPhone X downgrades to 14.3-15.7.2
+                ipsw_ipx=1
+                restore_usepwndfu64=1
+                ipsw_prepare_ipx
+            elif [[ $ipsw_ipx == 1 && $target_det == 14 ]] && (( target_det2 >= 2 )); then
+                # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
+                ipsw_ipx=1
+                restore_usepwndfu64=1
+                ipsw_prepare_ipx
+            fi
             restore_usepwndfu64_option
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
-                 ipsw_prepare_1033
+                ipsw_prepare_1033
             fi
         ;;
     esac
@@ -5621,6 +5638,115 @@ restore_usepwndfu64_option() {
             restore_usepwndfu64=1
         fi
     fi
+}
+
+ipsw_prepare_ipx() {
+    local target_det=$(echo "$device_target_vers" | cut -d. -f1)
+    local target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+
+    log "Extracting BuildManifest.plist from IPSW"
+    unzip -o -j "$ipsw_path.ipsw" BuildManifest.plist
+    log "Get paths"
+    local restoresep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
+    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
+    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist)
+    log "RestoreSEP: $restoresep"
+    log "RestoreRamDisk: $restoreramdisk"
+    log "KernelCache: $kernelcache"
+
+    # patch kernelcache amfi (required when using custom ramdisk)
+    log "Extracting KernelCache from IPSW"
+    unzip -o -j "$ipsw_path.ipsw" $kernelcache
+    log "Processing KernelCache"
+    "$dir/img4" -i $kernelcache -o kcache.raw
+    log "Patching KernelCache"
+    "$dir/KPlooshFinder" kcache.raw kcache.patched
+    "$dir/kerneldiff" kcache.raw kcache.patched kcache.bpatch
+    log "Repacking KernelCache"
+    "$dir/img4" -i $kernelcache -o kcache.im4p -T rkrn -P kcache.bpatch -J
+
+    local restoreramdisk2
+    if [[ $target_det == 14 ]] && (( target_det2 >= 2 )); then
+        # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
+        if [[ -s ../saved/$device_type/18A8395.dmg ]]; then
+            log "Using downloaded 14.1 ramdisk"
+            cp ../saved/$device_type/18A8395.dmg $restoreramdisk
+        else
+            ipsw_get_url 18A8395
+            "$dir/pzb" -g "BuildManifest.plist" -o BuildManifest2.plist "$ipsw_url"
+            log "Get 14.1 paths"
+            restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist)
+            log "Download 14.1 ramdisk"
+            "$dir/pzb" -g "$restoreramdisk2" -o $restoreramdisk2 "$ipsw_url"
+            if [[ ! -s $restoreramdisk2 ]]; then
+                error "Failed to download 14.1 ramdisk. Please run the script again"
+            fi
+            mv $restoreramdisk2 $restoreramdisk
+            cp $restoreramdisk ../saved/$device_type/18A8395.dmg
+        fi
+    else
+        log "Extracting RestoreRamDisk from IPSW"
+        unzip -o -j "$ipsw_path.ipsw" $restoreramdisk
+    fi
+
+    local platform2="$platform"
+    [[ $platform2 == "macos" ]] && platform2+="x"
+    ldid="../saved/ldid_${platform2}_$(uname -m)"
+    if [[ ! -s $ldid ]]; then
+        download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/$(basename $ldid) ldid
+        mv ldid $ldid
+    fi
+    if [[ ! -s $ldid ]]; then
+        error "Failed to download ldid. Please run the script again"
+    fi
+    chmod +x $ldid
+
+    # patch restored_external for iPhone X downgrades to 14.3-15.7.2
+    log "Processing RestoreRamDisk"
+    "$dir/img4" -i $restoreramdisk -o ramdisk.raw
+    log "Extracting restored_external"
+    "$dir/hfsplus" ramdisk.raw extract usr/local/bin/restored_external
+    log "Patching restored_external"
+    mv restored_external restored_external.orig
+    "$dir/ipx_restored_patcher" restored_external.orig restored_external
+    $ldid -e restored_external.orig > ent.xml
+    $ldid -Sent.xml restored_external
+    log "Replacing restored_external"
+    "$dir/hfsplus" ramdisk.raw rm usr/local/bin/restored_external
+    "$dir/hfsplus" ramdisk.raw add restored_external usr/local/bin/restored_external
+    "$dir/hfsplus" ramdisk.raw chmod 755 usr/local/bin/restored_external
+    log "Repacking RestoreRamDisk"
+    "$dir/img4" -i ramdisk.raw -o rdsk.im4p -T rdsk -A
+
+    # replace restoresep with latest
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
+        log "Found existing custom IPSW: $ipsw_custom.ipsw"
+        ipsw_path="$ipsw_custom"
+        return
+    fi
+    ipsw_get_url $device_latest_build
+    if [[ -s ../saved/$device_type/restoresep.im4p ]]; then
+        cp ../saved/$device_type/restoresep.im4p .
+    else
+        log "Downloading latest RestoreSEP"
+        "$dir/pzb" -g "$restoresep" -o restoresep.im4p "$ipsw_url"
+        if [[ ! -s restoresep.im4p ]]; then
+            error "Failed to download latest RestoreSEP. Please run the script again"
+        fi
+        cp restoresep.im4p ../saved/$device_type/restoresep.im4p
+    fi
+    log "Replace RestoreSEP with latest in BuildManifest"
+    chmod 644 BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreSEP:Info:Path restoresep.im4p" BuildManifest.plist
+
+    log "Copying IPSW"
+    cp "$ipsw_path.ipsw" temp.ipsw
+    log "Replacing BuildManifest and RestoreSEP in IPSW"
+    zip -r0 temp.ipsw BuildManifest.plist restoresep.im4p
+    ipsw_latest_set
+    mv temp.ipsw "$ipsw_custom.ipsw"
+    log "Custom IPSW done: $ipsw_custom.ipsw"
+    ipsw_path="$ipsw_custom"
 }
 
 menu_remove4() {
@@ -7487,9 +7613,7 @@ menu_shsh_onboard() {
             print "* IPSW Version: $device_target_vers-$device_target_build"
             if [[ $device_mode == "Normal" && $device_target_vers != "$device_vers" ]]; then
                 warn "Selected IPSW does not seem to match the current version."
-                if (( device_proc < 7 )); then
-                    print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
-                fi
+                print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
             fi
             menu_items+=("Save Onboard Blobs")
         else
@@ -8506,20 +8630,13 @@ menu_ipsw_browse() {
         esac
     elif [[ $device_latest_vers == "16"* ]]; then
         case $device_target_build in
+            18[CDEFGH]* | 19* )
+                ipsw_print_1415warn
+                pause
+            ;;
             20[GH]* ) # 16.6-16.7.x only in 16.x
                 ipsw_print_16warn
                 pause
-            ;;
-            18[CDEFGH]* | 19* )
-                if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]]; then # prevent iphone x from restoring to 14.x/15.x
-                    log "Selected IPSW ($device_target_vers) is not supported as target version."
-                    print "* Latest SEP/BB is not compatible."
-                    pause
-                    return
-                else
-                    ipsw_print_1415warn
-                    pause
-                fi
             ;;
             * )
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
@@ -10297,6 +10414,7 @@ for i in "$@"; do
         "--skip-ibss"       ) device_skip_ibss=1;;
 
         # options for 64-bit devices
+        "--enable-ipx"      ) ipsw_ipx=1;;
         "--skip-blob"       ) restore_useskipblob=1;;
         "--use-pwndfu"      ) restore_usepwndfu64=1;;
 
