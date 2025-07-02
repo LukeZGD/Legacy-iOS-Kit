@@ -5079,14 +5079,11 @@ restore_futurerestore() {
         fi
         log "Checking for futurerestore updates..."
         #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
-        local fr_latest
-        local fr_branch
+        local fr_latest="2719b0d615987093191aa20ff6aad82c2ad937e6"
+        local fr_branch="main"
         if (( target_det >= 16 )); then
             fr_latest="cd485661035e1748ec8ef9d0f9e4eaf9aaf1924e"
-            fr_branch="dev-2025"
-        else
-            fr_latest="cb5376bfd1b5deba512a80578b15daf47257262b"
-            fr_branch="main"
+            fr_branch="dev"
         fi
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
         log "futurerestore $fr_branch branch will be used for this restore"
@@ -5564,6 +5561,8 @@ ipsw_prepare() {
             elif [[ $ipsw_ipx == 1 && $target_det == 14 ]] && (( target_det2 >= 2 )); then
                 # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
                 ipsw_prepare_ipx
+            else
+                ipsw_ipx=
             fi
             restore_usepwndfu64_option
             if [[ $device_target_other != 1 && $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
@@ -5628,10 +5627,8 @@ ipsw_prepare_ipx() {
     log "Get paths"
     local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist)
     local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
-    local restoresep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
     log "KernelCache: $kernelcache"
     log "RestoreRamDisk: $restoreramdisk"
-    log "RestoreSEP: $restoresep"
 
     # patch kernelcache amfi (required when using custom ramdisk)
     log "Extracting KernelCache from IPSW"
@@ -5699,53 +5696,6 @@ ipsw_prepare_ipx() {
     "$dir/hfsplus" ramdisk.raw chmod 755 usr/local/bin/restored_external
     log "Repacking RestoreRamDisk"
     "$dir/img4" -i ramdisk.raw -o rdsk.im4p -T rdsk -A
-
-    # check for existing custom ipsw
-    ipsw_latest_set
-    if [[ -s "$ipsw_custom.ipsw" ]]; then
-        log "Checking existing Custom IPSW..."
-        unzip -o -j "$ipsw_custom.ipsw" restoresep.im4p
-        mv BuildManifest.plist tmp.plist
-        unzip -o -j "$ipsw_custom.ipsw" BuildManifest.plist
-        local rsep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
-        if [[ $rsep == "restoresep.im4p" && -s restoresep.im4p ]]; then
-            log "Found existing Custom IPSW. Skipping IPSW creation."
-            ipsw_path="$ipsw_custom"
-            return
-        fi
-        log "Existing custom IPSW is incomplete/invalid. Deleting..."
-        rm -f "$ipsw_custom.ipsw" restoresep.im4p
-        mv tmp.plist BuildManifest.plist
-    fi
-
-    # replace restoresep with latest
-    if [[ -s ../saved/$device_type/restoresep.im4p ]]; then
-        cp ../saved/$device_type/restoresep.im4p .
-    else
-        ipsw_get_url $device_latest_build
-        log "Downloading latest RestoreSEP"
-        "$dir/pzb" -g "$restoresep" -o restoresep.im4p "$ipsw_url"
-        if [[ ! -s restoresep.im4p ]]; then
-            error "Failed to download latest RestoreSEP. Please run the script again"
-        fi
-        cp restoresep.im4p ../saved/$device_type/restoresep.im4p
-    fi
-    log "Replace RestoreSEP with latest in BuildManifest"
-    chmod 644 BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreSEP:Info:Path restoresep.im4p" BuildManifest.plist
-
-    # add latest restoresep to new custom ipsw
-    log "Copying IPSW"
-    cp "$ipsw_path.ipsw" temp.ipsw
-    if [[ $? != 0 ]]; then
-        error "Failed to copy IPSW. Please run the script again"
-    fi
-    log "Replacing BuildManifest and RestoreSEP in IPSW"
-    zip -r0 temp.ipsw BuildManifest.plist restoresep.im4p
-
-    mv temp.ipsw "$ipsw_custom.ipsw"
-    log "Custom IPSW done: $ipsw_custom.ipsw"
-    ipsw_path="$ipsw_custom"
 }
 
 menu_remove4() {
