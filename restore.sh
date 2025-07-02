@@ -2875,7 +2875,7 @@ ipsw_prepare_logos_add() {
 }
 
 ipsw_prepare_jailbreak() {
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
@@ -3599,7 +3599,7 @@ ipsw_prepare_32bit() {
         ipsw_everuntether=1
         JBFiles+=("everuntether.tar")
     fi
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $ipsw_jailbreak == 1 && $ipsw_everuntether != 1 ]]; then
@@ -4354,7 +4354,7 @@ ipsw_prepare_tethered() {
         options_plist="options.plist"
     fi
 
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
@@ -4412,7 +4412,7 @@ ipsw_prepare_ios4powder() {
     local JBFiles=()
     ipsw_prepare_usepowder=1
 
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
@@ -4502,7 +4502,7 @@ ipsw_prepare_ios4powder() {
 
 ipsw_prepare_powder() {
     local ExtraArgs
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
@@ -4778,7 +4778,7 @@ ipsw_prepare_s5l8900() {
         log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
     fi
 
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Deleting existing custom IPSW"
         rm "$ipsw_custom.ipsw"
     fi
@@ -4823,7 +4823,7 @@ ipsw_prepare_s5l8900() {
 }
 
 ipsw_prepare_custom() {
-    if [[ -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     elif [[ $device_target_vers == "4.1" && $ipsw_jailbreak != 1 ]]; then
@@ -5063,7 +5063,7 @@ restore_futurerestore() {
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
-        if [[ $device_target_vers != "16"* && $ipsw_ipx != 1 ]]; then
+        if (( target_det < 16 )) && [[ $ipsw_ipx != 1 ]]; then
             ExtraArr+=("--no-rsep")
         fi
         if [[ $device_target_setnonce == 1 ]]; then
@@ -5081,8 +5081,7 @@ restore_futurerestore() {
         #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
         local fr_latest
         local fr_branch
-        local device_det3=$(echo "$device_target_vers" | cut -c -2)
-        if (( device_det3 > 15 )); then
+        if (( target_det >= 16 )); then
             fr_latest="cd485661035e1748ec8ef9d0f9e4eaf9aaf1924e"
             fr_branch="dev-2025"
         else
@@ -5627,12 +5626,12 @@ ipsw_prepare_ipx() {
     log "Extracting BuildManifest.plist from IPSW"
     unzip -o -j "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
-    local restoresep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
-    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
     local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist)
-    log "RestoreSEP: $restoresep"
-    log "RestoreRamDisk: $restoreramdisk"
+    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
+    local restoresep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
     log "KernelCache: $kernelcache"
+    log "RestoreRamDisk: $restoreramdisk"
+    log "RestoreSEP: $restoresep"
 
     # patch kernelcache amfi (required when using custom ramdisk)
     log "Extracting KernelCache from IPSW"
@@ -5704,16 +5703,26 @@ ipsw_prepare_ipx() {
     # check for existing custom ipsw
     ipsw_latest_set
     if [[ -s "$ipsw_custom.ipsw" ]]; then
-        log "Found existing custom IPSW: $ipsw_custom.ipsw"
-        ipsw_path="$ipsw_custom"
-        return
+        log "Checking existing Custom IPSW..."
+        unzip -o -j "$ipsw_custom.ipsw" restoresep.im4p
+        mv BuildManifest.plist tmp.plist
+        unzip -o -j "$ipsw_custom.ipsw" BuildManifest.plist
+        local rsep=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreSEP:Info:Path" BuildManifest.plist)
+        if [[ $rsep == "restoresep.im4p" && -s restoresep.im4p ]]; then
+            log "Found existing Custom IPSW. Skipping IPSW creation."
+            ipsw_path="$ipsw_custom"
+            return
+        fi
+        log "Existing custom IPSW is incomplete/invalid. Deleting..."
+        rm -f "$ipsw_custom.ipsw" restoresep.im4p
+        mv tmp.plist BuildManifest.plist
     fi
 
     # replace restoresep with latest
-    ipsw_get_url $device_latest_build
     if [[ -s ../saved/$device_type/restoresep.im4p ]]; then
         cp ../saved/$device_type/restoresep.im4p .
     else
+        ipsw_get_url $device_latest_build
         log "Downloading latest RestoreSEP"
         "$dir/pzb" -g "$restoresep" -o restoresep.im4p "$ipsw_url"
         if [[ ! -s restoresep.im4p ]]; then
@@ -5728,8 +5737,12 @@ ipsw_prepare_ipx() {
     # add latest restoresep to new custom ipsw
     log "Copying IPSW"
     cp "$ipsw_path.ipsw" temp.ipsw
+    if [[ $? != 0 ]]; then
+        error "Failed to copy IPSW. Please run the script again"
+    fi
     log "Replacing BuildManifest and RestoreSEP in IPSW"
     zip -r0 temp.ipsw BuildManifest.plist restoresep.im4p
+
     mv temp.ipsw "$ipsw_custom.ipsw"
     log "Custom IPSW done: $ipsw_custom.ipsw"
     ipsw_path="$ipsw_custom"
