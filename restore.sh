@@ -5110,12 +5110,9 @@ restore_futurerestore() {
         futurerestore2+="-${fr_branch}"
     fi
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
-    if [[ -n "$1" ]]; then
-        ExtraArr+=("$1")
-    fi
-    if [[ -n "$2" ]]; then
-        ExtraArr+=("$2")
-    fi
+    for arg in "$@"; do
+        [[ -n "$arg" ]] && ExtraArr+=("$arg")
+    done
     if [[ $debug_mode == 1 ]]; then
         ExtraArr+=("-d")
     fi
@@ -9900,13 +9897,11 @@ device_dumpapp() {
         selected3="${available_dumpers[$?]}"
         case $selected3 in
             "Clutch" )
-                if (( device_det == 6 || device_det == 7 )); then
-                    dumper_binary="clutch204" # iOS 6 - 7
-                elif (( device_det == 5 )); then
-                    dumper_binary="clutch13" # iOS 5
-                else
-                    dumper_binary="clutch" # iOS 8 - 12.0.x
-                fi
+                case $device_det in
+                    [67] ) dumper_binary="clutch204";; # iOS 6 - 7
+                    5    ) dumper_binary="clutch13";;  # iOS 5
+                    *    ) dumper_binary="clutch";;    # iOS 8 - 12.0.x
+                esac
             ;;
             "Go Back" ) kill $iproxy_pid; return;;
             *) :;;
@@ -9927,7 +9922,7 @@ device_dumpapp() {
     fi
 
     local available_apps_json="$($ideviceinstaller list --json --user)"
-    local available_apps=($(echo $available_apps_json | jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+    local available_apps=($(echo $available_apps_json | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
     local all_apps=("${available_apps[@]}")
     available_apps+=("Go Back")
     local app_index=0
@@ -9936,7 +9931,6 @@ device_dumpapp() {
         mkdir -p ../saved/applications
 
         while true; do
-
             if [[ $1 == "all" ]]; then
                 selected2="${all_apps[$app_index]}"
                 if [[ -z $selected2 ]]; then
@@ -9965,8 +9959,8 @@ device_dumpapp() {
 
                 "Clutch" )
                     local ipa
-                    if (( device_det == 5 )); then
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+                    if [[ $device_det == 5 ]]; then
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
                         $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
@@ -9979,7 +9973,7 @@ device_dumpapp() {
             esac
 
             if [[ $check == 0 ]]; then
-                local ipa_name="$(echo $available_apps_json | jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
+                local ipa_name="$(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
