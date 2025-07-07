@@ -1115,6 +1115,7 @@ device_get_info() {
                 device_newbr="$($irecovery -q | grep -c '359.3.2')"
             fi
             device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+            device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
         ;;
 
         "Normal" )
@@ -1376,7 +1377,6 @@ device_get_info() {
     fi
 
     if [[ $device_proc == 1 && $device_mode == "DFU" ]]; then
-        device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
         log "SRTG: $device_srtg"
         if [[ $device_srtg == "iBoot-636.66.3x" ]]; then
             device_pwnd="Pwnage 2.0"
@@ -1963,6 +1963,7 @@ device_enter_mode() {
 
             if [[ $device_mode == "DFU" ]]; then
                 device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
+                device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
             fi
             if [[ -n $device_pwnd ]]; then
                 log "Device seems to be already in pwned DFU mode"
@@ -1979,15 +1980,10 @@ device_enter_mode() {
                 esac
                 return
             elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                    $device_boot4 != 1 && $device_proc == 5 ]]; then
-                print "* Select Y if your device is in pwned iBSS/kDFU mode."
-                print "* Select N if this is not the case. (pwn using checkm8-a5)"
-                print "* Failing to answer correctly will cause \"Sending iBEC\" to fail."
-                select_yesno "Is your device already in pwned iBSS/kDFU mode?" 0
-                if [[ $? != 0 ]]; then
-                    log "Pwned iBSS/kDFU mode specified by user."
-                    return
-                fi
+                    $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
+                 [[ $device_proc == 5 || $device_proc == 6 ]]; then
+                log "No SRTG for A5(X)/A6(X) device in DFU mode! Already pwned iBSS mode?"
+                return
             fi
 
             if [[ $device_proc == 5 ]]; then
