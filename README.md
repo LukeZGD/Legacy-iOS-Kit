@@ -160,7 +160,7 @@
 - [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux and macOS)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
 - [darkhttpd](https://github.com/emikulic/darkhttpd)
-- [x8A4](https://github.com/Cryptiiiic/x8A4) - x8A4 - Cryptiiiic (for getting Cryptex seed)
+- [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macos arm64)
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices (mostly not used though)

@@ -2899,7 +2899,7 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
                 6* ) JBFiles+=("evasi0n6-untether.tar");;
-                4.1 | 4.0* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
+                4.[10]* | 3.2* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
                 5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
             esac
             case $device_target_vers in
@@ -5523,8 +5523,8 @@ ipsw_prepare() {
                 ipsw_prepare_custom
             fi
             if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
-               [[ $device_target_vers == "3.2"* && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
-               [[ $ipsw_gasgauge_patch == 1 ]]; then
+               [[ $device_target_vers == "3.2"* && $ipsw_prepare_ios4multipart_patch != 1 &&
+                  $device_target_other != 1 ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_multipatch
             fi
         ;;
@@ -6947,7 +6947,7 @@ shsh_convert_onboard() {
         "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
         if [[ $? != 0 ]]; then
             warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
-            print "* If you selected the correct IPSW and the error is not LLB and/or iBoot, the blob should be usable."
+            print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
         fi
     else
         "$dir/img4tool" --convert -s dump.shsh dump.raw
@@ -8238,7 +8238,7 @@ menu_ipsw() {
         menu_items+=("Go Back")
 
         if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]] &&
-           (( device_proc > 4 )) && (( device_proc < 7 )); then
+           [[ $device_proc == 5 || $device_proc == 6 ]]; then
             print "* This restore will use $device_use_vers baseband"
             echo
         elif [[ $device_use_bb2 == 1 ]]; then
@@ -8743,9 +8743,7 @@ menu_shsh_browse() {
     fi
     if [[ $shsh_validate != 0 ]]; then
         warn "Validation failed. Did you select the correct IPSW/SHSH?"
-        if (( device_proc < 5 )); then
-            warn "Validation might be a false negative for A4 and older devices."
-        fi
+        print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
         pause
     fi
     shsh_path="$newpath"
@@ -9984,7 +9982,7 @@ device_dumpapp() {
             fi
 
             if [[ $1 == "all" ]]; then
-                app_index=$((app_index+1))
+                ((app_index++))
             fi
         done
     else
