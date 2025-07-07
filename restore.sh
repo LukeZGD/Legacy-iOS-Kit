@@ -500,7 +500,7 @@ set_tool_paths() {
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
-        zenity="../bin/macos/zenity"
+        zenity="$dir/zenity"
         scp2="/usr/bin/scp"
         ssh2="/usr/bin/ssh"
 
