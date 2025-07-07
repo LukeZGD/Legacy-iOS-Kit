@@ -471,20 +471,6 @@ set_tool_paths() {
                 "* Supported macOS versions are 10.11 and newer. (10.12 and newer recommended)"
             elif [[ $mac_minver == 11 ]]; then
                 mac_cocoa=1
-                if [[ -z $(command -v cocoadialog) ]]; then
-                    local error_msg="* You need to install cocoadialog from MacPorts."
-                    error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
-                    error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
-                    error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
-                    error "Cannot find cocoadialog, cannot continue." "$error_msg"
-                fi
-            fi
-            if [[ $(command -v curl) == "/usr/bin/curl" ]] && (( mac_minver < 15 )); then
-                local error_msg="* You need to install curl from MacPorts."
-                error_msg+=$'\n* Please read the wiki and install the requirements needed in MacPorts: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
-                error_msg+=$'\n* Also make sure that /opt/local/bin (or /usr/local/bin) is in your $PATH.'
-                error_msg+=$'\n* You may try running this command: export PATH="/opt/local/bin:$PATH"'
-                error "Outdated curl detected, cannot continue." "$error_msg"
             fi
             case $mac_minver in
                 11 ) mac_name="El Capitan";;
@@ -545,6 +531,7 @@ set_tool_paths() {
         chmod +x $dir/*
     fi
 
+    aria2c="$dir/aria2c"
     futurerestore+="$dir/futurerestore"
     ideviceactivation+="$dir/ideviceactivation"
     idevicediagnostics+="$dir/idevicediagnostics"
@@ -651,7 +638,9 @@ version_update_check() {
         /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
-    github_api=$(curl https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest 2>/dev/null)
+    rm -f latest
+    $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" >/dev/null
+    github_api=$(cat latest 2>/dev/null)
     version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
     git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
     popd >/dev/null
@@ -676,8 +665,11 @@ version_update() {
     log "Downloading..."
     git clone --filter=blob:none "https://github.com/LukeZGD/Legacy-iOS-Kit"
     if [[ $? != 0 ]]; then
-        error "git clone failed. Please run the script again" \
-        "* If you have not installed/updated git, please install git from your package manager."
+        git clone "https://github.com/LukeZGD/Legacy-iOS-Kit"
+        if [[ $? != 0 ]]; then
+            error "git clone failed. Please run the script again" \
+            "* If you have not installed/updated git, please install git from your package manager."
+        fi
     fi
     popd >/dev/null
     log "Updating..."
@@ -701,8 +693,11 @@ version_get() {
             log "Shallow git repository detected. Unshallowing..."
             git fetch --unshallow --filter=blob:none
             if [[ $? != 0 ]]; then
-                error "git fetch failed. Please run the script again" \
-                "* If you have not installed/updated git, please install git from your package manager."
+                git fetch --unshallow
+                if [[ $? != 0 ]]; then
+                    error "git fetch failed. Please run the script again" \
+                    "* If you have not installed/updated git, please install git from your package manager."
+                fi
             fi
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
@@ -937,7 +932,9 @@ device_get_name() {
     esac
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
-        device_name="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" | $jq -r ".name")"
+        rm -f tmp.json
+        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" -o tmp.json >/dev/null
+        device_name="$(cat tmp.json | $jq -r ".name")"
     fi
 }
 
@@ -1459,7 +1456,9 @@ device_get_info() {
         device_latest_vers="18.5"
         device_latest_build="22F76"
 #         log "Getting latest iOS version for $device_type"
-#         local latestver="$(curl "https://api.ipsw.me/v4/device/$device_type?type=ipsw" | $jq -j ".firmwares[0]")"
+#         rm -f tmp.json
+#         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json >/dev/null
+#         local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
 #         device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
 #         device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
     fi
@@ -2187,7 +2186,7 @@ download_file() {
     # usage: download_file {link} {target location} {sha1}
     local filename="$(basename $2)"
     log "Downloading $filename..."
-    curl -L $1 -o $2
+    $aria2c "$1" -o $2
     if [[ ! -s $2 ]]; then
         error "Downloading $2 failed. Please run the script again"
     fi
@@ -2218,13 +2217,13 @@ device_fw_key_check() {
     fi
 
     if [[ ! -e "$keys_path/index.html" ]]; then
-        log "Getting firmware keys for $device_type-$build"
         mkdir -p "$keys_path" 2>/dev/null
         local try=("https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/raw/master/$device_type/$build/index.html"
                    "http://127.0.0.1:8888/firmware/$device_type/$build"
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
-            curl -L $i -o index.html
+            log "Getting firmware keys for $device_type-$build: $i"
+            $aria2c "$i" -o index.html >/dev/null
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
                 break
             fi
@@ -2276,7 +2275,9 @@ ipsw_get_url() {
                 1[789]* | [23]* ) phone="PadOS";; # iPadOS
             esac
         fi
-        url="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
+        rm -f tmp.json
+        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json >/dev/null
+        url="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
         if [[ $(echo "$url" | grep -c '<') != 0 || $url2 != *"$build_id2"* ]]; then
@@ -2676,7 +2677,7 @@ ipsw_download() {
         fi
         print "* If you want to download it yourself, here is the link: $ipsw_url"
         log "Downloading IPSW... (Press Ctrl+C to cancel)"
-        curl -L "$ipsw_url" -o temp.ipsw
+        $aria2c "$ipsw_url" -c -s 16 -x 16 -k 1M -j 1 -o temp.ipsw
         mv temp.ipsw "$ipsw_dl.ipsw"
     fi
     ipsw_verify "$ipsw_dl" "$build_id"
@@ -2719,7 +2720,9 @@ ipsw_verify() {
             1[789]* | [23]* ) phone="PadOS";; # iPadOS
         esac
     fi
-    IPSWSHA1="$(curl "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
+    rm -f tmp.json
+    $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json >/dev/null
+    IPSWSHA1="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
@@ -4325,7 +4328,7 @@ ipsw_prepare_multipatch() {
         fi
         if [[ ! -s "$ipsw_name.ipsw" ]]; then
             log "Downloading FS IPSW..."
-            curl -L "$ipsw_url" -o temp2.ipsw
+            $aria2c -c -s 16 -x 16 -k 1M -j 1 "$ipsw_url" -o temp2.ipsw
             log "Getting SHA1 hash for FS IPSW..."
             sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
             if [[ $sha1L != "$sha1E" ]]; then
@@ -4785,7 +4788,7 @@ ipsw_prepare_s5l8900() {
 
     if [[ $device_type != "iPhone1,2" ]]; then
         log "Downloading IPSW: $ipsw_url"
-        curl -L "$ipsw_url" -o temp.ipsw
+        $aria2c -c -s 16 -x 16 -k 1M -j 1 "$ipsw_url" -o temp.ipsw
         log "Getting SHA1 hash for IPSW..."
         sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
         if [[ $sha1L != "$sha1E" ]]; then
@@ -5078,7 +5081,9 @@ restore_futurerestore() {
             return
         fi
         log "Checking for futurerestore updates..."
-        #local fr_latest="$(curl https://api.github.com/repos/futurerestore/futurerestore/commits | $jq -r '.[0].sha')"
+        #rm -f commits
+        #$aria2c "https://api.github.com/repos/futurerestore/futurerestore/commits" >/dev/null
+        #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
         local fr_latest="2719b0d615987093191aa20ff6aad82c2ad937e6"
         local fr_branch="main"
         if (( target_det >= 16 )); then
@@ -6460,6 +6465,17 @@ device_ramdisk_setnvram() {
                 fi
             ;;
         esac
+        : '
+    elif [[ $device_type == "iPad1,1" ]]; then
+        device_ramdisk_iosvers
+        if [[ $device_vers == "3"* && -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+            untether="${device_type}_${device_build}.tar"
+            log "Sending $untether"
+            $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
+            log "Extracting $untether"
+            $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+        fi
+        '
     fi
     log "Done"
 }
@@ -6490,18 +6506,6 @@ device_ramdisk_ios3exploit() {
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
         log "Extracting $untether"
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
-        : '
-        log "Mounting data partition"
-        $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
-        device_send_rdtar cydiasubstrate.tar
-        device_send_rdtar cydiahttpatch.tar
-        if [[ $device_vers == "3.1.3" || $device_vers == "3.2" ]]; then
-            device_send_rdtar freeze.tar data
-        fi
-        if [[ $ipsw_openssh == 1 ]]; then
-            device_send_rdtar sshdeb.tar
-        fi
-        '
     fi
 }
 
@@ -6684,7 +6688,9 @@ menu_ramdisk() {
                     continue
                 fi
                 log "Checking for latest TrollStore"
-                local latest="$(curl https://api.github.com/repos/opa334/TrollStore/releases/latest | $jq -r ".tag_name")"
+                rm -f latest
+                $aria2c "https://api.github.com/repos/opa334/TrollStore/releases/latest" >/dev/null
+                local latest="$(cat latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version 2>/dev/null || echo "none")"
                 log "Latest version: $latest, current version: $current"
                 if [[ $current != "$latest" ]]; then
@@ -6961,7 +6967,9 @@ shsh_convert_onboard() {
 }
 
 shsh_save_cydia() {
-    local json=$(curl "https://api.ipsw.me/v4/device/${device_type}?type=ipsw")
+    rm -f tmp.json
+    $aria2c "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" -o tmp.json >/dev/null
+    local json=$(cat tmp.json)
     local len=$(echo "$json" | $jq -r ".firmwares | length")
     local builds=()
     local i=0
@@ -7423,7 +7431,9 @@ device_sideloader() {
     fi
     sideloader+="$arch"
     log "Checking for latest Sideloader"
-    local latest="$(curl https://api.github.com/repos/LukeZGD/Sideloader/releases/latest | $jq -r ".tag_name")"
+    rm -f latest
+    $aria2c "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest" >/dev/null
+    local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
     if [[ $current != "$latest" ]]; then
@@ -7452,12 +7462,8 @@ menu_zenity_check() {
 menu_ipa_browse() {
     local newpath
     input "Select your IPA file(s) in the file selection window."
-    if [[ $mac_cocoa == 1 ]]; then
-        newpath="$($cocoadialog fileselect --with-extensions ipa)"
-    else
-        menu_zenity_check
-        newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
-    fi
+    menu_zenity_check
+    newpath="$($zenity --file-selection --multiple --file-filter='IPA | *.ipa' --title="Select IPA file(s)")"
     [[ -z "$newpath" ]] && read -p "$(input "Enter path to IPA file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     ipa_path="$newpath"
 }
@@ -8417,12 +8423,8 @@ ipsw_custom_set() {
 menu_logo_browse() {
     local newpath
     input "Select your $1 image file in the file selection window."
-    if [[ $mac_cocoa == 1 ]]; then
-        newpath="$($cocoadialog fileselect --with-extensions png)"
-    else
-        menu_zenity_check
-        newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
-    fi
+    menu_zenity_check
+    newpath="$($zenity --file-selection --file-filter='PNG | *.png' --title="Select $1 image file")"
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to $1 image file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected $1 image file: $newpath"
@@ -8497,13 +8499,10 @@ menu_ipsw_browse() {
 
     if [[ $picker == 1 ]]; then
         input "Select your $text IPSW file in the file selection window."
-        if [[ $mac_cocoa == 1 ]]; then
-            newpath="$($cocoadialog fileselect --with-extensions ipsw)"
-        elif [[ $1 == "custom" ]]; then
-            menu_zenity_check
+        menu_zenity_check
+        if [[ $1 == "custom" ]]; then
             newpath="$($zenity --file-selection --file-filter='IPSW | *.ipsw' --title="Select $text IPSW file")"
         else
-            menu_zenity_check
             newpath="$($zenity --file-selection --file-filter='IPSW | *Restore.ipsw' --title="Select $text IPSW file")"
         fi
     fi
@@ -8714,12 +8713,8 @@ menu_shsh_browse() {
     [[ $1 == "base" ]] && text="Base"
 
     input "Select your $text SHSH file in the file selection window."
-    if [[ $mac_cocoa == 1 ]]; then
-        newpath="$($cocoadialog fileselect)"
-    else
-        menu_zenity_check
-        newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
-    fi
+    menu_zenity_check
+    newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
     log "Selected SHSH file: $newpath"
     if [[ -n "$newpath" && ! -s "$newpath" ]]; then
         warn "The selected SHSH blob file seems to be empty/invalid. It cannot be used for restoring."
@@ -8752,12 +8747,8 @@ menu_shsh_browse() {
 menu_shshdump_browse() {
     local newpath
     input "Select your raw dump file in the file selection window."
-    if [[ $mac_cocoa == 1 ]]; then
-        newpath="$($cocoadialog fileselect --with-extensions raw)"
-    else
-        menu_zenity_check
-        newpath="$($zenity --file-selection --file-filter='Raw Dump | *.dump *.raw' --title="Select Raw Dump")"
-    fi
+    menu_zenity_check
+    newpath="$($zenity --file-selection --file-filter='Raw Dump | *.dump *.raw' --title="Select Raw Dump")"
     [[ ! -s "$newpath" ]] && read -p "$(input "Enter path to raw dump file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     [[ ! -s "$newpath" ]] && return
     log "Selected raw dump file: $newpath"
@@ -9834,7 +9825,9 @@ device_altserver() {
         mv AltServer-$arch $altserver
     fi
     log "Checking for latest anisette-server"
-    local latest="$(curl https://api.github.com/repos/LukeZGD/Provision/releases/latest | $jq -r ".tag_name")"
+    rm -f latest
+    $aria2c "https://api.github.com/repos/LukeZGD/Provision/releases/latest" >/dev/null
+    local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
     if [[ $current != "$latest" ]]; then

@@ -154,6 +154,7 @@
 - [ideviceinstaller](https://github.com/LukeeGD/ideviceinstaller) - libimobiledevice
 - [ifuse](https://github.com/LukeeGD/ifuse) - libimobiledevice
 - [static-cross-openssh](https://github.com/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
+- [Motrix](https://github.com/agalwood/Motrix) - aria2c binaries
 - [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only, optional)
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
