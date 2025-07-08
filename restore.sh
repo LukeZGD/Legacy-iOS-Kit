@@ -134,8 +134,13 @@ For 64-bit checkm8 devices compatible with pwned restores:
     '
 }
 
+tar2="$(command -v tar)"
 unzip2="$(command -v unzip)"
 zip2="$(command -v zip)"
+
+tar() {
+    $tar2 "$@" || error "An error occurred with the tar operation: $*"
+}
 
 unzip() {
     $unzip2 "$@" || error "An error occurred with the unzip operation: $*"
@@ -143,6 +148,38 @@ unzip() {
 
 zip() {
     $zip2 "$@" || error "An error occurred with the zip operation: $*"
+}
+
+file_extract() {
+    local archive="$1"
+    local dest="$2"
+    local arr=()
+    if [[ $platform == "macos" ]]; then
+        arr+=("-xzvf" "$archive")
+        [[ -n $dest ]] && arr+=("-C" "$dest")
+        tar "${arr[@]}"
+        return
+    fi
+    arr+=("-o" "$archive")
+    [[ -n $dest ]] && arr+=("-d" "$dest")
+    unzip "${arr[@]}"
+}
+
+file_extract_from_archive() {
+    local archive="$1"
+    local file="$2"
+    local dest="$3"
+    [[ -z $dest ]] && dest=.
+    local arr=()
+    if [[ $platform == "macos" && $file != *"/"* ]]; then
+        arr+=("-xzvOf" "$archive")
+        arr+=("$file")
+        tar "${arr[@]}" > "$dest/$file"
+        return
+    fi
+    arr+=("-o" "-j" "$archive" "$file")
+    [[ -n $dest ]] && arr+=("-d" "$dest")
+    unzip "${arr[@]}"
 }
 
 # from https://unix.stackexchange.com/questions/146570/arrow-key-enter-menu#415155
@@ -2142,9 +2179,9 @@ device_ipwndfu_alloc8() {
 
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
-        download_file https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
-        unzip -q ipwndfu.zip -d ../saved
-        mv ../saved/ipwndfu-* ../saved/$ipwndfu
+        file_download https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
+        file_extract ipwndfu.zip
+        mv ipwndfu-* ../saved/$ipwndfu
         echo "$ipwndfu_sha1" > ../saved/$ipwndfu/sha1check
     fi
 
@@ -2178,8 +2215,8 @@ device_ipwndfu_alloc8() {
     fi
 }
 
-download_file() {
-    # usage: download_file {link} {target location} {sha1}
+file_download() {
+    # usage: file_download {link} {target location} {sha1}
     local filename="$(basename $2)"
     log "Downloading $filename..."
     $aria2c "$1" -o $2
@@ -2622,7 +2659,7 @@ shsh_save() {
         if [[ ! -e $buildmanifest ]]; then
             if [[ -e "$ipsw_base_path.ipsw" ]]; then
                 log "Extracting BuildManifest from $version IPSW..."
-                unzip -o -j "$ipsw_base_path.ipsw" BuildManifest.plist -d .
+                file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
             else
                 ipsw_get_url $build_id
                 log "Downloading BuildManifest for $version..."
@@ -2780,15 +2817,15 @@ ipsw_prepare_1033() {
     iBSS="iBSS.$iBSS.RELEASE"
 
     log "Patching iBSS and iBEC..."
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBSS.im4p
-    unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBEC.im4p
+    file_extract_from_archive "$ipsw_path.ipsw" Firmware/dfu/$iBSS.im4p
+    file_extract_from_archive "$ipsw_path.ipsw" Firmware/dfu/$iBEC.im4p
     mv $iBSS.im4p $iBSS.orig
     mv $iBEC.im4p $iBEC.orig
     $bspatch $iBSS.orig $iBSS.im4p ../resources/patch/$iBSS.patch
     $bspatch $iBEC.orig $iBEC.im4p ../resources/patch/$iBEC.patch
     if [[ $device_type == "iPad4,"* ]]; then
-        unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBSSb.im4p
-        unzip -o -j "$ipsw_path.ipsw" Firmware/dfu/$iBECb.im4p
+        file_extract_from_archive "$ipsw_path.ipsw" Firmware/dfu/$iBSSb.im4p
+        file_extract_from_archive "$ipsw_path.ipsw" Firmware/dfu/$iBECb.im4p
         mv $iBSSb.im4p $iBSSb.orig
         mv $iBECb.im4p $iBECb.orig
         $bspatch $iBSSb.orig $iBSSb.im4p ../resources/patch/$iBSSb.patch
@@ -2825,7 +2862,7 @@ ipsw_prepare_logos_convert() {
         name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         logoname="$name"
         log "Converting custom logo"
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
+        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$name
         "$dir/xpwntool" $name logo-orig.img3 -iv $iv -k $key -decrypt
         "$dir/imagetool" inject "$ipsw_customlogo" logo.img3 logo-orig.img3
         if [[ ! -s logo.img3 ]]; then
@@ -2851,7 +2888,7 @@ ipsw_prepare_logos_convert() {
         name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RecoveryMode") | .filename')
         recmname="$name"
         log "Converting custom recovery"
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/$name
+        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$name
         "$dir/xpwntool" $name recovery-orig.img3 -iv $iv -k $key -decrypt
         "$dir/imagetool" inject "$ipsw_customrecovery" recovery.img3 recovery-orig.img3
         if [[ ! -s recovery.img3 ]]; then
@@ -3000,8 +3037,9 @@ ipsw_prepare_fourthree() {
     device_fw_key_check temp 8L1
     mkdir -p $all_flash Downgrade $saved_path 2>/dev/null
     log "Extracting files"
-    unzip -o -j "$ipsw_path.ipsw" $all_flash/manifest -d $all_flash
-    unzip -o -j temp.ipsw Downgrade/RestoreDeviceTree
+    file_extract_from_archive "$ipsw_path.ipsw" $all_flash/manifest
+    mv manifest $all_flash
+    file_extract_from_archive temp.ipsw Downgrade/RestoreDeviceTree
     log "RestoreDeviceTree"
     iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "DeviceTree") | .iv')
     key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "DeviceTree") | .key')
@@ -3014,7 +3052,7 @@ ipsw_prepare_fourthree() {
         path="$all_flash/"
         log "$getcomp"
         if [[ $vers == "$device_base_vers" ]]; then
-            unzip -o -j "$ipsw_base_path.ipsw" ${path}$name
+            file_extract_from_archive "$ipsw_base_path.ipsw" ${path}$name
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
@@ -3067,7 +3105,7 @@ ipsw_prepare_fourthree_part2() {
         log "Kernelcache"
         iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "Kernelcache") | .iv')
         key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "Kernelcache") | .key')
-        unzip -o -j "$ipsw_base_path.ipsw" kernelcache.release.$device_model
+        file_extract_from_archive "$ipsw_base_path.ipsw" kernelcache.release.$device_model
         "$dir/xpwntool" kernelcache.release.$device_model kernelcache.dec -iv $iv -k $key
         $bspatch kernelcache.dec kernelcache.patched $bpatch/kernelcache.release.patch
         #$bspatch kernelcache.dec kernelcache.patched ../resources/patch/kernelcache.release.$device_model.$device_base_build.patch
@@ -3078,7 +3116,7 @@ ipsw_prepare_fourthree_part2() {
         log "LLB"
         iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "LLB") | .iv')
         key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "LLB") | .key')
-        unzip -o -j "$ipsw_base_path.ipsw" $all_flash/LLB.${device_model}ap.RELEASE.img3
+        file_extract_from_archive "$ipsw_base_path.ipsw" $all_flash/LLB.${device_model}ap.RELEASE.img3
         "$dir/xpwntool" LLB.${device_model}ap.RELEASE.img3 llb.dec -iv $iv -k $key
         $bspatch llb.dec $saved_path/LLB $bpatch/LLB.${device_model}ap.RELEASE.patch
     fi
@@ -3086,7 +3124,7 @@ ipsw_prepare_fourthree_part2() {
         log "RootFS"
         name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
         key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RootFS") | .key')
-        unzip -o -j "$ipsw_base_path.ipsw" $name
+        file_extract_from_archive "$ipsw_base_path.ipsw" $name
         "$dir/dmg" extract $name rootfs.dec -k $key
         rm $name
         "$dir/dmg" build rootfs.dec $saved_path/RootFS.dmg
@@ -3341,7 +3379,7 @@ ipsw_prepare_bundle() {
     mkdir -p $FirmwareBundle
 
     log "Generating firmware bundle for $device_type-$vers ($build) $1..."
-    unzip -o -j "$ipsw_p.ipsw" $all_flash/manifest
+    file_extract_from_archive "$ipsw_p.ipsw" $all_flash/manifest
     mv manifest $FirmwareBundle/
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
@@ -3349,7 +3387,7 @@ ipsw_prepare_bundle() {
     if [[ -z $ramdisk_name ]]; then
         error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
-    unzip -o -j "$ipsw_p.ipsw" $ramdisk_name
+    file_extract_from_archive "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
     if [[ ! -s options.$device_model.plist ]]; then
@@ -3781,7 +3819,7 @@ ipsw_bbreplace() {
     fi
 
     log "Extracting BuildManifest from IPSW"
-    unzip -o -j temp.ipsw BuildManifest.plist
+    file_extract_from_archive temp.ipsw BuildManifest.plist
     mkdir Firmware 2>/dev/null
     restore_download_bbsep
     cp $restore_baseband Firmware/$device_use_bb
@@ -3876,9 +3914,9 @@ patch_iboot() {
     if [[ $1 == "--logo" ]]; then
         iboot_name="${iboot_name/iBoot/iBoot2}"
         rsa=
-        unzip -o -j temp.ipsw $all_flash/$iboot_name
+        file_extract_from_archive temp.ipsw $all_flash/$iboot_name
     else
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/$iboot_name
+        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$iboot_name
     fi
     mv $iboot_name iBoot.orig
     "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
@@ -3946,7 +3984,7 @@ ipsw_prepare_ios4multipart() {
         esac
         log "$getcomp"
         if [[ $vers == "$device_base_vers" ]]; then
-            unzip -o -j "$ipsw_base_path.ipsw" ${path}$name
+            file_extract_from_archive "$ipsw_base_path.ipsw" ${path}$name
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
@@ -3977,7 +4015,7 @@ ipsw_prepare_ios4multipart() {
 
     log "Manifest plist"
     if [[ $vers == "$device_base_vers" ]]; then
-        unzip -o -j "$ipsw_base_path.ipsw" BuildManifest.plist
+        file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
     elif [[ -e $saved_path/BuildManifest.plist ]]; then
         cp $saved_path/BuildManifest.plist .
     else
@@ -4023,11 +4061,11 @@ ipsw_prepare_ios4multipart() {
     "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
 
     log "Extract all_flash from $device_base_vers base"
-    unzip -o -j "$ipsw_base_path.ipsw" Firmware/all_flash/\* -d $all_flash2
+    file_extract_from_archive "$ipsw_base_path.ipsw" Firmware/all_flash/\* $all_flash2
 
     log "Add $device_target_vers DeviceTree to all_flash"
-    rm $all_flash2/DeviceTree.${device_model}ap.img3
-    unzip -o -j "$ipsw_path.ipsw" $all_flash/DeviceTree.${device_model}ap.img3 -d $all_flash2
+    rm -f $all_flash2/DeviceTree.${device_model}ap.img3
+    file_extract_from_archive "$ipsw_path.ipsw" $all_flash/DeviceTree.${device_model}ap.img3 $all_flash2
 
     local ExtraArr=("--boot-partition" "--boot-ramdisk" "--logo4")
     case $device_target_vers in
@@ -4064,7 +4102,7 @@ ipsw_prepare_ios4multipart() {
         ipsw_prepare_logos_convert
         mv $all_flash/$logoname $logo_name
     else
-        unzip -o -j "$ipsw_path.ipsw" $all_flash/$logo_name
+        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$logo_name
         echo "0000010: 3467" | xxd -r - $logo_name
         echo "0000020: 3467" | xxd -r - $logo_name
     fi
@@ -4167,7 +4205,7 @@ ipsw_prepare_multipatch() {
         esac
         log "$getcomp"
         if [[ $vers == "$device_target_vers" ]]; then
-            unzip -o -j "$ipsw_path.ipsw" ${path}$name
+            file_extract_from_archive "$ipsw_path.ipsw" ${path}$name
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
@@ -4202,7 +4240,7 @@ ipsw_prepare_multipatch() {
     done
 
     log "Extracting ramdisk from IPSW"
-    unzip -o -j temp.ipsw $ramdisk_name
+    file_extract_from_archive temp.ipsw $ramdisk_name
     mv $ramdisk_name ramdisk2.orig
     "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
 
@@ -4334,7 +4372,7 @@ ipsw_prepare_multipatch() {
             mv temp2.ipsw "$ipsw_name.ipsw"
         fi
         log "Extract RootFS from FS IPSW"
-        unzip -o -j "$ipsw_name.ipsw" $rootfs_name
+        file_extract_from_archive "$ipsw_name.ipsw" $rootfs_name
         log "Add RootFS to IPSW"
         zip -r0 temp.ipsw $rootfs_name
     fi
@@ -4366,7 +4404,7 @@ ipsw_prepare_tethered() {
     iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     mv "$ipsw_custom.ipsw" temp.ipsw
-    unzip -o -j temp.ipsw $name
+    file_extract_from_archive temp.ipsw $name
     mv $name ramdisk.orig
     "$dir/xpwntool" ramdisk.orig ramdisk.dec -iv $iv -k $key
     "$dir/hfsplus" ramdisk.dec extract usr/local/share/restore/$options_plist
@@ -4398,7 +4436,7 @@ ipsw_prepare_ios4patches() {
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         name="$getcomp.${device_model}ap.RELEASE.dfu"
         log "Patch $getcomp"
-        unzip -o -j "$ipsw_path.ipsw" ${path}$name
+        file_extract_from_archive "$ipsw_path.ipsw" ${path}$name
         mv $name $getcomp.orig
         "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
         "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
@@ -4484,7 +4522,7 @@ ipsw_prepare_ios4powder() {
     else
         log "Patch AppleLogo"
         local applelogo_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
-        unzip -o -j temp.ipsw $all_flash/$applelogo_name
+        file_extract_from_archive temp.ipsw $all_flash/$applelogo_name
         echo "0000010: 3467" | xxd -r - $applelogo_name
         echo "0000020: 3467" | xxd -r - $applelogo_name
         mv $applelogo_name $all_flash/$applelogo_name
@@ -4635,7 +4673,7 @@ ipsw_prepare_patchcomp() {
         ext="s5l8900x"
         patch="../resources/patch/$name.$ext.p2"
         log "Patch $1"
-        unzip -o -j temp.ipsw $name.$ext
+        file_extract_from_archive temp.ipsw $name.$ext
         mv $name.$ext kc.orig
         $bspatch kc.orig $name.$ext $patch.patch
         zip -r0 temp.ipsw $name.$ext
@@ -4692,7 +4730,7 @@ ipsw_prepare_patchcomp() {
                 cp $name.$ext $saved_path/$name41.$ext
             fi
         else
-            unzip -o -j "$ipsw_path.ipsw" $name.$ext
+            file_extract_from_archive "$ipsw_path.ipsw" $name.$ext
         fi
         mv $name.$ext rd.orig
         "$dir/xpwntool" rd.orig rd.dec -iv $iv -k $key
@@ -4723,7 +4761,7 @@ ipsw_prepare_patchcomp() {
         zip -r0 temp.ipsw Downgrade/$1
         return
     else
-        unzip -o -j "$ipsw_path.ipsw" ${path}$name.$ext
+        file_extract_from_archive "$ipsw_path.ipsw" ${path}$name.$ext
     fi
     $bspatch $name.$ext $name.patched $patch
     mkdir -p $path
@@ -4755,7 +4793,7 @@ ipsw_prepare_s5l8900() {
 
     if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
         log "Checking RestoreRamdisk hash of custom IPSW"
-        unzip -o -j "$ipsw_custom.ipsw" $rname
+        file_extract_from_archive "$ipsw_custom.ipsw" $rname
         sha1L="$($sha1sum $rname | awk '{print $1}')"
     elif [[ -e "$ipsw_custom2.ipsw" ]]; then
         log "Getting SHA1 hash for $ipsw_custom2.ipsw..."
@@ -4847,7 +4885,7 @@ ipsw_prepare_custom() {
         3.0* )
             ipsw_prepare_patchcomp LLB
             log "Patch Kernelcache"
-            unzip -o -j "$ipsw_path.ipsw" kernelcache.release.s5l8920x
+            file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.s5l8920x
             mv kernelcache.release.s5l8920x kernelcache.orig
             $bspatch kernelcache.orig kernelcache.release.s5l8920x ../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_target_vers}_${device_target_build}.bundle/kernelcache.release.patch
             zip -r0 temp.ipsw kernelcache.release.s5l8920x
@@ -4873,7 +4911,6 @@ ipsw_prepare_custom() {
 }
 
 ipsw_extract() {
-    local ExtraArgs
     local ipsw="$ipsw_path"
     if [[ $1 == "custom" ]]; then
         ipsw="$ipsw_custom"
@@ -4881,7 +4918,7 @@ ipsw_extract() {
     if [[ ! -d "$ipsw" ]]; then
         mkdir "$ipsw"
         log "Extracting IPSW: $ipsw.ipsw"
-        unzip -o "$ipsw.ipsw" -d "$ipsw/" $ExtraArgs
+        file_extract "$ipsw.ipsw" "$ipsw/"
     fi
 }
 
@@ -5080,10 +5117,10 @@ restore_futurerestore() {
         #rm -f commits
         #$aria2c "https://api.github.com/repos/futurerestore/futurerestore/commits" >/dev/null
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
-        local fr_latest="2719b0d615987093191aa20ff6aad82c2ad937e6"
+        local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
         local fr_branch="main"
         if (( target_det >= 16 )); then
-            fr_latest="cd485661035e1748ec8ef9d0f9e4eaf9aaf1924e"
+            fr_latest="870bdb8f876de752078c9000a185fed119d60af9"
             fr_branch="dev"
         fi
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
@@ -5100,8 +5137,8 @@ restore_futurerestore() {
                 "linux" ) file+="Linux-x86_64-RELEASE-${fr_branch}.zip";;
             esac
             url+="$file"
-            download_file $url $file
-            unzip -q "$file" -d .
+            file_download $url $file
+            file_extract "$file"
             tar -xJvf futurerestore*.xz
             mv futurerestore ${futurerestore2}-${fr_branch}
             chmod +x ${futurerestore2}-${fr_branch}
@@ -5465,7 +5502,7 @@ restore_prepare() {
 restore_pwned64() {
     device_enter_mode pwnDFU
     if [[ ! -s ../saved/firmwares.json ]]; then
-        download_file https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+        file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
         cp firmwares.json ../saved
     fi
     rm -f /tmp/firmwares.json
@@ -5583,7 +5620,7 @@ restore_usepwndfu64_option() {
         restore_usepwndfu64=1
         return
     elif [[ $device_target_vers == "10.3.3" && $device_target_other != 1 &&
-            $platform == "macos" && $platform_arch == "arm64" ]] ||
+            $platform == "macos" ]] && [[ $platform_arch == "arm64" || $mac_cocoa == 1 ]] ||
          [[ $device_target_setnonce == 1 ]]; then
         restore_usepwndfu64=1
         return
@@ -5621,7 +5658,7 @@ restore_usepwndfu64_option() {
 ipsw_prepare_ipx() {
     restore_usepwndfu64=1
     log "Extracting BuildManifest.plist from IPSW"
-    unzip -o -j "$ipsw_path.ipsw" BuildManifest.plist
+    file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
     local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist)
     local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
@@ -5630,7 +5667,7 @@ ipsw_prepare_ipx() {
 
     # patch kernelcache amfi (required when using custom ramdisk)
     log "Extracting KernelCache from IPSW"
-    unzip -o -j "$ipsw_path.ipsw" $kernelcache
+    file_extract_from_archive "$ipsw_path.ipsw" $kernelcache
     log "Processing KernelCache"
     "$dir/img4" -i $kernelcache -o kcache.raw
     log "Patching KernelCache"
@@ -5660,14 +5697,14 @@ ipsw_prepare_ipx() {
         fi
     else
         log "Extracting RestoreRamDisk from IPSW"
-        unzip -o -j "$ipsw_path.ipsw" $restoreramdisk
+        file_extract_from_archive "$ipsw_path.ipsw" $restoreramdisk
     fi
 
     local platform2="$platform"
     [[ $platform2 == "macos" ]] && platform2+="x"
     ldid="../saved/ldid_${platform2}_$(uname -m)"
     if [[ ! -s $ldid ]]; then
-        download_file https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/$(basename $ldid) ldid
+        file_download https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/$(basename $ldid) ldid
         mv ldid $ldid
     fi
     if [[ ! -s $ldid ]]; then
@@ -5760,8 +5797,8 @@ device_ramdisk64() {
         sshtar="../saved/iram.tar"
         if [[ ! -e $sshtar ]]; then
             log "Downloading iram.tar from iarchive.app..."
-            download_file https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip iram.zip
-            unzip iram.zip
+            file_download https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip iram.zip
+            file_extract iram.zip
             mv iram.tar $sshtar
         fi
         cp $sshtar ssh.tar
@@ -5772,7 +5809,7 @@ device_ramdisk64() {
         fi
         if [[ ! -e $sshtar.gz ]]; then
             log "Downloading ssh.tar from SSHRD_Script..."
-            download_file https://github.com/LukeZGD/sshtars/raw/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
+            file_download https://github.com/LukeZGD/sshtars/raw/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
             mv ssh.tar.gz $sshtar.gz
         fi
         cp $sshtar.gz ssh.tar.gz
@@ -6012,7 +6049,7 @@ device_ramdisk() {
 
         log "$getcomp"
         if [[ -n $ipsw_justboot_path ]]; then
-            unzip -o -j "$ipsw_justboot_path.ipsw" "${path}$name" -d .
+            file_extract_from_archive "$ipsw_justboot_path.ipsw" "${path}$name"
         elif [[ -s $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
@@ -6697,8 +6734,8 @@ menu_ramdisk() {
                 else
                     rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                     log "Downloading files for latest TrollStore"
-                    download_file https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
-                    download_file https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
+                    file_download https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
+                    file_download https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
                     cp TrollStore.tar PersistenceHelper_Embedded ../saved
                     echo "$latest" > ../saved/TrollStore_version
                 fi
@@ -7436,8 +7473,9 @@ device_sideloader() {
         rm -f ../saved/$sideloader
     fi
     if [[ ! -e ../saved/$sideloader ]]; then
-        download_file https://github.com/LukeZGD/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
-        unzip -o -j $sideloader.zip $sideloader -d ../saved
+        file_download https://github.com/LukeZGD/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
+        file_extract_from_archive $sideloader.zip $sideloader
+        mv $sideloader ../saved
     fi
     echo "$latest" > ../saved/Sideloader_version
     device_pair
@@ -7715,12 +7753,6 @@ menu_restore() {
         esac
         if [[ $platform == "macos" ]] && (( device_proc >= 7 )); then
             print "* Note: Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
-            if [[ $mac_cocoa == 1 ]]; then
-                warn "Restoring 64-bit devices is broken on 10.11 El Capitan, so it has been disabled."
-                print "* To proceed, use macOS 10.12 Sierra or newer."
-                pause
-                break
-            fi
             echo
         fi
         input "Select an option:"
@@ -8336,7 +8368,7 @@ ipsw_version_set() {
     local build
 
     log "Getting version from IPSW"
-    unzip -o -j "$newpath.ipsw" Restore.plist -d .
+    file_extract_from_archive "$newpath.ipsw" Restore.plist
     if [[ $platform == "macos" ]]; then
         rm -f BuildVer Version
         plutil -extract 'ProductVersion' xml1 Restore.plist -o Version
@@ -8723,7 +8755,7 @@ menu_shsh_browse() {
     [[ ! -s "$newpath" ]] && return
     log "Validating..."
     if (( device_proc >= 7 )); then
-        unzip -o -j "$val" BuildManifest.plist
+        file_extract_from_archive "$val" BuildManifest.plist
         shsh_validate=$("$dir/img4tool" -s "$newpath" --verify BuildManifest.plist | tee /dev/tty | grep -c "APTicket is BAD!")
     else
         if [[ $1 == "base" ]]; then
@@ -9352,7 +9384,7 @@ device_dumpbb() {
     case $device_vers in
         [56]* )
             mkdir -p usr/local/standalone/firmware/Baseband/$bb2
-            unzip $bb2-personalized.zip -d usr/local/standalone/firmware/Baseband/$bb2
+            file_extract $bb2-personalized.zip usr/local/standalone/firmware/Baseband/$bb2
             cp $bb2-personalized.zip usr/local/standalone/firmware/Baseband/$bb2
         ;;
         * )
@@ -9366,7 +9398,7 @@ device_dumpbb() {
             rm baseband.tar
             pushd usr/local/standalone/firmware/Baseband/$bb2 >/dev/null
             zip -r0 $bb2-personalized.zip *
-            unzip -o $bb2-personalized.zip -d .
+            file_extract $bb2-personalized.zip
             popd >/dev/null
         ;;
     esac
@@ -9622,7 +9654,7 @@ device_dfuipsw() {
             llb+=".img3"
         fi
         mkdir -p $all
-        unzip -o -j temp.ipsw $all/$applelogo -d .
+        file_extract_from_archive temp.ipsw $all/$applelogo
         mv $applelogo $all/$llb
         zip -r0 temp.ipsw $all/*
         mv temp.ipsw $ipsw_dfuipsw.ipsw
@@ -9817,7 +9849,7 @@ device_altserver() {
         rm -f $altserver
     fi
     if [[ ! -e $altserver ]]; then
-        download_file https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
+        file_download https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
         mv AltServer-$arch $altserver
     fi
     log "Checking for latest anisette-server"
@@ -9830,7 +9862,7 @@ device_altserver() {
         rm -f $anisette
     fi
     if [[ ! -e $anisette ]]; then
-        download_file https://github.com/LukeZGD/Provision/releases/download/$latest/anisette-server-$arch anisette-server-$arch
+        file_download https://github.com/LukeZGD/Provision/releases/download/$latest/anisette-server-$arch anisette-server-$arch
         mv anisette-server-$arch $anisette
         echo "$latest" > ../saved/anisette-server_version
     fi
