@@ -5047,6 +5047,10 @@ restore_idevicerestore() {
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
     fi
+    if [[ $device_target_vers == "3.2"* && $device_target_powder != 1 ]]; then
+        log "Note: Make sure to do the following below to fix the jailbreak."
+        print "* To fix this, go to: Useful Utilities -> Disable/Enable Exploit -> Disable Exploit"
+    fi
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
@@ -5415,7 +5419,7 @@ restore_prepare() {
                     ;;
                     * ) restore_idevicerestore;;
                 esac
-                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]] && [[ $device_target_powder == 1 ]]; then
+                if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                     echo
                     log "The device may enter recovery mode after the restore"
                     print "* To fix this, go to: Useful Utilities -> Disable/Enable Exploit -> Enable Exploit"
@@ -5561,8 +5565,8 @@ ipsw_prepare() {
                 ipsw_prepare_custom
             fi
             if [[ $ipsw_isbeta == 1 && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
-               [[ $device_target_vers == "3.2"* && $ipsw_prepare_ios4multipart_patch != 1 &&
-                  $device_target_other != 1 ]] || [[ $ipsw_gasgauge_patch == 1 ]]; then
+               [[ $device_target_vers == "3.2"* && $ipsw_prepare_ios4multipart_patch != 1 ]] ||
+               [[ $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_multipatch
             fi
         ;;
@@ -6498,7 +6502,6 @@ device_ramdisk_setnvram() {
                 fi
             ;;
         esac
-        : '
     elif [[ $device_type == "iPad1,1" ]]; then
         device_ramdisk_iosvers
         if [[ $device_vers == "3"* && -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
@@ -6508,7 +6511,6 @@ device_ramdisk_setnvram() {
             log "Extracting $untether"
             $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
         fi
-        '
     fi
     log "Done"
 }
