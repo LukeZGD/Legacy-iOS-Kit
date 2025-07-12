@@ -804,6 +804,9 @@ device_entry() {
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
         done
     fi
+    if [[ -n $device_ecid && $main_argmode == "device_justboot" ]]; then
+        cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
+    fi
 }
 
 device_get_name() {
@@ -2016,10 +2019,9 @@ device_enter_mode() {
                     ;;
                 esac
                 return
-            elif [[ $device_mode == "DFU" && $mode != "pwned-ibss" &&
-                    $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
+            elif [[ $device_mode == "DFU" && $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
                  [[ $device_proc == 5 || $device_proc == 6 ]]; then
-                log "No SRTG for A5(X)/A6(X) device in DFU mode! Already pwned iBSS mode?"
+                log "No SRTG for A${device_proc}(X) device in DFU mode! Already pwned iBSS mode?"
                 return
             fi
 
@@ -2776,7 +2778,7 @@ ipsw_verify() {
         warn "Local SHA1 hash mismatch. Overwriting local hash."
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     elif [[ -z $IPSWSHA1E ]]; then
-        log "Local SHA1 hash does not exist. Creating local hash."
+        log "Local SHA1 hash does not exist. Saving local hash."
         echo "$IPSWSHA1" > $device_fw_dir/$build_id/sha1sum
     fi
 
@@ -2923,7 +2925,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
             ipsw_prepare_rebootsh
-            JBFiles+=("$jelbrek/fstab8.tar")
+            JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/LukeZGD.tar")
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
             for i in {0..2}; do
                 cp $jelbrek/${JBFiles2[$i]} .
@@ -3682,9 +3684,8 @@ ipsw_prepare_32bit() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            9.3.[1234] | 9.3 ) JBFiles+=("untetherhomedepot.tar");;
-            9.2* | 9.1 )       JBFiles+=("untetherhomedepot921.tar");;
-            9.0* )             JBFiles+=("everuntether.tar");;
+            9.3.[56] ) :;;
+            9* )            JBFiles+=("everuntether.tar");;
             7.1* ) # remove for lyncis
                 case $device_type in
                     iPod* ) JBFiles+=("panguaxe-ipod.tar");;
@@ -3706,7 +3707,7 @@ ipsw_prepare_32bit() {
             JBFiles[0]=$jelbrek/${JBFiles[0]}
         fi
         case $device_target_vers in
-            [98]* ) JBFiles+=("$jelbrek/fstab8.tar");;
+            [98]* ) JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/LukeZGD.tar");;
             7* ) JBFiles+=("$jelbrek/fstab7.tar");;
             4* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
@@ -3726,10 +3727,8 @@ ipsw_prepare_32bit() {
             ;;
         esac
         JBFiles+=("$jelbrek/freeze.tar")
-        if [[ $device_target_vers == "9.0"* ]]; then
+        if [[ $device_target_vers == "9"* ]]; then
             JBFiles+=("$jelbrek/launchctl.tar")
-        elif [[ $device_target_vers == "9"* ]]; then
-            JBFiles+=("$jelbrek/daemonloader.tar" "$jelbrek/launchctl.tar")
         elif [[ $device_target_vers == "5"* ]]; then
             JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
         fi
@@ -6279,13 +6278,12 @@ device_ramdisk() {
             fi
 
             case $vers in
-                9.3.[4231] | 9.3 ) untether="untetherhomedepot.tar";;
-                9.2* | 9.1 )       untether="untetherhomedepot921.tar";;
-                9.0* )             untether="everuntether.tar";;
-                8* )               untether="daibutsu/untether.tar";;
-                6.1.[6543] )       untether="p0sixspwn.tar";;
-                6* )               untether="evasi0n6-untether.tar";;
-                5* )               untether="g1lbertJB/${device_type}_${build}.tar";;
+                9.3.[56] ) :;;
+                9* )         untether="everuntether.tar";;
+                8* )         untether="daibutsu/untether.tar";;
+                6.1.[6543] ) untether="p0sixspwn.tar";;
+                6* )         untether="evasi0n6-untether.tar";;
+                5* )         untether="g1lbertJB/${device_type}_${build}.tar";;
                 7.1* )
                     case $device_type in
                         iPod* ) untether="panguaxe-ipod.tar";;
@@ -6362,7 +6360,7 @@ device_ramdisk() {
 
             # do stuff
             case $vers in
-                [98]* ) device_send_rdtar fstab8.tar;;
+                [98]* ) device_send_rdtar fstab8.tar; device_send_rdtar LukeZGD.tar;;
                 7* )    device_send_rdtar fstab7.tar;;
                 6* )    device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] )
@@ -6409,11 +6407,6 @@ device_ramdisk() {
             fi
 
             # extras extraction
-            if [[ $vers == "9"* ]]; then
-                # required stuff for everuntether and untetherhomedepot
-                [[ $vers != "9.0"* ]] && device_send_rdtar daemonloader.tar
-                device_send_rdtar launchctl.tar
-            fi
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
             fi
@@ -6421,6 +6414,7 @@ device_ramdisk() {
                 [543]* ) device_send_rdtar cydiasubstrate.tar;;
             esac
             case $vers in
+                9* ) device_send_rdtar launchctl.tar;;
                 3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
 
@@ -8484,7 +8478,9 @@ menu_ipsw_browse() {
     local text="Target"
     local picker
 
+    ipsw_latest_set
     local menu_items=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
+    [[ $device_type2 != "$device_type" ]] && menu_items+=($(ls ../$device_type2*$device_latest_vers*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
          text="Base"
          menu_items=()
@@ -8503,8 +8499,11 @@ menu_ipsw_browse() {
         [6543]* ) versionc="$1";;
         "custom" ) text="Custom";;
     esac
-    if [[ $versionc == "$device_latest_vers" || $1 == "custom" ]]; then
+    if [[ $1 == "custom" ]]; then
         menu_items=()
+    elif [[ $versionc == "$device_latest_vers" ]]; then
+        menu_items=($(ls ../$device_type*$device_latest_vers*Restore.ipsw 2>/dev/null))
+        [[ $device_type2 != "$device_type" ]] && menu_items+=($(ls ../$device_type2*$device_latest_vers*Restore.ipsw 2>/dev/null))
     elif [[ -n $versionc ]]; then
         menu_items=($(ls ../${device_type}_${versionc}*Restore.ipsw 2>/dev/null))
     fi
@@ -8546,8 +8545,13 @@ menu_ipsw_browse() {
     log "Selected IPSW file: $newpath.ipsw"
     ipsw_version_set "$newpath" "$1"
 
-    if [[ $platform == "macos" && $device_target_vers == "$device_latest_vers" ]] && (( device_proc >= 7 )); then
+    if [[ $device_target_vers == "$device_latest_vers" && $platform == "macos" ]] && (( device_proc >= 7 )); then
         log "Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
+        pause
+        return
+    fi
+    if [[ $device_target_vers == "$device_latest_vers" && $device_target_other == 1 ]]; then
+        log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other (Use SHSH Blobs)\""
         pause
         return
     fi
@@ -9919,8 +9923,8 @@ device_dumpapp() {
         case $selected3 in
             "Clutch" )
                 case $device_det in
-                    [67] ) dumper_binary="clutch204";; # iOS 6 - 7
                     5    ) dumper_binary="clutch13";;  # iOS 5
+                    [67] ) dumper_binary="clutch204";; # iOS 6 - 7
                     *    ) dumper_binary="clutch";;    # iOS 8 - 12.0.x
                 esac
             ;;
