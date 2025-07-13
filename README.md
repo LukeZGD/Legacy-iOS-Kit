@@ -141,9 +141,8 @@
     - [iPhone 5C 7.0.x exploit ramdisk is from m1zole](https://github.com/m1zole/untitled_pub)
     - [Other iPhone 5/5C ramdisks are from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
     - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
-- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX, Linus Henze, synackuk; LukeZGD fork
-- [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite) - dora2ios (used on macOS); LukeZGD fork
-- [iPwnder32](https://github.com/LukeZGD/iPwnder32) - dora2ios (old version with libusb used on Linux); LukeZGD fork
+- [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX; LukeZGD fork
+- [iPwnder32](https://github.com/LukeZGD/iPwnder32) libusb - dora2ios; LukeZGD fork
 - [gaster](https://github.com/LukeZGD/gaster) - 0x7ff; LukeZGD fork
 - [primepwn](https://github.com/LukeZGD/primepwn)
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork

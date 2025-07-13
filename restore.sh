@@ -2068,26 +2068,17 @@ device_enter_mode() {
             if (( device_proc >= 7 )); then
                 # 64-bit checkm8 devices use gaster
                 log "Placing device to pwnDFU mode using gaster"
-                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel."
+                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $gaster pwn
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
             elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
-                # A6/3gs/touch 3 use ipwnder
+                # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
-                opt="$ipwnder -d" # ipwnder_lite
-                if [[ $platform == "linux" ]]; then
-                    opt="$ipwnder -p" # ipwnder32 libusb
-                    print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
-                elif [[ $device_proc == 6 ]]; then
-                    print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
-                fi
-                mkdir image3 ../saved/image3 2>/dev/null
-                cp ../saved/image3/* image3/ 2>/dev/null
-                $opt
+                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
+                $ipwnder -p
                 tool_pwned=$?
-                cp image3/* ../saved/image3/ 2>/dev/null
             else
                 # A4/touch 2 use primepwn
                 log "Placing device to pwnDFU mode using primepwn"
