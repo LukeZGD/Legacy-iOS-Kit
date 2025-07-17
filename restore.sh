@@ -8430,7 +8430,8 @@ ipsw_custom_set() {
     if [[ $ipsw_verbose == 1 ]]; then
         ipsw_custom+="V"
     fi
-    if [[ $device_target_powder == 1 && $device_target_vers == "4.3"* ]]; then
+    if [[ $device_target_powder == 1 && $device_target_vers == "4.3"* ]] || [[ $device_actrec == 1 ]] ||
+       [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         ipsw_custom+="-$device_ecid"
     fi
 }
