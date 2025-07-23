@@ -5942,6 +5942,7 @@ device_ramdisk64() {
     if [[ $ios8 == 1 ]]; then
         device_iproxy no-logging 44
         print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
+        print "* You may need to unplug and replug your device."
     else
         device_iproxy no-logging
         print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
@@ -6792,11 +6793,9 @@ menu_ramdisk() {
                     [789].* ) :;;
                     * ) continue;;
                 esac
-                $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/mnt1
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf freeze.tar -C .; rm freeze.tar; mv private/var/lib private"
+                cat $jelbrek/freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf - -C .; mv private/var/lib private"
                 if [[ $device_vers == "9"* ]]; then
-                    $scp -P $ssh_port $jelbrek/launchctl.tar root@127.0.0.1:/mnt1
-                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf launchctl.tar -C .; rm launchctl.tar"
+                    cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 fi
                 case $device_vers in
                     9.3.[45] ) :;;
@@ -6828,8 +6827,7 @@ menu_ramdisk() {
                     "7.0"  ) untether="evasi0n7-untether-70.tar";;
                     "7.0"* ) untether="evasi0n7-untether.tar";;
                 esac
-                $scp -P $ssh_port $jelbrek/$untether root@127.0.0.1:/mnt1
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf $untether -C .; rm *.tar"
+                cat $jelbrek/$untether | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
             ;;
         esac
     done
