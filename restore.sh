@@ -6829,6 +6829,18 @@ menu_ramdisk() {
                     "7.0"* ) untether="evasi0n7-untether.tar";;
                 esac
                 cat $jelbrek/$untether | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                input "Stashing to free up space on system partition"
+                print "* When enabled, Cydia will move some components to the data partition on its first run."
+                print "* This frees up more space for installing tweaks."
+                print "* However, this option can be unstable and lead to bootloop issues."
+                print "* This option is disabled by default (N). Disable this option if unsure."
+                select_yesno "Enable this option?" 0
+                if [[ $? != 1 ]]; then
+                    log "Stashing disabled by user."
+                else
+                    log "Stashing enabled."
+                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm .cydia_no_stash"
+                fi
             ;;
         esac
     done
