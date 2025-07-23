@@ -6790,10 +6790,11 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
                 device_ramdisk_iosvers
                 case $device_vers in
-                    [789].* ) :;;
+                    7.* | 8.[012].* ) freeze_tar="freeze7.tar" ;;
+                    8.[34].* | 9.* ) freeze_tar="freeze.tar" ;;
                     * ) continue;;
                 esac
-                cat $jelbrek/freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf - -C .; mv private/var/lib private"
+                cat $jelbrek/$freeze_tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf - -C .; mv private/var/lib private"
                 if [[ $device_vers == "9"* ]]; then
                     cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 fi
