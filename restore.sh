@@ -6789,9 +6789,12 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
                 device_ramdisk_iosvers
                 case $device_vers in
-                    7.* | 8.[012].* ) freeze_tar="freeze7.tar" ;;
-                    8.[34].* | 9.* ) freeze_tar="freeze.tar" ;;
-                    * ) continue;;
+                    7.* | 8.[012]* ) freeze_tar="freeze7.tar";;
+                    8.[34]* | 9.*  ) freeze_tar="freeze.tar";;
+                    * )
+                        log "iOS version does not seem to be in the supported range. Cannot continue."
+                        continue
+                    ;;
                 esac
                 cat $jelbrek/$freeze_tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf - -C .; mv private/var/lib private"
                 if [[ $device_vers == "9"* ]]; then
@@ -6834,11 +6837,11 @@ menu_ramdisk() {
                 print "* However, this option can be unstable and lead to bootloop issues."
                 print "* This option is disabled by default (N). Disable this option if unsure."
                 select_yesno "Enable this option?" 0
-                if [[ $? != 1 ]]; then
-                    log "Stashing disabled by user."
-                else
-                    log "Stashing enabled."
+                if [[ $? != 0 ]]; then
+                    log "Stashing option enabled by user."
                     $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm .cydia_no_stash"
+                else
+                    log "Stashing disabled."
                 fi
             ;;
         esac
