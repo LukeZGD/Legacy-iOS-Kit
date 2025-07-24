@@ -493,12 +493,6 @@ set_tool_paths() {
         fi
 
         # macos checks
-        if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
-            local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
-            error_msg+=$'\n* This is also required for installing Homebrew/MacPorts and the needed dependencies.'
-            error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
-            error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
-        fi
         mac_majver="${platform_ver:0:2}"
         if [[ $mac_majver == 10 ]]; then
             mac_minver=${platform_ver:3}
@@ -528,6 +522,11 @@ set_tool_paths() {
         mac_ver="$platform_ver"
         if [[ -n $mac_name ]]; then
             platform_ver="$mac_name $platform_ver"
+        fi
+        if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
+            local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
+            error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+            error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
         fi
         /usr/bin/xattr -cr ../bin/macos
 
@@ -9904,7 +9903,13 @@ device_dumpapp() {
     local dumper_binary="ipainstaller"
     local selected2
     local selected3="ipainstaller" # Default for everyone else
-    if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
+    if (( device_det >= 5 && device_det <= 7 )); then
+        selected3="Clutch"
+        case $device_det in
+            5 ) dumper_binary="clutch13";;  # iOS 5
+            * ) dumper_binary="clutch204";; # iOS 6 - 7
+        esac
+    elif (( device_det >= 8 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
         available_dumpers=("ipainstaller" "Clutch" "Go Back")
         echo
         print "* You should choose ipainstaller over Clutch for dumping most apps."
@@ -9913,15 +9918,9 @@ device_dumpapp() {
         select_option "${available_dumpers[@]}"
         selected3="${available_dumpers[$?]}"
         case $selected3 in
-            "Clutch" )
-                case $device_det in
-                    5    ) dumper_binary="clutch13";;  # iOS 5
-                    [67] ) dumper_binary="clutch204";; # iOS 6 - 7
-                    *    ) dumper_binary="clutch";;    # iOS 8 - 12.0.x
-                esac
-            ;;
+            "Clutch"  ) dumper_binary="clutch";; # iOS 8 - 12.0.x
             "Go Back" ) kill $iproxy_pid; return;;
-            *) :;;
+            * ) :;;
         esac
     fi
     local dumper="../resources/appdump/$dumper_binary"
@@ -9939,10 +9938,20 @@ device_dumpapp() {
     fi
 
     local available_apps_json="$($ideviceinstaller list --json --user)"
-    local available_apps=($(echo $available_apps_json | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+    local available_apps=()
+    if [[ $selected3 == "Clutch" ]]; then
+        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -i > /tmp/installed_apps.txt"
+        local str=$($ssh -p $ssh_port root@127.0.0.1 "cat /tmp/installed_apps.txt")
+        while IFS= read -r i; do
+            available_apps+=("$i")
+        done <<< "$str"
+    else
+        available_apps=($(echo $available_apps_json | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+    fi
     local all_apps=("${available_apps[@]}")
     available_apps+=("Go Back")
     local app_index=0
+    local ipa_name="$(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
 
     if [[ $check == 0 ]]; then
         mkdir -p ../saved/applications
@@ -9990,7 +9999,6 @@ device_dumpapp() {
             esac
 
             if [[ $check == 0 ]]; then
-                local ipa_name="$(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
