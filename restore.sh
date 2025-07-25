@@ -7101,7 +7101,7 @@ menu_print_info() {
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
         if [[ $device_actrec == 1 ]]; then
-            warn "activation-records flag detected. activation_record stitching enabled."
+            warn "activation-records flag detected. Activation record stitching enabled."
         fi
         if [[ $device_pwnrec == 1 ]]; then
             warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
@@ -9355,8 +9355,8 @@ device_dump() {
     log "Dumping files for $arg: $dmps"
     if [[ -s $dump ]]; then
         log "Found existing dumped $arg: $dump"
-        if [[ $arg == "activation" && $(tar -tf $dump | grep -c "activation_record.plist") == 0 ]]; then
-            log "activation_record not found in existing activation dump. Deleting"
+        if [[ $arg == "activation" && $(tar -tf $dump | grep -c "_record.plist") == 0 ]]; then
+            log "Activation record not found in existing activation dump. Deleting"
             rm $dump
         elif [[ $(tar -tf $dump | grep -c "bbticket.der") == 0 ]]; then
             log "bbticket not found in existing baseband dump. Deleting"
@@ -9383,10 +9383,10 @@ device_dump() {
             log "Copying $arg.tar"
             $scp -P $ssh_port ${ssh_user}@127.0.0.1:/tmp/$arg.tar .
             mv $arg.tar $arg-$device_ecid.tar
-            if [[ $(tar -tf activation-$device_ecid.tar | grep -c "activation_record.plist") != 0 ]]; then
+            if [[ $(tar -tf activation-$device_ecid.tar | grep -c "_record.plist") != 0 ]]; then
                 cp activation-$device_ecid.tar $dump
             else
-                warn "activation_record not found in tar. Will not save activation dump."
+                warn "Activation record not found in tar. Will not save activation dump."
             fi
         else
             device_dumpbb
@@ -9512,10 +9512,10 @@ device_dumprd() {
         "* If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
     fi
     mv activation.tar activation-$device_ecid.tar
-    if [[ $(tar -tf activation-$device_ecid.tar | grep -c "activation_record.plist") != 0 ]]; then
+    if [[ $(tar -tf activation-$device_ecid.tar | grep -c "_record.plist") != 0 ]]; then
         cp activation-$device_ecid.tar $dump
     else
-        warn "activation_record not found in tar. Will not save activation dump."
+        warn "Activation record not found in tar. Will not save activation dump."
     fi
     $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
 }
@@ -10353,7 +10353,7 @@ main() {
         "actrec" )
             device_dump activation
             log "Activation records dumping is done"
-            print "* The output tar file contains the plist file(s) dumped. activation_record.plist is all you need for activation"
+            print "* The output tar file contains the plist file(s) dumped. Activation record plist is all you need for activation"
             print "* Note: Using the activation records only works on iOS 9.2.1 or lower. It will not work on iOS 9.3+"
             if (( device_proc < 7 )); then
                 print "* To stitch activation to IPSW, run Legacy iOS Kit with --activation-records flag:"
