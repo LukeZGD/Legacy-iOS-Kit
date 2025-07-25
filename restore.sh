@@ -2920,15 +2920,15 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         if [[ $device_target_vers == "8.4.1" ]]; then
             ipsw_prepare_rebootsh
-            JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/LukeZGD.tar")
+            JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/patcyh.tar")
             JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
-            for i in {0..2}; do
+            for i in {0..1}; do
                 cp $jelbrek/${JBFiles2[$i]} .
             done
             ExtraArgs+="-daibutsu" # use daibutsuCFW
             daibutsu="daibutsu"
         else
-            JBFiles+=("fstab_rw.tar" "freeze.tar")
+            JBFiles+=("fstab_rw.tar")
             case $device_target_vers in
                 6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
                 6* ) JBFiles+=("evasi0n6-untether.tar");;
@@ -2938,9 +2938,10 @@ ipsw_prepare_jailbreak() {
             case $device_target_vers in
                 [43]* ) JBFiles[0]="fstab_old.tar"
             esac
-            for i in {0..2}; do
+            for i in {0..1}; do
                 JBFiles[i]=$jelbrek/${JBFiles[$i]}
             done
+            JBFiles+=("freeze.tar")
             case $device_target_vers in
                 4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[2]=;;
                 4.2.[8761] )
@@ -2976,6 +2977,12 @@ ipsw_prepare_jailbreak() {
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
+        case $device_target_vers in
+            [43]* ) :;;
+            * ) JBFiles+=("$jelbrek/LukeZGD.tar");;
+        esac
+        cp $jelbrek/freeze.tar.gz .
+        gzip -d freeze.tar.gz
     fi
 
     ipsw_prepare_bundle $daibutsu
@@ -3698,7 +3705,7 @@ ipsw_prepare_32bit() {
             JBFiles[0]=$jelbrek/${JBFiles[0]}
         fi
         case $device_target_vers in
-            [98]* ) JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/LukeZGD.tar");;
+            [98]* ) JBFiles+=("$jelbrek/fstab8.tar");;
             7* ) JBFiles+=("$jelbrek/fstab7.tar");;
             4* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
@@ -3717,7 +3724,7 @@ ipsw_prepare_32bit() {
                 fi
             ;;
         esac
-        JBFiles+=("$jelbrek/freeze.tar")
+        JBFiles+=("freeze.tar")
         if [[ $device_target_vers == "9"* ]]; then
             JBFiles+=("$jelbrek/launchctl.tar")
         elif [[ $device_target_vers == "5"* ]]; then
@@ -3731,6 +3738,15 @@ ipsw_prepare_32bit() {
                 5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
         fi
+        case $device_target_vers in
+            9* | 8.[43]* ) JBFiles+=("$jelbrek/patcyh.tar");;
+        esac
+        case $device_target_vers in
+            [43]* ) :;;
+            * ) JBFiles+=("$jelbrek/LukeZGD.tar");;
+        esac
+        cp $jelbrek/freeze.tar.gz .
+        gzip -d freeze.tar.gz
     fi
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
@@ -4445,14 +4461,15 @@ ipsw_prepare_ios4powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar" "fstab_old.tar" "freeze.tar" "cydiasubstrate.tar")
-        for i in {0..3}; do
+        JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar" "fstab_old.tar" "cydiasubstrate.tar" "freeze.tar")
+        for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
         fi
-        cp $jelbrek/freeze.tar .
+        cp $jelbrek/freeze.tar.gz .
+        gzip -d freeze.tar.gz
     fi
 
     ipsw_prepare_bundle target
@@ -4551,7 +4568,6 @@ ipsw_prepare_powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        cp $jelbrek/freeze.tar .
         case $device_target_vers in
             7.1* ) # remove for lyncis
                 ExtraArgs+=" $jelbrek/fstab7.tar"
@@ -4578,6 +4594,9 @@ ipsw_prepare_powder() {
         if [[ $ipsw_openssh == 1 ]]; then
             ExtraArgs+=" $jelbrek/sshdeb.tar"
         fi
+        ExtraArgs+=" $jelbrek/LukeZGD.tar"
+        cp $jelbrek/freeze.tar.gz .
+        gzip -d freeze.tar.gz
     fi
 
     local ExtraArr=("--boot-partition" "--boot-ramdisk")
@@ -5754,14 +5773,14 @@ menu_remove4() {
 }
 
 device_send_rdtar() {
-    local target="/mnt1"
+    log "Sending and extracting $1"
     if [[ $2 == "data" ]]; then
-        target+="/private/var"
+        cp $jelbrek/$1.gz .
+        gzip -d $1.gz
+        cat $1 | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+        return
     fi
-    log "Sending $1"
-    $scp -P $ssh_port $jelbrek/$1 root@127.0.0.1:$target
-    log "Extracting $1"
-    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf $target/$1 -C /mnt1; rm $target/$1"
+    cat $jelbrek/$1 | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
 }
 
 device_ramdisk64() {
@@ -6411,6 +6430,13 @@ device_ramdisk() {
                 9* ) device_send_rdtar launchctl.tar;;
                 3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
+            case $vers in
+                9* | 8.[43]* ) device_send_rdtar patcyh.tar;;
+            esac
+            case $vers in
+                [43]* ) :;;
+                * ) device_send_rdtar LukeZGD.tar;;
+            esac
 
             # final setup for ios 8.x daibutsu, and/or reboot
             if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then # || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
@@ -6792,16 +6818,18 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
                 device_ramdisk_iosvers
                 case $device_vers in
-                    7.* | 8.[012]* ) freeze_tar="freeze7.tar";;
-                    8.[34]* | 9.*  ) freeze_tar="freeze.tar";;
+                    [789].* ) :;;
                     * )
                         log "iOS version does not seem to be in the supported range. Cannot continue."
                         continue
                     ;;
                 esac
-                cat $jelbrek/$freeze_tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xf - -C .; mv private/var/lib private"
+                cat $jelbrek/freeze.tar.gz | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xzvf - -C .; mv private/var/lib private"
+                case $device_vers in
+                    9* | 8.[43]* ) cat $jelbrek/patcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1";;
+                esac
                 if [[ $device_vers == "9"* ]]; then
-                    cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                    cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
                 fi
                 case $device_vers in
                     9.3.[45] ) :;;
@@ -8338,7 +8366,7 @@ ipsw_print_warnings() {
     else
         warn "Selected Target IPSW failed validation, proceed with caution"
     fi
-    if [[ $device_target_vers == "9.3"* && $device_actrec == 1 && $device_target_vers != "$device_latest_vers" ]]; then
+    if [[ $device_target_vers == "9.3"* && $device_actrec == 1 ]]; then
         warn "Activation records stitching does not work for iOS 9.3+ versions, use iOS 9.2.1 or lower instead when possible."
     fi
     if [[ $1 == "powder" ]]; then
@@ -9313,7 +9341,9 @@ device_jailbreak() {
 device_jailbreak_gilbert() {
     pushd ../resources/jailbreak/g1lbertJB >/dev/null
     log "Copying freeze.tar to Cydia.tar"
-    cp ../freeze.tar payload/common/Cydia.tar
+    cp ../freeze.tar.gz .
+    gzip -d freeze.tar.gz
+    mv freeze.tar payload/common/Cydia.tar
     log "Running g1lbertJB..."
     "../../$dir/gilbertjb"
     rm payload/common/Cydia.tar
@@ -9358,7 +9388,7 @@ device_dump() {
         if [[ $arg == "activation" && $(tar -tf $dump | grep -c "_record.plist") == 0 ]]; then
             log "Activation record not found in existing activation dump. Deleting"
             rm $dump
-        elif [[ $(tar -tf $dump | grep -c "bbticket.der") == 0 ]]; then
+        elif [[ $arg == "baseband" && $(tar -tf $dump | grep -c "bbticket.der") == 0 ]]; then
             log "bbticket not found in existing baseband dump. Deleting"
             rm $dump
         else
@@ -10153,12 +10183,12 @@ device_fourthree_step3() {
     local dmp="private/var/root/Library/Lockdown"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/$dmp; cp -Rv /$dmp/* /mnt1/$dmp"
     log "Installing jailbreak"
-    $scp -P $ssh_port $jelbrek/freeze.tar root@127.0.0.1:/tmp
-    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/freeze.tar -C /mnt1"
+    cp $jelbrek/freeze.tar.gz .
+    gzip -d freeze.tar.gz
+    cat $jelbrek/freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
     if [[ $ipsw_openssh == 1 ]]; then
         log "Installing OpenSSH"
-        $scp -P $ssh_port $jelbrek/sshdeb.tar root@127.0.0.1:/tmp
-        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /tmp/sshdeb.tar -C /mnt1"
+        cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
     fi
     log "Unmounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt1/private/var; umount /mnt1"
