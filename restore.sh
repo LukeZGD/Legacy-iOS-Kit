@@ -1533,6 +1533,10 @@ device_get_info() {
     if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         device_disable_bbupdate="$device_type"
     fi
+    # enable activation records flag if device is a5(x)/a6(x)
+    if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+        device_actrec=1
+    fi
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
         device_latest_vers=$device_use_vers
@@ -2983,11 +2987,9 @@ ipsw_prepare_jailbreak() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
-        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
-        device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
     if [[ $1 == "iboot" ]]; then
@@ -3664,11 +3666,9 @@ ipsw_prepare_32bit() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
-        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
-        device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
@@ -4467,7 +4467,6 @@ ipsw_prepare_ios4powder() {
         ExtraArgs+=" -memory"
     fi
     if [[ $device_actrec == 1 ]]; then
-        device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
@@ -4544,11 +4543,9 @@ ipsw_prepare_powder() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
-        device_dump baseband
         ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
     fi
     if [[ $device_actrec == 1 ]]; then
-        device_dump activation
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
@@ -5312,6 +5309,12 @@ device_buttons2() {
 }
 
 restore_deviceprepare() {
+    if [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
+        device_dump baseband
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        device_dump activation
+    fi
     case $device_proc in
         1 )
             if [[ $device_target_vers == "4"* && $ipsw_jailbreak == 1 ]]; then
@@ -6368,7 +6371,6 @@ device_ramdisk() {
                         fstab="fstab_old" # disk0s2 data
                     fi
                     $scp -P $ssh_port $jelbrek/$fstab root@127.0.0.1:/mnt1/private/etc/fstab
-                    $ssh -p $ssh_port root@127.0.0.1 "rm /mnt1/private/var/mobile/Library/Caches/com.apple.mobile.installation.plist" # idk if this is really needed but ill keep it
                 ;;
             esac
 
@@ -7065,13 +7067,23 @@ menu_print_info() {
     if [[ $device_unactivated == 1 ]]; then
         print "* Device is not activated, select Attempt Activation to activate."
     fi
+    if [[ $device_argmode == "none" ]]; then
+        if [[ $device_type == "$device_disable_bbupdate" || -n $device_deadbb ]]; then
+            warn "disable-bbupdate/dead-bb flag detected, but cannot be used in no-device mode."
+            device_disable_bbupdate=
+            device_deadbb=
+        fi
+        if [[ $device_actrec == 1 ]]; then
+            warn "Activation records flag detected, but cannot be used in no-device mode."
+            device_actrec=
+        fi
+    fi
     if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
-        warn "Disable bbupdate flag detected, baseband update is disabled. Proceed with caution"
+        warn "Disable bbupdate flag detected, baseband stitching enabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
             warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate after restore"
         else
             print "* Current device baseband will be dumped and stitched to custom IPSW"
-            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other (tethered or with SHSH), powdersn0w"
             warn "Note that stitching baseband does not always work! There is a chance of non-working baseband after the restore"
         fi
     elif [[ -n $device_disable_bbupdate ]]; then
@@ -7085,8 +7097,7 @@ menu_print_info() {
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
         if [[ $device_actrec == 1 ]]; then
-            warn "Activation records flag detected. Proceed with caution"
-            print "* Stitching is supported in these restores/downgrades: 8.4.1/6.1.3, Other with SHSH, powdersn0w"
+            warn "Activation records flag detected. activation_record stitching enabled."
         fi
         if [[ $device_pwnrec == 1 ]]; then
             warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
@@ -8323,8 +8334,8 @@ ipsw_print_warnings() {
     else
         warn "Selected Target IPSW failed validation, proceed with caution"
     fi
-    if [[ $device_target_vers == "9.3"* && $device_actrec == 1 ]]; then
-        warn "Activation records stitching does not work for iOS 9.3+ versions. Use iOS 9.2.1 or lower instead."
+    if [[ $device_target_vers == "9.3"* && $device_actrec == 1 && $device_target_vers != "$device_latest_vers" ]]; then
+        warn "Activation records stitching does not work for iOS 9.3+ versions, use iOS 9.2.1 or lower instead when possible."
     fi
     if [[ $1 == "powder" ]]; then
         case $device_target_build in
@@ -9322,19 +9333,22 @@ device_dump() {
     log "Dumping files for $arg: $dmps"
     if [[ -s $dump ]]; then
         log "Found existing dumped $arg: $dump"
-        print "* Select Y to overwrite, or N to use existing dump"
-        print "* Make sure to keep a backup of the dump if needed"
-        select_yesno "Overwrite this existing dump?" 0
-        if [[ $? != 1 ]]; then
+        if [[ $arg == "activation" && $(tar -tf $dump | grep -c "activation_record.plist") == 0 ]]; then
+            log "activation_record not found in existing activation dump. Deleting"
+            rm $dump
+        elif [[ $(tar -tf $dump | grep -c "bbticket.der") == 0 ]]; then
+            log "bbticket not found in existing baseband dump. Deleting"
+            rm $dump
+        else
             return
         fi
-        log "Deleting existing dumped $arg"
-        rm $dump
     fi
-    if [[ $device_mode == "Recovery" ]]; then
-        device_enter_mode pwnDFU
-    elif [[ $device_mode == "Normal" ]]; then
+    if [[ $device_mode == "Normal" ]]; then
         device_buttons2
+    else
+        log "Recovery/DFU mode device detected, entering pwnDFU mode to continue for SSH ramdisk."
+        print "* Note: If you can jailbreak and enter kDFU mode, exit now and proceed to do that instead."
+        device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
         device_ssh_message
@@ -9347,23 +9361,27 @@ device_dump() {
             log "Copying $arg.tar"
             $scp -P $ssh_port ${ssh_user}@127.0.0.1:/tmp/$arg.tar .
             mv $arg.tar $arg-$device_ecid.tar
+            if [[ $(tar -tf activation-$device_ecid.tar | grep -c "activation_record.plist") != 0 ]]; then
+                cp activation-$device_ecid.tar $dump
+            else
+                warn "activation_record not found in tar. Will not save activation dump."
+            fi
         else
             device_dumpbb
+            if [[ $(tar -tf baseband-$device_ecid.tar | grep -c "bbticket.der") != 0 ]]; then
+                cp baseband-$device_ecid.tar $dump
+            else
+                warn "bbticket not found in tar. Will not save baseband dump."
+            fi
         fi
-        cp $arg-$device_ecid.tar $dump
     else
-        log "This operation requires an SSH ramdisk, proceeding"
-        print "* I recommend dumping baseband/activation on Normal mode instead of Recovery/DFU mode if possible"
         device_enter_ramdisk $arg
         device_dumprd
-        $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=0; reboot_bak"
-        log "Done, device should reboot to recovery mode now"
-        log "Just exit recovery mode if needed: Main Menu -> Exit Recovery Mode"
+        $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1; reboot_bak"
+        log "Done, device should reboot now"
         if [[ $mode != "baseband" && $mode != "actrec" ]]; then
-            log "Put your device back in kDFU/pwnDFU mode to proceed"
-            device_find_mode Recovery
-            device_enter_mode DFU
-            device_enter_mode pwnDFU
+            log "Put your device back in kDFU/pwnDFU mode to proceed, then run the script again."
+            exit
         fi
     fi
     kill $iproxy_pid
@@ -9442,16 +9460,13 @@ device_dumprd() {
     case $device_type in
         iPhone[45]* | iPad2,[67] | iPad3,[56] )
             log "Dumping both baseband and activation tars"
-            device_dumpbb rd
             print "* Reminder to backup dump tars if needed"
-            if [[ -s $dump/baseband-$device_ecid.tar ]]; then
-                select_yesno "Baseband dump exists in $dump/baseband-$device_ecid.tar. Overwrite?" 0
-                if [[ $? == 1 ]]; then
-                    log "Deleting existing dumped baseband"
-                    rm $dump/baseband-$device_ecid.tar
-                fi
+            device_dumpbb rd
+            if [[ $(tar -tf baseband-$device_ecid.tar | grep -c "bbticket.der") != 0 ]]; then
+                cp baseband-$device_ecid.tar $dump
+            else
+                warn "bbticket not found in tar. Will not save baseband dump."
             fi
-            cp baseband-$device_ecid.tar $dump
         ;;
     esac
 
@@ -9475,14 +9490,11 @@ device_dumprd() {
         "* If your device is on iOS 9 or newer, make sure to set the version of the SSH ramdisk correctly."
     fi
     mv activation.tar activation-$device_ecid.tar
-    if [[ -s $dump/activation-$device_ecid.tar ]]; then
-        select_yesno "Activation records dump exists in $dump/activation-$device_ecid.tar. Overwrite?" 0
-        if [[ $? == 1 ]]; then
-            log "Deleting existing dumped activation"
-            rm $dump/activation-$device_ecid.tar
-        fi
+    if [[ $(tar -tf activation-$device_ecid.tar | grep -c "activation_record.plist") != 0 ]]; then
+        cp activation-$device_ecid.tar $dump
+    else
+        warn "activation_record not found in tar. Will not save activation dump."
     fi
-    cp activation-$device_ecid.tar $dump
     $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
 }
 
