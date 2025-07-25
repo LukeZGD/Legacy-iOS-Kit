@@ -6824,7 +6824,9 @@ menu_ramdisk() {
                         continue
                     ;;
                 esac
-                cat $jelbrek/freeze.tar.gz | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xzvf - -C .; mv private/var/lib private"
+                cp $jelbrek/freeze.tar.gz .
+                gzip -d freeze.tar.gz
+                cat freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib private"
                 case $device_vers in
                     9* | 8.[43]* ) cat $jelbrek/patcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1";;
                 esac
