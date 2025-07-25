@@ -111,6 +111,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --build-id=<build>        Specify iOS build ID for SSH ramdisk/tether boot
     --bootargs=<bootargs>     Specify custom bootargs for SSH ramdisk/tether boot
     --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
+    --disable-actrec          Disable dumping/stitching activation records
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
@@ -1534,7 +1535,7 @@ device_get_info() {
         device_disable_bbupdate="$device_type"
     fi
     # enable activation records flag if device is a5(x)/a6(x)
-    if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ -z $device_disable_actrec ]]; then
         device_actrec=1
     fi
     # if latest vers is not set, copy use vers to latest
@@ -7067,6 +7068,9 @@ menu_print_info() {
     if [[ $device_unactivated == 1 ]]; then
         print "* Device is not activated, select Attempt Activation to activate."
     fi
+    if [[ $device_disable_actrec == 1 ]]; then
+        warn "disable-actrec flag detected, activation dumping/stitching disabled. Proceed with caution"
+    fi
     if [[ $device_argmode == "none" ]]; then
         if [[ $device_type == "$device_disable_bbupdate" || -n $device_deadbb ]]; then
             warn "disable-bbupdate/dead-bb flag detected, but cannot be used in no-device mode."
@@ -7079,15 +7083,15 @@ menu_print_info() {
         fi
     fi
     if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
-        warn "Disable bbupdate flag detected, baseband stitching enabled. Proceed with caution"
+        warn "disable-bbupdate flag detected, baseband stitching enabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
-            warn "dead-bb flag detected, baseband dump/stitching is disabled. Your device will not activate after restore"
+            warn "dead-bb flag detected, baseband dumping/stitching disabled. Your device will not activate after restore"
         else
             print "* Current device baseband will be dumped and stitched to custom IPSW"
             warn "Note that stitching baseband does not always work! There is a chance of non-working baseband after the restore"
         fi
     elif [[ -n $device_disable_bbupdate ]]; then
-        warn "Disable bbupdate flag detected, but this flag is not supported for this device"
+        warn "disable-bbupdate flag detected, but this flag is not supported for this device"
     fi
     if [[ -n $device_disable_bbupdate ]]; then
         print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update"
@@ -7097,7 +7101,7 @@ menu_print_info() {
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
         if [[ $device_actrec == 1 ]]; then
-            warn "Activation records flag detected. activation_record stitching enabled."
+            warn "activation-records flag detected. activation_record stitching enabled."
         fi
         if [[ $device_pwnrec == 1 ]]; then
             warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
@@ -8818,7 +8822,12 @@ menu_flags() {
         if (( device_proc >= 7 )); then
             menu_items+=("Enable skip-blob flag")
         else
-            menu_items+=("Enable activation-records flag" "Enable jailbreak flag" "Enable gasgauge-patch flag")
+            if [[ $device_actrec == 1 ]]; then
+                menu_items+=("Disable activation-records flag")
+            else
+                menu_items+=("Enable activation-records flag")
+            fi
+            menu_items+=("Enable jailbreak flag" "Enable gasgauge-patch flag")
             if (( device_proc >= 5 )); then
                 menu_items+=("Enable skip-ibss flag")
             fi
@@ -8854,6 +8863,19 @@ menu_flags() {
                 select_yesno "Do you want to enable the activation-records flag?" 0
                 if [[ $? != 0 ]]; then
                     device_actrec=1
+                    device_disable_actrec=
+                    back=1
+                fi
+            ;;
+            "Disable activation-records flag" )
+                warn "This will disable the --activation-records flag."
+                print "* This will disable usage of dumped activation records and stitch to IPSW."
+                print "* Do not disable this if you do not know what you are doing."
+                local opt
+                select_yesno "Do you want to disable the activation-records flag?" 0
+                if [[ $? != 0 ]]; then
+                    device_actrec=
+                    device_disable_actrec=1
                     back=1
                 fi
             ;;
@@ -10393,6 +10415,7 @@ for i in "$@"; do
         "--build-id="*      ) device_rd_build="${i#*=}";;
         "--bootargs="*      ) device_bootargs="${i#*=}";;
         "--dead-bb"         ) device_deadbb=1; device_disable_bbupdate=1;;
+        "--disable-actrec"  ) device_disable_actrec=1;;
         "--disable-bbupdate") device_disable_bbupdate=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--ipsw-verbose"    ) ipsw_verbose=1;;
