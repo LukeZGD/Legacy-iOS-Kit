@@ -2918,60 +2918,49 @@ ipsw_prepare_jailbreak() {
     local daibutsu=$1
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        if [[ $device_target_vers == "8.4.1" ]]; then
-            ipsw_prepare_rebootsh
-            JBFiles+=("$jelbrek/fstab8.tar" "$jelbrek/patcyh.tar")
-            JBFiles2=("daibutsu/bin.tar" "daibutsu/untether.tar" "freeze.tar")
-            for i in {0..1}; do
-                cp $jelbrek/${JBFiles2[$i]} .
-            done
-            ExtraArgs+="-daibutsu" # use daibutsuCFW
-            daibutsu="daibutsu"
-        else
-            JBFiles+=("fstab_rw.tar")
+        JBFiles+=("fstab_rw.tar")
+        case $device_target_vers in
+            6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
+            6* ) JBFiles+=("evasi0n6-untether.tar");;
+            4.[10]* | 3.2* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
+            5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+        esac
+        case $device_target_vers in
+            [43]* ) JBFiles[0]="fstab_old.tar"
+        esac
+        for i in {0..1}; do
+            JBFiles[i]=$jelbrek/${JBFiles[$i]}
+        done
+        JBFiles+=("freeze.tar")
+        case $device_target_vers in
+            4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[2]=;;
+            4.2.[8761] )
+                if [[ $device_type == "iPhone1,2" ]]; then
+                    JBFiles[2]=
+                else
+                    ExtraArgs+=" -punchd"
+                    JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+                fi
+            ;;
+            3.1* )
+                if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
+                    JBFiles[2]=
+                fi
+            ;;
+            3.0* | 4.2* ) JBFiles[2]=;;
+        esac
+        case $device_target_vers in
+            [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
+        esac
+        if [[ $device_target_vers == "3"* ]]; then
+            JBFiles+=("$jelbrek/cydiahttpatch.tar")
+        elif [[ $device_target_vers == "5"* ]]; then
+            JBFiles+=("$jelbrek/g1lbertJB.tar")
+        fi
+        if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
             case $device_target_vers in
-                6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
-                6* ) JBFiles+=("evasi0n6-untether.tar");;
-                4.[10]* | 3.2* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
-                5* | 4.[32]* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+                5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
-            case $device_target_vers in
-                [43]* ) JBFiles[0]="fstab_old.tar"
-            esac
-            for i in {0..1}; do
-                JBFiles[i]=$jelbrek/${JBFiles[$i]}
-            done
-            JBFiles+=("freeze.tar")
-            case $device_target_vers in
-                4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[2]=;;
-                4.2.[8761] )
-                    if [[ $device_type == "iPhone1,2" ]]; then
-                        JBFiles[2]=
-                    else
-                        ExtraArgs+=" -punchd"
-                        JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
-                    fi
-                ;;
-                3.1* )
-                    if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
-                        JBFiles[2]=
-                    fi
-                ;;
-                3.0* | 4.2* ) JBFiles[2]=;;
-            esac
-            case $device_target_vers in
-                [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
-            esac
-            if [[ $device_target_vers == "3"* ]]; then
-                JBFiles+=("$jelbrek/cydiahttpatch.tar")
-            elif [[ $device_target_vers == "5"* ]]; then
-                JBFiles+=("$jelbrek/g1lbertJB.tar")
-            fi
-            if [[ $device_target_tethered == 1 && $device_type != "iPad2"* ]]; then
-                case $device_target_vers in
-                    5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
-                esac
-            fi
         fi
         ExtraArgs+=" -S 30" # system partition add
         if [[ $ipsw_openssh == 1 ]]; then
@@ -3738,9 +3727,6 @@ ipsw_prepare_32bit() {
                 5* | 4.3* ) JBFiles+=("$jelbrek/g1lbertJB/install.tar");;
             esac
         fi
-        case $device_target_vers in
-            9* | 8.[43]* ) JBFiles+=("$jelbrek/patcyh.tar");;
-        esac
         case $device_target_vers in
             [43]* ) :;;
             * ) JBFiles+=("$jelbrek/LukeZGD.tar");;
@@ -5589,8 +5575,6 @@ ipsw_prepare() {
                 ipsw_prepare_tethered
             elif [[ $device_target_powder == 1 ]]; then
                 ipsw_prepare_powder
-            elif [[ $ipsw_jailbreak == 1 && $device_target_other != 1 ]]; then
-                ipsw_prepare_jailbreak
             elif [[ $device_target_vers != "$device_latest_vers" || $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_32bit
             fi
@@ -6431,9 +6415,6 @@ device_ramdisk() {
                 3* ) device_send_rdtar cydiahttpatch.tar;;
             esac
             case $vers in
-                9* | 8.[43]* ) device_send_rdtar patcyh.tar;;
-            esac
-            case $vers in
                 [43]* ) :;;
                 * ) device_send_rdtar LukeZGD.tar;;
             esac
@@ -6827,15 +6808,16 @@ menu_ramdisk() {
                 cp $jelbrek/freeze.tar.gz .
                 gzip -d freeze.tar.gz
                 cat freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib private"
-                case $device_vers in
-                    9* | 8.[43]* ) cat $jelbrek/patcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1";;
-                esac
                 if [[ $device_vers == "9"* ]]; then
                     cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
                 fi
                 case $device_vers in
                     9.3.[45] ) :;;
                     9.[23]*  ) $scp -P $ssh_port $jelbrek/io.pangu93.loader.plist root@127.0.0.1:/mnt1/Library/LaunchDaemons;;
+                    7.* | 8.[012]* ) # remove patcyh
+                        $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
+                        cat $jelbrek/nopatcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib/dpkg/* private/lib/dpkg"
+                    ;;
                 esac
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
@@ -6855,6 +6837,7 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1"
                 device_ramdisk_iosvers
                 if [[ $device_vers != "7."* ]]; then
+                    log "iOS version does not seem to be in the supported range. Cannot continue."
                     continue
                 fi
                 local untether
