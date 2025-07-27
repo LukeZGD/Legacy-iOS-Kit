@@ -2954,21 +2954,21 @@ ipsw_prepare_jailbreak() {
         done
         JBFiles+=("freeze.tar")
         case $device_target_vers in
-            4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[2]=;;
+            4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[1]=;;
             4.2.[8761] )
                 if [[ $device_type == "iPhone1,2" ]]; then
-                    JBFiles[2]=
+                    JBFiles[1]=
                 else
                     ExtraArgs+=" -punchd"
-                    JBFiles[2]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
+                    JBFiles[1]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                 fi
             ;;
             3.1* )
                 if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
-                    JBFiles[2]=
+                    JBFiles[1]=
                 fi
             ;;
-            3.0* | 4.2* ) JBFiles[2]=;;
+            3.0* | 4.2* ) JBFiles[1]=;;
         esac
         case $device_target_vers in
             [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
@@ -3721,11 +3721,7 @@ ipsw_prepare_32bit() {
             * )  JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
         case $device_target_vers in
-            4.3* )
-                if [[ $device_type == "iPad2"* ]]; then
-                    JBFiles[0]=
-                fi
-            ;;
+            4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[0]=;;
             4.2.9 | 4.2.10 ) JBFiles[0]=;;
             4.2.1 )
                 if [[ $device_type != "iPhone1,2" ]]; then
