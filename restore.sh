@@ -2077,6 +2077,10 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
+            elif [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
+                # A6 intel mac use ipwndfu
+                device_ipwndfu
+                tool_pwned=$?
             elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
@@ -2157,23 +2161,18 @@ device_send_unpacked_ibss() {
     fi
 }
 
-device_ipwndfu_alloc8() {
-    local tool_pwned=0
-    local ipwndfu_comm="52fdaa27fc7c12cdca74bcaa344a91726be46cce"
-    local ipwndfu_sha1="5c98881c45d7b829579af6783bc9568cf5e426d7"
-    local ipwndfu="ipwndfu_python3"
-    local psudo
+ipwndfu_init() {
+    local ipwndfu_comm="fb58cab1a78792865e80fd9655e6b52d1bcb8546"
+    local ipwndfu_sha1="f2d4506b3258abdd89287b7588c61c1ec9dca62d"
+    ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="sudo"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="21913d43a66d8a4b292efc9a8c87e26cde06ea36"
-        ipwndfu_sha1="cd5d889403705af058816fe0563111ce5adf729b"
+        ipwndfu_comm="bfed43ad4dadab2cc452efb254f87e3026a0a107"
+        ipwndfu_sha1="ebed4f897b08c17eab663e5f0ccceb5801deb43c"
     fi
-
-    device_enter_mode pwnDFU
-
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
         file_download https://github.com/LukeZGD/ipwndfu/archive/$ipwndfu_comm.zip ipwndfu.zip $ipwndfu_sha1
@@ -2181,6 +2180,12 @@ device_ipwndfu_alloc8() {
         mv ipwndfu-* ../saved/$ipwndfu
         echo "$ipwndfu_sha1" > ../saved/$ipwndfu/sha1check
     fi
+}
+
+device_alloc8() {
+    local tool_pwned=0
+    device_enter_mode pwnDFU
+    ipwndfu_init
 
     if [[ ! -s ../saved/n88ap-iBSS-4.3.5.img3 ]]; then
         log "Downloading iOS 4.3.5 iBSS"
@@ -2210,6 +2215,22 @@ device_ipwndfu_alloc8() {
         print "* You may also need to force restart the device and re-enter DFU mode before retrying."
         print "* To retry, just go back to: Useful Utilities -> Install alloc8 Exploit"
     fi
+}
+
+device_ipwndfu() {
+    local tool_pwned
+    ipwndfu_init
+
+    pushd ../saved/$ipwndfu/ >/dev/null
+    log "Placing device to pwnDFU mode using ipwndfu"
+    $psudo ./ipwndfu -p
+    tool_pwned=$?
+    if [[ $device_sudoloop == 1 ]]; then
+        sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
+    fi
+    popd >/dev/null
+
+    return $tool_pwned
 }
 
 file_download() {
@@ -5450,7 +5471,7 @@ restore_prepare() {
                     fi
                     log "Do not disconnect your device, not done yet"
                     device_find_mode DFU 50
-                    device_ipwndfu_alloc8
+                    device_alloc8
                 else
                     restore_latest custom
                 fi
@@ -9123,7 +9144,7 @@ menu_usefulutilities() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                mode="device_ipwndfu_alloc8"
+                mode="device_alloc8"
             ;;
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
