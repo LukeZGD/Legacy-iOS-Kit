@@ -2170,8 +2170,8 @@ ipwndfu_init() {
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="bfed43ad4dadab2cc452efb254f87e3026a0a107"
-        ipwndfu_sha1="ebed4f897b08c17eab663e5f0ccceb5801deb43c"
+        ipwndfu_comm="01108dc5dbd5353b4c93d9694d75d020187dfbb5"
+        ipwndfu_sha1="9aff74dbe947fec8ed8bda9c261c3526df3ca6e9"
     fi
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
@@ -9401,7 +9401,9 @@ device_dump() {
         device_buttons2
     else
         log "Recovery/DFU mode device detected, entering pwnDFU mode to continue for SSH ramdisk."
-        print "* Note: If you can jailbreak and enter kDFU mode, exit now and proceed to do that instead."
+        if [[ $platform == "linux" || $device_proc == 5 ]]; then
+            print "* Note: If you can jailbreak and enter kDFU mode, exit now and proceed to do that instead."
+        fi
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
