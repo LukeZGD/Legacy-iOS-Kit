@@ -10007,6 +10007,9 @@ device_dumpapp() {
             * ) :;;
         esac
     fi
+    if [[ $dumper_binary == "ipainstaller" ]] && (( device_det <= 10 )); then
+        dumper_binary="ipainstaller_legacy"
+    fi
     local dumper="../resources/appdump/$dumper_binary"
 
     log "Sending $selected3 to device"
