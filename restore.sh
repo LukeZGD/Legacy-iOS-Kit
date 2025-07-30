@@ -407,7 +407,7 @@ set_tool_paths() {
             live_cdusb=1
             live_cdusb_str="Live session"
             log "Linux Live session detected."
-            if [[ $(pwd) == "/home"* ]]; then
+            if [[ $(pwd) == "/home/"* ]]; then
                 df . -h
                 if [[ $(lsblk -o label | grep -c "casper-rw") == 1 || $(lsblk -o label | grep -c "persistence") == 1 ]]; then
                     log "Detected Legacy iOS Kit running on persistent storage."
@@ -425,10 +425,11 @@ set_tool_paths() {
             fi
         fi
 
-        # if "/media" is detected in pwd, warn user of possible permission issues
-        if [[ $(pwd) == *"/media"* ]]; then
+        # if "/media/" is detected in pwd, warn user of possible permission issues
+        if [[ $(pwd) == *"/media/"* ]]; then
             warn "You might get permission errors like \"Permission denied\" on getting device info."
             print "* If this is the case, try moving Legacy iOS Kit to the Desktop or Documents folder."
+            live_cdusb_str+=" - External storage"
         fi
 
         if [[ -z $device_disable_sudoloop ]]; then
@@ -2162,8 +2163,8 @@ device_send_unpacked_ibss() {
 }
 
 ipwndfu_init() {
-    local ipwndfu_comm="fb58cab1a78792865e80fd9655e6b52d1bcb8546"
-    local ipwndfu_sha1="f2d4506b3258abdd89287b7588c61c1ec9dca62d"
+    local ipwndfu_comm="624763e9903e523bcc0de8a9b44e35053ce72ac6"
+    local ipwndfu_sha1="398b1e74317373d0c9fdd2711581913810ced270"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="sudo"
@@ -5289,10 +5290,11 @@ device_buttons() {
     if [[ $device_proc == 6 && $platform != "macos" ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
-        print "* Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
+        warn "Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
     elif [[ $device_proc == 5 ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
+        warn "Selecting pwnDFU will require usage of checkm8-a5."
         print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     else
         selection=("pwnDFU" "kDFU")
@@ -5316,11 +5318,11 @@ device_buttons2() {
     fi
     input "Jailbroken/pwnDFU Mode Option"
     print "* This device needs to be jailbroken/in pwnDFU mode before proceeding."
-    print "* Selecting 1 (Jailbroken) is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
-    print "* Selecting 2 (pwnDFU) is for those that prefer the ramdisk method instead."
+    print "* Selecting Jailbroken is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
+    print "* Selecting pwnDFU is for those that prefer the ramdisk method instead."
     if [[ $device_proc == 5 ]]; then
-        warn "Selecting 2 will require usage of checkm8-a5."
-        print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+        warn "Selecting pwnDFU will require usage of checkm8-a5."
+        print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     fi
     input "Select your option:"
     local opt2
