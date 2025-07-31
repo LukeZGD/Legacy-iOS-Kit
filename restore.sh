@@ -1485,17 +1485,17 @@ device_get_info() {
             device_latest_build="20H360"
         ;;
         iPad7,[123456] )
-            device_latest_vers="17.7.8"
-            device_latest_build="21H440"
+            device_latest_vers="17.7.9"
+            device_latest_build="21H446"
         ;;
         iPad7,1[12] )
-            device_latest_vers="18.5"
-            device_latest_build="22F76"
+            device_latest_vers="18.6"
+            device_latest_build="22G86"
         ;;
     esac
     if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
         device_latest_vers="18.5"
-        device_latest_build="22F76"
+        device_latest_build="22G86"
 #         log "Getting latest iOS version for $device_type"
 #         rm -f tmp.json
 #         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json >/dev/null
@@ -2630,8 +2630,8 @@ ipsw_preference_set() {
     elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]]; then
         case $device_target_vers in
             6.1.6 | 4.1 ) log "3GS verbose boot is not supported on 6.1.6 and 4.1";;
-            [65]* ) log "3GS verbose boot is currently supported on iOS 4 and lower only";;
-            3.0* ) :;;
+            [65]*       ) log "3GS verbose boot is currently supported on iOS 4 and lower only";;
+            3.0*        ) log "3GS verbose boot is always enabled on 3.0.x";;
             * ) ipsw_canverbose=1;;
         esac
     fi
@@ -3028,7 +3028,6 @@ ipsw_prepare_jailbreak() {
     fi
 
     ipsw_prepare_logos_add
-    ipsw_prepare_fourthree
     ipsw_bbreplace
 
     mv temp.ipsw "$ipsw_custom.ipsw"
@@ -3044,6 +3043,7 @@ ipsw_prepare_fourthree() {
     if [[ $ipsw_fourthree != 1 ]]; then
         return
     fi
+    log "Preparing IPSW for FourThree"
     ipsw_get_url 8L1
     url="$ipsw_url"
     device_fw_key_check
@@ -3114,6 +3114,7 @@ ipsw_prepare_fourthree_part2() {
     local iv
     local key
     mkdir -p $saved_path 2>/dev/null
+    log "Preparing components for FourThree dualboot"
     if [[ ! -s $saved_path/Kernelcache ]]; then
         log "Kernelcache"
         iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "Kernelcache") | .iv')
@@ -3771,6 +3772,7 @@ ipsw_prepare_32bit() {
         "* You may try selecting N for memory option"
     fi
 
+    ipsw_prepare_fourthree
     ipsw_bbreplace
     if [[ $device_target_vers == "4"* ]]; then
         ipsw_prepare_ios4patches
