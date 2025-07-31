@@ -1494,7 +1494,7 @@ device_get_info() {
         ;;
     esac
     if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
-        device_latest_vers="18.5"
+        device_latest_vers="18.6"
         device_latest_build="22G86"
 #         log "Getting latest iOS version for $device_type"
 #         rm -f tmp.json
