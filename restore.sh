@@ -5283,7 +5283,9 @@ restore_prepare_pwnrec64() {
 
 device_buttons() {
     local selection=("kDFU" "pwnDFU")
-    if [[ $device_mode != "Normal" ]]; then
+    if [[ $device_jailbrokenselected == 1 ]]; then
+        device_enter_mode kDFU
+    elif [[ $device_mode != "Normal" ]]; then
         device_enter_mode pwnDFU
         return
     fi
@@ -5330,9 +5332,10 @@ device_buttons2() {
     local opt2
     select_option "${selection[@]}"
     opt2="${selection[$?]}"
-    if [[ $opt2 == *"DFU" ]]; then
-        device_enter_mode $opt2
-    fi
+    case $opt2 in
+        "Jailbroken" ) device_jailbrokenselected=1;;
+        "pwnDFU"     ) device_enter_mode pwnDFU;;
+    esac
 }
 
 restore_deviceprepare() {
@@ -5356,7 +5359,7 @@ restore_deviceprepare() {
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 ]]; then
+                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ]]; then
                     shsh_save version $device_latest_vers
                     device_buttons
                 fi
@@ -5453,7 +5456,7 @@ restore_prepare() {
                     log "Done, your device should boot now"
                 fi
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 ]]; then
+                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ]]; then
                     restore_idevicerestore
                 else
                     restore_latest
@@ -6379,7 +6382,7 @@ device_ramdisk() {
 
             # do stuff
             case $vers in
-                [98]* ) device_send_rdtar fstab8.tar; device_send_rdtar LukeZGD.tar;;
+                [98]* ) device_send_rdtar fstab8.tar;;
                 7* )    device_send_rdtar fstab7.tar;;
                 6* )    device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] )
@@ -7443,7 +7446,7 @@ menu_ipa() {
             print "* Select IPA file to install"
         fi
         if [[ $1 == "Sideload"* ]]; then
-            menu_items+=("List Certificates" "Revoke Certificate")
+            menu_items+=("List and Revoke Certificate")
         fi
         menu_items+=("Go Back")
         echo
@@ -7463,11 +7466,24 @@ menu_ipa() {
             ;;
             "Install IPA using Sideloader" )
                 device_sideloader
-                $sideloader install "$ipa_path" -i -d
+                log "Checking for any existing certificates..."
+                $sideloader cert list
+                if [[ $? != 0 ]]; then
+                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
+                    pause
+                    continue
+                fi
+                local revoke=$($sideloader cert list | grep -m1 "serial number" | sed -E 's/.*number `//' | cut -c -32)
+                if [[ -n $revoke ]]; then
+                    log "Revoking existing certificate..."
+                    $sideloader cert revoke $revoke
+                fi
+                log "Installing IPA using Sideloader..."
+                $sideloader install "$ipa_path"
                 local ipa_base="$(basename "$ipa_path")"
                 local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision" 2>/dev/null)"
                 if [[ -s "$ipa_check" && $platform == "linux" ]] && (( device_det <= 8 )); then
-                    log "Attempting workaround for iOS 8 and lower..."
+                    log "Attempting Linux workaround for iOS 8 and lower..."
                     pushd "/tmp/$ipa_base"
                     zip -r0 Payload.ipa Payload
                     popd
@@ -7477,20 +7493,22 @@ menu_ipa() {
                 print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
                 pause
             ;;
-            "List Certificates" )
+            "List and Revoke Certificate" )
                 device_sideloader
-                $sideloader cert list -i
-                print "* Take note of the serial number if you want to revoke a certificate."
-                pause
-            ;;
-            "Revoke Certificate" )
+                log "Checking for any existing certificates..."
+                $sideloader cert list
+                if [[ $? != 0 ]]; then
+                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
+                    pause
+                    continue
+                fi
+                print "* Take note of the certificate serial number that you want to revoke."
                 local revoke
                 revoke=
                 while [[ -z $revoke ]]; do
                     read -p "$(input 'Certificate Serial Number: ')" revoke
                 done
-                device_sideloader
-                $sideloader cert revoke $revoke -i
+                $sideloader cert revoke $revoke
                 print "* If you see no error, the certificate should be revoked successfully."
                 pause
             ;;
@@ -7531,7 +7549,18 @@ device_sideloader() {
     log "Launching Dadoum Sideloader"
     log "Enter Apple ID details to continue."
     print "* Your Apple ID and password will only be sent to Apple servers."
+    local apple_id
+    local apple_pass
+    while [[ -z $apple_id ]]; do
+        read -p "$(input 'Apple ID: ')" apple_id
+    done
+    export APPLE_ID_USER="$apple_id"
     print "* Your password input will not be visible, but it is still being entered."
+    while [[ -z $apple_pass ]]; do
+        read -s -p "$(input 'Password: ')" apple_pass
+    done
+    echo
+    export APPLE_ID_PWD="$apple_pass"
     chmod +x ../saved/$sideloader
     sideloader="../saved/$sideloader"
 }
@@ -9417,6 +9446,7 @@ device_dump() {
         if [[ $arg == "activation" ]]; then
             log "Creating $arg.tar"
             $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
+            #$ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
             $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
             log "Copying $arg.tar"
             $scp -P $ssh_port ${ssh_user}@127.0.0.1:/tmp/$arg.tar .
@@ -9541,6 +9571,7 @@ device_dumprd() {
     esac
     log "Creating activation.tar"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/private/var/$dmp2; cp -R /mnt2/$dmps/* $tmp/private/var/$dmp2"
+    #$ssh -p $ssh_port root@127.0.0.1 "cd $tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
     $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar private/var/$dmp2"
     log "Copying activation.tar"
     print "* Reminder to backup dump tars if needed"
