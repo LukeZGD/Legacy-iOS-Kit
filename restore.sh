@@ -276,22 +276,17 @@ select_yesno() {
             read -p "$(input "$msg")" opt
             case $opt in
                 [NnYy] ) break;;
-                "" )
-                    # select default if no y/n given
-                    if [[ $2 == 1 ]]; then
-                        opt='y'
-                    else
-                        opt='n'
-                    fi
+                "" ) # select default if no y/n given
+                    [[ $2 == 1 ]] && opt='y' || opt='n'
                     break
                 ;;
             esac
         done
         if [[ $2 == 1 ]]; then # default is "yes" if $2 is set to 1
             [[ $opt == [Nn] ]] && return 0 || return 1
-        else                   # default is "no" otherwise
-            [[ $opt == [Yy] ]] && return 1 || return 0
         fi
+        # default is "no" otherwise
+        [[ $opt == [Yy] ]] && return 1 || return 0
     fi
 
     local yesno=("No" "Yes") # default is "no" by default
@@ -7491,6 +7486,7 @@ menu_ipa() {
                 fi
                 print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
                 print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
+                print "* If you see an error regarding verification, make sure that your device is connected to the Internet."
                 pause
             ;;
             "List and Revoke Certificate" )
