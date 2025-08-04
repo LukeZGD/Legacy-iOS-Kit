@@ -10223,7 +10223,7 @@ device_fourthree_step3() {
     log "Installing jailbreak"
     cp $jelbrek/freeze.tar.gz .
     gzip -d freeze.tar.gz
-    cat $jelbrek/freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+    cat freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
     if [[ $ipsw_openssh == 1 ]]; then
         log "Installing OpenSSH"
         cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
