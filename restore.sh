@@ -1530,8 +1530,8 @@ device_get_info() {
     if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         device_disable_bbupdate="$device_type"
     fi
-    # enable activation records flag if device is a5(x)/a6(x)
-    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ -z $device_disable_actrec ]]; then
+    # enable activation records flag if device is a5(x)/a6(x), if normal mode and activated
+    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ $device_mode == "Normal" && $device_unactivated != 1 ]]; then
         device_actrec=1
     fi
     # if latest vers is not set, copy use vers to latest
@@ -5967,7 +5967,6 @@ device_ramdisk64() {
     if [[ $ios8 == 1 ]]; then
         device_iproxy no-logging 44
         print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
-        print "* You may need to unplug and replug your device."
     else
         device_iproxy no-logging
         print "* Booted SSH ramdisk is based on: https://github.com/verygenericname/SSHRD_Script"
@@ -5976,9 +5975,10 @@ device_ramdisk64() {
 
     local found
     log "Waiting for device..."
+    print "* You may need to unplug and replug your device."
     while [[ $found != 1 ]]; do
         found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
-        sleep 1
+        sleep 2
     done
 
     echo
@@ -6247,9 +6247,10 @@ device_ramdisk() {
 
     local found
     log "Waiting for device..."
+    print "* You may need to unplug and replug your device."
     while [[ $found != 1 ]]; do
         found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
-        sleep 1
+        sleep 2
     done
     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
         log "Transferring some files"
