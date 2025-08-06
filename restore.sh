@@ -1530,9 +1530,10 @@ device_get_info() {
     if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         device_disable_bbupdate="$device_type"
     fi
-    # enable activation records flag if device is a5(x)/a6(x), if normal mode and activated
-    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ $device_mode == "Normal" && $device_unactivated != 1 ]]; then
+    # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
+    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ $device_mode == "Normal" && $device_unactivated != 1 && -z $device_disable_actrec ]]; then
         device_actrec=1
+        device_auto_actrec=1
     fi
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
@@ -7133,7 +7134,9 @@ menu_print_info() {
         warn "Jailbreak flag detected. Jailbreak option enabled."
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
-        if [[ $device_actrec == 1 ]]; then
+        if [[ $device_auto_actrec == 1 ]]; then
+            print "* Activated A${device_proc}(X) device detected. Activation record stitching enabled."
+        elif [[ $device_actrec == 1 ]]; then
             warn "activation-records flag detected. Activation record stitching enabled."
         fi
         if [[ $device_pwnrec == 1 ]]; then
