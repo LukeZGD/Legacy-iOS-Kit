@@ -1531,9 +1531,14 @@ device_get_info() {
         device_disable_bbupdate="$device_type"
     fi
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
-    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ $device_mode == "Normal" && $device_unactivated != 1 && -z $device_disable_actrec ]]; then
-        device_actrec=1
-        device_auto_actrec=1
+    if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+        if [[ $device_mode == "Normal" && $device_unactivated != 1 && -z $device_disable_actrec ]]; then
+            device_actrec=1
+            device_auto_actrec=1
+        elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]]; then
+            device_actrec=1
+            device_auto_actrec=2
+        fi
     fi
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
@@ -2023,6 +2028,7 @@ device_enter_mode() {
             elif [[ $device_mode == "DFU" && $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
                  [[ $device_proc == 5 || $device_proc == 6 ]]; then
                 log "No SRTG for A${device_proc}(X) device in DFU mode! Already pwned iBSS mode?"
+                print "* If your device is not in pwnDFU/kDFU mode, sending iBEC will fail."
                 return
             fi
 
@@ -2037,8 +2043,9 @@ device_enter_mode() {
                 print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
                 print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
                 print "* Also make sure that you have NOT sent a pwned iBSS yet."
-                print "* If you do not know what you are doing, restart your device in normal mode."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+                echo
+                print "* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD."
                 echo
                 log "After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
                 pause
@@ -2051,7 +2058,7 @@ device_enter_mode() {
                 else
                     local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-                        error_msg+=$'\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
+                        error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
                         error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
                         error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
                     fi
@@ -2118,7 +2125,7 @@ device_pwnerror() {
         error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
-            error_msg+=$'\n\n* As much as possible, use the jailbroken method instead: restart the device in normal mode and jailbreak it.'
+            error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
             error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Zebra.'
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
         fi
@@ -3634,6 +3641,7 @@ ipsw_prepare_32bit() {
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
     esac
+    : '
     # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -3643,6 +3651,11 @@ ipsw_prepare_32bit() {
             ;;
         esac
     elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_target_vers == "8.4" && $ipsw_jailbreak == 1 ]]; then
+        ipsw_everuntether=1
+        JBFiles+=("everuntether.tar")
+    fi
+    '
+    if [[ $target_det == 8 ]]; then
         ipsw_everuntether=1
         JBFiles+=("everuntether.tar")
     fi
@@ -5518,6 +5531,8 @@ restore_prepare() {
                 restore_notpwned64
             fi
         ;;
+
+        11 ) restore_latest;;
     esac
 }
 
@@ -6335,6 +6350,7 @@ device_ramdisk() {
                 ;;
             esac
 
+            : '
             # use everuntether instead of daibutsu+dsc haxx for A5(X) 8.0-8.2 and 5C 8.4
             if [[ $device_proc == 5 ]]; then
                 case $vers in
@@ -6344,6 +6360,11 @@ device_ramdisk() {
                     ;;
                 esac
             elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $vers == "8.4" ]]; then
+                ipsw_everuntether=1
+                untether="everuntether.tar"
+            fi
+            '
+            if [[ $vers == "8"* ]]; then
                 ipsw_everuntether=1
                 untether="everuntether.tar"
             fi
@@ -6698,12 +6719,8 @@ menu_ramdisk() {
                 log "Attempting to dump blobs"
                 $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 if [[ ! -s dump.raw ]]; then
-                    log "Failed with rdisk1, trying again with rdisk2..."
-                    $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk2" | dd of=dump.raw bs=256 count=$((0x4000))
-                    if [[ ! -s dump.raw ]]; then
-                        warn "Failed with rdisk2, cannot continue."
-                        continue
-                    fi
+                    warn "Dumping rdisk1 failed, cannot continue."
+                    continue
                 fi
                 "$dir/img4tool" --convert -s $shsh dump.raw
                 if [[ -s $shsh ]]; then
@@ -7136,6 +7153,8 @@ menu_print_info() {
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
         if [[ $device_auto_actrec == 1 ]]; then
             print "* Activated A${device_proc}(X) device detected. Activation record stitching enabled."
+        elif [[ $device_auto_actrec == 2 ]]; then
+            print "* Existing activation records detected. Activation record stitching enabled."
         elif [[ $device_actrec == 1 ]]; then
             warn "activation-records flag detected. Activation record stitching enabled."
         fi
@@ -7588,7 +7607,7 @@ menu_shsh() {
     device_target_vers=
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=()
+        menu_items=("Latest iOS ($device_latest_vers)")
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
@@ -7618,6 +7637,10 @@ menu_shsh() {
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
+            "Latest iOS"* )
+                device_target_vers="$device_latest_vers"
+                device_target_build="$device_latset_build"
+            ;;
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
                 device_target_build="14G60"
@@ -7632,7 +7655,7 @@ menu_shsh() {
             ;;
         esac
         case $selected in
-            "iOS"* ) shsh_save; pause;;
+            *"iOS"* ) shsh_save; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Onboard Blobs (Raw Dump)" )
                 print "* This option will save onboard blobs of your device, but only as a raw dump. You will need to convert them to be usable."
@@ -7840,13 +7863,7 @@ menu_restore() {
             "" ) :;;
             "Go Back" ) back=1;;
             "Other (Custom IPSW)" ) restore_customipsw_confirm;;
-            "DFU IPSW" )
-                if [[ $1 == "ipsw" ]]; then
-                    mode="dfuipswipsw"
-                else
-                    device_dfuipsw_confirm
-                fi
-            ;;
+            "DFU IPSW" ) device_dfuipsw_confirm $1;;
             "More versions" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             * ) menu_ipsw "$selected" "$1";;
@@ -9312,14 +9329,14 @@ device_jailbreak_confirm() {
             pause
             [[ $ipsw_jailbreak != 1 ]] && return
         ;;
-        8* | 9.0* )
+        8* | 9.0* | 9.3.[56] )
             print "* For this version, you can use EverPwnage and sideload it to your device."
             print "* https://github.com/LukeZGD/EverPwnage"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         9.3.[56] )
-            print "* For this version, download kok3shi9 and sideload it to your device."
-            print "* https://kok3shidoll.web.app/kok3shi9_32.html"
+            print "* For this version, you can use EverPwnage and sideload it to your device."
+            print "* https://github.com/LukeZGD/EverPwnage"
             pause
             return
         ;;
@@ -9329,7 +9346,7 @@ device_jailbreak_confirm() {
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         10* )
-            print "* For this version, download socket and sideload it to your device."
+            print "* For this version, you can use socket and sideload it to your device."
             print "* https://github.com/staturnzz/socket"
             pause
             return
@@ -9717,7 +9734,7 @@ device_dfuipsw_confirm() {
     if [[ $? != 1 ]]; then
         return
     fi
-    mode="device_dfuipsw"
+    mode="device_dfuipsw$1"
 }
 
 device_dfuipsw() {
@@ -10195,7 +10212,6 @@ device_fourthree_step3() {
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt1 /mnt2"
     $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_hfs -s -v System -J -b 8192 -n a=8192,c=8192,e=8192 /dev/disk0s3"
     $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_hfs -s -v Data -J -b 8192 -n a=8192,c=8192,e=8192 /dev/disk0s4"
-    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s4 /mnt2"
     log "Sending root filesystem, this will take a while."
     $scp -P $ssh_port $saved_path/RootFS.dmg root@127.0.0.1:/var
     log "Restoring root filesystem"
@@ -10203,19 +10219,21 @@ device_fourthree_step3() {
     log "Checking root filesystem"
     $ssh -p $ssh_port root@127.0.0.1 "rm /var/RootFS.dmg; fsck_hfs -f /dev/disk0s3"
     log "Restoring data partition"
-    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt2; mount_hfs /dev/disk0s3 /mnt1; mount_hfs /dev/disk0s4 /mnt2; mv /mnt1/private/var/* /mnt2"
+    $ssh -p $ssh_port root@127.0.0.1 "mount_hfs /dev/disk0s3 /mnt1; mount_hfs /dev/disk0s4 /mnt2; mv /mnt1/private/var/* /mnt2"
     log "Fixing fstab"
     $ssh -p $ssh_port root@127.0.0.1 "echo '/dev/disk0s3 / hfs rw 0 1' | tee /mnt1/private/etc/fstab; echo '/dev/disk0s4 /private/var hfs rw 0 2' | tee -a /mnt1/private/etc/fstab"
-    log "Getting lockdownd"
-    $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/libexec/lockdownd .
-    local patch="../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_base_vers}_${device_base_build}.bundle/lockdownd.patch"
-    log "Patching lockdownd"
-    $bspatch lockdownd lockdownd.patched "$patch"
-    log "Renaming original lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "mv /mnt1/usr/libexec/lockdownd /mnt1/usr/libexec/lockdownd.orig"
-    log "Copying patched lockdownd to device"
-    $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/mnt1/usr/libexec/lockdownd
-    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /mnt1/usr/libexec/lockdownd"
+    if [[ $device_type != "iPad2,1" ]]; then
+        log "Getting lockdownd"
+        $scp -P $ssh_port root@127.0.0.1:/mnt1/usr/libexec/lockdownd .
+        local patch="../resources/firmware/FirmwareBundles/Down_iPhone2,1_${device_base_vers}_${device_base_build}.bundle/lockdownd.patch"
+        log "Patching lockdownd"
+        $bspatch lockdownd lockdownd.patched "$patch"
+        log "Renaming original lockdownd"
+        $ssh -p $ssh_port root@127.0.0.1 "mv /mnt1/usr/libexec/lockdownd /mnt1/usr/libexec/lockdownd.orig"
+        log "Copying patched lockdownd to device"
+        $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/mnt1/usr/libexec/lockdownd
+        $ssh -p $ssh_port root@127.0.0.1 "chmod +x /mnt1/usr/libexec/lockdownd"
+    fi
     log "Fixing system keybag"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir /mnt2/keybags; ttbthingy; fixkeybag -v2; cp /tmp/systembag.kb /mnt2/keybags"
     log "Remounting data partition"
