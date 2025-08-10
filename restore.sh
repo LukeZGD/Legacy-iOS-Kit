@@ -9329,7 +9329,7 @@ device_jailbreak_confirm() {
             pause
             [[ $ipsw_jailbreak != 1 ]] && return
         ;;
-        8* | 9.0* | 9.3.[56] )
+        8* | 9.0* )
             print "* For this version, you can use EverPwnage and sideload it to your device."
             print "* https://github.com/LukeZGD/EverPwnage"
             print "* You may still continue if you really want to do the ramdisk method instead."
