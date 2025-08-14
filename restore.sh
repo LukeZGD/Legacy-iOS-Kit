@@ -1531,8 +1531,8 @@ device_get_info() {
         device_disable_bbupdate="$device_type"
     fi
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
-    if [[ $device_proc == 5 || $device_proc == 6 ]]; then
-        if [[ $device_mode == "Normal" && $device_unactivated != 1 && -z $device_disable_actrec ]]; then
+    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ -z $device_disable_actrec ]]; then
+        if [[ $device_mode == "Normal" && $device_unactivated != 1 ]]; then
             device_actrec=1
             device_auto_actrec=1
         elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]]; then
@@ -7654,6 +7654,8 @@ menu_shsh() {
                 device_target_build="10B329"
             ;;
         esac
+        target_det=$(echo "$device_target_vers" | cut -d. -f1)
+        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
         case $selected in
             *"iOS"* ) shsh_save; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
@@ -8082,6 +8084,8 @@ menu_ipsw() {
                 fi
             ;;
         esac
+        target_det=$(echo "$device_target_vers" | cut -d. -f1)
+        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
         if [[ $device_type != "iPhone"* ]]; then
             ipsw_canhacktivate=
         fi
