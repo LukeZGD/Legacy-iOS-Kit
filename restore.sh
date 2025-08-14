@@ -3641,7 +3641,6 @@ ipsw_prepare_32bit() {
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
     esac
-    : '
     # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -3654,11 +3653,12 @@ ipsw_prepare_32bit() {
         ipsw_everuntether=1
         JBFiles+=("everuntether.tar")
     fi
-    '
-    if [[ $target_det == 8 ]]; then
+    : '
+    if [[ $target_det == 8 && $ipsw_jailbreak == 1 ]]; then
         ipsw_everuntether=1
         JBFiles+=("everuntether.tar")
     fi
+    '
     if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -5540,7 +5540,7 @@ restore_pwned64() {
     device_enter_mode pwnDFU
     if [[ ! -s ../saved/firmwares.json ]]; then
         file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
-        cp firmwares.json ../saved
+        mv firmwares.json ../saved
     fi
     rm -f /tmp/firmwares.json
     cp ../saved/firmwares.json /tmp
@@ -6377,6 +6377,11 @@ device_ramdisk() {
             fi
             log "Nice, iOS $vers is compatible."
 
+            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
+                file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/freeze5.tar.gz freeze5.tar.gz 15c92613d4f7e6bbabd9bd3521db8e4baf032265
+                mv freeze5.tar.gz ../saved/
+            fi
+
             # skip untether stuff for 3gs 3.x, kernel is patched for those
             if [[ $device_type == "iPhone2,1" && $vers == "3"* ]]; then
                 :
@@ -6440,7 +6445,9 @@ device_ramdisk() {
             # bootstrap extraction
             if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
                 # 4.3.x 3gs'es have little free space in rootfs. workaround: extract an older strap that takes less space
+                cp ../saved/freeze5.tar.gz $jelbrek/
                 device_send_rdtar freeze5.tar data
+                rm $jelbrek/freeze5.tar.gz
             else
                 device_send_rdtar freeze.tar data
             fi
@@ -6771,7 +6778,7 @@ menu_ramdisk() {
                     log "Downloading files for latest TrollStore"
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
-                    cp TrollStore.tar PersistenceHelper_Embedded ../saved
+                    mv TrollStore.tar PersistenceHelper_Embedded ../saved
                     echo "$latest" > ../saved/TrollStore_version
                 fi
                 tar -xf TrollStore.tar
