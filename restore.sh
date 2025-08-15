@@ -2633,7 +2633,6 @@ ipsw_preference_set() {
     elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]]; then
         case $device_target_vers in
             6.1.6 | 4.1 ) log "3GS verbose boot is not supported on 6.1.6 and 4.1";;
-            [65]*       ) log "3GS verbose boot is currently supported on iOS 4 and lower only";;
             3.0*        ) log "3GS verbose boot is always enabled on 3.0.x";;
             * ) ipsw_canverbose=1;;
         esac

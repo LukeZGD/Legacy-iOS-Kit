@@ -165,7 +165,7 @@
     - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macos arm64)
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices (mostly not used though)
     - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
-- [iBoot32Patcher](https://github.com/dora2-iOS/iBoot32Patcher/) - dora2ios fork
+- [iBoot32Patcher](https://github.com/Merculous/iBoot32Patcher/) - Merculous fork
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
