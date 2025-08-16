@@ -4094,10 +4094,7 @@ ipsw_prepare_ios4multipart() {
     if [[ $ipsw_verbose == 1 ]]; then
         bootargs="pio-error=0 -v"
     fi
-    if [[ $device_target_vers == "4.2"* ]]; then
-        bootargs+=" amfi=0xff cs_enforcement_disable=1"
-    fi
-    ExtraArr+=("-b" "$bootargs" "--debug")
+    ExtraArr+=("-b" "$bootargs")
     patch_iboot "${ExtraArr[@]}"
 
     if [[ $device_type == "iPad1,1" && $device_target_vers == "3"* ]]; then
