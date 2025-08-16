@@ -4096,7 +4096,10 @@ ipsw_prepare_ios4multipart() {
     if [[ $ipsw_verbose == 1 ]]; then
         bootargs="pio-error=0 -v"
     fi
-    ExtraArr+=("-b" "$bootargs")
+    if [[ $device_target_vers == "4.2"* ]]; then
+        bootargs+=" cs_enforcement_disable=1 amfi=0xff"
+    fi
+    ExtraArr+=("-b" "$bootargs" "--debug")
     patch_iboot "${ExtraArr[@]}"
 
     if [[ $device_type == "iPad1,1" && $device_target_vers == "3"* ]]; then
@@ -6349,7 +6352,6 @@ device_ramdisk() {
                 ;;
             esac
 
-            : '
             # use everuntether instead of daibutsu+dsc haxx for A5(X) 8.0-8.2 and 5C 8.4
             if [[ $device_proc == 5 ]]; then
                 case $vers in
@@ -6362,11 +6364,12 @@ device_ramdisk() {
                 ipsw_everuntether=1
                 untether="everuntether.tar"
             fi
-            '
+            : '
             if [[ $vers == "8"* ]]; then
                 ipsw_everuntether=1
                 untether="everuntether.tar"
             fi
+            '
 
             # untether var must be set by now
             if [[ -z $untether ]]; then
@@ -6376,7 +6379,7 @@ device_ramdisk() {
             fi
             log "Nice, iOS $vers is compatible."
 
-            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
+            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* && ! -s ../saved/freeze5.tar.gz ]]; then
                 file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/freeze5.tar.gz freeze5.tar.gz 15c92613d4f7e6bbabd9bd3521db8e4baf032265
                 mv freeze5.tar.gz ../saved/
             fi
