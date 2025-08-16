@@ -3733,11 +3733,9 @@ ipsw_prepare_32bit() {
         case $device_target_vers in
             4.3* ) [[ $device_type == "iPad2"* ]] && JBFiles[0]=;;
             4.2.9 | 4.2.10 ) JBFiles[0]=;;
-            4.2.1 )
-                if [[ $device_type != "iPhone1,2" ]]; then
-                    ExtraArgs+=" -punchd"
-                    JBFiles[0]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
-                fi
+            4.2.[8761] )
+                ExtraArgs+=" -punchd"
+                JBFiles[0]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
             ;;
         esac
         JBFiles+=("freeze.tar")
