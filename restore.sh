@@ -4097,7 +4097,7 @@ ipsw_prepare_ios4multipart() {
         bootargs="pio-error=0 -v"
     fi
     if [[ $device_target_vers == "4.2"* ]]; then
-        bootargs+=" cs_enforcement_disable=1 amfi=0xff"
+        bootargs+=" amfi=0xff cs_enforcement_disable=1"
     fi
     ExtraArr+=("-b" "$bootargs" "--debug")
     patch_iboot "${ExtraArr[@]}"
