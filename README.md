@@ -97,7 +97,7 @@
     - iPad Pro 9.7/12.9 1st gen
 - Restoring with **powdersn0w** is supported on the following devices and target version range:
     - iPhone 4 GSM - iOS 4.0 to 7.1.1
-    - iPhone 4 CDMA - iOS 5.0 to 7.1.1 (4.2.x has issues)
+    - iPhone 4 CDMA - iOS 4.2.6 to 7.1.1
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - iOS 5.0 to 9.3.5
     - iPad 1 - iOS 3.2 to 5.1
     - iPod touch 3 - iOS 4.0 to 5.1 (3.1.x has issues)

@@ -4358,17 +4358,32 @@ ipsw_prepare_multipatch() {
     log "Add Restore Ramdisk to IPSW"
     zip -r0 temp.ipsw $ramdisk_name
 
-    # 3.2 fs workaround
-    if [[ $device_target_vers == "3.2"* ]]; then
+    # 3.2.x ipad/4.2.x cdma fs workaround
+    case $device_target_vers in
+    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* )
         local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
-        ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/iPad1.1_${device_target_vers}_${device_target_build}_FS2.ipsw"
-        local sha1E="f4660666ce9d7bd9312d761c850fa3a1615899e9"
+        local type="iPad1.1"
+        [[ $device_type == "iPhone3,3" ]] && type="iPhone3.3"
+        local build="$device_target_build"
+        local vers="$device_target_vers"
+        local rootfs_name_fs="$rootfs_name"
+        case $device_target_vers in
+        4.2.10 | 4.2.9 )
+            build="8E401"
+            vers="4.2.8"
+            device_fw_key_check temp $build
+            rootfs_name_fs=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
+        esac
+        local ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/${type}_${vers}_${build}_FS2.ipsw"
+        local sha1E="f4660666ce9d7bd9312d761c850fa3a1615899e9" # 3.2.2
         local sha1L="none"
-        if [[ $device_target_vers == "3.2.1" ]]; then
-            sha1E="896c0344435615aee7f52fc75739241022e38fe7"
-        elif [[ $device_target_vers == "3.2" ]]; then
-            sha1E="47fdfe04ad9b65da009c834902eda3f141feac28"
-        fi
+        case $vers in
+            4.2.10 | 4.2.[98] ) sha1E="b78fc4aba52bbf652c71cc633eccfba6d659698f";;
+            4.2.7 ) sha1E="d07c841bbedae42f9ff98fa9160fc1298e6fffb2";;
+            4.2.6 ) sha1E="671cbbb3964e5e5c38078577f5c2844bbe16699c";;
+            3.2.1 ) sha1E="896c0344435615aee7f52fc75739241022e38fe7";;
+            3.2   ) sha1E="47fdfe04ad9b65da009c834902eda3f141feac28";;
+        esac
         if [[ -s "$ipsw_name.ipsw" ]]; then
             log "Verifying FS IPSW..."
             sha1L=$($sha1sum "$ipsw_name.ipsw" | awk '{print $1}')
@@ -4390,10 +4405,12 @@ ipsw_prepare_multipatch() {
             mv temp2.ipsw "$ipsw_name.ipsw"
         fi
         log "Extract RootFS from FS IPSW"
-        file_extract_from_archive "$ipsw_name.ipsw" $rootfs_name
+        file_extract_from_archive "$ipsw_name.ipsw" $rootfs_name_fs
+        [[ $rootfs_name_fs != "$rootfs_name" ]] && mv $rootfs_name_fs $rootfs_name
         log "Add RootFS to IPSW"
         zip -r0 temp.ipsw $rootfs_name
-    fi
+    ;;
+    esac
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -9654,6 +9671,14 @@ device_hacktivate() {
     pause
     device_iproxy
     device_sshpass
+    if [[ $device_type == "iPhone3,3" && $device_vers == "4.2"* ]]; then
+        echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
+        log "Copying data_ark.plist to device"
+        $scp -P $ssh_port data_ark.plist root@127.0.0.1:/var/root/Library/Lockdown/data_ark.plist
+        $ssh -p $ssh_port root@127.0.0.1 "reboot"
+        log "Done. Your device should reboot now"
+        return
+    fi
     log "Checking lockdownd"
     local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls /usr/libexec/lockdownd.orig 2>/dev/null")"
     if [[ -n $lock ]]; then
