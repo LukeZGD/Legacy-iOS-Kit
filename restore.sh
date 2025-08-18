@@ -136,6 +136,7 @@ For 64-bit checkm8 devices compatible with pwned restores:
 }
 
 tar2="$(command -v tar)"
+[[ $OSTYPE == "darwin"* ]] && tar2="/usr/bin/tar"
 unzip2="$(command -v unzip)"
 zip2="$(command -v zip)"
 
@@ -3640,7 +3641,7 @@ ipsw_prepare_32bit() {
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
     esac
-    # use everuntether instead of daibutsu+dsc haxx for a5(x) 8.0-8.2
+    # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             8.[012]* )
@@ -3648,16 +3649,7 @@ ipsw_prepare_32bit() {
                 JBFiles+=("everuntether.tar")
             ;;
         esac
-    elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $device_target_vers == "8.4" && $ipsw_jailbreak == 1 ]]; then
-        ipsw_everuntether=1
-        JBFiles+=("everuntether.tar")
     fi
-    : '
-    if [[ $target_det == 8 && $ipsw_jailbreak == 1 ]]; then
-        ipsw_everuntether=1
-        JBFiles+=("everuntether.tar")
-    fi
-    '
     if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
@@ -6364,7 +6356,7 @@ device_ramdisk() {
                 ;;
             esac
 
-            # use everuntether instead of daibutsu+dsc haxx for A5(X) 8.0-8.2 and 5C 8.4
+            # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
             if [[ $device_proc == 5 ]]; then
                 case $vers in
                     8.[012]* )
@@ -6372,16 +6364,7 @@ device_ramdisk() {
                         untether="everuntether.tar"
                     ;;
                 esac
-            elif [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]] && [[ $vers == "8.4" ]]; then
-                ipsw_everuntether=1
-                untether="everuntether.tar"
             fi
-            : '
-            if [[ $vers == "8"* ]]; then
-                ipsw_everuntether=1
-                untether="everuntether.tar"
-            fi
-            '
 
             # untether var must be set by now
             if [[ -z $untether ]]; then
@@ -7144,12 +7127,12 @@ menu_print_info() {
         warn "disable-actrec flag detected, activation dumping/stitching disabled. Proceed with caution"
     fi
     if [[ $device_argmode == "none" ]]; then
-        if [[ $device_type == "$device_disable_bbupdate" || -n $device_deadbb ]]; then
-            warn "disable-bbupdate/dead-bb flag detected, but cannot be used in no-device mode."
+        if [[ $device_type == "$device_disable_bbupdate" && -z $device_deadbb ]]; then
+            warn "disable-bbupdate flag detected, but cannot be used in no-device mode."
             device_disable_bbupdate=
             device_deadbb=
         fi
-        if [[ $device_actrec == 1 ]]; then
+        if [[ $device_actrec == 1 && -z $device_auto_actrec ]]; then
             warn "Activation records flag detected, but cannot be used in no-device mode."
             device_actrec=
         fi
