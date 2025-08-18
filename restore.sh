@@ -51,7 +51,7 @@ pause() {
 }
 
 clean() {
-    kill $httpserver_pid $iproxy_pid $anisette_pid 2>/dev/null
+    kill $httpserver_pid $iproxy_pid $anisette_pid $sshfs_pid 2>/dev/null
     popd &>/dev/null
     rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 &&
@@ -572,13 +572,13 @@ set_tool_paths() {
     ideviceinfo="$dir/ideviceinfo"
     ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
-    ifuse="$(command -v ifuse)"
     ipwnder+="$dir/ipwnder"
     irecovery+="$dir/irecovery"
     irecovery2+="$dir/irecovery2"
     irecovery3+="../$dir/irecovery"
     jq="$dir/jq"
     primepwn+="$dir/primepwn"
+    sshfs="$(command -v sshfs)"
 
     cp ../resources/ssh_config .
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
@@ -615,7 +615,7 @@ install_depends() {
 
     log "Installing dependencies..."
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git ifuse libimobiledevice openssh python udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git libimobiledevice openssh python sshfs udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
@@ -623,13 +623,13 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y ca-certificates curl git ifuse libssl3 libzstd1 openssh-client patch python3 unzip usbmuxd usbutils xxd zenity zip zlib1g
+        sudo apt install -m -y ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git ifuse libimobiledevice libzstd openssl patch python3 systemd udev usbmuxd vim-common zenity zip
+        sudo dnf install -y ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
@@ -638,11 +638,11 @@ install_depends() {
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install ca-certificates curl git ifuse libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 usbmuxd unzip vim zenity zip
+        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
         prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates app-pda/ifuse libimobiledevice net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "void" ]]; then
         sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip
@@ -1644,6 +1644,7 @@ device_sshpass() {
     ssh_pass="$pass"
     scp="$dir/sshpass -p $pass $scp2"
     ssh="$dir/sshpass -p $pass $ssh2"
+    sshfs2="$dir/sshpass -p $pass $sshfs"
 }
 
 device_iproxy() {
@@ -7316,10 +7317,11 @@ menu_datamanage() {
     else
         menu_items+=("Backup" "Restore")
     fi
-    if [[ -z $ifuse ]]; then
-        warn "ifuse not installed. Mount Device options are not available. Install ifuse from your package manager to fix this"
+    if [[ -z $sshfs ]]; then
+        warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
+        [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs"
     else
-        menu_items+=("Mount Device" "Mount Device (Raw File System)" "Unmount Device")
+        menu_items+=("Mount Device" "Mount Device (Raw File System)")
     fi
     menu_items+=("Connect to SSH" "Cydia App Install")
     if (( device_det >= 9 )); then
@@ -7337,9 +7339,21 @@ menu_datamanage() {
             "Backup"  ) mode="device_backup_create";;
             "Restore" ) menu_backup_restore;;
             "Erase All Content and Settings" ) mode="device_erase";;
-            "Mount Device" ) mkdir ../mount 2>/dev/null; $ifuse ../mount; log "Device (Media) should now be mounted on mount folder";;
-            "Mount Device (Raw File System)" ) mkdir ../mount 2>/dev/null; $ifuse --root ../mount; log "Device (root) should now be mounted on mount folder";;
-            "Unmount Device" ) log "Attempting to umount device from mount folder"; umount ../mount;;
+            "Mount Device"* )
+                local path="/var/mobile/Media"
+                [[ $selected == *"Raw"* ]] && path="/"
+                device_ssh_message
+                device_iproxy no-logging
+                device_sshpass
+                mkdir ../mount 2>/dev/null
+                $sshfs2 -d -F $(pwd)/ssh_config -p 6414 ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
+                sshfs_pid=$!
+                log "Device should now be mounted on mount folder"
+                print "* Press Enter/Return to unmount the device."
+                pause
+                umount ../mount 2>/dev/null
+                kill $iproxy_pid $sshfs_pid
+            ;;
             "Connect to SSH" ) device_ssh;;
             "Cydia App Install" )
                 echo
