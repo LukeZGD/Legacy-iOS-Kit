@@ -1481,17 +1481,17 @@ device_get_info() {
             device_latest_build="20H360"
         ;;
         iPad7,[123456] )
-            device_latest_vers="17.7.9"
-            device_latest_build="21H446"
+            device_latest_vers="17.7.10"
+            device_latest_build="21H450"
         ;;
         iPad7,1[12] )
-            device_latest_vers="18.6"
-            device_latest_build="22G86"
+            device_latest_vers="18.6.2"
+            device_latest_build="22G100"
         ;;
     esac
     if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
-        device_latest_vers="18.6"
-        device_latest_build="22G86"
+        device_latest_vers="18.6.2"
+        device_latest_build="22G100"
 #         log "Getting latest iOS version for $device_type"
 #         rm -f tmp.json
 #         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json >/dev/null
@@ -2463,6 +2463,7 @@ ipsw_nojailbreak_message() {
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
+        10* ) ipsw_gasgauge_patch=;;
         [76543]* ) ipsw_canjailbreak=1;;
     esac
     if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
@@ -5210,12 +5211,13 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
+    [[ $1 == "update" ]] && ExtraArgs=
     if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         idevicerestore2+="2"
-        ExtraArgs+="y"
+        ExtraArgs+=" -y"
     fi
     if [[ $1 == "custom" ]]; then
-        ExtraArgs+="c"
+        ExtraArgs+=" -c"
         ipsw_path="$ipsw_custom"
         ipsw_extract custom
     else
@@ -5230,8 +5232,6 @@ restore_latest() {
             log "Sending iBSS..."
             $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
             device_find_mode Recovery
-        else
-            ExtraArgs="-e"
         fi
     elif [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
         log "Sending iBSS..."
@@ -5239,7 +5239,7 @@ restore_latest() {
         device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
-        ExtraArgs+="d"
+        ExtraArgs+=" -d"
     fi
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
@@ -8347,6 +8347,9 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 ipsw_print_warnings
                 menu_items+=("$start")
+                if [[ $device_target_vers == "$device_latest_vers" ]]; then
+                    menu_items+=("Start Update")
+                fi
             elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
                 menu_items+=("$start")
             else
@@ -8420,6 +8423,17 @@ menu_ipsw() {
         case $selected in
             "Create IPSW" ) mode="custom-ipsw";;
             "$start" ) mode="downgrade";;
+            "Start Update" )
+                print "* The \"Start Update\" will perform an update to your device without clearing device data."
+                print "* One usage of this is to carry over activation records to the latest iOS version."
+                warn "This option should NOT be used if your device is jailbroken."
+                warn "This option is not recommended to be used unless you know what you are doing."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                mode="restore-update"
+            ;;
             "Select Target IPSW" ) menu_ipsw_browse "$1";;
             "Select Base IPSW" ) menu_ipsw_browse "base";;
             "Select Target SHSH" ) menu_shsh_browse "$1";;
@@ -10480,6 +10494,7 @@ main() {
                 print "    > ./restore.sh --activation-records"
             fi
         ;;
+        "restore-update" ) restore_latest update;;
         "kdfu"         ) device_enter_mode kDFU;;
         "ramdisknvram" ) device_ramdisk clearnvram;;
         "pwned-ibss"   ) device_enter_mode pwnDFU;;
