@@ -2867,49 +2867,34 @@ ipsw_prepare_rebootsh() {
 }
 
 ipsw_prepare_logos_convert() {
-    local iv
-    local key
-    local name
+    local fourcc="logo"
     if [[ -n $ipsw_customlogo ]]; then
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .key')
-        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
-        logoname="$name"
         log "Converting custom logo"
-        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$name
-        "$dir/xpwntool" $name logo-orig.img3 -iv $iv -k $key -decrypt
-        "$dir/imagetool" inject "$ipsw_customlogo" logo.img3 logo-orig.img3
+        logoname=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
+        if [[ $device_target_powder == 1 ]]; then
+            fourcc="logb"
+            case $target_det in
+                [34] ) fourcc="log4";;
+            esac
+        fi
+        "$dir/ibootim" "$ipsw_customlogo" logo.raw
+        "$dir/img3maker" -t $fourcc -f logo.raw -o logo.img3
         if [[ ! -s logo.img3 ]]; then
             error "Converting custom logo failed. Check your image"
         fi
-        if [[ $device_target_powder == 1 ]]; then
-            if [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
-                log "log4"
-                echo "0000010: 3467" | xxd -r - logo.img3
-                echo "0000020: 3467" | xxd -r - logo.img3
-            else
-                log "logb"
-                echo "0000010: 6267" | xxd -r - logo.img3
-                echo "0000020: 6267" | xxd -r - logo.img3
-            fi
-        fi
         mkdir -p $all_flash 2>/dev/null
-        mv logo.img3 $all_flash/$name
+        mv logo.img3 $all_flash/$logoname
     fi
     if [[ -n $ipsw_customrecovery ]]; then
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RecoveryMode") | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RecoveryMode") | .key')
-        name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RecoveryMode") | .filename')
-        recmname="$name"
         log "Converting custom recovery"
-        file_extract_from_archive "$ipsw_path.ipsw" $all_flash/$name
-        "$dir/xpwntool" $name recovery-orig.img3 -iv $iv -k $key -decrypt
-        "$dir/imagetool" inject "$ipsw_customrecovery" recovery.img3 recovery-orig.img3
+        recmname=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "RecoveryMode") | .filename')
+        "$dir/ibootim" "$ipsw_customlogo" recovery.raw
+        "$dir/img3maker" -t recm -f recovery.raw -o recovery.img3
         if [[ ! -s recovery.img3 ]]; then
             error "Converting custom recovery failed. Check your image"
         fi
         mkdir -p $all_flash 2>/dev/null
-        mv recovery.img3 $all_flash/$name
+        mv recovery.img3 $all_flash/$recmname
     fi
 }
 
@@ -8349,7 +8334,7 @@ menu_ipsw() {
 
         if [[ $ipsw_cancustomlogo2 == 1 ]]; then
             print "* You can select your own custom Apple logo image. This is optional and an experimental option"
-            print "* Note: The images must be in PNG format, and up to 320x480 resolution only"
+            print "* Note: The images must be in PNG format, and up to your device resolution"
             print "* Note 2: The custom images might not work, current support is spotty"
             if [[ -n $ipsw_customlogo ]]; then
                 print "* Custom Apple logo: $ipsw_customlogo"
@@ -8360,7 +8345,7 @@ menu_ipsw() {
             echo
         elif [[ $ipsw_cancustomlogo == 1 ]]; then
             print "* You can select your own custom logo and recovery image. This is optional and an experimental option"
-            print "* Note: The images must be in PNG format, and up to 320x480 resolution only"
+            print "* Note: The images must be in PNG format, and up to 320x480 resolution"
             print "* Note 2: The custom images might not work, current support is spotty"
             if [[ -n $ipsw_customlogo ]]; then
                 print "* Custom Apple logo: $ipsw_customlogo"
