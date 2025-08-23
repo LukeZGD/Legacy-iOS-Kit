@@ -1880,17 +1880,7 @@ device_enter_mode() {
             patch_ibss
             device_iproxy
 
-            log "Please read the message below:"
-            print "* Follow these instructions to enter kDFU mode."
-            print "1. Install \"OpenSSH\" in Cydia or Zebra."
-            if [[ $device_det == 10 ]]; then
-                print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
-                print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
-            fi
-            print "  - After installing these requirements, lock your device."
-            print "2. You will be prompted to enter the root password of your iOS device."
-            print "  - The default root password is: alpine"
-            print "  - Your password input will not be visible, but it is still being entered."
+            device_ssh_message
             print "3. On entering kDFU mode, the device will disconnect."
             print "  - Proceed to unplug and replug the device when prompted."
             print "  - Alternatively, press the TOP or HOME button."
@@ -3304,9 +3294,7 @@ ipsw_prepare_config() {
         verbose="true"
     fi
     log "Preparing config file"
-    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
+    echo "<plist>
 <dict>
     <key>FilesystemJailbreak</key>
     <$1/>
@@ -3328,7 +3316,7 @@ ipsw_prepare_config() {
 ipsw_prepare_systemversion() {
     local sysplist="SystemVersion.plist"
     log "Beta iOS detected, preparing modified $sysplist"
-    echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' > $sysplist
+    echo '<plist><dict>' > $sysplist
     echo "<key>ProductBuildVersion</key><string>$device_target_build</string>" >> $sysplist
     local copyright="<key>ProductCopyright</key><string>1983-201"
     case $device_target_vers in
@@ -3438,7 +3426,7 @@ ipsw_prepare_bundle() {
     if [[ -z $rootfs_name ]]; then
         error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
     fi
-    echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' > $NewPlist
+    echo '<plist><dict>' > $NewPlist
     echo "<key>Filename</key><string>$ipsw_p.ipsw</string>" >> $NewPlist
     echo "<key>RootFilesystem</key><string>$rootfs_name</string>" >> $NewPlist
     echo "<key>RootFilesystemKey</key><string>$rootfs_key</string>" >> $NewPlist
@@ -4050,9 +4038,7 @@ ipsw_prepare_ios4multipart() {
 
     log "Modify options.plist"
     local options_plist="options.$device_model.plist"
-    echo '<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
+    echo '<plist>
 <dict>
     <key>CreateFilesystemPartitions</key>
     <false/>
@@ -9439,15 +9425,17 @@ device_jailbreak_gilbert() {
 }
 
 device_ssh_message() {
-    print "* Make sure to have OpenSSH installed on your iOS device."
+    log "Please read the message below:"
+    print "* Follow these instructions to connect to the device."
+    print "1. Install \"OpenSSH\" in Cydia or Zebra."
     if [[ $device_det == 10 ]] && (( device_proc < 7 )); then
-        print "* Install all updates in Cydia/Zebra."
-        print "* Make sure to also have Dropbear installed from my repo."
-        print "* Repo: https://lukezgd.github.io/repo"
+        print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
+        print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
     fi
-    print "* Only proceed if you have these requirements installed using Cydia/Zebra/Sileo."
-    print "* You will be prompted to enter the root/mobile password of your iOS device."
-    print "* The default password is: alpine"
+    print "2. You will be prompted to enter the root/mobile password of your iOS device."
+    print "  - The default password is: alpine"
+    print "  - Your password input will not be visible, but it is still being entered."
+    print "* You can also just press Enter/Return to enter the default password."
 }
 
 device_dump() {
@@ -9529,7 +9517,7 @@ device_dump() {
     fi
     kill $iproxy_pid
     if [[ ! -e $dump ]]; then
-        error "Failed to dump $arg from device. Please run the script again"
+        error "Failed to dump $arg from device. Please run the script again" "* Make sure to have OpenSSH installed."
     fi
     log "Dumping $arg done: $dump"
 }
