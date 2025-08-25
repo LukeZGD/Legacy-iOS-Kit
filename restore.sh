@@ -1877,15 +1877,6 @@ device_enter_mode() {
                 return
             fi
 
-            patch_ibss
-            device_iproxy
-
-            device_ssh_message
-            print "3. On entering kDFU mode, the device will disconnect."
-            print "  - Proceed to unplug and replug the device when prompted."
-            print "  - Alternatively, press the TOP or HOME button."
-            pause
-
             echo "chmod +x /tmp/kloader*" > kloaders
             if [[ $device_det == 10 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
@@ -1904,8 +1895,17 @@ device_enter_mode() {
                 sendfiles+=("../resources/kloader/kloader")
             fi
             sendfiles+=("kloaders" "pwnediBSS")
+            patch_ibss
 
-            device_sshpass
+            device_iproxy
+            if [[ $device_jailbrokenselected != 1 ]]; then
+                device_ssh_message
+                print "3. On entering kDFU mode, the device will disconnect."
+                print "  - Proceed to unplug and replug the device when prompted."
+                print "  - Alternatively, press the TOP or HOME button."
+                device_sshpass
+            fi
+
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             log "Sending files to device: ${sendfiles[*]}"
@@ -5272,6 +5272,7 @@ device_buttons() {
     local selection=("kDFU" "pwnDFU")
     if [[ $device_jailbrokenselected == 1 ]]; then
         device_enter_mode kDFU
+        return
     elif [[ $device_mode != "Normal" ]]; then
         device_enter_mode pwnDFU
         return
@@ -6896,8 +6897,8 @@ shsh_save_onboard64() {
         return
     fi
     log "Proceeding to dump onboard blobs on normal mode"
-    device_ssh_message
     device_iproxy
+    device_ssh_message
     device_sshpass
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
     local shsh2
@@ -7313,8 +7314,8 @@ menu_datamanage() {
             "Mount Device"* )
                 local path="/var/mobile/Media"
                 [[ $selected == *"Raw"* ]] && path="/"
-                device_ssh_message
                 device_iproxy no-logging
+                device_ssh_message
                 device_sshpass
                 mkdir ../mount 2>/dev/null
                 $sshfs2 -d -F $(pwd)/ssh_config -p 6414 ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
@@ -9211,8 +9212,8 @@ device_update_datetime() {
     device_buttons2
     if [[ $device_mode == "Normal" ]]; then
         log "Proceeding on Normal mode."
-        device_ssh_message
         device_iproxy
+        device_ssh_message
         device_sshpass
         device_datetime_cmd
         kill $iproxy_pid
@@ -9239,8 +9240,8 @@ device_ssh() {
     print "* Note: This is for connecting via SSH to devices that are already jailbroken and have OpenSSH installed."
     print "* If this is not what you want, you might be looking for the \"SSH Ramdisk\" option instead."
     echo
-    device_ssh_message
     device_iproxy no-logging
+    device_ssh_message
     device_sshpass
     log "Connecting to device SSH..."
     print "* For SSH/SCP access, use the following:"
@@ -9466,8 +9467,8 @@ device_dump() {
         device_enter_mode pwnDFU
     fi
     if [[ $device_mode == "Normal" ]]; then
-        device_ssh_message
         device_iproxy
+        device_ssh_message
         device_sshpass
         if [[ $arg == "activation" ]]; then
             log "Creating $arg.tar"
@@ -10047,8 +10048,8 @@ device_altserver() {
 }
 
 device_dumpapp() {
-    device_ssh_message
     device_iproxy
+    device_ssh_message
     device_sshpass
 
     local dumper_binary="ipainstaller"
