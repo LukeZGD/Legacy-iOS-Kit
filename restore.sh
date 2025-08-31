@@ -565,7 +565,9 @@ set_tool_paths() {
         chmod +x $dir/*
     fi
 
-    aria2c="$dir/aria2c"
+    aria2c="$(command -v aria2c)"
+    [[ -z $aria2c ]] && aria2c="$dir/aria2c"
+    aria2c+=" --download-result=hide"
     futurerestore+="$dir/futurerestore"
     ideviceactivation+="$dir/ideviceactivation"
     idevicediagnostics+="$dir/idevicediagnostics"
@@ -615,7 +617,7 @@ install_depends() {
 
     log "Installing dependencies..."
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed base-devel ca-certificates ca-certificates-mozilla curl git libimobiledevice openssh python sshfs udev unzip usbmuxd usbutils vim zenity zip zstd
+        sudo pacman -Sy --noconfirm --needed aria2 base-devel ca-certificates ca-certificates-mozilla curl git libimobiledevice openssh python sshfs udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
@@ -623,13 +625,13 @@ install_depends() {
             sudo add-apt-repository -y universe
         fi
         sudo apt update
-        sudo apt install -m -y ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
+        sudo apt install -m -y aria2 ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
+        sudo dnf install -y aria2 ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
         sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
@@ -638,14 +640,14 @@ install_depends() {
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
+        sudo zypper -n install aria2 ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
         prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "void" ]]; then
-        sudo xbps-install curl git patch openssh python3 unzip xxd zenity zip
+        sudo xbps-install aria2 curl git patch openssh python3 unzip xxd zenity zip
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
@@ -673,7 +675,7 @@ version_update_check() {
     fi
     log "Checking for updates..."
     rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" >/dev/null
+    $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
     github_api=$(cat latest 2>/dev/null)
     version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
     git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
@@ -970,7 +972,7 @@ device_get_name() {
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
         rm -f tmp.json
-        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" -o tmp.json >/dev/null
+        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" -o tmp.json
         device_name="$(cat tmp.json | $jq -r ".name")"
     fi
 }
@@ -1494,7 +1496,7 @@ device_get_info() {
         device_latest_build="22G100"
 #         log "Getting latest iOS version for $device_type"
 #         rm -f tmp.json
-#         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json >/dev/null
+#         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
 #         local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
 #         device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
 #         device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
@@ -2270,7 +2272,7 @@ device_fw_key_check() {
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
             log "Getting firmware keys for $device_type-$build: $i"
-            $aria2c "$i" -o index.html >/dev/null
+            $aria2c "$i" -o index.html
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
                 break
             fi
@@ -2323,7 +2325,7 @@ ipsw_get_url() {
             esac
         fi
         rm -f tmp.json
-        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json >/dev/null
+        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
         url="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
@@ -2768,7 +2770,7 @@ ipsw_verify() {
         esac
     fi
     rm -f tmp.json
-    $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json >/dev/null
+    $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
     IPSWSHA1="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
@@ -5125,7 +5127,7 @@ restore_futurerestore() {
         fi
         log "Checking for futurerestore updates..."
         #rm -f commits
-        #$aria2c "https://api.github.com/repos/futurerestore/futurerestore/commits" >/dev/null
+        #$aria2c "https://api.github.com/repos/futurerestore/futurerestore/commits"
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
         local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
         local fr_branch="main"
@@ -6740,7 +6742,7 @@ menu_ramdisk() {
                 fi
                 log "Checking for latest TrollStore"
                 rm -f latest
-                $aria2c "https://api.github.com/repos/opa334/TrollStore/releases/latest" >/dev/null
+                $aria2c "https://api.github.com/repos/opa334/TrollStore/releases/latest"
                 local latest="$(cat latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version 2>/dev/null || echo "none")"
                 log "Latest version: $latest, current version: $current"
@@ -7038,7 +7040,7 @@ shsh_convert_onboard() {
 
 shsh_save_cydia() {
     rm -f tmp.json
-    $aria2c "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" -o tmp.json >/dev/null
+    $aria2c "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" -o tmp.json
     local json=$(cat tmp.json)
     local len=$(echo "$json" | $jq -r ".firmwares | length")
     local builds=()
@@ -7547,7 +7549,7 @@ device_sideloader() {
     sideloader+="$arch"
     log "Checking for latest Sideloader"
     rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest" >/dev/null
+    $aria2c "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest"
     local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
@@ -10009,7 +10011,7 @@ device_altserver() {
     fi
     log "Checking for latest anisette-server"
     rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Provision/releases/latest" >/dev/null
+    $aria2c "https://api.github.com/repos/LukeZGD/Provision/releases/latest"
     local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
