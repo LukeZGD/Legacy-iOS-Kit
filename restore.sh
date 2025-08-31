@@ -3660,11 +3660,6 @@ ipsw_prepare_32bit() {
     ExtraArgs+=" -ramdiskgrow 10"
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
-        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
-    fi
-    if [[ $device_actrec == 1 ]]; then
-        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
@@ -3726,12 +3721,19 @@ ipsw_prepare_32bit() {
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
     fi
+
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
     fi
     if [[ $1 == "iboot" ]]; then
         ExtraArgs+=" iBoot.tar"
+    fi
+    if [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
+        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -4325,10 +4327,11 @@ ipsw_prepare_multipatch() {
 
     # 3.2.x ipad/4.2.x cdma fs workaround
     case $device_target_vers in
-    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* )
+    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* | 3.1.3 )
         local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
         local type="iPad1.1"
         [[ $device_type == "iPhone3,3" ]] && type="iPhone3.3"
+        [[ $device_type == "iPod3,1" ]] && type="iPod3.1"
         local build="$device_target_build"
         local vers="$device_target_vers"
         local rootfs_name_fs="$rootfs_name"
@@ -4348,6 +4351,7 @@ ipsw_prepare_multipatch() {
             4.2.6 ) sha1E="671cbbb3964e5e5c38078577f5c2844bbe16699c";;
             3.2.1 ) sha1E="896c0344435615aee7f52fc75739241022e38fe7";;
             3.2   ) sha1E="47fdfe04ad9b65da009c834902eda3f141feac28";;
+            3.1.3 ) sha1E="5500f63ff36ddf3379c66fcff26f0a6837ad522d";;
         esac
         if [[ -s "$ipsw_name.ipsw" ]]; then
             log "Verifying FS IPSW..."
@@ -4554,11 +4558,6 @@ ipsw_prepare_powder() {
     fi
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
-    elif [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
-        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
-    fi
-    if [[ $device_actrec == 1 ]]; then
-        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
@@ -4625,9 +4624,16 @@ ipsw_prepare_powder() {
         tar -cvf iBoot.tar iBEC
         ExtraArgs+=" iBoot.tar"
     fi
+
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
+    fi
+    if [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
+        ExtraArgs+=" ../saved/$device_type/baseband-$device_ecid.tar"
+    fi
+    if [[ $device_actrec == 1 ]]; then
+        ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs"
