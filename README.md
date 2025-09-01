@@ -22,7 +22,6 @@
 - Jailbreak all 32-bit iOS devices on nearly any iOS version
     - Available on iOS versions 3.0 to 9.3.4 with some small exceptions
 - Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
-- [FourThree Utility](https://github.com/LukeZGD/FourThree-iPad2) - Dualboot iOS 4.3.x for the iPad 2
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
 - Sideload IPA files for supported devices on Linux (and macOS)
