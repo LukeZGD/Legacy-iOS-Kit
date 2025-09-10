@@ -5370,13 +5370,16 @@ restore_deviceprepare() {
                 fi
             elif [[ $device_target_vers == "4.1" ]]; then
                 case $device_type in
-                    iPhone2,1 | iPod[23],1 ) shsh_save version 4.1;;
+                    iPhone2,1 | iPod[23],1 )
+                        shsh_save version 4.1
+                        if [[ $ipsw_jailbreak == 1 ]]; then
+                            device_enter_mode pwnDFU
+                        else
+                            device_enter_mode DFU
+                        fi
+                    ;;
+                    * ) device_enter_mode pwnDFU;;
                 esac
-                if [[ $ipsw_jailbreak == 1 ]]; then
-                    device_enter_mode pwnDFU
-                else
-                    device_enter_mode DFU
-                fi
             else
                 if [[ $device_target_powder == 1 ]]; then
                     shsh_save version $device_latest_vers
@@ -8295,11 +8298,8 @@ menu_ipsw() {
             else
                 print "* Select Target IPSW to continue"
             fi
-            if (( device_proc >= 7 )); then
-                print "* Check the SEP/BB compatibility chart: https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs"
-                if (( device_proc >= 9 )) && [[ $device_type != "iPhone10"* ]]; then
-                    print "* It is recommended to use turdus merula instead: https://sep.lol/"
-                fi
+            if (( device_proc >= 9 )) && [[ $device_type != "iPhone10"* ]]; then
+                print "* It is recommended to use turdus merula instead: https://sep.lol/"
             fi
             echo
             if [[ -n $shsh_path ]]; then

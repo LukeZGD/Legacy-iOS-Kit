@@ -88,8 +88,8 @@
     - iPad Air 1, 2
     - iPad mini 2, 3, 4
     - iPod touch 6, 7
-    - See [SEP/BB Compatibility Chart](https://docs.google.com/spreadsheets/d/1Mb1UNm6g3yvdQD67M413GYSaJ4uoNhLgpkc7YKi3LBs/edit#gid=1191207636) for iOS versions that can be restored to
-    - Although SEP/BB compatibility mostly does not matter anymore for A9(X)/A10(X) devices thanks to [turdus merula](https://sep.lol)
+    - Versions that can be restored to depend on SEP/BB compatibility
+    - Although SEP/BB compatibility does not matter anymore for A9(X)/A10(X) devices thanks to [turdus merula](https://sep.lol)
 - Restoring with iOS 14.3-15.x and 16.6+ SHSH blobs using futurerestore is also supported on these devices (SSH ramdisks not supported):
     - iPhone 8, X
     - iPad 5
