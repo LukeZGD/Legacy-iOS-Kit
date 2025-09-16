@@ -1478,32 +1478,30 @@ device_get_info() {
             device_latest_build="16H81"
         ;;
         iPad5,* | iPhone[89],* | iPod9,1 )
-            device_latest_vers="15.8.4"
-            device_latest_build="19H390"
+            device_latest_vers="15.8.5"
+            device_latest_build="19H394"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.11"
-            device_latest_build="20H360"
+            device_latest_vers="16.7.12"
+            device_latest_build="20H364"
         ;;
         iPad7,[123456] )
             device_latest_vers="17.7.10"
             device_latest_build="21H450"
         ;;
         iPad7,1[12] )
-            device_latest_vers="18.6.2"
-            device_latest_build="22G100"
+            device_latest_vers="18.7"
+            device_latest_build="22H20"
         ;;
     esac
     if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
-        device_latest_vers="18.6.2"
-        device_latest_build="22G100"
-#         log "Getting latest iOS version for $device_type"
-#         rm -f tmp.json
-#         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
-#         [[ $? != 0 ]] && $curl -L "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
-#         local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
-#         device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
-#         device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
+        log "Getting latest iOS version for $device_type"
+        rm -f tmp.json
+        $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
+        [[ $? != 0 ]] && $curl -L "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
+        local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
+        device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
+        device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
     fi
     # set device_use_bb, device_use_bb_sha1 (what baseband to use for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_bb and device_latest_bb_sha1 are used instead
