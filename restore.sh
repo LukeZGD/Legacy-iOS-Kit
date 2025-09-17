@@ -5994,6 +5994,10 @@ device_ramdisk64() {
         sleep 2
     done
 
+    case $1 in
+        "getversion" ) device_datetime_cmd;;
+    esac
+
     echo
     print "* Mount filesystems with this command (for iOS 11.3 and newer):"
     print "    mount_filesystems"
@@ -9983,7 +9987,7 @@ device_enter_ramdisk() {
     fi
 
     if (( device_proc >= 7 )); then
-        device_ramdisk64
+        device_ramdisk64 $1
     else
         device_ramdisk $1
     fi
@@ -10506,7 +10510,7 @@ main() {
         ;;
         "dfuipswipsw"  ) device_dfuipsw ipsw;;
         "customipsw"   ) restore_customipsw;;
-        "getversion"   ) device_ramdisk getversion;;
+        "getversion"   ) device_enter_ramdisk getversion;;
         "shutdown"     ) $idevicediagnostics shutdown;;
         "restart"      ) $idevicediagnostics restart;;
         "remove4"      ) device_ramdisk setnvram $rec;;
