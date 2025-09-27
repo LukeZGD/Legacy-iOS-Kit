@@ -597,7 +597,7 @@ set_tool_paths() {
 prepare_udev_rules() {
     local owner="$1"
     local group="$2"
-    echo "ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"122[27]|128[0-3]|1338\", OWNER=\"$owner\", GROUP=\"$group\", MODE=\"0660\" TAG+=\"uaccess\"" > 39-libirecovery.rules
+    echo "ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"122[27]|128[0-3]|1338|4141\", OWNER=\"$owner\", GROUP=\"$group\", MODE=\"0660\" TAG+=\"uaccess\"" > 39-libirecovery.rules
 }
 
 install_depends() {
@@ -795,7 +795,7 @@ version_check() {
 device_entry() {
     # enable manual entry
     log "Manual device/ECID entry is enabled."
-    until [[ -n $device_type ]]; do
+    until [[ -n $device_type && $device_type == "iP"* ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
     if [[ $main_argmode == "device_justboot" || $main_argmode == "device_enter_ramdisk"* ]]; then
@@ -1463,11 +1463,11 @@ device_get_info() {
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-        iPad3,[56] | iPhone5,[1234] )
+        iPad3,[456] | iPhone5,[1234] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
-        iPad3,4 | iPad4,[12345] | iPhone6,[12] )
+        iPad4,[12345] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
         ;;
@@ -7940,15 +7940,9 @@ menu_restore_more() {
     local back
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=()
-        case $device_type in
-            iPhone2,1 )
-                menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-                menu_items+=("4.3.4" "4.3.3" "4.3.2" "4.3.1" "4.3" "4.2.1")
-                menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
-            ;;
-            iPod2,1 ) menu_items+=("4.0.2" "4.0" "3.1.2" "3.1.1");;
-        esac
+        menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+        menu_items+=("4.3.4" "4.3.3" "4.3.2" "4.3.1" "4.3" "4.2.1")
+        menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
         menu_items+=("Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
@@ -7956,11 +7950,11 @@ menu_restore_more() {
         else
             print " > Main Menu > Restore/Downgrade"
         fi
-        if [[ -z $1 && $device_type == "iPod2,1" && $device_newbr != 0 ]]; then
-            warn "These versions are for old bootrom devices only. They may not work on your device"
-            echo
-        elif [[ $device_type == "iPod2,1" ]]; then
-            warn "These versions might not restore/boot properly"
+        warn "3.1.x versions listed here might not restore properly"
+        if [[ $device_newbr != 0 ]]; then
+            print "* 3.0.x versions are not restorable on new bootrom devices"
+            menu_items=("${menu_items[@]::${#menu_items[@]}-3}")
+            menu_items+=("Go Back")
             echo
         fi
         input "Select an option:"
@@ -8342,7 +8336,8 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 ipsw_print_warnings
                 menu_items+=("$start")
-                if [[ $device_target_vers == "$device_latest_vers" ]]; then
+                if [[ $device_target_vers == "$device_latest_vers" &&
+                      $device_mode != "none" && -z $2 ]]; then
                     menu_items+=("Start Update")
                 fi
             elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
@@ -10075,6 +10070,10 @@ device_dumpapp() {
     device_iproxy
     device_ssh_message
     device_sshpass
+    echo
+    warn "The dump apps feature is not actively maintained/supported and may have issues."
+    print "* If you encounter any issue, try going here instead: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
+    pause
 
     local dumper_binary="ipainstaller"
     local selected2

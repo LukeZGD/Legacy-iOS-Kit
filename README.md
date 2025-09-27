@@ -9,7 +9,7 @@
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10/A11) devices
     - Devices that received iOS 16 and newer will only have limited functionality (e.g. sideloading) and some features like SSH ramdisk are not supported
-    - Legacy iOS Kit defines *legacy devices* as all iOS devices that are vulnerable to checkm8 and older
+    - Legacy iOS Kit defines *legacy devices* as all iOS devices that are vulnerable to a bootrom exploit (checkm8 and older)
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Restore supported devices to unsigned versions with SHSH blobs
