@@ -1762,18 +1762,17 @@ device_dfuhelper() {
         fi
         exit
     fi
-    device_find_all $1
-    opt=$?
-    if [[ $opt == 1 ]]; then
-        log "Found device in DFU mode."
-        device_mode="DFU"
-        return
-    fi
     print "* Get ready..."
-    for i in {3..1}; do
-        echo -n "$i "
-        sleep 1
-    done
+    device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
+    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
+        log "Found device in DFU mode."
+        return
+    elif [[ -n $device_mode ]]; then
+        for i in {3..1}; do
+            echo -n "$i "
+            sleep 1
+        done
+    fi
     case $device_type in
         iPhone1,* | iPod1,1  ) device_dfuhelper3 $2; return;;
         iPad1,1 | iPad1[12]* ) :;;
