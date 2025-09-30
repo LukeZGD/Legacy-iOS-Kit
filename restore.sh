@@ -2279,6 +2279,7 @@ device_fw_key_check() {
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
                 break
             fi
+            rm -f index.html
         done
         if [[ $(cat index.html | grep -c "$build") != 1 ]]; then
             local error_msg="* You may need to run wikiproxy to get firmware keys."
