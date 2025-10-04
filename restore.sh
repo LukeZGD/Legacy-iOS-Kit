@@ -10072,9 +10072,11 @@ device_dumpapp() {
     device_ssh_message
     device_sshpass
     echo
+    : '
     warn "The dump apps feature is not actively maintained/supported and may have issues."
     print "* If you encounter any issue, try going here instead: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
     pause
+    '
 
     local dumper_binary="ipainstaller"
     local selected2
@@ -10116,7 +10118,21 @@ device_dumpapp() {
         local check=$?
     fi
 
-    local available_apps_json="$($ideviceinstaller list --json --user)"
+    local available_apps_base="$($ideviceinstaller list --user)"
+    echo "[" > tmp.json
+    echo "$available_apps_base" | while read i; do
+        [[ $i == "CFBundleIdentifier"* ]] && continue
+        IFS=', ' read -r CFBundleIdentifier CFBundleShortVersionString CFBundleDisplayName <<< "$i"
+        CFBundleShortVersionString="$(echo "$CFBundleShortVersionString" | tr -d '"')"
+        CFBundleDisplayName="$(echo "$CFBundleDisplayName" | tr -d '"')"
+        echo "{\"CFBundleIdentifier\": \"$CFBundleIdentifier\"," >> tmp.json
+        echo "\"CFBundleShortVersionString\": \"$CFBundleShortVersionString\"," >> tmp.json
+        echo "\"CFBundleDisplayName\": \"$CFBundleDisplayName\"}," >> tmp.json
+    done
+    echo "{}]" >> tmp.json
+    $jq 'del(.[-1])' tmp.json > tmp2.json
+    local available_apps_json="$(cat tmp2.json)"
+
     local available_apps=($(echo $available_apps_json | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
     local all_apps=("${available_apps[@]}")
     available_apps+=("Go Back")
@@ -10155,7 +10171,7 @@ device_dumpapp() {
                 "Clutch" )
                     local ipa
                     if [[ $device_det == 5 ]]; then
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleExecutable')" &>ssh.log
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
                         $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
