@@ -364,7 +364,7 @@ set_tool_paths() {
         fi
 
         # distro check
-        if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" ]]; then
+        if [[ $ID == "arch" || $ID_LIKE == "arch" || $ID == "artix" || $ID == "cachyos" ]]; then
             distro="arch"
         elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
             distro="debian"
@@ -549,8 +549,6 @@ set_tool_paths() {
         if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
-    elif [[ $mac_cocoa == 1 ]]; then
-        warn "Updating to macOS 10.12 or newer is recommended for full support."
     fi
     if [[ ! -d $dir ]]; then
         error "Failed to find bin directory ($dir), cannot continue." \
@@ -7108,8 +7106,6 @@ menu_print_info() {
         if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
-    elif [[ $mac_cocoa == 1 ]]; then
-        warn "Updating to macOS 10.12 or newer is recommended for full support."
     fi
     echo
     if [[ $device_argmode == "entry" ]]; then
@@ -7450,7 +7446,9 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
-            print "* There is also the option to use Dadoum Sideloader: https://github.com/Dadoum/Sideloader"
+            if (( device_det >= 9 )); then
+                print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
+            fi
             print "* If you have AppSync installed, or are installing an app with a valid"
             print "  signature, go to App Management -> Install IPA (AppSync) instead."
             if [[ $device_unactivated == 1 ]]; then
@@ -7459,19 +7457,22 @@ menu_ipa() {
                 pause
                 break
             fi
+            if [[ $platform == "macos" ]]; then
+                echo
+                warn "It is recommended to use Sideloadly instead of using this option."
+                print "* Download Sideloadly from here: https://sideloadly.io"
+            fi
         fi
         echo
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
-            if [[ $1 == "Sideload"* && $platform == "macos" ]]; then
-                :
-            elif [[ $1 == "Sideload"* ]] && (( device_det <= 8 )); then
-                :
-            else
-                menu_items+=("Install IPA")
-            fi
             if [[ $1 == "Sideload"* ]]; then
                 menu_items+=("Install IPA using Sideloader")
+                if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
+                    menu_items+=("Install IPA using AltServer")
+                fi
+            else
+                menu_items+=("Install IPA")
             fi
         elif [[ $1 == "Install"* ]]; then
             print "* Select IPA file(s) to install (multiple selection)"
@@ -7490,11 +7491,11 @@ menu_ipa() {
         case $selected in
             "Select IPA" ) menu_ipa_browse;;
             "Install IPA" )
-                if [[ $1 == "Install"* ]]; then
-                    device_ideviceinstaller
-                else
-                    device_altserver
-                fi
+                device_ideviceinstaller
+                pause
+            ;;
+            "Install IPA using AltServer" )
+                device_altserver
                 pause
             ;;
             "Install IPA using Sideloader" )
@@ -7506,7 +7507,7 @@ menu_ipa() {
                     pause
                     continue
                 fi
-                local revoke=$($sideloader cert list | grep -m1 "serial number" | sed -E 's/.*number `//' | cut -c -32)
+                local revoke=$($sideloader cert list | grep -m1 "serial number" | sed -E 's/.*number `//' | cut -c -32 | tr -dc '[:alnum:]')
                 if [[ -n $revoke ]]; then
                     log "Revoking existing certificate..."
                     $sideloader cert revoke $revoke
@@ -7951,7 +7952,7 @@ menu_restore_more() {
             print " > Main Menu > Restore/Downgrade"
         fi
         warn "3.1.x versions listed here might not restore properly"
-        if [[ $device_newbr != 0 ]]; then
+        if [[ $device_newbr != 0 && $device_mode != "none" ]]; then
             print "* 3.0.x versions are not restorable on new bootrom devices"
             menu_items=("${menu_items[@]::${#menu_items[@]}-3}")
             menu_items+=("Go Back")
@@ -10437,7 +10438,7 @@ main() {
 
     version_check
 
-    local checks=(curl git patch unzip xxd zip)
+    local checks=(curl git patch xxd)
     local check_fail
     for check in "${checks[@]}"; do
         if [[ $debug_mode == 1 ]]; then
@@ -10448,6 +10449,10 @@ main() {
             check_fail=1
         fi
     done
+    if [[ -z $unzip2 || -z $zip2 ]]; then
+        warn "unzip/zip not found in PATH"
+        check_fail=1
+    fi
 
     if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" || $check_fail == 1 ]]; then
         install_depends
