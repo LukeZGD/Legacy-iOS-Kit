@@ -8934,7 +8934,7 @@ menu_flags() {
             else
                 menu_items+=("Enable activation-records flag")
             fi
-            menu_items+=("Enable jailbreak flag" "Enable gasgauge-patch flag")
+            menu_items+=("Enable jailbreak flag" "Enable multipatch flag")
             if (( device_proc >= 5 )); then
                 menu_items+=("Enable skip-ibss flag")
             fi
@@ -9011,15 +9011,15 @@ menu_flags() {
                     back=1
                 fi
             ;;
-            "Enable gasgauge-patch flag" )
-                warn "This will enable the --gasgauge-patch flag."
+            "Enable multipatch flag" )
+                warn "This will enable the --multipatch flag."
                 print "* This will enable \"multipatch\" for the custom IPSW."
                 print "* This is especially useful for iPhone 4S devices that have issues restoring due to battery replacement."
                 print "* This issue is called \"gas gauge\" error, also known as error 29 in iTunes."
                 print "* By enabling this, firmware components for 6.1.3 or lower will be used for restoring to get past the error."
-                print "* This also attempts to get past \"invalid ticket\" error."
+                print "* This also attempts to get past \"invalid ticket\" error and other restore errors."
                 local opt
-                select_yesno "Do you want to enable the gasgauge-patch flag?" 0
+                select_yesno "Do you want to enable the multipatch flag?" 0
                 if [[ $? != 0 ]]; then
                     ipsw_gasgauge_patch=1
                     back=1
@@ -10119,21 +10119,19 @@ device_dumpapp() {
     fi
 
     local available_apps_base="$($ideviceinstaller list --user)"
-    echo "[" > tmp.json
-    echo "$available_apps_base" | while read i; do
-        [[ $i == "CFBundleIdentifier"* ]] && continue
-        IFS=', ' read -r CFBundleIdentifier CFBundleShortVersionString CFBundleDisplayName <<< "$i"
-        CFBundleShortVersionString="$(echo "$CFBundleShortVersionString" | tr -d '"')"
-        CFBundleDisplayName="$(echo "$CFBundleDisplayName" | tr -d '"')"
-        echo "{\"CFBundleIdentifier\": \"$CFBundleIdentifier\"," >> tmp.json
-        echo "\"CFBundleShortVersionString\": \"$CFBundleShortVersionString\"," >> tmp.json
-        echo "\"CFBundleDisplayName\": \"$CFBundleDisplayName\"}," >> tmp.json
-    done
-    echo "{}]" >> tmp.json
-    $jq 'del(.[-1])' tmp.json > tmp2.json
-    local available_apps_json="$(cat tmp2.json)"
+    local available_apps_json="["
+    while IFS= read -r line; do
+        [[ $line == CFBundleIdentifier* ]] && continue
+        IFS=', ' read -r CFBundleIdentifier CFBundleShortVersionString CFBundleDisplayName <<< "$line"
+        CFBundleShortVersionString="${CFBundleShortVersionString//\"/}"
+        CFBundleDisplayName="${CFBundleDisplayName//\"/}"
+        available_apps_json+="{\"CFBundleIdentifier\":\"$CFBundleIdentifier\","
+        available_apps_json+="\"CFBundleShortVersionString\":\"$CFBundleShortVersionString\","
+        available_apps_json+="\"CFBundleDisplayName\":\"$CFBundleDisplayName\"},"
+    done <<< "$available_apps_base"
+    available_apps_json="${available_apps_json%,}]"
 
-    local available_apps=($(echo $available_apps_json | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
+    local available_apps=($(echo "$available_apps_json" | $jq -r 'to_entries[] | .value.CFBundleIdentifier' | tr '\n' ' '))
     local all_apps=("${available_apps[@]}")
     available_apps+=("Go Back")
     local app_index=0
@@ -10171,7 +10169,7 @@ device_dumpapp() {
                 "Clutch" )
                     local ipa
                     if [[ $device_det == 5 ]]; then
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
+                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
                         $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
@@ -10184,7 +10182,7 @@ device_dumpapp() {
             esac
 
             if [[ $check == 0 ]]; then
-                local ipa_name="$(echo $available_apps_json | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
+                local ipa_name="$(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
