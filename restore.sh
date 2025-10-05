@@ -265,11 +265,7 @@ select_yesno() {
     if [[ -n $1 ]]; then
         msg="$1"
     fi
-    if [[ $2 == 1 ]]; then
-        msg+=" (Y/n): "
-    else
-        msg+=" (y/N): "
-    fi
+    [[ $2 == 1 ]] && msg+=" (Y/n): " || msg+=" (y/N): "
 
     if [[ $menu_old == 1 ]]; then
         local opt
@@ -977,7 +973,7 @@ device_get_name() {
 }
 
 device_manufacturing() {
-    if [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]] || [[ $device_argmode == "none" ]]; then
+    if (( device_proc > 10 )) || [[ $device_proc != 1 && $device_argmode == "none" ]]; then
         return
     fi
     if [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
@@ -1000,6 +996,39 @@ device_manufacturing() {
         device_newbr=2
         print "* Cannot check $device_name bootrom model in Recovery mode. Enter DFU mode to get bootrom model"
         return
+    elif [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]]; then
+        if [[ $device_type == "DFU" ]]; then
+            print "* Cannot check for manufacturing date in DFU mode"
+            return
+        fi
+        local fourth="${device_serial:1:1}"
+        local year_half
+        case $fourth in
+            C ) year_half="1st half 2010";;
+            D ) year_half="2nd half 2010";;
+            F ) year_half="1st half 2011";;
+            G ) year_half="2nd half 2011";;
+            H ) year_half="1st half 2012";;
+            J ) year_half="2nd half 2012";;
+            K ) year_half="1st half 2013";;
+            L ) year_half="2nd half 2013";;
+            M ) year_half="1st half 2014";;
+            N ) year_half="2nd half 2014";;
+            P ) year_half="1st half 2015";;
+            Q ) year_half="2nd half 2015";;
+            R ) year_half="1st half 2016";;
+            S ) year_half="2nd half 2016";;
+            T ) year_half="1st half 2017";;
+            V ) year_half="2nd half 2017";;
+            W ) year_half="1st half 2018";;
+            X ) year_half="2nd half 2018";;
+            Y ) year_half="1st half 2019";;
+            Z ) year_half="2nd half 2019";;
+        esac
+        if [[ -n $year_half ]]; then
+            print "* Manufactured in $year_half"
+            [[ $year_half == *"2012" ]] && device_is2012=1
+        fi
     fi
     case $device_newbr in
         0 ) print "* This $device_name is an old bootrom model";;
@@ -1164,6 +1193,9 @@ device_get_info() {
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
                 device_ecid=$($ideviceinfo -s -k UniqueChipID)
                 device_model=$($ideviceinfo -s -k HardwareModel)
+            fi
+            if [[ $device_model == "N81AP" ]]; then
+                device_type="iPod4,1" # this is needed since touch 4 devices on ios 7 show as iphone3,1/3,3
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
@@ -7831,6 +7863,9 @@ menu_restore() {
         if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
+#         if [[ $device_type == "iPod4,1" ]]; then
+#             menu_items+=("iOS 7.1.2")
+#         fi
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
             case $device_type in
@@ -7889,6 +7924,13 @@ menu_restore() {
             "DFU IPSW" ) device_dfuipsw_confirm $1;;
             "More versions" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
+            "iOS 7.1.2" )
+                if [[ -z $device_is2012 ]]; then
+                    select_yesno "Select Y if your device is a 2012/16GB model, select N if not" 1
+                    device_is2012=$?
+                fi
+                menu_ipsw "$selected" "$1"
+            ;;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
