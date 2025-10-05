@@ -971,9 +971,7 @@ device_get_name() {
     esac
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
-        rm -f tmp.json
-        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" -o tmp.json
-        [[ $? != 0 ]] && $curl -L "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/device/$device_type.json" -o tmp.json
+        download_appledb "device/$device_type"
         device_name="$(cat tmp.json | $jq -r ".name")"
     fi
 }
@@ -2267,7 +2265,7 @@ device_fw_key_check() {
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path" 2>/dev/null
-        local try=("https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/raw/master/$device_type/$build/index.html"
+        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
                    "http://127.0.0.1:8888/firmware/$device_type/$build"
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
@@ -2315,20 +2313,7 @@ ipsw_get_url() {
     fi
     if [[ -z $url ]]; then
         log "Getting URL for $device_type-$build_id"
-        local phone="OS" # iOS
-        case $build_id in
-            [23][0123456789]* | 7B405 | 7B500 ) :;;
-            1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-            7* ) phone="Phone%20OS";; # iPhone OS
-        esac
-        if [[ $device_type == "iPad"* ]]; then
-            case $build_id in
-                1[789]* | [23]* ) phone="PadOS";; # iPadOS
-            esac
-        fi
-        rm -f tmp.json
-        $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
-        [[ $? != 0 ]] && $curl -L "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
+        download_appledb ios $build_id
         url="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .links[0].url")"
         local url2="$(echo "$url" | tr '[:upper:]' '[:lower:]')"
         local build_id2="$(echo "$build_id" | tr '[:upper:]' '[:lower:]')"
@@ -2348,6 +2333,38 @@ ipsw_get_url() {
         echo "$url" > $device_fw_dir/$build_id/url
     fi
     ipsw_url="$url"
+}
+
+download_appledb() {
+    local query="$1"
+    if [[ $query == "ios" ]]; then
+        local phone="iOS" # iOS
+        local build_id="$2"
+        case $build_id in
+            [23][0123456789]* | 7B405 | 7B500 ) :;;
+            1[AC]* | [2345]* ) phone="iPhone%20Software";; # iPhone Software
+            7* ) phone="iPhone%20OS";; # iPhone OS
+        esac
+        if [[ $device_type == "iPad"* ]]; then
+            case $build_id in
+                1[789]* | [23]* ) phone="iPadOS";; # iPadOS
+            esac
+        fi
+        query="ios/${phone};${build_id}"
+    fi
+
+    local try=("https://api.appledb.dev/${query}.json"
+               "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/${query}.json")
+    for request in "${try[@]}"; do
+        rm -f tmp.json
+        log "AppleDB request: $request"
+        $aria2c "$request" -o tmp.json
+        [[ $? != 0 ]] && $curl -L "$request" -o tmp.json
+        [[ -s tmp.json ]] && break
+    done
+    if [[ ! -s tmp.json ]]; then
+        error "Failed to get AppleDB request. Please run the script again"
+    fi
 }
 
 download_comp() {
@@ -2761,20 +2778,7 @@ ipsw_verify() {
     fi
 
     log "Getting SHA1 hash from AppleDB..."
-    local phone="OS" # iOS
-    case $build_id in
-        [23][0123456789]* | 7B405 | 7B500 ) :;;
-        1[AC]* | [2345]* ) phone="Phone%20Software";; # iPhone Software
-        7* ) phone="Phone%20OS";; # iPhone OS
-    esac
-    if [[ $device_type == "iPad"* ]]; then
-        case $build_id in
-            1[789]* | [23]* ) phone="PadOS";; # iPadOS
-        esac
-    fi
-    rm -f tmp.json
-    $aria2c "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
-    [[ $? != 0 ]] && $curl -L "https://raw.githubusercontent.com/littlebyteorg/appledb/refs/heads/gh-pages/ios/i${phone};$build_id.json" -o tmp.json
+    download_appledb ios $build_id
     IPSWSHA1="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
@@ -5839,7 +5843,7 @@ device_ramdisk64() {
         fi
         if [[ ! -e $sshtar.gz ]]; then
             log "Downloading ssh.tar from SSHRD_Script..."
-            file_download https://github.com/LukeZGD/sshtars/raw/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
+            file_download https://raw.githubusercontent.com/LukeZGD/sshtars/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
             mv ssh.tar.gz $sshtar.gz
         fi
         cp $sshtar.gz ssh.tar.gz
@@ -9193,7 +9197,7 @@ menu_usefulutilities() {
         if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
             menu_items+=("SSH Ramdisk")
         fi
-        menu_items+=("Update DateTime" "DFU Mode Helper")
+        menu_items+=("Run uicache" "Update DateTime" "DFU Mode Helper")
         menu_items+=("Go Back")
         menu_print_info
         # other utilities menu
@@ -9222,6 +9226,16 @@ menu_usefulutilities() {
             "Just Boot" ) menu_justboot;;
             "Update DateTime" ) device_update_datetime;;
             "DFU Mode Helper" ) mode="device_dfuhelper";;
+            "Run uicache" )
+                print "* This will run the uicache command via SSH to help fix missing jailbreak app icons."
+                print "* In order for this to work, OpenSSH must be installed on your device."
+                print "* If your device is restored/jailbroken with Legacy iOS Kit, OpenSSH is already installed."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                mode="device_uicache"
+            ;;
             "Go Back" ) back=1;;
         esac
     done
@@ -10325,8 +10339,7 @@ device_fourthree_app() {
     log "Installing FourThree app"
     $scp -P $ssh_port $jelbrek/fourthree.tar root@127.0.0.1:/tmp
     $ssh -p $ssh_port root@127.0.0.1 "tar -h -xvf /tmp/fourthree.tar -C /; cd /Applications/FourThree.app; chmod 6755 boot.sh FourThree kloader_ios5 /usr/bin/runasroot"
-    log "Running uicache"
-    $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
+    device_uicache $1
 }
 
 device_fourthree_boot() {
@@ -10376,6 +10389,16 @@ device_fourthree_check() {
         "* Redo the FourThree process from Step 3"
     fi
     return 0
+}
+
+device_uicache() {
+    if [[ $1 != "install" ]]; then
+        device_iproxy
+        print "* The default root password is: alpine"
+        device_sshpass
+    fi
+    log "Running uicache"
+    $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
 }
 
 device_backup_create() {

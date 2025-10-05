@@ -75,7 +75,7 @@ jobs:
         run: cp -R ./exclude/bin/* ./bin
 
       - name: Zip complete files
-        run: zip -r ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.cmd restore.sh README.md saved/
+        run: zip -r ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
       - name: Create this file to get latest git hash
         run: |
