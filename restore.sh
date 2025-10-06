@@ -2104,11 +2104,12 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
+            #elif [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
                 # A6 intel mac use ipwndfu
-                device_ipwndfu
-                tool_pwned=$?
-            elif [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+                #device_ipwndfu
+                #tool_pwned=$?
+            elif [[ $device_proc == 4 && $platform == "macos" ]] ||
+                 [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
