@@ -2038,7 +2038,13 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    [56] ) device_send_unpacked_ibss;;
+                    [56] )
+                        if [[ $device_pwnd == "meowing" ]]; then
+                            device_send_meowing_ibss
+                            return
+                        fi
+                        device_send_unpacked_ibss
+                    ;;
                     [789] | 10 )
                         if [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                             warn "Device is not pwned with ipwnder or updated gaster. Restoring/ramdisk booting will fail."
@@ -2104,11 +2110,12 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            #elif [[ $device_proc == 6 && $platform == "macos" && $platform_arch == "x86_64" ]]; then
-                # A6 intel mac use ipwndfu
-                #device_ipwndfu
-                #tool_pwned=$?
-            elif [[ $device_proc == 4 && $platform == "macos" ]] ||
+            elif [[ $device_proc == 6 && $platform == "macos" && $device_type == "iPhone5,"* ]]; then
+                # A6 mac use a6meowing
+                log "Placing device to pwnDFU mode using a6meowing"
+                "$dir/a6meowing"
+                tool_pwned=$?
+            elif [[ $device_proc == 4 && $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
                  [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
@@ -2135,6 +2142,10 @@ device_enter_mode() {
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
                 if [[ $device_proc == 6 ]]; then
+                    if [[ $device_pwnd == "meowing" ]]; then
+                        device_send_meowing_ibss
+                        return
+                    fi
                     device_send_unpacked_ibss
                 fi
             fi
@@ -2186,6 +2197,20 @@ device_send_unpacked_ibss() {
         log "Device should now be in $pwnrec mode."
     else
         error "Device failed to enter $pwnrec mode."
+    fi
+}
+
+device_send_meowing_ibss() {
+    log "gaster reset"
+    $gaster reset
+    sleep 1
+    patch_ibss
+    log "Sending iBSS..."
+    $irecovery -f pwnediBSS.dfu
+    local tool_pwned=$?
+    if [[ $tool_pwned != 0 ]]; then
+        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
+        "* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
     fi
 }
 
