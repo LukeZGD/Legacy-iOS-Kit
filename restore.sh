@@ -631,7 +631,10 @@ install_depends() {
         prepare_udev_rules root usbmuxd
 
     elif [[ $distro == "fedora-atomic" ]]; then
-        rpm-ostree install patch vim-common zenity
+        local packages=(patch vim-common zenity)
+        for package in "${packages[@]}"; do
+            rpm-ostree install $package
+        done
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
