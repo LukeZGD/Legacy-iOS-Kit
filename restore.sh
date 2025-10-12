@@ -1213,6 +1213,7 @@ device_get_info() {
                     device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
                 fi
                 device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
+                device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
             fi
         ;;
     esac
@@ -1436,7 +1437,9 @@ device_get_info() {
             device_det=1
         fi
     fi
-    if [[ -z $device_name || -z $device_proc ]]; then
+    if [[ $device_type == "AppleTV"* || $device_type == "Watch"* ]]; then
+        device_proc=11
+    elif [[ -z $device_name || -z $device_proc ]]; then
         error "Unrecognized device $device_type. Enter the device type properly."
     fi
     if (( device_proc > 10 )); then
@@ -1520,12 +1523,20 @@ device_get_info() {
             device_latest_vers="17.7.10"
             device_latest_build="21H450"
         ;;
-        iPad7,1[12] )
-            device_latest_vers="18.7"
-            device_latest_build="22H20"
+        iPad7,1[12] | iPhone11,* )
+            device_latest_vers="18.7.1"
+            device_latest_build="22H31"
         ;;
     esac
-    if (( device_proc > 10 )) && [[ $platform == "linux" ]]; then
+    # if latest vers is not set, copy use vers to latest
+    if [[ -z $device_latest_vers ]]; then
+        device_latest_vers=$device_use_vers
+        device_latest_build=$device_use_build
+        device_latest_bb=$device_use_bb
+        device_latest_bb_sha1=$device_use_bb_sha1
+    fi
+    # if still not set and on linux, get from ipsw.me
+    if [[ -z $device_latest_vers && $platform == "linux" ]]; then
         log "Getting latest iOS version for $device_type"
         rm -f tmp.json
         $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
@@ -1568,7 +1579,7 @@ device_get_info() {
     fi
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
     if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ -z $device_disable_actrec ]]; then
-        if [[ $device_mode == "Normal" && $device_unactivated != 1 ]]; then
+        if [[ $device_mode == "Normal" && $device_unactivated != 1 && $device_imei == "9900"* ]]; then
             device_actrec=1
             device_auto_actrec=1
         elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]]; then
@@ -1576,14 +1587,6 @@ device_get_info() {
             device_auto_actrec=2
         fi
     fi
-    # if latest vers is not set, copy use vers to latest
-    if [[ -z $device_latest_vers || -z $device_latest_build ]]; then
-        device_latest_vers=$device_use_vers
-        device_latest_build=$device_use_build
-        device_latest_bb=$device_use_bb
-        device_latest_bb_sha1=$device_use_bb_sha1
-    fi
-
     if [[ $device_argmode == "none" ]]; then
         device_mode="none"
         device_vers="Unknown"
@@ -1702,11 +1705,11 @@ device_iproxy() {
 device_find_all() {
     # find device stuff from palera1n legacy
     local opt
-    if [[ $1 == "norec" || $platform == "macos" || $mode == "device_dfuhelper" ]]; then
+    if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         return
     fi
     if [[ $platform == "macos" ]]; then
-        opt="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
+        opt="$(ioreg -p IOUSB -l 2>/dev/null | awk -F'= ' '/idVendor/ {v=$2} /idProduct/ {p=$2; if (v == 1452) printf "%04x\n", p}')"
     elif [[ $platform == "linux" ]]; then
         opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
     fi
@@ -2218,16 +2221,16 @@ device_send_meowing_ibss() {
 }
 
 ipwndfu_init() {
-    local ipwndfu_comm="624763e9903e523bcc0de8a9b44e35053ce72ac6"
-    local ipwndfu_sha1="398b1e74317373d0c9fdd2711581913810ced270"
+    local ipwndfu_comm="ea998f27d737611a30e0d10fbf251d66967022f6"
+    local ipwndfu_sha1="7eb59cc50d31078fa7bbc2fddb1e76f74e43c040"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="sudo"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="01108dc5dbd5353b4c93d9694d75d020187dfbb5"
-        ipwndfu_sha1="9aff74dbe947fec8ed8bda9c261c3526df3ca6e9"
+        ipwndfu_comm="2bc68605dd0dd31ab27fa720452e4ccd4e638d0d"
+        ipwndfu_sha1="88d8a39c3250d0603086c5ce6911c3df1b43e9cd"
     fi
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
@@ -7213,8 +7216,11 @@ menu_print_info() {
         warn "Jailbreak flag detected. Jailbreak option enabled."
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+        case $device_proc in
+            [56] ) [[ $device_imei == "9900"* ]] && warn "Your device's IMEI starts with 9900. These devices are affected by an activation looping issue."
+        esac
         if [[ $device_auto_actrec == 1 ]]; then
-            print "* Activated A${device_proc}(X) device detected. Activation record stitching enabled."
+            print "* Activated A${device_proc}(X) device with 9900 IMEI detected. Activation record stitching enabled."
         elif [[ $device_auto_actrec == 2 ]]; then
             print "* Existing activation records detected. Activation record stitching enabled."
         elif [[ $device_actrec == 1 ]]; then
@@ -7289,7 +7295,7 @@ menu_main() {
                 iPad2,[123] ) menu_items+=("FourThree Utility");;
             esac
         fi
-        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 11 )); then
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -7393,7 +7399,14 @@ menu_datamanage() {
         selected="${menu_items[$?]}"
         case $selected in
             "Go Back" ) back=1;;
-            "Backup"  ) mode="device_backup_create";;
+            "Backup"  )
+                print "* A backup of your device will be created. Please see the notes above."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                mode="device_backup_create"
+            ;;
             "Restore" ) menu_backup_restore;;
             "Erase All Content and Settings" ) mode="device_erase";;
             "Mount Device"* )
@@ -9266,9 +9279,12 @@ menu_usefulutilities() {
             menu_items+=("Enter pwnDFU Mode")
         fi
         if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
-            menu_items+=("SSH Ramdisk")
+            menu_items+=("SSH Ramdisk" "Update DateTime")
         fi
-        menu_items+=("Run uicache" "Update DateTime" "DFU Mode Helper")
+        if [[ $device_mode == "Normal" ]]; then
+            menu_items+=("Run uicache")
+        fi
+        menu_items+=("DFU Mode Helper")
         menu_items+=("Go Back")
         menu_print_info
         # other utilities menu
@@ -10473,8 +10489,6 @@ device_uicache() {
 }
 
 device_backup_create() {
-    print "* A backup of your device will be created. Please see the notes above."
-    pause
     device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
     mkdir -p $device_backup
     pushd "$(dirname $device_backup)"

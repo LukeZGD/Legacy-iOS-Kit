@@ -28,8 +28,8 @@ jobs:
         run: |
           mkdir -p saved/firmware
           pushd resources
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/624763e9903e523bcc0de8a9b44e35053ce72ac6.zip -o ipwndfu_python3.zip
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/01108dc5dbd5353b4c93d9694d75d020187dfbb5.zip -o ipwndfu.zip
+          curl -L https://github.com/LukeZGD/ipwndfu/archive/ea998f27d737611a30e0d10fbf251d66967022f6.zip -o ipwndfu_python3.zip
+          curl -L https://github.com/LukeZGD/ipwndfu/archive/2bc68605dd0dd31ab27fa720452e4ccd4e638d0d.zip -o ipwndfu.zip
           curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
           unzip keys.zip -d .
           cp -r Legacy-iOS-Kit-Keys-master/* ../saved/firmware
@@ -38,8 +38,8 @@ jobs:
           unzip ipwndfu.zip -d .
           mv ipwndfu*/ ../saved/ipwndfu
           rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu*.zip keys.zip
-          echo "398b1e74317373d0c9fdd2711581913810ced270" > ../saved/ipwndfu_python3/sha1check
-          echo "9aff74dbe947fec8ed8bda9c261c3526df3ca6e9" > ../saved/ipwndfu/sha1check
+          echo "7eb59cc50d31078fa7bbc2fddb1e76f74e43c040" > ../saved/ipwndfu_python3/sha1check
+          echo "88d8a39c3250d0603086c5ce6911c3df1b43e9cd" > ../saved/ipwndfu/sha1check
           popd
 
       - name: Move linux binaries
