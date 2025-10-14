@@ -2116,12 +2116,14 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_proc == 6 && $platform == "macos" && $device_type == "iPhone5,"* ]]; then
+            elif [[ $device_proc == 6 && $device_type == "iPhone5,"* &&
+                    $platform == "macos" && $platform_arch == "arm64" ]]; then
                 # A6 mac use a6meowing
                 log "Placing device to pwnDFU mode using a6meowing"
                 "$dir/a6meowing"
                 tool_pwned=$?
-            elif [[ $device_proc == 4 && $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
+            elif [[ $device_proc == 4 && $device_type != "iPod2,1" &&
+                    $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
                  [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
@@ -9284,8 +9286,7 @@ menu_usefulutilities() {
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache")
         fi
-        menu_items+=("DFU Mode Helper")
-        menu_items+=("Go Back")
+        menu_items+=("DFU Mode Helper" "Go Back")
         menu_print_info
         # other utilities menu
         print " > Main Menu > Useful Utilities"
