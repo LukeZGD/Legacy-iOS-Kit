@@ -2048,6 +2048,10 @@ device_enter_mode() {
                         if [[ $device_pwnd == "meowing" ]]; then
                             device_send_meowing_ibss
                             return
+                        elif [[ $device_pwnd == "ipwnder" ]]; then
+                            patch_ibss
+                            "$dir/ipwnder32" -f pwnediBSS.dfu
+                            return
                         fi
                         device_send_unpacked_ibss
                     ;;
@@ -2118,9 +2122,14 @@ device_enter_mode() {
                 $gaster reset
             elif [[ $device_proc == 6 && $device_type == "iPhone5,"* &&
                     $platform == "macos" && $platform_arch == "arm64" ]]; then
-                # A6 mac use a6meowing
+                # A6 iphone asi mac use a6meowing
                 log "Placing device to pwnDFU mode using a6meowing"
                 "$dir/a6meowing"
+                tool_pwned=$?
+            elif [[ $device_proc == 6 && $platform == "macos" ]]; then
+                # A6 mac use ipwnder32
+                log "Placing device to pwnDFU mode using ipwnder32"
+                "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $device_proc == 4 && $device_type != "iPod2,1" &&
                     $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
@@ -2152,6 +2161,10 @@ device_enter_mode() {
                 if [[ $device_proc == 6 ]]; then
                     if [[ $device_pwnd == "meowing" ]]; then
                         device_send_meowing_ibss
+                        return
+                    elif [[ $device_pwnd == "ipwnder" ]]; then
+                        patch_ibss
+                        "$dir/ipwnder32" -f pwnediBSS.dfu
                         return
                     fi
                     device_send_unpacked_ibss
