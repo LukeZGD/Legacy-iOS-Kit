@@ -10127,10 +10127,6 @@ menu_justboot_history() {
         print "* Select a build version from your boot history:"
         echo
         
-        printf "%-20s | %-15s | %s\n" "Device Model" "iOS Version" "Build"
-        printf "%-20s-+-%-15s-+-%s\n" "--------------------" "---------------" "----------"
-        echo
-        
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
