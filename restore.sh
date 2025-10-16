@@ -10048,7 +10048,7 @@ menu_justboot_history() {
     local history_files
     local saved_dir="../saved"
     
-    history_files=($(find "$saved_dir" -name "justboot_*" -type f 2>/dev/null | sort))
+    history_files=($(find "$saved_dir" -name "justboot_*" -type f 2>/dev/null -exec ls -t {} +))
     
     if [[ ${#history_files[@]} -eq 0 ]]; then
         warn "No boot history found"
