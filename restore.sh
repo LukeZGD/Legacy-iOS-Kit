@@ -10061,11 +10061,12 @@ menu_justboot_history() {
         local ecid=$(basename "$file" | sed 's/justboot_//')
         local build_version=$(cat "$file" 2>/dev/null | tr -d '\n')
         
+        # Get device name by using device_get_name function
         local device_name=""
-        local hrname_file="$saved_dir/$device_type_from_file/hrname_$ecid"
-        if [[ -s "$hrname_file" ]]; then
-            device_name=$(cat "$hrname_file" 2>/dev/null | tr -d '\n')
-        fi
+        local temp_device_type="$device_type_from_file"
+        device_type="$temp_device_type"
+        device_get_name
+        device_name="$device_name"
         
         local ios_version=""
         local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
@@ -10096,20 +10097,20 @@ menu_justboot_history() {
             fi
         fi
         
+        # Final fallback: show build number as version if nothing else found
+        if [[ -z "$ios_version" ]]; then
+            ios_version="Build $build_version"
+        fi
+        
         if [[ -n "$build_version" ]]; then
-            # Format device name
+            # Format device name (truncate if too long)
             local display_name="$device_name"
             if [[ ${#display_name} -gt 18 ]]; then
                 display_name="${display_name:0:15}..."
             fi
             
-            # Format iOS version
-            local display_ios=""
-            if [[ -n "$ios_version" ]]; then
-                display_ios="$ios_version"
-            else
-                display_ios="-"
-            fi
+            # Format iOS version (truncate if too long)
+            local display_ios="$ios_version"
             if [[ ${#display_ios} -gt 12 ]]; then
                 display_ios="${display_ios:0:9}..."
             fi
