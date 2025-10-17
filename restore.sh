@@ -1710,7 +1710,7 @@ device_find_all() {
         return
     fi
     if [[ $platform == "macos" ]]; then
-        opt="$(ioreg -p IOUSB -l 2>/dev/null | awk -F'= ' '/idVendor/ {v=$2} /idProduct/ {p=$2; if (v == 1452) printf "%04x\n", p}')"
+        opt="$(ioreg -p IOUSB -l 2>/dev/null | awk -F'= ' '/idVendor/ {v=$2} /idProduct/ {p=$2; if (v == 1452) printf "%04x\n", p}' | grep '^12')"
     elif [[ $platform == "linux" ]]; then
         opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
     fi
@@ -2126,7 +2126,7 @@ device_enter_mode() {
                 "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $device_proc == 4 && $device_type != "iPod2,1" &&
-                    $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
+                    $platform == "macos" && $platform_arch == "arm64" ]] ||
                  [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
@@ -2222,6 +2222,7 @@ device_send_meowing_ibss() {
     log "gaster reset"
     $gaster reset
     sleep 1
+    device_rd_build=
     patch_ibss
     log "Sending iBSS..."
     $irecovery -f pwnediBSS.dfu
