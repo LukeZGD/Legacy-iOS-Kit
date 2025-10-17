@@ -1152,6 +1152,7 @@ device_get_info() {
             fi
             if [[ $device_mode == "WTF" && -z $device_argmode ]]; then
                 device_argmode="entry"
+                log "Found device in WTF mode."
                 print "* Device Type Option"
                 print "* Select your device in the options below. Make sure to select correctly."
                 local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
@@ -2048,10 +2049,6 @@ device_enter_mode() {
                         if [[ $device_pwnd == "meowing" ]]; then
                             device_send_meowing_ibss
                             return
-                        elif [[ $device_pwnd == "ipwnder" ]]; then
-                            patch_ibss
-                            "$dir/ipwnder32" -f pwnediBSS.dfu
-                            return
                         fi
                         device_send_unpacked_ibss
                     ;;
@@ -2078,10 +2075,7 @@ device_enter_mode() {
                 fi
                 echo
                 print "* DFU mode for A5(X) device - Make sure that your device is in PWNED DFU mode."
-                print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
-                print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
-                print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
-                print "* Also make sure that you have NOT sent a pwned iBSS yet."
+                print "* You need to have an Raspberry Pi Pico or Arduino+USB Host Shield for checkm8-a5."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
                 echo
                 print "* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD."
@@ -2162,10 +2156,6 @@ device_enter_mode() {
                     if [[ $device_pwnd == "meowing" ]]; then
                         device_send_meowing_ibss
                         return
-                    elif [[ $device_pwnd == "ipwnder" ]]; then
-                        patch_ibss
-                        "$dir/ipwnder32" -f pwnediBSS.dfu
-                        return
                     fi
                     device_send_unpacked_ibss
                 fi
@@ -2195,6 +2185,7 @@ device_pwnerror() {
 
 device_send_unpacked_ibss() {
     local pwnrec="pwned iBSS"
+    local tool_pwned
     if [[ $device_boot4 == 1 ]]; then
         pwnrec="pwned recovery"
         cp iBSS.patched pwnediBSS
@@ -2202,9 +2193,15 @@ device_send_unpacked_ibss() {
         device_rd_build=
         patch_ibss
     fi
-    log "Sending unpacked iBSS..."
-    $primepwn pwnediBSS
-    local tool_pwned=$?
+    if [[ $device_pwnd == "ipwnder" ]]; then
+        log "Sending packed iBSS..."
+        $primepwn pwnediBSS.dfu
+        tool_pwned=$?
+    else
+        log "Sending unpacked iBSS..."
+        $primepwn pwnediBSS
+        tool_pwned=$?
+    fi
     rm pwnediBSS
     if [[ $tool_pwned != 0 ]]; then
         error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
@@ -7303,7 +7300,7 @@ menu_main() {
                 menu_items+=("Attempt Activation")
             elif [[ $device_mode == "Recovery" ]]; then
                 menu_items+=("Exit Recovery Mode")
-            elif [[ $device_mode == "WTF" ]]; then
+            elif [[ $device_mode == "WTF" && $debug_mode == 1 ]]; then
                 menu_items+=("Enter pwnDFU Mode")
             fi
             case $device_type in
@@ -9895,8 +9892,14 @@ device_dfuipsw() {
     # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
     # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
     # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
+    local ExtraArgs="-e"
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
+    if [[ $device_proc == 1 ]]; then
+        ExtraArgs+="c"
+        device_target_vers="3.1.3"
+        device_target_build="7E18"
+    fi
     ipsw_latest_set
     ipsw_path="../$ipsw_latest_path"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
@@ -9948,8 +9951,8 @@ device_dfuipsw() {
     ipsw_path="$ipsw_dfuipsw"
     device_enter_mode Recovery
     ipsw_extract
-    log "Running idevicerestore with command: $idevicerestore -e \"$ipsw_path.ipsw\""
-    $idevicerestore -e "$ipsw_path.ipsw"
+    log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$ipsw_path.ipsw\""
+    $idevicerestore $ExtraArgs "$ipsw_path.ipsw"
     log "Device should now be stuck in DFU mode"
     print "* You may now restore the device. Run the script again and select Restore/Downgrade"
 }
