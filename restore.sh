@@ -1210,9 +1210,8 @@ device_get_info() {
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
                 if [[ $device_type == "iPod2,1" ]]; then
                     device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
-                elif [[ $device_type == "iPhone2,1" ]]; then
-                    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
                 fi
+                device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
                 device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
                 device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
             fi
@@ -7349,6 +7348,7 @@ menu_appmanage() {
     local back
 
     menu_print_info
+    print "* For more info about App Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/App-Management"
     while [[ -z "$mode" && -z "$back" ]]; do
         if [[ $device_unactivated == 1 ]]; then
             warn "Device is not activated. App Management options including Install IPA (AppSync) are not available."
@@ -7382,12 +7382,7 @@ menu_datamanage() {
     local back
 
     menu_print_info
-    print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
-    print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
-    print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
-    print "* Note 3: You may need to select Pair Device first to get some options working."
-    print "* Note 4: Backups do not include apps. Only some app data and settings"
-    print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
+    print "* For more info about Data Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management"
     if (( device_det < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
@@ -7537,7 +7532,7 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
-            if (( device_det >= 9 )); then
+            if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
                 print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
             fi
             print "* If you have AppSync installed, or are installing an app with a valid"
