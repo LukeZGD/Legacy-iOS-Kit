@@ -2044,13 +2044,7 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    [56] )
-                        if [[ $device_pwnd == "meowing" ]]; then
-                            device_send_meowing_ibss
-                            return
-                        fi
-                        device_send_unpacked_ibss
-                    ;;
+                    [56] ) device_send_unpacked_ibss;;
                     [789] | 10 )
                         if [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                             warn "Device is not pwned with ipwnder or updated gaster. Restoring/ramdisk booting will fail."
@@ -2152,10 +2146,6 @@ device_enter_mode() {
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
                 if [[ $device_proc == 6 ]]; then
-                    if [[ $device_pwnd == "meowing" ]]; then
-                        device_send_meowing_ibss
-                        return
-                    fi
                     device_send_unpacked_ibss
                 fi
             fi
@@ -2196,6 +2186,13 @@ device_send_unpacked_ibss() {
         log "Sending packed iBSS..."
         $primepwn pwnediBSS.dfu
         tool_pwned=$?
+    elif [[ $device_pwnd == "meowing" ]]; then
+        log "gaster reset"
+        $gaster reset
+        sleep 1
+        log "Sending iBSS..."
+        $irecovery -f pwnediBSS.dfu
+        tool_pwned=$?
     else
         log "Sending unpacked iBSS..."
         $primepwn pwnediBSS
@@ -2214,21 +2211,6 @@ device_send_unpacked_ibss() {
         log "Device should now be in $pwnrec mode."
     else
         error "Device failed to enter $pwnrec mode."
-    fi
-}
-
-device_send_meowing_ibss() {
-    log "gaster reset"
-    $gaster reset
-    sleep 1
-    device_rd_build=
-    patch_ibss
-    log "Sending iBSS..."
-    $irecovery -f pwnediBSS.dfu
-    local tool_pwned=$?
-    if [[ $tool_pwned != 0 ]]; then
-        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
-        "* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
     fi
 }
 
