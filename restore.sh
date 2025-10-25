@@ -5593,6 +5593,29 @@ restore_prepare() {
     esac
 }
 
+# Function to get iOS version from build number using firmwares.json
+get_ios_version_from_build() {
+    local build="$1"
+    
+    # Ensure firmwares.json exists
+    if [[ ! -s ../saved/firmwares.json ]]; then
+        log "Downloading firmwares.json for build lookup..."
+        file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+        mv firmwares.json ../saved
+    fi
+    
+    # Use firmwares.json to find version
+    local version=$(cat ../saved/firmwares.json | $jq -r --arg build "$build" '
+        [.. | objects | select(.buildid == $build) | .version] | 
+        if length > 0 then .[0] else empty end' 2>/dev/null)
+    
+    if [[ -n "$version" && "$version" != "null" ]]; then
+        echo "$version"
+    else
+        echo ""
+    fi
+}
+
 restore_pwned64() {
     device_enter_mode pwnDFU
     if [[ ! -s ../saved/firmwares.json ]]; then
@@ -9969,9 +9992,16 @@ menu_justboot() {
         if [[ -s $recent ]]; then
             menu_items+=("Recent Build Version")
         fi
+        # Check for boot history files for current device type
         local history_count=$(find "../saved/$device_type" -name "justboot_*" -type f 2>/dev/null | wc -l)
+        
+        # Also check for any boot history files regardless of device type
+        local total_history_count=$(find "../saved" -name "justboot_*" -type f 2>/dev/null | wc -l)
+        
         if [[ $history_count -gt 0 ]]; then
             menu_items+=("Boot History")
+        elif [[ $total_history_count -gt 0 ]]; then
+            menu_items+=("Boot History (All Devices)")
         fi
         if [[ -n $vers ]]; then
             menu_items+=("Just Boot")
@@ -10025,7 +10055,7 @@ menu_justboot() {
                 vers="$(cat $recent)"
                 device_rd_build="$vers"
             ;;
-            "Boot History" )
+            "Boot History" | "Boot History (All Devices)" )
                 menu_justboot_history
                 if [[ -n $vers ]]; then
                     device_rd_build="$vers"
@@ -10088,8 +10118,16 @@ menu_justboot_history() {
         
         # If no version found in ver file, try to map from build number using firmwares.json
         if [[ -z "$ios_version" ]]; then
-            local firmwares_file="$saved_dir/firmwares.json"
-            if [[ -s "$firmwares_file" ]]; then
+            # Try multiple possible paths for firmwares.json
+            local firmwares_file=""
+            for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
+                if [[ -s "$path" ]]; then
+                    firmwares_file="$path"
+                    break
+                fi
+            done
+            
+            if [[ -n "$firmwares_file" ]]; then
                 # Use jq to find the version for this build number
                 ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
                     [.. | objects | select(.buildid == $build) | .version] | 
