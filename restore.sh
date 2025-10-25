@@ -9986,18 +9986,20 @@ menu_justboot() {
     local back
     local vers
     local recent="../saved/$device_type/justboot_${device_ecid}"
+    
+    # Store original device info to prevent it from being overwritten
+    local original_device_type="$device_type"
+    local original_device_ecid="$device_ecid"
+    local original_device_name="$device_name"
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
         
         # Add Connected Device option first if it exists in boot history
-        local current_device_file="../saved/$device_type/justboot_${device_ecid}"
+        local current_device_file="../saved/$original_device_type/justboot_${original_device_ecid}"
         if [[ -s "$current_device_file" ]]; then
-            # Get device name for display
-            local temp_device_type="$device_type"
-            device_get_name
-            local connected_device_name="$device_name"
-            menu_items+=("Connected device [$connected_device_name]")
+            # Use stored device name to avoid overwriting global variables
+            menu_items+=("Connected device [$original_device_name]")
         fi
         
         # Add other options
@@ -10079,6 +10081,10 @@ menu_justboot() {
                 if [[ -n $vers ]]; then
                     device_rd_build="$vers"
                 fi
+                # Restore original device info after history menu
+                device_type="$original_device_type"
+                device_ecid="$original_device_ecid"
+                device_name="$original_device_name"
             ;;
             "Just Boot" )
                 echo "$vers" > $recent
