@@ -9988,7 +9988,21 @@ menu_justboot() {
     local recent="../saved/$device_type/justboot_${device_ecid}"
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Enter Build Version" "Select IPSW")
+        menu_items=()
+        
+        # Add Connected Device option first if it exists in boot history
+        local current_device_file="../saved/$device_type/justboot_${device_ecid}"
+        if [[ -s "$current_device_file" ]]; then
+            # Get device name for display
+            local temp_device_type="$device_type"
+            device_get_name
+            local connected_device_name="$device_name"
+            menu_items+=("Connected device [$connected_device_name]")
+        fi
+        
+        # Add other options
+        menu_items+=("Enter Build Version" "Select IPSW")
+        
         if [[ -s $recent ]]; then
             menu_items+=("Recent Build Version")
         fi
@@ -10051,6 +10065,11 @@ menu_justboot() {
                 vers="$device_target_build"
                 device_rd_build="$vers"
             ;;
+            "Connected device ["* )
+                vers="$(cat $current_device_file)"
+                device_rd_build="$vers"
+                log "Selected connected device build version: $vers"
+            ;;
             "Recent Build Version" )
                 vers="$(cat $recent)"
                 device_rd_build="$vers"
@@ -10086,25 +10105,26 @@ menu_justboot_history() {
         return
     fi
     
+    # Add all devices in chronological order (newest first)
     for file in "${history_files[@]}"; do
         local device_type_from_file=$(basename "$(dirname "$file")")
         local ecid=$(basename "$file" | sed 's/justboot_//')
+        
         local build_version=$(cat "$file" 2>/dev/null | tr -d '\n')
         
-        # Get device name by using device_get_name function
+        # Get device name
         local device_name=""
         local temp_device_type="$device_type_from_file"
         device_type="$temp_device_type"
         device_get_name
         device_name="$device_name"
         
+        # Get iOS version
         local ios_version=""
         local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
         if [[ -s "$ver_file" ]]; then
             ios_version=$(cat "$ver_file" 2>/dev/null | tr -d '\n')
-            # Clean up beta version names and extract version
             if [[ "$ios_version" == *".dmg" ]]; then
-                # Extract iOS version from beta filename (e.g "ios_7_beta" -> "7.0 Beta")
                 local beta_version=$(echo "$ios_version" | sed 's/ios_\([0-9]*\)_beta.*/\1/')
                 if [[ "$beta_version" != "$ios_version" && -n "$beta_version" ]]; then
                     ios_version="${beta_version}.0 Beta"
@@ -10116,9 +10136,8 @@ menu_justboot_history() {
             fi
         fi
         
-        # If no version found in ver file, try to map from build number using firmwares.json
+        # Try firmwares.json if no version found
         if [[ -z "$ios_version" ]]; then
-            # Try multiple possible paths for firmwares.json
             local firmwares_file=""
             for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
                 if [[ -s "$path" ]]; then
@@ -10128,26 +10147,24 @@ menu_justboot_history() {
             done
             
             if [[ -n "$firmwares_file" ]]; then
-                # Use jq to find the version for this build number
                 ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
                     [.. | objects | select(.buildid == $build) | .version] | 
                     if length > 0 then .[0] else empty end' 2>/dev/null)
             fi
         fi
         
-        # Final fallback: show build number as version if nothing else found
         if [[ -z "$ios_version" ]]; then
             ios_version="Build $build_version"
         fi
         
         if [[ -n "$build_version" ]]; then
-            # Format device name (truncate if too long)
+            # Format device name
             local display_name="$device_name"
             if [[ ${#display_name} -gt 18 ]]; then
                 display_name="${display_name:0:15}..."
             fi
             
-            # Format iOS version (truncate if too long)
+            # Format iOS version
             local display_ios="$ios_version"
             if [[ ${#display_ios} -gt 12 ]]; then
                 display_ios="${display_ios:0:9}..."
