@@ -5593,6 +5593,29 @@ restore_prepare() {
     esac
 }
 
+# Function to get iOS version from build number using firmwares.json
+get_ios_version_from_build() {
+    local build="$1"
+    
+    # Ensure firmwares.json exists
+    if [[ ! -s ../saved/firmwares.json ]]; then
+        log "Downloading firmwares.json for build lookup..."
+        file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+        mv firmwares.json ../saved
+    fi
+    
+    # Use firmwares.json to find version
+    local version=$(cat ../saved/firmwares.json | $jq -r --arg build "$build" '
+        [.. | objects | select(.buildid == $build) | .version] | 
+        if length > 0 then .[0] else empty end' 2>/dev/null)
+    
+    if [[ -n "$version" && "$version" != "null" ]]; then
+        echo "$version"
+    else
+        echo ""
+    fi
+}
+
 restore_pwned64() {
     device_enter_mode pwnDFU
     if [[ ! -s ../saved/firmwares.json ]]; then
@@ -9963,11 +9986,38 @@ menu_justboot() {
     local back
     local vers
     local recent="../saved/$device_type/justboot_${device_ecid}"
+    
+    # Store original device info to prevent it from being overwritten
+    local original_device_type="$device_type"
+    local original_device_ecid="$device_ecid"
+    local original_device_name="$device_name"
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Enter Build Version" "Select IPSW")
+        menu_items=()
+        
+        # Add Connected Device option first if it exists in boot history
+        local current_device_file="../saved/$original_device_type/justboot_${original_device_ecid}"
+        if [[ -s "$current_device_file" ]]; then
+            # Use stored device name to avoid overwriting global variables
+            menu_items+=("Connected device [$original_device_name]")
+        fi
+        
+        # Add other options
+        menu_items+=("Enter Build Version" "Select IPSW")
+        
         if [[ -s $recent ]]; then
             menu_items+=("Recent Build Version")
+        fi
+        # Check for boot history files for current device type
+        local history_count=$(find "../saved/$device_type" -name "justboot_*" -type f 2>/dev/null | wc -l)
+        
+        # Also check for any boot history files regardless of device type
+        local total_history_count=$(find "../saved" -name "justboot_*" -type f 2>/dev/null | wc -l)
+        
+        if [[ $history_count -gt 0 ]]; then
+            menu_items+=("Boot History")
+        elif [[ $total_history_count -gt 0 ]]; then
+            menu_items+=("Boot History (All Devices)")
         fi
         if [[ -n $vers ]]; then
             menu_items+=("Just Boot")
@@ -10017,9 +10067,24 @@ menu_justboot() {
                 vers="$device_target_build"
                 device_rd_build="$vers"
             ;;
+            "Connected device ["* )
+                vers="$(cat $current_device_file)"
+                device_rd_build="$vers"
+                log "Selected connected device build version: $vers"
+            ;;
             "Recent Build Version" )
                 vers="$(cat $recent)"
                 device_rd_build="$vers"
+            ;;
+            "Boot History" | "Boot History (All Devices)" )
+                menu_justboot_history
+                if [[ -n $vers ]]; then
+                    device_rd_build="$vers"
+                fi
+                # Restore original device info after history menu
+                device_type="$original_device_type"
+                device_ecid="$original_device_ecid"
+                device_name="$original_device_name"
             ;;
             "Just Boot" )
                 echo "$vers" > $recent
@@ -10027,6 +10092,129 @@ menu_justboot() {
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Go Back" ) back=1;;
+        esac
+    done
+}
+
+menu_justboot_history() {
+    local menu_items=()
+    local selected
+    local back
+    local history_files
+    local saved_dir="../saved"
+    
+    history_files=($(find "$saved_dir" -name "justboot_*" -type f 2>/dev/null -exec ls -t {} +))
+    
+    if [[ ${#history_files[@]} -eq 0 ]]; then
+        warn "No boot history found"
+        pause
+        return
+    fi
+    
+    # Add all devices in chronological order (newest first)
+    for file in "${history_files[@]}"; do
+        local device_type_from_file=$(basename "$(dirname "$file")")
+        local ecid=$(basename "$file" | sed 's/justboot_//')
+        
+        local build_version=$(cat "$file" 2>/dev/null | tr -d '\n')
+        
+        # Get device name
+        local device_name=""
+        local temp_device_type="$device_type_from_file"
+        device_type="$temp_device_type"
+        device_get_name
+        device_name="$device_name"
+        
+        # Get iOS version - prioritize firmwares.json as it's more reliable
+        local ios_version=""
+        
+        # First try firmwares.json (most reliable)
+        local firmwares_file=""
+        for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
+            if [[ -s "$path" ]]; then
+                firmwares_file="$path"
+                break
+            fi
+        done
+        
+        # Download firmwares.json if not found
+        if [[ -z "$firmwares_file" ]]; then
+            log "Downloading firmwares.json for iOS version lookup..."
+            file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+            mv firmwares.json "$saved_dir"
+            firmwares_file="$saved_dir/firmwares.json"
+        fi
+        
+        if [[ -n "$firmwares_file" ]]; then
+            ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
+                [.. | objects | select(.buildid == $build) | .version] | 
+                if length > 0 then .[0] else empty end' 2>/dev/null)
+        fi
+        
+        # Fallback to ver file if firmwares.json didn't work
+        if [[ -z "$ios_version" ]]; then
+            local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
+            if [[ -s "$ver_file" ]]; then
+                ios_version=$(cat "$ver_file" 2>/dev/null | tr -d '\n')
+                if [[ "$ios_version" == *".dmg" ]]; then
+                    local beta_version=$(echo "$ios_version" | sed 's/ios_\([0-9]*\)_beta.*/\1/')
+                    if [[ "$beta_version" != "$ios_version" && -n "$beta_version" ]]; then
+                        ios_version="${beta_version}.0 Beta"
+                    else
+                        ios_version="Beta"
+                    fi
+                elif [[ "$ios_version" == "?" ]]; then
+                    ios_version=""
+                fi
+            fi
+        fi
+        
+        if [[ -z "$ios_version" ]]; then
+            ios_version="Build $build_version"
+        fi
+        
+        if [[ -n "$build_version" ]]; then
+            # Format device name
+            local display_name="$device_name"
+            if [[ ${#display_name} -gt 18 ]]; then
+                display_name="${display_name:0:15}..."
+            fi
+            
+            # Format iOS version
+            local display_ios="$ios_version"
+            if [[ ${#display_ios} -gt 12 ]]; then
+                display_ios="${display_ios:0:9}..."
+            fi
+            
+            local menu_item="$(printf "%-20s | %-15s | %s" "$display_name" "$display_ios" "$build_version")"
+            menu_items+=("$menu_item")
+        fi
+    done
+    
+    menu_items+=("Go Back")
+    
+    while [[ -z "$vers" && -z "$back" ]]; do
+        menu_print_info
+        print " > Main Menu > Just Boot > Boot History"
+        print "* Select a build version from your boot history:"
+        echo
+        
+        input "Select an option:"
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
+        
+        case $selected in
+            "Go Back" ) 
+                back=1
+            ;;
+            * )
+                vers=$(echo "$selected" | awk -F'|' '{print $3}' | tr -d ' ')
+                if [[ -n "$vers" ]]; then
+                    log "Selected build version: $vers"
+                else
+                    warn "Could not extract build version from selection"
+                fi
+            ;;
         esac
     done
 }
