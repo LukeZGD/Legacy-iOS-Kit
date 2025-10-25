@@ -1152,6 +1152,7 @@ device_get_info() {
             fi
             if [[ $device_mode == "WTF" && -z $device_argmode ]]; then
                 device_argmode="entry"
+                log "Found device in WTF mode."
                 print "* Device Type Option"
                 print "* Select your device in the options below. Make sure to select correctly."
                 local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
@@ -1209,9 +1210,8 @@ device_get_info() {
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
                 if [[ $device_type == "iPod2,1" ]]; then
                     device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
-                elif [[ $device_type == "iPhone2,1" ]]; then
-                    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
                 fi
+                device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
                 device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
                 device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
             fi
@@ -1709,7 +1709,7 @@ device_find_all() {
         return
     fi
     if [[ $platform == "macos" ]]; then
-        opt="$(ioreg -p IOUSB -l 2>/dev/null | awk -F'= ' '/idVendor/ {v=$2} /idProduct/ {p=$2; if (v == 1452) printf "%04x\n", p}')"
+        opt="$(ioreg -p IOUSB -l 2>/dev/null | awk -F'= ' '/idVendor/ {v=$2} /idProduct/ {p=$2; if (v == 1452) printf "%04x\n", p}' | grep '^12')"
     elif [[ $platform == "linux" ]]; then
         opt="$(lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2)"
     fi
@@ -2044,17 +2044,7 @@ device_enter_mode() {
                 log "Device seems to be already in pwned DFU mode"
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
-                    [56] )
-                        if [[ $device_pwnd == "meowing" ]]; then
-                            device_send_meowing_ibss
-                            return
-                        elif [[ $device_pwnd == "ipwnder" ]]; then
-                            patch_ibss
-                            "$dir/ipwnder32" -f pwnediBSS.dfu
-                            return
-                        fi
-                        device_send_unpacked_ibss
-                    ;;
+                    [56] ) device_send_unpacked_ibss;;
                     [789] | 10 )
                         if [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                             warn "Device is not pwned with ipwnder or updated gaster. Restoring/ramdisk booting will fail."
@@ -2078,10 +2068,7 @@ device_enter_mode() {
                 fi
                 echo
                 print "* DFU mode for A5(X) device - Make sure that your device is in PWNED DFU mode."
-                print "* You need to have an Arduino and USB Host Shield for checkm8-a5."
-                print "* Use my fork of checkm8-a5: https://github.com/LukeZGD/checkm8-a5"
-                print "* You may also use checkm8-a5 for the Pi Pico: https://www.reddit.com/r/LegacyJailbreak/comments/1djuprf/working_checkm8a5_on_the_raspberry_pi_pico/"
-                print "* Also make sure that you have NOT sent a pwned iBSS yet."
+                print "* You need to have an Raspberry Pi Pico or Arduino+USB Host Shield for checkm8-a5."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
                 echo
                 print "* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD."
@@ -2132,7 +2119,7 @@ device_enter_mode() {
                 "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $device_proc == 4 && $device_type != "iPod2,1" &&
-                    $platform == "macos" ]] || # && $platform_arch == "arm64" ]] ||
+                    $platform == "macos" && $platform_arch == "arm64" ]] ||
                  [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
@@ -2159,14 +2146,6 @@ device_enter_mode() {
                 log "Found device in pwned DFU mode."
                 print "* Pwned: $device_pwnd"
                 if [[ $device_proc == 6 ]]; then
-                    if [[ $device_pwnd == "meowing" ]]; then
-                        device_send_meowing_ibss
-                        return
-                    elif [[ $device_pwnd == "ipwnder" ]]; then
-                        patch_ibss
-                        "$dir/ipwnder32" -f pwnediBSS.dfu
-                        return
-                    fi
                     device_send_unpacked_ibss
                 fi
             fi
@@ -2195,6 +2174,7 @@ device_pwnerror() {
 
 device_send_unpacked_ibss() {
     local pwnrec="pwned iBSS"
+    local tool_pwned
     if [[ $device_boot4 == 1 ]]; then
         pwnrec="pwned recovery"
         cp iBSS.patched pwnediBSS
@@ -2202,9 +2182,22 @@ device_send_unpacked_ibss() {
         device_rd_build=
         patch_ibss
     fi
-    log "Sending unpacked iBSS..."
-    $primepwn pwnediBSS
-    local tool_pwned=$?
+    if [[ $device_pwnd == "ipwnder" ]]; then
+        log "Sending packed iBSS..."
+        $primepwn pwnediBSS.dfu
+        tool_pwned=$?
+    elif [[ $device_pwnd == "meowing" ]]; then
+        log "gaster reset"
+        $gaster reset
+        sleep 1
+        log "Sending iBSS..."
+        $irecovery -f pwnediBSS.dfu
+        tool_pwned=$?
+    else
+        log "Sending unpacked iBSS..."
+        $primepwn pwnediBSS
+        tool_pwned=$?
+    fi
     rm pwnediBSS
     if [[ $tool_pwned != 0 ]]; then
         error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
@@ -2218,20 +2211,6 @@ device_send_unpacked_ibss() {
         log "Device should now be in $pwnrec mode."
     else
         error "Device failed to enter $pwnrec mode."
-    fi
-}
-
-device_send_meowing_ibss() {
-    log "gaster reset"
-    $gaster reset
-    sleep 1
-    patch_ibss
-    log "Sending iBSS..."
-    $irecovery -f pwnediBSS.dfu
-    local tool_pwned=$?
-    if [[ $tool_pwned != 0 ]]; then
-        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
-        "* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
     fi
 }
 
@@ -7303,7 +7282,7 @@ menu_main() {
                 menu_items+=("Attempt Activation")
             elif [[ $device_mode == "Recovery" ]]; then
                 menu_items+=("Exit Recovery Mode")
-            elif [[ $device_mode == "WTF" ]]; then
+            elif [[ $device_mode == "WTF" && $debug_mode == 1 ]]; then
                 menu_items+=("Enter pwnDFU Mode")
             fi
             case $device_type in
@@ -7351,6 +7330,7 @@ menu_appmanage() {
     local back
 
     menu_print_info
+    print "* For more info about App Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/App-Management"
     while [[ -z "$mode" && -z "$back" ]]; do
         if [[ $device_unactivated == 1 ]]; then
             warn "Device is not activated. App Management options including Install IPA (AppSync) are not available."
@@ -7384,12 +7364,7 @@ menu_datamanage() {
     local back
 
     menu_print_info
-    print "* Note: For \"Raw File System\" your device must be jailbroken and have AFC2"
-    print "*       For most jailbreaks, install \"Apple File Conduit 2\" in Cydia/Zebra/Sileo"
-    print "* Note 2: The \"Erase All Content and Settings\" option works on iOS 9+ only"
-    print "* Note 3: You may need to select Pair Device first to get some options working."
-    print "* Note 4: Backups do not include apps. Only some app data and settings"
-    print "* For dumping apps, go to: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
+    print "* For more info about Data Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management"
     if (( device_det < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
@@ -7539,7 +7514,7 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that the device is activated and connected to the Internet."
-            if (( device_det >= 9 )); then
+            if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
                 print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
             fi
             print "* If you have AppSync installed, or are installing an app with a valid"
@@ -9895,8 +9870,14 @@ device_dfuipsw() {
     # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
     # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
     # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
+    local ExtraArgs="-e"
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
+    if [[ $device_proc == 1 ]]; then
+        ExtraArgs+="c"
+        device_target_vers="3.1.3"
+        device_target_build="7E18"
+    fi
     ipsw_latest_set
     ipsw_path="../$ipsw_latest_path"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
@@ -9948,8 +9929,8 @@ device_dfuipsw() {
     ipsw_path="$ipsw_dfuipsw"
     device_enter_mode Recovery
     ipsw_extract
-    log "Running idevicerestore with command: $idevicerestore -e \"$ipsw_path.ipsw\""
-    $idevicerestore -e "$ipsw_path.ipsw"
+    log "Running idevicerestore with command: $idevicerestore $ExtraArgs \"$ipsw_path.ipsw\""
+    $idevicerestore $ExtraArgs "$ipsw_path.ipsw"
     log "Device should now be stuck in DFU mode"
     print "* You may now restore the device. Run the script again and select Restore/Downgrade"
 }
