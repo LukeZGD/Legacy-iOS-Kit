@@ -10125,37 +10125,47 @@ menu_justboot_history() {
         device_get_name
         device_name="$device_name"
         
-        # Get iOS version
+        # Get iOS version - prioritize firmwares.json as it's more reliable
         local ios_version=""
-        local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
-        if [[ -s "$ver_file" ]]; then
-            ios_version=$(cat "$ver_file" 2>/dev/null | tr -d '\n')
-            if [[ "$ios_version" == *".dmg" ]]; then
-                local beta_version=$(echo "$ios_version" | sed 's/ios_\([0-9]*\)_beta.*/\1/')
-                if [[ "$beta_version" != "$ios_version" && -n "$beta_version" ]]; then
-                    ios_version="${beta_version}.0 Beta"
-                else
-                    ios_version="Beta"
-                fi
-            elif [[ "$ios_version" == "?" ]]; then
-                ios_version=""
+        
+        # First try firmwares.json (most reliable)
+        local firmwares_file=""
+        for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
+            if [[ -s "$path" ]]; then
+                firmwares_file="$path"
+                break
             fi
+        done
+        
+        # Download firmwares.json if not found
+        if [[ -z "$firmwares_file" ]]; then
+            log "Downloading firmwares.json for iOS version lookup..."
+            file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
+            mv firmwares.json "$saved_dir"
+            firmwares_file="$saved_dir/firmwares.json"
         fi
         
-        # Try firmwares.json if no version found
+        if [[ -n "$firmwares_file" ]]; then
+            ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
+                [.. | objects | select(.buildid == $build) | .version] | 
+                if length > 0 then .[0] else empty end' 2>/dev/null)
+        fi
+        
+        # Fallback to ver file if firmwares.json didn't work
         if [[ -z "$ios_version" ]]; then
-            local firmwares_file=""
-            for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
-                if [[ -s "$path" ]]; then
-                    firmwares_file="$path"
-                    break
+            local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
+            if [[ -s "$ver_file" ]]; then
+                ios_version=$(cat "$ver_file" 2>/dev/null | tr -d '\n')
+                if [[ "$ios_version" == *".dmg" ]]; then
+                    local beta_version=$(echo "$ios_version" | sed 's/ios_\([0-9]*\)_beta.*/\1/')
+                    if [[ "$beta_version" != "$ios_version" && -n "$beta_version" ]]; then
+                        ios_version="${beta_version}.0 Beta"
+                    else
+                        ios_version="Beta"
+                    fi
+                elif [[ "$ios_version" == "?" ]]; then
+                    ios_version=""
                 fi
-            done
-            
-            if [[ -n "$firmwares_file" ]]; then
-                ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
-                    [.. | objects | select(.buildid == $build) | .version] | 
-                    if length > 0 then .[0] else empty end' 2>/dev/null)
             fi
         fi
         
