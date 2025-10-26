@@ -493,7 +493,7 @@ set_tool_paths() {
             mac_minver=${mac_minver%.*}
             if (( mac_minver < 11 )); then
                 error "Your macOS version ($platform_ver - $platform_arch) is not supported." \
-                "* Supported macOS versions are 10.11 and newer. (10.12 and newer recommended)"
+                "* Supported macOS versions are 10.11 and newer."
             elif [[ $mac_minver == 11 ]]; then
                 mac_cocoa=1
             fi
@@ -2024,6 +2024,7 @@ device_enter_mode() {
         "pwnDFU" )
             local irec_pwned
             local tool_pwned
+            local tool
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -2099,6 +2100,22 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
+            if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+                tool="ipwnder"
+            elif [[ $device_type == "iPod2,1" || $device_proc == 4 ]]; then
+                tool="primepwn"
+            elif [[ $device_type == "iPhone5,"* ]]; then
+                tool="ipwnder"
+                if [[ $platform == "macos" ]]; then
+                    [[ $platform_arch == "arm64" ]] && tool="a6meowing" || tool="ipwnder32"
+                fi
+            elif [[ $device_proc == 6 ]]; then
+                tool="ipwnder"
+                if [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
+                    tool="ipwnder32"
+                fi
+            fi
+
             if (( device_proc >= 7 )); then
                 # 64-bit checkm8 devices use gaster
                 log "Placing device to pwnDFU mode using gaster"
@@ -2107,26 +2124,23 @@ device_enter_mode() {
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
-            elif [[ $device_proc == 6 && $device_type == "iPhone5,"* &&
-                    $platform == "macos" && $platform_arch == "arm64" ]]; then
+            elif [[ $tool == "a6meowing" ]]; then
                 # A6 iphone asi mac use a6meowing
                 log "Placing device to pwnDFU mode using a6meowing"
                 "$dir/a6meowing"
                 tool_pwned=$?
-            elif [[ $device_proc == 6 && $platform == "macos" ]]; then
+            elif [[ $tool == "ipwnder32" ]]; then
                 # A6 mac use ipwnder32
                 log "Placing device to pwnDFU mode using ipwnder32"
                 "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
-            elif [[ $device_proc == 4 && $device_type != "iPod2,1" &&
-                    $platform == "macos" && $platform_arch == "arm64" ]] ||
-                 [[ $device_proc == 6 || $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
+            elif [[ $tool == "ipwnder" ]]; then
                 # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $ipwnder -p
                 tool_pwned=$?
-            else
+            elif [[ $tool == "primepwn" ]]; then
                 # A4/touch 2 use primepwn
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
