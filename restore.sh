@@ -9996,18 +9996,14 @@ menu_justboot() {
         menu_items=()
         
         # Add Connected Device option first if it exists in boot history
-        local current_device_file="../saved/$original_device_type/justboot_${original_device_ecid}"
-        if [[ -s "$current_device_file" ]]; then
+        if [[ -s "$recent" ]]; then
             # Use stored device name to avoid overwriting global variables
-            menu_items+=("Connected device [$original_device_name]")
+            menu_items+=("Connected Device [$original_device_name]")
         fi
         
         # Add other options
         menu_items+=("Enter Build Version" "Select IPSW")
         
-        if [[ -s $recent ]]; then
-            menu_items+=("Recent Build Version")
-        fi
         # Check for boot history files for current device type
         local history_count=$(find "../saved/$device_type" -name "justboot_*" -type f 2>/dev/null | wc -l)
         
@@ -10067,16 +10063,13 @@ menu_justboot() {
                 vers="$device_target_build"
                 device_rd_build="$vers"
             ;;
-            "Connected device ["* )
-                vers="$(cat $current_device_file)"
+            "Connected Device ["* )
+                vers="$(cat $recent)"
                 device_rd_build="$vers"
                 log "Selected connected device build version: $vers"
             ;;
-            "Recent Build Version" )
-                vers="$(cat $recent)"
-                device_rd_build="$vers"
-            ;;
             "Boot History" | "Boot History (All Devices)" )
+                vers=
                 menu_justboot_history
                 if [[ -n $vers ]]; then
                     device_rd_build="$vers"
