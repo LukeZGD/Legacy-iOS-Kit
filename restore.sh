@@ -7829,7 +7829,7 @@ menu_shsh_onboard() {
                 warn "Selected IPSW does not seem to match the current version."
                 print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
             fi
-            menu_items+=("Save Onboard Blobs")
+            menu_items+=("(*) Save Onboard Blobs")
         else
             print "* Select IPSW of your current iOS version to continue"
         fi
@@ -7841,7 +7841,7 @@ menu_shsh_onboard() {
         selected="${menu_items[$?]}"
         case $selected in
             "Select IPSW" ) menu_ipsw_browse onboard;;
-            "Save Onboard Blobs" ) mode="shsh_save_onboard";;
+            "(*) Save Onboard Blobs" ) mode="shsh_save_onboard";;
             "Go Back" ) back=1;;
         esac
     done
@@ -7865,7 +7865,7 @@ menu_shsh_convert() {
                 print "* Go here to find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
                 menu_items+=("Select IPSW")
             else
-                menu_items+=("Convert Raw Dump")
+                menu_items+=("(*) Convert Raw Dump")
             fi
         else
             print "* Select raw dump file to continue"
@@ -7877,7 +7877,7 @@ menu_shsh_convert() {
             if [[ $device_target_vers == "10"* ]]; then
                 warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
             fi
-            menu_items+=("Convert Raw Dump")
+            menu_items+=("(*) Convert Raw Dump")
         elif (( device_proc < 7 )); then
             echo
             print "* Select IPSW of the raw dump's iOS version to continue"
@@ -7891,7 +7891,7 @@ menu_shsh_convert() {
         case $selected in
             "Select IPSW" ) menu_ipsw_browse;;
             "Select Raw Dump" ) menu_shshdump_browse;;
-            "Convert Raw Dump" )
+            "(*) Convert Raw Dump" )
                 rm -f dump.raw
                 cp "$shsh_path" dump.raw
                 shsh_convert_onboard
@@ -8014,7 +8014,7 @@ menu_ipsw_downloader() {
     while [[ -z "$back" ]]; do
         menu_items=("Enter Build Version")
         if [[ -n $vers ]]; then
-            menu_items+=("Start Download")
+            menu_items+=("(*) Start Download")
         fi
         menu_items+=("Go Back")
         menu_print_info
@@ -8039,7 +8039,7 @@ menu_ipsw_downloader() {
                 device_enter_build
                 vers="$device_rd_build"
             ;;
-            "Start Download" )
+            "(*) Start Download" )
                 device_target_build="$vers"
                 ipsw_download
                 log "IPSW downloading is done"
@@ -8140,21 +8140,21 @@ menu_ipsw() {
     local back
     local newpath
     local nav
-    local start
+    local start="(*) "
 
     if [[ $2 == "ipsw" ]]; then
         nav=" > Main Menu > Misc Utilities > Create Custom IPSW > $1"
-        start="Create IPSW"
+        start+="Create IPSW"
     elif [[ $2 == "fourthree" ]]; then
         nav=" > Main Menu > FourThree Utility > Step 1: Restore"
-        start="Start Restore"
+        start+="Start Restore"
     elif [[ $1 == "Set Nonce Only" ]]; then
         nav=" > Main Menu > Restore/Downgrade > $1"
-        start="Set Nonce"
+        start+="Set Nonce"
         device_target_setnonce=1
     else
         nav=" > Main Menu > Restore/Downgrade > $1"
-        start="Start Restore"
+        start+="Start Restore"
     fi
 
     ipsw_24o=
@@ -8454,7 +8454,7 @@ menu_ipsw() {
                 menu_items+=("$start")
                 if [[ $device_target_vers == "$device_latest_vers" &&
                       $device_mode != "none" && -z $2 ]]; then
-                    menu_items+=("Start Update")
+                    menu_items+=("(*) Start Update")
                 fi
             elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
                 menu_items+=("$start")
@@ -8527,9 +8527,9 @@ menu_ipsw() {
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
-            "Create IPSW" ) mode="custom-ipsw";;
+            "(*) Create IPSW" ) mode="custom-ipsw";;
             "$start" ) mode="downgrade";;
-            "Start Update" )
+            "(*) Start Update" )
                 print "* The \"Start Update\" will perform an update to your device without clearing device data."
                 print "* One usage of this is to carry over activation records to the latest iOS version."
                 warn "This option should NOT be used if your device is jailbroken."
@@ -10030,7 +10030,7 @@ menu_justboot() {
             menu_items+=("Boot History (All Devices)")
         fi
         if [[ -n $vers ]]; then
-            menu_items+=("Just Boot")
+            menu_items+=("(*) Just Boot")
         fi
         menu_items+=("Custom Bootargs" "Go Back")
         menu_print_info
@@ -10093,7 +10093,7 @@ menu_justboot() {
                 device_ecid="$original_device_ecid"
                 device_name="$original_device_name"
             ;;
-            "Just Boot" )
+            "(*) Just Boot" )
                 echo "$vers" > $recent
                 mode="device_justboot"
             ;;
