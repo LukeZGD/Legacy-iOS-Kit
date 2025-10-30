@@ -1530,10 +1530,8 @@ device_get_info() {
     esac
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers ]]; then
-        device_latest_vers=$device_use_vers
-        device_latest_build=$device_use_build
-        device_latest_bb=$device_use_bb
-        device_latest_bb_sha1=$device_use_bb_sha1
+        device_latest_vers="$device_use_vers"
+        device_latest_build="$device_use_build"
     fi
     # if still not set and on linux, get from ipsw.me
     if [[ -z $device_latest_vers && $platform == "linux" ]]; then
@@ -1573,6 +1571,11 @@ device_get_info() {
             device_latest_bb_sha1="f5db17f72a78d807a791138cd5ca87d2f5e859f0"
         ;;
     esac
+    # if use bb is not set but latest bb is set, copy latest bb to use
+    if [[ -z $device_use_bb && -n $device_latest_bb ]]; then
+        device_use_bb="$device_latest_bb"
+        device_use_bb_sha1="$device_latest_bb_sha1"
+    fi
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
     if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         device_disable_bbupdate="$device_type"
@@ -5187,7 +5190,7 @@ restore_futurerestore() {
         else
             ExtraArr=("--latest-sep")
             case $device_type in
-                iPhone* | iPad5,[24] | iPad6,[48] | iPad6,12 | iPad7,[46] | iPad7,12 ) ExtraArr+=("--latest-baseband");;
+                iPhone* | iPad4,[235689] | iPad5,[24] | iPad6,[48] | iPad[67],12 | iPad7,[46] ) ExtraArr+=("--latest-baseband");;
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
