@@ -5536,7 +5536,7 @@ restore_prepare() {
                     device_find_mode Recovery 50
                     log "Attempting to exit recovery mode"
                     $irecovery -n
-                    log "Done, your device should boot now"
+                    log "Done. Your device should reboot now"
                 fi
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ]]; then
@@ -6589,15 +6589,16 @@ device_ramdisk() {
         ;;
 
         "clearnvram" )
-            log "Sending command for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "nvram -c"
-            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
+            log "Sending commands for clearing NVRAM..."
+            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
+            log "Done. Your device should reboot now"
             pause
         ;;
 
         "setnvram" )
             device_ramdisk_setnvram
-            log "Done. Proceeding to SSH Ramdisk Menu. You may reboot from there or do other stuff if needed."
+            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+            log "Done. Your device should reboot now"
             pause
         ;;
 
@@ -6902,7 +6903,7 @@ menu_ramdisk() {
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
                 $ssh -p $ssh_port root@127.0.0.1 "sync; cd /; /sbin/umount /mnt2; /sbin/umount /mnt1; sync; /sbin/reboot"
-                log "Done, your device should reboot now"
+                log "Done. Your device should reboot now"
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
             ;;
@@ -9456,7 +9457,7 @@ device_jailbreak_confirm() {
     fi
     if [[ $device_vers == "7"* ]]; then
         warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
-        print "* It is recommended to use evasi0n7/Pangu/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
+        print "* It is recommended to use evasi0n7/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
         [[ $ipsw_jailbreak == 1 ]] && warn "Jailbreak flag enabled. You may encounter issues when jailbreaking 7.x with ramdisk method, especially baseband issues."
         echo
     fi
@@ -9465,8 +9466,12 @@ device_jailbreak_confirm() {
             6.1.[3456] )
                 print "* For this version, Aquila on Windows/Mac can also be used instead of this option."
                 print "* https://ios.cfw.guide/installing-aquila/"
+                print "* Sideloading aquila-app is also an option, especially if on Linux."
+                print "* https://github.com/LukeZGD/aquila-app"
             ;;
-            9* | 10* )
+        esac
+        case $device_vers in
+            [689]* | 10* )
                 print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
             ;;
         esac
@@ -9480,8 +9485,7 @@ device_jailbreak_confirm() {
             [[ $ipsw_jailbreak != 1 ]] && return
         ;;
         7.1* )
-            print "* For this version, use Pangu or Lyncis to jailbreak your device."
-            print "* https://ios.cfw.guide/installing-pangu7/"
+            print "* For this version, use Lyncis to jailbreak your device."
             print "* https://ios.cfw.guide/using-lyncis/"
             pause
             [[ $ipsw_jailbreak != 1 ]] && return
@@ -10476,7 +10480,7 @@ device_dumpapp() {
             esac
 
             if [[ $check == 0 ]]; then
-                local ipa_name="$(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleExecutable else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
+                local ipa_name="$(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i].value | if (.CFBundleDisplayName == "") then .CFBundleIdentifier else .CFBundleDisplayName end + " " + .CFBundleShortVersionString').ipa"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
                 $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
