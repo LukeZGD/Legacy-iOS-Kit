@@ -6592,14 +6592,14 @@ device_ramdisk() {
             log "Sending commands for clearing NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
             log "Done. Your device should reboot now"
-            pause
+            return
         ;;
 
         "setnvram" )
             device_ramdisk_setnvram
             $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
             log "Done. Your device should reboot now"
-            pause
+            return
         ;;
 
         * ) log "Device should now boot to SSH ramdisk mode.";;
@@ -9461,7 +9461,7 @@ device_jailbreak_confirm() {
         [[ $ipsw_jailbreak == 1 ]] && warn "Jailbreak flag enabled. You may encounter issues when jailbreaking 7.x with ramdisk method, especially baseband issues."
         echo
     fi
-    if [[ $device_proc == 5 ]] || [[ $device_proc == 6 && $platform == "linux" ]]; then
+    if [[ $device_proc == 5 || $device_proc == 6 ]]; then
         case $device_vers in
             6.1.[3456] )
                 print "* For this version, Aquila on Windows/Mac can also be used instead of this option."
@@ -9470,11 +9470,11 @@ device_jailbreak_confirm() {
                 print "* https://github.com/LukeZGD/aquila-app"
             ;;
         esac
-        case $device_vers in
-            [689]* | 10* )
-                print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option."
-            ;;
-        esac
+        if [[ $platform == "linux" ]]; then
+            case $device_vers in
+                [689]* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
+            esac
+        fi
     fi
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
     case $device_vers in
