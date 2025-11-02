@@ -2105,22 +2105,25 @@ device_enter_mode() {
 
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 tool="ipwnder"
+                if [[ $platform == "macos" ]]; then
+                    tool="ipwnder_lite"
+                fi
             elif [[ $device_type == "iPod2,1" || $device_proc == 4 ]]; then
                 tool="primepwn"
-            elif [[ $device_type == "iPhone5,"* ]]; then
-                tool="ipwnder"
-                if [[ $platform == "macos" ]]; then
-                    [[ $platform_arch == "arm64" ]] && tool="a6meowing" || tool="ipwnder32"
-                fi
             elif [[ $device_proc == 6 ]]; then
                 tool="ipwnder"
-                if [[ $platform == "macos" && $platform_arch == "x86_64" ]]; then
+                if [[ $platform == "macos" ]]; then
                     tool="ipwnder32"
+                    if [[ $platform_arch == "arm64" ]]; then
+                        tool="ipwnder_lite"
+                        if [[ $device_type == "iPhone5,"* ]]; then
+                            tool="a6meowing"
+                        fi
+                    fi
                 fi
             fi
 
             if (( device_proc >= 7 )); then
-                # 64-bit checkm8 devices use gaster
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $gaster pwn
@@ -2128,23 +2131,27 @@ device_enter_mode() {
                 log "gaster reset"
                 $gaster reset
             elif [[ $tool == "a6meowing" ]]; then
-                # A6 iphone asi mac use a6meowing
                 log "Placing device to pwnDFU mode using a6meowing"
                 "$dir/a6meowing"
                 tool_pwned=$?
             elif [[ $tool == "ipwnder32" ]]; then
-                # A6 mac use ipwnder32
                 log "Placing device to pwnDFU mode using ipwnder32"
                 "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $tool == "ipwnder" ]]; then
-                # A6/3gs/touch 3 use ipwnder32 libusb
                 log "Placing device to pwnDFU mode using ipwnder"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $ipwnder -p
                 tool_pwned=$?
+            elif [[ $tool == "ipwnder_lite" ]]; then
+                log "Placing device to pwnDFU mode using ipwnder_lite"
+                [[ $device_proc == 6 ]] && print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
+                mkdir image3 ../saved/image3 2>/dev/null
+                cp ../saved/image3/* image3/ 2>/dev/null
+                $ipwnder -d
+                tool_pwned=$?
+                cp image3/* ../saved/image3/ 2>/dev/null
             elif [[ $tool == "primepwn" ]]; then
-                # A4/touch 2 use primepwn
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
                 tool_pwned=$?
@@ -2165,6 +2172,8 @@ device_enter_mode() {
                 if [[ $device_proc == 6 ]]; then
                     device_send_unpacked_ibss
                 fi
+            elif [[ $tool == "a6meowing" || $tool == "ipwnder32" ]]; then
+                device_pwnerror
             fi
         ;;
     esac
