@@ -448,27 +448,33 @@ set_tool_paths() {
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
                 "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
             fi
-            trap "clean_usbmuxd" EXIT
-            if [[ $othertmp == 0 ]]; then
-                if [[ $(command -v systemctl) ]]; then
-                    sudo systemctl stop usbmuxd
-                elif [[ $(command -v rc-service) ]]; then
-                    sudo rc-service usbmuxd zap
-                else
-                    sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+            if [[ $device_argmode != "none" ]]; then
+                trap "clean_usbmuxd" EXIT
+                if [[ $(command -v gio) ]]; then
+                    log "gio detected. Unmounting all iOS devices with it"
+                    gio mount -l | awk '/gphoto2:\/\/Apple_Inc/ {print $NF}' | while read -r m; do gio mount -u "$m"; done
                 fi
-                #sudo killall usbmuxd 2>/dev/null
-                #sleep 1
-                if [[ $use_usbmuxd2 == 1 ]]; then
-                    log "Running usbmuxd2"
-                    sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
+                if [[ $othertmp == 0 ]]; then
+                    if [[ $(command -v systemctl) ]]; then
+                        sudo systemctl stop usbmuxd
+                    elif [[ $(command -v rc-service) ]]; then
+                        sudo rc-service usbmuxd zap
+                    else
+                        sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+                    fi
+                    #sudo killall usbmuxd 2>/dev/null
+                    #sleep 1
+                    if [[ $use_usbmuxd2 == 1 ]]; then
+                        log "Running usbmuxd2"
+                        sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
+                    else
+                        log "Running usbmuxd"
+                        sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                    fi
                 else
-                    log "Running usbmuxd"
-                    sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                    warn "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
+                    warn "Not running usbmuxd"
                 fi
-            elif [[ $othertmp != 0 ]]; then
-                log "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
-                log "Not running usbmuxd"
             fi
         fi
         gaster+="$dir/gaster"
@@ -6569,6 +6575,15 @@ device_ramdisk() {
                 * ) device_send_rdtar LukeZGD.tar;;
             esac
 
+            # remove patcyh except for ios 8.3+ where it's required
+            case $vers in
+                9* | 8.[43]* ) :;;
+                * )
+                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
+                    device_send_rdtar nopatcyh.tar
+                ;;
+            esac
+
             # final setup for ios 8.x daibutsu, and/or reboot
             if [[ $vers == "8"* && $ipsw_everuntether != 1 ]]; then # || [[ $vers == "7.1"* ]]; then # change to "7"* for lyncis 7.0.x
                 log "Sending daibutsu/move.sh"
@@ -10940,8 +10955,8 @@ trap "clean" EXIT
 trap "exit 1" INT TERM
 
 clean
-othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 
+othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 if [[ $othertmp != 0 ]]; then
     log "Detected existing tmp folder(s)."
     print "* There might be other Legacy iOS Kit instance(s) running, or residual tmp folder(s) not deleted."
@@ -10952,8 +10967,8 @@ if [[ $othertmp != 0 ]]; then
         rm -r "$(dirname "$0")/tmp"*
     fi
 fi
-
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
+
 mkdir "$(dirname "$0")/tmp$$"
 pushd "$(dirname "$0")/tmp$$" >/dev/null
 mkdir ../saved 2>/dev/null
