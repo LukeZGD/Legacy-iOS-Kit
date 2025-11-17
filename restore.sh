@@ -7471,7 +7471,7 @@ menu_datamanage() {
                 device_sshpass
                 mkdir ../mount 2>/dev/null
                 if [[ $platform == "linux" ]]; then
-                    $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p $ssh_pass $(pwd)/ssh -F $(pwd)/ssh_config -p $ssh_port" -d root@127.0.0.1:$path ../mount &>../saved/sshfs.log &
+                    $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p $ssh_pass $(pwd)/ssh -F $(pwd)/ssh_config -p $ssh_port" -d ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
                     sshfs_pid=$!
                 else
                     $dir/sshpass -p $ssh_pass $sshfs -d -F $(pwd)/ssh_config -p $ssh_port ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
@@ -9456,6 +9456,7 @@ device_jailbreak_confirm() {
         esac
     fi
     log "Checking if your device and version is supported..."
+    log "Please read the message below:"
     if [[ $device_type == "iPad2"* && $device_vers == "4"* ]]; then
         warn "For this version, it will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
         print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
@@ -10396,13 +10397,10 @@ device_altserver() {
 device_dumpapp() {
     device_iproxy
     device_ssh_message
-    device_sshpass
     echo
-    : '
     warn "The dump apps feature is not actively maintained/supported and may have issues."
     print "* If you encounter any issue, try going here instead: https://www.reddit.com/r/LegacyJailbreak/wiki/guides/crackingapps"
-    pause
-    '
+    device_sshpass
 
     local dumper_binary="ipainstaller"
     local selected2
