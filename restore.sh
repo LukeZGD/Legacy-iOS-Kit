@@ -1691,7 +1691,6 @@ device_sshpass() {
     ssh_pass="$pass"
     scp="$dir/sshpass -p $pass $scp2"
     ssh="$dir/sshpass -p $pass $ssh2"
-    sshfs2="$dir/sshpass -p $pass $sshfs"
 }
 
 device_iproxy() {
@@ -7471,8 +7470,13 @@ menu_datamanage() {
                 device_ssh_message
                 device_sshpass
                 mkdir ../mount 2>/dev/null
-                $sshfs2 -d -F $(pwd)/ssh_config -p 6414 ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
-                sshfs_pid=$!
+                if [[ $platform == "linux" ]]; then
+                    $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p $ssh_pass $(pwd)/ssh -F $(pwd)/ssh_config -p $ssh_port" -d root@127.0.0.1:$path ../mount &>../saved/sshfs.log &
+                    sshfs_pid=$!
+                else
+                    $dir/sshpass -p $ssh_pass $sshfs -d -F $(pwd)/ssh_config -p $ssh_port ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
+                    sshfs_pid=$!
+                fi
                 log "Device should now be mounted on mount folder"
                 print "* Press Enter/Return to unmount the device."
                 pause
