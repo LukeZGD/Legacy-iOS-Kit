@@ -73,6 +73,10 @@ clean_usbmuxd() {
     fi
     sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
     sleep 1
+    if [[ $(command -v restorecon) ]]; then
+        sudo restorecon /var/run/usbmuxd
+        sudo systemctl restart usbmuxd
+    fi
     if [[ $(command -v systemctl) ]]; then
         sudo systemctl restart usbmuxd
     elif [[ $(command -v rc-service) ]]; then
@@ -452,7 +456,7 @@ set_tool_paths() {
                 trap "clean_usbmuxd" EXIT
                 if [[ $(command -v gio) ]]; then
                     log "gio detected. Unmounting all iOS devices with it"
-                    gio mount -l | awk '/gphoto2:\/\/Apple_Inc/ {print $NF}' | while read -r m; do gio mount -u "$m"; done
+                    gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
                 fi
                 if [[ $othertmp == 0 ]]; then
                     if [[ $(command -v systemctl) ]]; then
@@ -7582,7 +7586,7 @@ menu_ipa() {
         else
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
-            print "* Make sure that the device is activated and connected to the Internet."
+            print "* Make sure that your iOS device is connected to the Internet."
             if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
                 print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
             fi
@@ -7662,7 +7666,7 @@ menu_ipa() {
                 fi
                 print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
                 print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
-                print "* If you see an error regarding verification, make sure that your device is connected to the Internet."
+                print "* If you see an error regarding verification, make sure that your iOS device is connected to the Internet."
                 pause
             ;;
             "List and Revoke Certificate" )
@@ -10875,7 +10879,7 @@ main() {
     esac
 
     echo
-    print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
+    print "* Save the terminal output now if needed. (macOS: Cmd+S, Konsole: Ctrl+Shift+S)"
     print "* Legacy iOS Kit $version_current ($git_hash)"
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     echo
