@@ -5125,6 +5125,7 @@ restore_idevicerestore() {
     if [[ $1 == "norflash" ]]; then
         cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
     fi
+    device_rd_build=
     if [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
        [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
@@ -7427,24 +7428,23 @@ menu_appmanage() {
 }
 
 menu_datamanage() {
-    local menu_items=()
+    local menu_items=("Connect to SSH")
     local selected
     local back
 
     menu_print_info
     print "* For more info about Data Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management"
+    if [[ -z $sshfs ]]; then
+        warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
+        [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs"
+    else
+        menu_items+=("Mount Device" "Mount Device (Raw File System)" "Cydia App Install")
+    fi
     if (( device_det < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
         menu_items+=("Backup" "Restore")
     fi
-    if [[ -z $sshfs ]]; then
-        warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
-        [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs"
-    else
-        menu_items+=("Mount Device" "Mount Device (Raw File System)")
-    fi
-    menu_items+=("Connect to SSH" "Cydia App Install")
     if (( device_det >= 9 )); then
         menu_items+=("Erase All Content and Settings")
     fi
@@ -7467,12 +7467,19 @@ menu_datamanage() {
             ;;
             "Restore" ) menu_backup_restore;;
             "Erase All Content and Settings" ) mode="device_erase";;
-            "Mount Device"* )
+            "Mount Device"* | "Cydia App Install" )
                 local path="/var/mobile/Media"
-                [[ $selected == *"Raw"* ]] && path="/"
+                case $selected in
+                    *"Raw"*   ) path="/";;
+                    *"Cydia"* ) path="/var/root/Media/Cydia/AutoInstall";;
+                esac
                 device_iproxy no-logging
                 device_ssh_message
                 device_sshpass
+                if [[ $selected == *"Cydia"* ]]; then
+                    $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir $path 2>/dev/null"
+                    print "* Place the .deb files you want to install to the mount folder, then reboot the device afterwards."
+                fi
                 mkdir ../mount 2>/dev/null
                 if [[ $platform == "linux" ]]; then
                     $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p $ssh_pass $(pwd)/ssh -F $(pwd)/ssh_config -p $ssh_port" -d ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
@@ -7481,23 +7488,14 @@ menu_datamanage() {
                     $dir/sshpass -p $ssh_pass $sshfs -d -F $(pwd)/ssh_config -p $ssh_port ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
                     sshfs_pid=$!
                 fi
-                log "Device should now be mounted on mount folder"
+                log "Device's \"$path\" should now be mounted on mount folder."
+                print "* If the mount folder is empty, make sure to have run \"Connect to SSH\" at least once."
                 print "* Press Enter/Return to unmount the device."
                 pause
                 umount ../mount 2>/dev/null
                 kill $iproxy_pid $sshfs_pid
             ;;
             "Connect to SSH" ) device_ssh;;
-            "Cydia App Install" )
-                echo
-                print "* Cydia App Install: You need to have working AFC2 or SSH for transferring the .deb files to your device."
-                print "* This must be done manually. Place the .deb files you want to install to this path:"
-                print "    > /var/root/Media/Cydia/AutoInstall"
-                print "* Using the \"Mount Device (Raw File System)\" or \"Connect to SSH\" options."
-                print "* Create the folders as needed if they do not exist."
-                print "* Reboot your device after transferring the .deb files to start the installation."
-                echo
-            ;;
             "Pair Device" ) device_pair;;
         esac
     done
@@ -7775,6 +7773,8 @@ menu_shsh() {
         case $device_type in
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
+            iPhone1,2 | iPhone2,1 | iPod[23],1 )
+                menu_items+=("iOS 4.1");;
         esac
         if (( device_proc < 7 )); then
             menu_items+=("Cydia Blobs")
@@ -7810,6 +7810,10 @@ menu_shsh() {
             "iOS 6.1.3" )
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
+            ;;
+            "iOS 4.1" )
+                device_target_vers="4.1"
+                device_target_build="8B117"
             ;;
         esac
         target_det=$(echo "$device_target_vers" | cut -d. -f1)
