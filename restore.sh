@@ -9491,6 +9491,11 @@ device_jailbreak_confirm() {
         print "* Especially since this method may require the usage of checkm8-a5."
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
+    elif [[ $device_type == "iPod3,1" && $device_vers == "6"* ]]; then
+        warn "Jailbreaking the $device_name on iOS 6 is currently not supported."
+        print "* Things need to be updated to support this, no etas."
+        pause
+        return
     fi
     if [[ $device_vers == "7"* ]]; then
         warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
