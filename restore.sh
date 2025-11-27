@@ -1534,8 +1534,8 @@ device_get_info() {
             device_latest_build="21H450"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.1"
-            device_latest_build="22H31"
+            device_latest_vers="18.7.2"
+            device_latest_build="22H124"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
@@ -9351,6 +9351,9 @@ menu_usefulutilities() {
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache")
         fi
+        if [[ $platform == "linux" ]]; then
+            menu_items+=("Console")
+        fi
         menu_items+=("DFU Mode Helper" "Go Back")
         menu_print_info
         # other utilities menu
@@ -9388,6 +9391,15 @@ menu_usefulutilities() {
                     continue
                 fi
                 mode="device_uicache"
+            ;;
+            "Console" )
+                print "* This will run idevicesyslog and show live system log of the device."
+                print "* To stop and exit, just press Ctrl+C or close the terminal window."
+                select_yesno
+                if [[ $? != 1 ]]; then
+                    continue
+                fi
+                "$dir/idevicesyslog"
             ;;
             "Go Back" ) back=1;;
         esac
