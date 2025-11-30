@@ -6299,7 +6299,7 @@ device_ramdisk() {
             log "Patch iBEC"
             "$dir/xpwntool" iBEC.dec iBEC.raw
             if [[ $1 == "justboot" ]]; then
-                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "$device_bootargs"
+                "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa -b "$device_bootargs"
             else
                 "$dir/iBoot32Patcher" iBEC.raw iBEC.patched --rsa --debug -b "rd=md0 -v amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             fi
@@ -7653,10 +7653,11 @@ menu_ipa() {
                 fi
                 log "Installing IPA using Sideloader..."
                 $sideloader install "$ipa_path"
+                local ret=$?
                 local ipa_base="$(basename "$ipa_path")"
                 local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision" 2>/dev/null)"
-                if [[ -s "$ipa_check" && $platform == "linux" ]] && (( device_det <= 8 )); then
-                    log "Attempting Linux workaround for iOS 8 and lower..."
+                if [[ -s "$ipa_check" && $platform == "linux" && $ret != 0 ]]; then
+                    log "Attempting Linux workaround..."
                     pushd "/tmp/$ipa_base"
                     zip -r0 Payload.ipa Payload
                     popd
