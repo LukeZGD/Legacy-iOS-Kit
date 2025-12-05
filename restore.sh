@@ -2112,13 +2112,17 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
+            tool="gaster"
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 tool="ipwnder"
                 if [[ $platform == "macos" ]]; then
-                    tool="ipwnder_lite"
+                    tool="reipwnder"
                 fi
             elif [[ $device_type == "iPod2,1" || $device_proc == 4 ]]; then
                 tool="primepwn"
+                if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+                    tool="reipwnder"
+                fi
             elif [[ $device_proc == 6 ]]; then
                 tool="ipwnder"
                 if [[ $platform == "macos" ]]; then
@@ -2132,7 +2136,7 @@ device_enter_mode() {
                 fi
             fi
 
-            if (( device_proc >= 7 )); then
+            if [[ $tool == "gaster" ]]; then
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $gaster pwn
@@ -2163,6 +2167,12 @@ device_enter_mode() {
             elif [[ $tool == "primepwn" ]]; then
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
+                tool_pwned=$?
+            elif [[ $tool == "reipwnder" ]]; then
+                log "Placing device in pwnDFU mode using reipwnder"
+                mkdir shellcode
+                cp ../resources/limera1n-shellcode.bin shellcode/
+                ../bin/macos/reipwnder -p
                 tool_pwned=$?
             fi
             sleep 1
@@ -9505,8 +9515,8 @@ device_jailbreak_confirm() {
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     elif [[ $device_type == "iPod3,1" && $device_vers == "6"* ]]; then
-        warn "Jailbreaking the $device_name on iOS 6 is currently not supported."
-        print "* Things need to be updated to support this, no etas."
+        warn "Jailbreaking the $device_name on iOS 6 is not supported."
+        print "* Use the jailbreak option in SundanceInH2A for this."
         pause
         return
     fi
