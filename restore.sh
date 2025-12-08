@@ -345,6 +345,7 @@ set_tool_paths() {
                 "lunar" | "mantic"    ) ubuntu_ver=23;;
                 "noble" | "oracular"  ) ubuntu_ver=24;;
                 "plucky" | "questing" ) ubuntu_ver=25;;
+                "resolute" ) ubuntu_ver=26;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
@@ -571,7 +572,7 @@ set_tool_paths() {
 
     aria2c="$(command -v aria2c)"
     [[ -z $aria2c ]] && aria2c="$dir/aria2c"
-    aria2c+=" --download-result=hide"
+    aria2c+=" --no-conf --download-result=hide"
     curl="$(command -v curl)"
     futurerestore+="$dir/futurerestore"
     ideviceactivation+="$dir/ideviceactivation"
