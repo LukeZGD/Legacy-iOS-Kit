@@ -9361,10 +9361,7 @@ menu_usefulutilities() {
             menu_items+=("SSH Ramdisk" "Update DateTime")
         fi
         if [[ $device_mode == "Normal" ]]; then
-            menu_items+=("Run uicache")
-        fi
-        if [[ $platform == "linux" ]]; then
-            menu_items+=("Console")
+            menu_items+=("Run uicache" "Console")
         fi
         menu_items+=("DFU Mode Helper" "Go Back")
         menu_print_info
