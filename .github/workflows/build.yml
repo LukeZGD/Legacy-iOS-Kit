@@ -82,15 +82,30 @@ jobs:
           echo "This file is for version checking purposes only. Get the correct zip file for your platform in the release assets." > README.txt
           zip -r git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip README.txt
 
+      - name: Remove all assets from latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets=$(gh release view latest --json assets -q '.assets[].name' || true)
+
+          if [[ -z "$assets" ]]; then
+            echo "No assets found on release 'latest'"
+            exit 0
+          fi
+
+          for asset in $assets; do
+            echo "Deleting asset: $asset"
+            gh release delete-asset latest "$asset" -y
+          done
+
       - name: Update latest release
-        uses: pyTooling/Actions/releaser@v6.7.0
-        with:
-          tag: latest
-          rm: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: |
-            git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip
-            ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip
-            ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip
-            ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip
-            ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload latest \
+            git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip \
+            ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            --clobber -R ${{ github.repository }}
