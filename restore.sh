@@ -531,6 +531,7 @@ set_tool_paths() {
         if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
             local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
             error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
+            xcode-select --install
             error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
         fi
         /usr/bin/xattr -cr ../bin/macos
@@ -687,8 +688,10 @@ version_update_check() {
     $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
     [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
     github_api=$(cat latest 2>/dev/null)
-    version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
-    git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
+    version_latest=$(echo "$github_api" | $jq -r '.name')
+    version_latest=${version_latest#Latest-}
+    git_hash_latest=$(echo "$github_api" | $jq -r '.target_commitish')
+    git_hash_latest=${git_hash_latest:0:7}
     popd >/dev/null
 }
 
@@ -713,8 +716,12 @@ version_update() {
     if [[ $? != 0 ]]; then
         git clone "https://github.com/LukeZGD/Legacy-iOS-Kit"
         if [[ $? != 0 ]]; then
-            error "git clone failed. Please run the script again" \
-            "* If you have not installed/updated git, please install git from your package manager."
+            local error_msg=$'\n* If you have not installed/updated git, please install git from your package manager.'
+            if [[ $platform == "macos" ]]; then
+                error_msg+=$'\n* On macOS, you may just need to install Xcode Command Line Tools with this command: xcode-select --install'
+                xcode-select --install
+            fi
+            error "git clone failed. Please run the script again" "$error_msg"
         fi
     fi
     popd >/dev/null
