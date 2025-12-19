@@ -2579,9 +2579,11 @@ ipsw_nojailbreak_message() {
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
-        10* ) ipsw_gasgauge_patch=;;
         [76543]* ) ipsw_canjailbreak=1;;
     esac
+    if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]]; then
+        ipsw_gasgauge_patch=1
+    fi
     if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
     fi
@@ -3729,6 +3731,13 @@ ipsw_prepare_32bit() {
     # redirect to ipsw_prepare_jailbreak for 4.1 and lower
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
+        10* )
+            if [[ ! -s "$ipsw_custom.ipsw" ]]; then
+                log "Copying custom IPSW..."
+                cp "$ipsw_path.ipsw" "$ipsw_custom.ipsw"
+            fi
+            return
+        ;;
     esac
     # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
     if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
@@ -4125,7 +4134,6 @@ ipsw_prepare_ios4multipart() {
     fi
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
     cp BuildManifest.plist $ipsw_custom_part2/
 
     log "Restore Ramdisk"
@@ -4239,6 +4247,7 @@ ipsw_prepare_multipatch() {
     local saved_path
     local url
     local ramdisk_name
+    local rootfs_name
     local name
     local iv
     local key
@@ -4265,29 +4274,49 @@ ipsw_prepare_multipatch() {
         vers="$device_target_vers"
         build="$device_target_build"
     fi
-    case $device_target_vers in
-        4.3* ) vers="4.3.5"; build="8L1";;
-        5* ) vers="5.1.1"; build="9B206";;
-        6* ) vers="6.1.3"; build="10B329";;
-    esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         vers="6.1.3"
         build="10B329"
-    else
-        case $device_target_vers in
-            7* ) vers="7.1.2"; build="11D257";;
-            8* ) vers="8.4.1"; build="12H321";;
-            9* ) vers="9.3.5"; build="13G36";;
-        esac
+        if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]]; then
+            vers="7.1.2"
+            build="11D257"
+        fi
     fi
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
     url="$ipsw_url"
-    device_fw_key_check
-    ramdisk_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
-    rootfs_name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
-    if [[ -z $ramdisk_name ]]; then
-        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
+    log "Extracting BuildManifest..."
+    file_extract_from_archive temp.ipsw BuildManifest.plist
+    ramdisk_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
+    rootfs_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')
+    log "ramdisk_name: $ramdisk_name"
+    log "rootfs_name: $rootfs_name"
+
+    log "Extracting ramdisk from IPSW"
+    file_extract_from_archive temp.ipsw $ramdisk_name
+    mv $ramdisk_name ramdisk2.orig
+    "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
+
+    log "Checking multipatch"
+    "$dir/hfsplus" ramdisk2.dec extract multipatched
+    if [[ -s multipatched ]]; then
+        log "Already multipatched"
+        mv temp.ipsw "$ipsw_custom.ipsw"
+        return
+    fi
+
+    if [[ $(cat BuildManifest.plist | grep -c "Downgrade") == 0 ]]; then
+        local ind=(0)
+        if [[ $device_proc == 6 && $target_det == 10 ]]; then
+            ind+=(2 4)
+            [[ $device_type == "iPhone5,"* ]] && ind+=(6)
+        fi
+        log "Modifying BuildManifest..."
+        for i in "${ind[@]}"; do
+            $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+            $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+        done
+        zip -r0 temp.ipsw BuildManifest.plist
     fi
 
     mkdir -p $saved_path Downgrade Firmware/dfu 2>/dev/null
@@ -4333,23 +4362,16 @@ ipsw_prepare_multipatch() {
             log "Patch $getcomp"
             "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug $ticket -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
-            cp ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu 2>/dev/null
-            zip -r0 temp.ipsw ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu
+            if [[ $target_det == 10 ]]; then
+                cp ${path}$name ${path}$getcomp.iphone5.RELEASE.dfu
+                cp ${path}$name ${path}$getcomp.iphone5b.RELEASE.dfu
+                cp ${path}$name ${path}$getcomp.ipad3b.RELEASE.dfu
+            elif (( target_det >= 8 )); then
+                cp ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu
+            fi
+            zip -r0 temp.ipsw ${path}$getcomp*
         fi
     done
-
-    log "Extracting ramdisk from IPSW"
-    file_extract_from_archive temp.ipsw $ramdisk_name
-    mv $ramdisk_name ramdisk2.orig
-    "$dir/xpwntool" ramdisk2.orig ramdisk2.dec
-
-    log "Checking multipatch"
-    "$dir/hfsplus" ramdisk2.dec extract multipatched
-    if [[ -s multipatched ]]; then
-        log "Already multipatched"
-        mv temp.ipsw "$ipsw_custom.ipsw"
-        return
-    fi
 
     log "Grow ramdisk"
     "$dir/hfsplus" RestoreRamdisk.dec grow 30000000
@@ -4363,10 +4385,12 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec rm usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/asr usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
-        log "Patch restored_external"
-        "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/bin/restored_external
-        "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/re usr/local/bin/restored_external
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/local/bin/restored_external
+        if [[ $vers == "6.1.3" ]]; then
+            log "Patch restored_external"
+            "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/bin/restored_external
+            "$dir/hfsplus" RestoreRamdisk.dec add ../resources/patch/re usr/local/bin/restored_external
+            "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/local/bin/restored_external
+        fi
     else
         "$dir/hfsplus" ramdisk2.dec extract usr/sbin/asr
         "$dir/hfsplus" RestoreRamdisk.dec add asr usr/sbin/asr
@@ -4382,15 +4406,18 @@ ipsw_prepare_multipatch() {
     fi
 
     log "Modify options.plist"
-    "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
+    cat $options_plist | sed '$d' | sed '$d' > options2.plist # remove </dict> and </plist>
     if [[ $ipsw_prepare_ios4multipart_patch == 1 || $device_target_tethered == 1 ]]; then
-        cat $options_plist | sed '$d' | sed '$d' > options2.plist
-        printf "<key>FlashNOR</key><false/></dict>\n</plist>\n" >> options2.plist
-        cat options2.plist
-        "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
-    else
-        "$dir/hfsplus" RestoreRamdisk.dec add $options_plist usr/local/share/restore/$options_plist
+        printf "<key>FlashNOR</key><false/>\n" >> options2.plist
     fi
+    if [[ -n $device_disable_bbupdate && $(cat options2.plist | grep -c "UpdateBaseband") == 0 ]]; then
+        printf "<key>UpdateBaseband</key><false/>\n" >> options2.plist
+    fi
+    printf "</dict>\n</plist>\n" >> options2.plist
+    cat options2.plist # print result
+    "$dir/hfsplus" RestoreRamdisk.dec rm usr/local/share/restore/$options_plist
+    "$dir/hfsplus" RestoreRamdisk.dec add options2.plist usr/local/share/restore/$options_plist
+
     if [[ $device_target_vers == "3"* ]]; then
         :
     elif [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
@@ -5304,10 +5331,12 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
+    local noextract
     [[ $1 == "update" ]] && ExtraArgs=
     if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         idevicerestore2+="2"
         ExtraArgs+=" -y"
+        noextract=1
     fi
     if [[ $1 == "custom" ]]; then
         ExtraArgs+=" -c"
@@ -5315,7 +5344,7 @@ restore_latest() {
         ipsw_extract custom
     else
         device_enter_mode Recovery
-        ipsw_extract
+        [[ $noextract != 1 ]] && ipsw_extract
     fi
     if [[ $device_type == "iPhone1,2" && $device_target_vers == "4"* ]]; then
         if [[ $1 == "custom" ]]; then
@@ -5822,8 +5851,8 @@ ipsw_prepare_ipx() {
     log "Extracting BuildManifest.plist from IPSW"
     file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
-    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist)
-    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist)
+    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
+    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
     log "KernelCache: $kernelcache"
     log "RestoreRamDisk: $restoreramdisk"
 
@@ -5848,7 +5877,7 @@ ipsw_prepare_ipx() {
             ipsw_get_url 18A8395
             "$dir/pzb" -g "BuildManifest.plist" -o BuildManifest2.plist "$ipsw_url"
             log "Get 14.1 paths"
-            restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist)
+            restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist | tr -d '"')
             log "Download 14.1 ramdisk"
             "$dir/pzb" -g "$restoreramdisk2" -o $restoreramdisk2 "$ipsw_url"
             if [[ ! -s $restoreramdisk2 ]]; then
@@ -7273,10 +7302,10 @@ menu_print_info() {
         fi
     fi
     if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
-        warn "disable-bbupdate flag detected, baseband stitching enabled. Proceed with caution"
         if [[ $device_deadbb == 1 ]]; then
-            warn "dead-bb flag detected, baseband dumping/stitching disabled. Your device will not activate after restore"
+            warn "dead-bb flag detected, baseband flashing disabled. Your device will not activate after restore"
         else
+            warn "disable-bbupdate flag detected, baseband stitching enabled. Proceed with caution"
             print "* Current device baseband will be dumped and stitched to custom IPSW"
             warn "Note that stitching baseband does not always work! There is a chance of non-working baseband after the restore"
         fi
@@ -7365,9 +7394,6 @@ menu_main() {
             elif [[ $device_mode == "WTF" && $debug_mode == 1 ]]; then
                 menu_items+=("Enter pwnDFU Mode")
             fi
-            case $device_type in
-                iPad2,[123] ) menu_items+=("FourThree Utility");;
-            esac
         fi
         if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 11 )); then
             menu_items+=("Save SHSH Blobs")
@@ -7394,7 +7420,6 @@ menu_main() {
             "Data Management" ) menu_datamanage;;
             "Misc Utilities" ) menu_miscutilities;;
             "Useful Utilities" ) menu_usefulutilities;;
-            "FourThree Utility" ) menu_fourthree;;
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "Just Boot" ) menu_justboot;;
@@ -8139,22 +8164,26 @@ menu_restore_more() {
 ipsw_latest_set() {
     local newpath
     case $device_type in
-        iPad3,[456]    ) newpath="iPad_32bit";;
-        iPad4,[123456] ) newpath="iPad_64bit";;
-        iPad6,[34]     ) newpath="iPadPro_9.7";;
-        iPad6,[78]     ) newpath="iPadPro_12.9";;
-        iPad6,1[12]    ) newpath="iPad_64bit_TouchID_ASTC";;
-        iPhone5,[1234] ) newpath="iPhone_4.0_32bit";;
-        iPhone10,[36]  ) newpath="iPhone10,3,iPhone10,6";;
-        iPod[79],1     ) newpath="iPodtouch";;
-        iPad4,[789] | iPad5*     ) newpath="iPad_64bit_TouchID";;
-        iPhone6,[12] | iPhone8,4 ) newpath="iPhone_4.0_64bit";;
-        iPhone7,1 | iPhone8,2    ) newpath="iPhone_5.5";;
-        iPhone7,2 | iPhone8,1    ) newpath="iPhone_4.7";;
-        iPhone9,[13] | iPhone10,[14] ) newpath="iPhone_4.7_P3";;
-        iPhone9,[24] | iPhone10,[25] ) newpath="iPhone_5.5_P3";;
-        * ) newpath="${device_type}";;
+        iPad3,[456]    ) ipsw_prefix="iPad_32bit";;
+        iPad4,[123456] ) ipsw_prefix="iPad_64bit";;
+        iPad6,[34]     ) ipsw_prefix="iPadPro_9.7";;
+        iPad6,[78]     ) ipsw_prefix="iPadPro_12.9";;
+        iPad7,[12]     ) ipsw_prefix="iPad_Pro_HFR";;
+        iPad7,1[12]    ) ipsw_prefix="iPad_10.2";;
+        iPhone5,[1234] ) ipsw_prefix="iPhone_4.0_32bit";;
+        iPhone10,[36]  ) ipsw_prefix="iPhone10,3,iPhone10,6";;
+        iPhone11,[246] ) ipsw_prefix="iPhone11,2,iPhone11,4,iPhone11,6";;
+        iPod[79],1     ) ipsw_prefix="iPodtouch";;
+        iPad4,[789] | iPad5*     ) ipsw_prefix="iPad_64bit_TouchID";;
+        iPad6,1[12] | iPad7,[56] ) ipsw_prefix="iPad_64bit_TouchID_ASTC";;
+        iPhone6,[12] | iPhone8,4 ) ipsw_prefix="iPhone_4.0_64bit";;
+        iPhone7,1 | iPhone8,2    ) ipsw_prefix="iPhone_5.5";;
+        iPhone7,2 | iPhone8,1    ) ipsw_prefix="iPhone_4.7";;
+        iPhone9,[13] | iPhone10,[14] ) ipsw_prefix="iPhone_4.7_P3";;
+        iPhone9,[24] | iPhone10,[25] ) ipsw_prefix="iPhone_5.5_P3";;
+        * ) ipsw_prefix="${device_type}";;
     esac
+    newpath="$ipsw_prefix"
     device_type2="$newpath"
     newpath+="_${device_target_vers}_${device_target_build}"
     ipsw_custom_set $newpath
@@ -8303,8 +8332,8 @@ menu_ipsw() {
             "3.0.1" ) device_target_build="7A400";;
             "3.0"   ) device_target_build="7A341";;
         esac
+        ipsw_latest_set
         if [[ $device_target_vers == "$device_latest_vers" ]]; then
-            ipsw_latest_set
             newpath="$ipsw_latest_path"
         else
             case $device_type in
@@ -8686,7 +8715,11 @@ ipsw_custom_set() {
         return
     fi
 
-    ipsw_custom="../${device_type}_${device_target_vers}_${device_target_build}_Custom"
+    ipsw_custom="../${device_type}"
+#     if (( target_det >= 10 )); then
+#         ipsw_custom="../${ipsw_prefix}"
+#     fi
+    ipsw_custom+="_${device_target_vers}_${device_target_build}_Custom"
     if [[ -n $1 ]]; then
         ipsw_custom="../$1_Custom"
     fi
@@ -9241,6 +9274,9 @@ menu_miscutilities() {
         menu_items=()
         if [[ $device_mode != "none" ]]; then
             if [[ $device_mode == "Normal" ]]; then
+                case $device_type in
+                    iPad2,[123] ) menu_items+=("FourThree Utility");;
+                esac
                 menu_items+=("Pair Device" "Export Device Info")
                 if (( device_det < 5 )); then
                     warn "Device is on lower than iOS 5. Battery info is not available"
@@ -9310,6 +9346,7 @@ menu_miscutilities() {
             "Create Custom IPSW" ) menu_restore ipsw;;
             "Get iOS Version" ) mode="getversion";;
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
+            "FourThree Utility" ) menu_fourthree;;
             "Go Back" ) back=1;;
         esac
     done
