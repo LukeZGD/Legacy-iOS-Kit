@@ -18,12 +18,11 @@ jobs:
           echo "COUNT=$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")" >> $GITHUB_ENV
           echo "SHA_SHORT=$(echo ${{ github.sha }} | cut -c -7)" >> $GITHUB_ENV
           echo "DATE_OLD=$(date +%Y-%m-%d)" >> $GITHUB_ENV
-          echo "VERSION=v${{ env.DATE }}.${{ env.COUNT }}" >> $GITHUB_ENV
 
       - name: Create git hash and version
         run: |
           echo "${{ env.SHA_SHORT }}" | tee ./resources/git_hash
-          echo "${{ env.VERSION }}" | tee ./resources/version
+          echo "v${{ env.DATE }}.${{ env.COUNT }}" | tee ./resources/version
 
       - name: Download some files
         run: |
@@ -50,7 +49,7 @@ jobs:
           rm -r ./bin/linux
 
       - name: Zip macos files
-        run: zip -r ${{ github.event.repository.name }}_macos_${{ env.VERSION }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
+        run: zip -r ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
       - name: Move macos binaries
         run: |
@@ -59,7 +58,7 @@ jobs:
           cp -R ./exclude/bin/linux/x86_64 ./bin/linux
 
       - name: Zip linux x86_64 files
-        run: zip -r ${{ github.event.repository.name }}_linux_x86_64_${{ env.VERSION }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
+        run: zip -r ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
       - name: Move linux x86_64 binaries and other files
         run: |
@@ -67,7 +66,7 @@ jobs:
           cp -R ./exclude/bin/linux/arm64 ./bin/linux
 
       - name: Zip linux arm64 files
-        run: zip -r ${{ github.event.repository.name }}_linux_arm64_${{ env.VERSION }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
+        run: zip -r ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
       - name: Move linux binaries and other files
         run: rm -r ./bin/linux
@@ -76,7 +75,7 @@ jobs:
         run: cp -R ./exclude/bin/* ./bin
 
       - name: Zip complete files
-        run: zip -r ${{ github.event.repository.name }}_complete_${{ env.VERSION }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
+        run: zip -r ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
 
       - name: Create this file to get latest git hash
         run: |
@@ -105,12 +104,12 @@ jobs:
         run: |
           gh release upload latest \
             git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip \
-            ${{ github.event.repository.name }}_complete_${{ env.VERSION }}.zip \
-            ${{ github.event.repository.name }}_macos_${{ env.VERSION }}.zip \
-            ${{ github.event.repository.name }}_linux_arm64_${{ env.VERSION }}.zip \
-            ${{ github.event.repository.name }}_linux_x86_64_${{ env.VERSION }}.zip \
+            ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
             --clobber -R ${{ github.repository }}
 
           gh release edit latest \
-            --title "Latest-${{ env.VERSION }}" \
+            --title "Latest-v${{ env.DATE }}.${{ env.COUNT }}" \
             --target ${{ github.sha }} -R ${{ github.repository }}
