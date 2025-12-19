@@ -83,7 +83,7 @@ jobs:
           zip -r git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip README.txt
 
       - name: Update latest release
-        uses: pyTooling/Actions/releaser@main
+        uses: pyTooling/Actions/releaser@v6.7.0
         with:
           tag: latest
           rm: true
