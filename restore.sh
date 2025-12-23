@@ -2868,11 +2868,14 @@ ipsw_download() {
 ipsw_verify() {
     local ipsw_dl="$1"
     local build_id="$2"
-    local phone
     local IPSWSHA1
     local IPSWSHA1E=$(cat "$device_fw_dir/$build_id/sha1sum" 2>/dev/null)
+    local IPSWSHA1L
+    local type="$device_type"
+    [[ $3 == "special" ]] && type="$device_type_special"
+
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
-    local IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
+    IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
     case $build_id in
         *[bcdefgkmpquv] )
             log "Beta IPSW detected, skip verification"
@@ -2892,7 +2895,7 @@ ipsw_verify() {
 
     log "Getting SHA1 hash from AppleDB..."
     download_appledb ios $build_id
-    IPSWSHA1="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$device_type\")) | .hashes.sha1")"
+    IPSWSHA1="$(cat tmp.json | $jq -r ".sources[] | select(.type == \"ipsw\" and any(.deviceMap[]; . == \"$type\")) | .hashes.sha1")"
     mkdir -p $device_fw_dir/$build_id 2>/dev/null
 
     if [[ -n $IPSWSHA1 && -n $IPSWSHA1E && $IPSWSHA1 == "$IPSWSHA1E" ]]; then
@@ -2919,7 +2922,7 @@ ipsw_verify() {
 
     if [[ $IPSWSHA1L != "$IPSWSHA1" ]]; then
         rm "$device_fw_dir/$build_id/sha1sum"
-        if [[ $1 != "nopause" ]]; then
+        if [[ $3 != "nopause" ]]; then
             log "SHA1sum mismatch. Expected $IPSWSHA1, got $IPSWSHA1L"
             warn "Verifying IPSW failed. Your IPSW may be corrupted or incomplete. Make sure to download and select the correct IPSW."
             pause
@@ -4247,6 +4250,249 @@ ipsw_prepare_ios4multipart() {
     ipsw_prepare_multipatch
 }
 
+ipsw_prepare_ios7touch4() {
+    local all_flash2="$ipsw_custom/$all_flash"
+    local patches="../resources/patch/touch4-ios7"
+    local saves="../saved/$device_type/touch4-ios7"
+
+    if [[ -e "$ipsw_custom.ipsw" ]]; then
+        log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    fi
+
+    log "Preparing custom IPSW..."
+    mkdir -p $ipsw_custom/Firmware/dfu $ipsw_custom/Downgrade $all_flash2 $saves
+
+    local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk"
+        "AppleLogo" "BatteryCharging0" "BatteryCharging1" "BatteryFull" "BatteryLow0" "BatteryLow1"
+        "GlyphCharging" "GlyphPlugin" "iBoot" "LLB" "RecoveryMode")
+    local name
+    local iv
+    local key
+    local path
+    device_fw_key_check base
+
+    log "Getting base ($device_base_vers) restore components"
+    for getcomp in "${comps[@]}"; do
+        name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+        iv=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+        case $getcomp in
+            "iBSS" | "iBEC" ) path="Firmware/dfu/";;
+            "Kernelcache" | "RestoreRamdisk" ) path="";;
+            * ) path="$all_flash/";;
+        esac
+        log "$getcomp"
+        file_extract_from_archive "$ipsw_base_path.ipsw" ${path}$name
+        case $getcomp in
+            "DeviceTree" )
+                cp $name $all_flash2/
+                "$dir/xpwntool" $name $ipsw_custom/Downgrade/RestoreDeviceTree -iv $iv -k $key -decrypt
+            ;;
+            "Kernelcache" )
+                "$dir/xpwntool" $name $ipsw_custom/Downgrade/RestoreKernelCache -iv $iv -k $key -decrypt
+            ;;
+            "AppleLogo" )
+                cp $name $all_flash2/
+                "$dir/xpwntool" $name $ipsw_custom/Downgrade/RestoreLogo -iv $iv -k $key -decrypt
+            ;;
+            "iBSS" | "iBEC" | "RestoreRamdisk" )
+                mv $name $getcomp.orig
+                "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
+            ;;
+            * ) mv $name $all_flash2/;;
+        esac
+    done
+
+    log "Patch iBSS"
+    "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa
+    "$dir/xpwntool" iBSS.patched $ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
+
+    log "Patch iBEC"
+    $bspatch iBEC.dec iBEC.patched $patches/iBEC.${device_model}ap.RELEASE.patch
+    "$dir/xpwntool" iBEC.patched $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
+    "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug --ticket -b "-v amfi=0xff cs_enforcement_disable=1"
+    "$dir/xpwntool" iBEC.patched $saves/pwnediBEC.dfu -t iBEC.orig
+
+    log "Base manifest plist"
+    file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
+    cp BuildManifest.plist $ipsw_custom/
+
+    local ramdisk_name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    log "Restore Ramdisk: $ramdisk_name"
+    mv RestoreRamdisk.dec ramdisk.dec
+    "$dir/hfsplus" ramdisk.dec grow 11000000
+
+    log "Patch ASR"
+    ipsw_patch_file ramdisk.dec usr/sbin asr $patches/asr.patch
+
+    log "Modify options.plist"
+    "$dir/hfsplus" ramdisk.dec rm usr/local/share/restore/options.n81.plist
+    "$dir/hfsplus" ramdisk.dec add $patches/options.n81.plist usr/local/share/restore/options.n81.plist
+
+    log "Repack Restore Ramdisk"
+    "$dir/xpwntool" ramdisk.dec $ipsw_custom/$ramdisk_name -t RestoreRamdisk.orig
+
+    local rootfs_name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
+    log "Base RootFS: $rootfs_name"
+
+    log "Target manifest plist"
+    rm BuildManifest.plist
+    file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
+    local rootfs_target_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')
+    local rootfs_target_key
+    local kc_iv
+    local kc_key
+    local dt_iv
+    local dt_key
+    case $device_type_special in
+        iPhone3,1 )
+            rootfs_target_key="38d0320d099b9dd34ffb3308c53d397f14955b347d6a433fe173acc2ced1ae78756b3684"
+            kc_iv="a1aee41423e11a44135233dd345433ce"
+            kc_key="9b05ef79c63c59e71f253219ffaa952f25f6810d3863aac2b49628e64f9f0869"
+            dt_iv="d2f224a2d7e04461ec12ac81f91d657a"
+            dt_key="b93c3a564dc36e184871e246fa8df725ecebafb38c042b6302b333c39e7d1787"
+        ;;
+        iPhone3,3 )
+            rootfs_target_key="423b3503689b7058d1398d1b5d56a7b1ccf4d79e1c3e6ba853122b4f86820a9e3bc911f6"
+            kc_iv="b84212f017d5ffd962db0bbe050581dc"
+            kc_key="92e5720cadf724cdf428d44119b634ab3346aef1ab4e3e20abc8ecb73f7f8642"
+            dt_iv="8662383170bb93fffe2dbdd181a620da"
+            dt_key="8473b8932e1957c1e650f15cb3b6f49f497e241ebacfaa7d0b1eca3b15fc633c"
+        ;;
+    esac
+    local rootfs_target_size=$((1589*1024*1024))
+
+    log "Target kernelcache"
+    file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.$device_model_special
+    mv kernelcache.release.$device_model_special kc
+    "$dir/xpwntool" kc kc.dec -iv $kc_iv -k $kc_key
+    $bspatch kc.dec kc.patched $patches/kc$ipsw_jailbreak.$device_model_special.patch # kc for non-jb, kc1 for jb
+    "$dir/xpwntool" kc.patched $ipsw_custom/kernelcache.release.$device_model -t kc -iv $kc_iv -k $kc_key
+    cp $ipsw_custom/kernelcache.release.$device_model $saves/kernelcache$ipsw_jailbreak
+
+    log "Target devicetree"
+    file_extract_from_archive "$ipsw_path.ipsw" $all_flash_special/DeviceTree.${device_model_special}ap.img3
+    mv DeviceTree.${device_model_special}ap.img3 dt
+    "$dir/xpwntool" dt dt.dec -iv $dt_iv -k $dt_key -decrypt
+    echo "0000006d: 38 31" | xxd -r - dt.dec
+    cp dt.dec $saves/devicetree
+
+    log "Target RootFS: extracting dmg from ipsw"
+    file_extract_from_archive "$ipsw_path.ipsw" $rootfs_target_name
+    log "Target RootFS: extracting dmg with key $rootfs_target_key"
+    "$dir/dmg" extract $rootfs_target_name rootfs.dec -k $rootfs_target_key
+    if [[ $? != 0 || ! -s rootfs.dec ]]; then
+        error "Failed to extract dmg. Please run the script again"
+    fi
+    log "Target RootFS: growing $rootfs_target_size"
+    "$dir/hfsplus" rootfs.dec grow $rootfs_target_size
+    log "Target RootFS: untar wifi firmware"
+    "$dir/hfsplus" rootfs.dec untar $patches/wifi.tar
+
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        log "Target RootFS: untar jailbreak bootstrap"
+        cp $jelbrek/freeze.tar.gz .
+        cp $jelbrek/jbloader.tar.lzma .
+        gzip -d freeze.tar.gz
+        lzma -d jbloader.tar.lzma
+        "$dir/hfsplus" rootfs.dec untar freeze.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/fstab7.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/jbloader.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
+        if [[ $ipsw_openssh == 1 ]]; then
+            "$dir/hfsplus" rootfs.dec untar $jelbrek/sshdeb.tar
+        fi
+        touch .cydia_no_stash
+        "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
+    fi
+
+    echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
+    log "Target RootFS: activation stuff"
+    "$dir/hfsplus" rootfs.dec add data_ark.plist /var/root/Library/Lockdown/data_ark.plist
+    "$dir/hfsplus" rootfs.dec mv /Applications/Setup.app /Setup.app
+
+    log "Target RootFS: building dmg as $rootfs_name"
+    "$dir/dmg" build rootfs.dec $ipsw_custom/$rootfs_name
+    if [[ $? != 0 || ! -s $ipsw_custom/$rootfs_name ]]; then
+        error "Failed to build dmg. Please run the script again"
+    fi
+
+    log "Creating $ipsw_custom.ipsw..."
+    pushd $ipsw_custom >/dev/null
+    zip -r0 $ipsw_custom.ipsw *
+    popd >/dev/null
+}
+
+ipsw_prepare_ios6touch3() {
+    local sundance="../saved/SundanceInH2A_$platform"
+    local ipsw_path2="${device_type_special}_${device_target_vers}_${device_target_build}_Restore"
+    local ipsw_base_path2="${device_type}_${device_base_vers}_${device_base_build}_Restore"
+    local ipsw_custom2="${device_type}_${device_target_vers}_${device_target_build}_Custom"
+    local kc
+    local kc_sha1
+    local jb
+
+    if [[ -e "$ipsw_custom.ipsw" ]]; then
+        log "Found existing Custom IPSW. Skipping IPSW creation."
+        return
+    fi
+
+    print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A"
+    log "Preparing SundanceInH2A"
+    if [[ -s $sundance/Sundancer ]]; then
+        pushd $sundance >/dev/null
+        git reset --hard
+        git pull
+        popd >/dev/null
+    else
+        local repo
+        rm -rf $sundance
+        case $platform in
+            "macos" ) repo="https://github.com/NyanSatan/SundanceInH2A";;
+            "linux" ) repo="https://github.com/LukeZGD/SundanceInH2A";;
+        esac
+        git clone $repo $sundance
+    fi
+
+    log "Downloading kernelcache"
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        jb="-j"
+        kc="$sundance/artifacts/kernelcache.jailbroken.n18ap.bin"
+        kc_sha1="56baaebd7c260f3d41679fee686426ef2578bbd3"
+        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 -d | gunzip > $kc
+    else
+        kc="$sundance/artifacts/kernelcache.n18ap.bin"
+        kc_sha1="2c42a07b82d14dab69417f750d0e4ca118bf225c"
+        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -d | gunzip > $kc
+    fi
+    if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
+        rm $kc
+        error "Downloading/verifying kernelcache failed. Please run the script again"
+    fi
+
+    log "Copying IPSWs..."
+    cp "$ipsw_path.ipsw" "$sundance/$ipsw_path2.ipsw"
+    cp "$ipsw_base_path.ipsw" "$sundance/$ipsw_base_path2.ipsw"
+    log "Preparing custom IPSW..."
+    pushd $sundance >/dev/null
+    rm -rf "$ipsw_custom2"
+    ./Sundancer $jb "$ipsw_base_path2.ipsw" "$ipsw_path2.ipsw" "$ipsw_custom2"
+    rm "$ipsw_path2.ipsw" "$ipsw_base_path2.ipsw"
+    if [[ ! -d "$ipsw_custom2" ]]; then
+        error "Custom IPSW creation seems to have failed. Please run the script again" \
+        "* If you do not have Python 3 installed, install it since SundanceInH2A requires it."
+    fi
+    pushd "$ipsw_custom2"
+    zip -r0 ../../$ipsw_custom.ipsw *
+    popd >/dev/null
+    rm -rf "$ipsw_custom2"
+    popd >/dev/null
+}
+
 ipsw_prepare_multipatch() {
     local vers
     local build
@@ -5167,9 +5413,10 @@ restore_idevicerestore() {
         log "Device $device_type has no baseband/disabled baseband update"
     fi
     ipsw_extract custom
-    if [[ $1 == "norflash" ]]; then
-        cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh
-    fi
+    case $1 in
+        "norflash" ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
+        "special"  ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
+    esac
     device_rd_build=
     if [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
        [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
@@ -5501,7 +5748,11 @@ restore_deviceprepare() {
         ;;
 
         4 )
-            if [[ $device_target_tethered == 1 ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
+               [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+                shsh_save version $device_latest_vers
+                device_buttons
+            elif [[ $device_target_tethered == 1 ]]; then
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
@@ -5564,8 +5815,11 @@ restore_prepare() {
         ;;
 
         4 )
-            if [[ $device_target_tethered == 1 || $device_target_other == 1 ]] ||
-               [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
+               [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+                restore_idevicerestore special
+            elif [[ $device_target_tethered == 1 || $device_target_other == 1 ]] ||
+                 [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
                 restore_idevicerestore
             elif [[ $device_target_powder == 1 ]]; then
                 case $device_target_vers in
@@ -5740,7 +5994,11 @@ ipsw_prepare() {
         ;;
 
         4 )
-            if [[ $device_target_tethered == 1 ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]]; then
+                ipsw_prepare_ios7touch4
+            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+                ipsw_prepare_ios6touch3
+            elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_other == 1 || $ipsw_gasgauge_patch == 1 ]] ||
                  [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
@@ -7594,7 +7852,7 @@ menu_fourthree() {
         print "* FourThree Utility: Dualboot iPad 2 to iOS 4.3.x"
         print "* This is a 3 step process for the device. Follow through the steps to successfully set up a dualboot."
         print "* Please read the README here: https://github.com/LukeZGD/FourThree-iPad2"
-        warn "FourThree Utility is not supported. Any issues will not be entertained nor fixed."
+        warn "Support for FourThree Utility is no longer provided. Any issues will not be entertained nor fixed."
         echo
         print " > Main Menu > FourThree Utility"
         input "Select an option:"
@@ -8005,7 +8263,7 @@ menu_restore() {
             iPhone2,1 )
                 menu_items+=("5.1.1" "4.3.5" "4.1" "3.1.3" "More versions");;
             iPod3,1 )
-                menu_items+=("4.1");;
+                menu_items+=("iOS 4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3");;
         esac
@@ -8016,9 +8274,10 @@ menu_restore() {
         if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
-#         if [[ $device_type == "iPod4,1" ]]; then
-#             menu_items+=("iOS 7.1.2")
-#         fi
+        case $device_type in
+            iPod4,1 ) menu_items+=("iOS 7.1.2");;
+            iPod3,1 ) menu_items+=("iOS 6.0");;
+        esac
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
             case $device_type in
@@ -8082,8 +8341,9 @@ menu_restore() {
                     select_yesno "Select Y if your device is a 2012/16GB model, select N if not" 1
                     device_is2012=$?
                 fi
-                menu_ipsw "$selected" "$1"
+                menu_ipsw_special "$selected" "$1"
             ;;
+            "iOS 6.0" ) menu_ipsw_special "$selected" "$1";;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -8275,6 +8535,10 @@ menu_ipsw() {
                 device_target_vers="6.1.3"
                 device_target_build="10B329"
             ;;
+            "iOS 4.1" )
+                device_target_vers="4.1"
+                device_target_build="8B117"
+            ;;
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
@@ -8359,10 +8623,14 @@ menu_ipsw() {
             fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
+            if [[ $device_proc == 4 ]]; then
+                device_base_vers="$device_latest_vers"
+                device_base_build="$device_latest_build"
+            fi
         elif [[ $1 == *"Tethered"* ]]; then
             device_target_tethered=1
         elif [[ -n $device_target_vers && -e "../$newpath.ipsw" ]]; then
-            ipsw_verify "../$newpath" "$device_target_build" nopause
+            ipsw_verify "../$newpath" "$device_target_build" #nopause
             if [[ $? == 0 ]]; then
                 ipsw_path="../$newpath"
             fi
@@ -8402,14 +8670,12 @@ menu_ipsw() {
             echo
             local text2="(iOS 7.1.x)"
             case $device_type in
-                iPhone3,[13] ) text2="(iOS 7.1.2)";;
+                iPhone3,[13] | iPad1,1 | iPod3,1 ) text2="(iOS $device_base_vers)";;
                 iPhone5,[1234] ) text2="(iOS 7.x)";;
                 iPad3,[456] ) text2="(iOS 7.0.x)";;
-                iPad1,1 | iPod3,1 ) text2="(iOS 5.1.1)";;
             esac
             if [[ -n $ipsw_base_path ]]; then
-                print "* Selected Base $text2 IPSW: $ipsw_base_path.ipsw"
-                print "* Base Version: $device_base_vers-$device_base_build"
+                print "* Selected Base IPSW $text2: $ipsw_base_path.ipsw"
                 if [[ $ipsw_base_validate == 0 ]]; then
                     print "* Selected Base IPSW is validated"
                 else
@@ -8420,14 +8686,14 @@ menu_ipsw() {
                 fi
                 echo
             else
-                print "* Select Base $text2 IPSW to continue"
+                print "* Select Base IPSW $text2 to continue"
                 echo
             fi
             if [[ $device_proc == 4 ]]; then
                 shsh_path=1
             else
                 if [[ -n $shsh_path ]]; then
-                    print "* Selected Base $text2 SHSH: $shsh_path"
+                    print "* Selected Base SHSH $text2: $shsh_path"
                     if [[ $shsh_validate == 0 ]]; then
                         print "* Selected SHSH file is validated"
                     else
@@ -8438,7 +8704,7 @@ menu_ipsw() {
                         echo
                     fi
                 elif [[ $2 != "ipsw" ]]; then
-                    print "* Select Base $text2 SHSH to continue"
+                    print "* Select Base SHSH $text2 to continue"
                     echo
                 fi
             fi
@@ -8449,15 +8715,14 @@ menu_ipsw() {
         elif [[ $2 == "fourthree" ]]; then
             menu_items+=("Download Target IPSW" "Select Base IPSW")
             if [[ -n $ipsw_path ]]; then
-                print "* Selected Target (iOS 6.1.3) IPSW: $ipsw_path.ipsw"
+                print "* Selected Target IPSW (iOS 6.1.3): $ipsw_path.ipsw"
                 ipsw_print_warnings
             else
-                print "* Select Target (iOS 6.1.3) IPSW to continue"
+                print "* Select Target IPSW (iOS 6.1.3) to continue"
             fi
             echo
             if [[ -n $ipsw_base_path ]]; then
-                print "* Selected Base (iOS 4.3.x) IPSW: $ipsw_base_path.ipsw"
-                print "* Base Version: $device_base_vers-$device_base_build"
+                print "* Selected Base IPSW (iOS 4.3.x): $ipsw_base_path.ipsw"
                 if [[ $ipsw_base_validate == 0 ]]; then
                     print "* Selected Base IPSW is validated"
                 else
@@ -8465,7 +8730,7 @@ menu_ipsw() {
                 fi
                 echo
             else
-                print "* Select Base (iOS 4.3.x) IPSW to continue"
+                print "* Select Base IPSW (iOS 4.3.x) to continue"
                 echo
             fi
             if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
@@ -8640,6 +8905,102 @@ menu_ipsw() {
     done
 }
 
+menu_ipsw_special() {
+    local menu_items
+    local selected
+    local back
+    local newpath
+    local nav
+    local start="(*) "
+    local base_text
+    local target_text
+
+    if [[ $2 == "ipsw" ]]; then
+        nav=" > Main Menu > Misc Utilities > Create Custom IPSW > $1"
+        start+="Create IPSW"
+    else
+        nav=" > Main Menu > Restore/Downgrade > $1"
+        start+="Start Restore"
+    fi
+
+    ipsw_path=
+    ipsw_base_path=
+    device_target_tethered=
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        case $1 in
+            "iOS 7.1.2" )
+                device_type_special="iPhone3,1"
+                device_model_special="n90"
+                if [[ $device_is2012 == 1 ]]; then
+                    device_type_special="iPhone3,3"
+                    device_model_special="n92"
+                fi
+                device_target_vers="7.1.2"
+                device_target_build="11D257"
+                device_target_tethered=1
+            ;;
+            "iOS 6.0" )
+                device_type_special="iPhone2,1"
+                device_model_special="n88"
+                device_target_vers="6.0"
+                device_target_build="10A403"
+            ;;
+        esac
+        all_flash_special="Firmware/all_flash/all_flash.${device_model_special}ap.production"
+        device_base_vers="$device_latest_vers"
+        device_base_build="$device_latest_build"
+        target_det=$(echo "$device_target_vers" | cut -d. -f1)
+        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+        base_text="$device_type-$device_base_vers"
+        target_text="$device_type_special-$device_target_vers"
+        ipsw_latest_set
+
+        menu_print_info
+        print "* Only select unmodified IPSW for the selection. Do not select custom IPSWs"
+        echo
+
+        if [[ -n $ipsw_path ]]; then
+            print "* Selected Target IPSW: $ipsw_path.ipsw"
+            ipsw_print_warnings
+        else
+            print "* Select Target IPSW ($target_text) to continue"
+        fi
+        echo
+        if [[ -n $ipsw_base_path ]]; then
+            print "* Selected Base IPSW ($base_text): $ipsw_base_path.ipsw"
+            if [[ $ipsw_base_validate == 0 ]]; then
+                print "* Selected Base IPSW is validated"
+            else
+                warn "Selected Base IPSW failed validation, proceed with caution"
+            fi
+        else
+            print "* Select Base IPSW ($base_text) to continue"
+        fi
+        echo
+        if [[ $1 == "iOS 7.1.2" ]]; then
+            warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing."
+            echo
+        fi
+        menu_items=("Select Target IPSW" "Select Base IPSW")
+        if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
+            menu_items+=("$start")
+        fi
+        menu_items+=("Go Back")
+
+        print "$nav"
+        input "Select an option:"
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
+        case $selected in
+            "(*) Create IPSW" ) mode="custom-ipsw";;
+            "$start" ) mode="downgrade";;
+            "Select Target IPSW" ) menu_ipsw_browse "special";;
+            "Select Base IPSW" ) menu_ipsw_browse "base";;
+            "Go Back" ) back=1;;
+        esac
+    done
+}
 ipsw_print_warnings() {
     if [[ $ipsw_validate == 0 ]]; then
         print "* Selected Target IPSW is validated"
@@ -8816,21 +9177,23 @@ menu_ipsw_browse() {
     local menu_items=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
     [[ $device_type2 != "$device_type" ]] && menu_items+=($(ls ../$device_type2*$device_latest_vers*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
-         text="Base"
-         menu_items=()
-         case $device_type in
-            iPhone3,[13] ) menu_items=($(ls ../${device_type}_7.1.2*Restore.ipsw 2>/dev/null));;
-            iPad1,1 | iPod3,1 ) menu_items=($(ls ../${device_type}_5.1.1*Restore.ipsw 2>/dev/null));;
-            iPhone5,* ) menu_items=($(ls ../${device_type}_7*Restore.ipsw 2>/dev/null));;
+        text="Base"
+        menu_items=()
+        case $device_proc in
+            4 ) menu_items=($(ls ../${device_type}_${device_base_vers}_${device_base_build}_Restore.ipsw 2>/dev/null));;
+            6 ) menu_items=($(ls ../${device_type}_7.*Restore.ipsw 2>/dev/null));;
             * ) menu_items=($(ls ../${device_type}_7.1*Restore.ipsw 2>/dev/null));;
         esac
+    elif [[ $1 == "special" ]]; then
+        menu_items=($(ls ../${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw 2>/dev/null))
     fi
     case $1 in
-        "iOS 10.3.3" ) versionc="10.3.3";;
-        "iOS 8.4.1" ) versionc="8.4.1";;
-        "iOS 6.1.3" ) versionc="6.1.3";;
+        "iOS 10.3.3"  ) versionc="10.3.3";;
+        "iOS 8.4.1"   ) versionc="8.4.1";;
+        "iOS 6.1.3"   ) versionc="6.1.3";;
+        "iOS 4.1"     ) versionc="4.1";;
         "Latest iOS"* ) versionc="$device_latest_vers";;
-        [6543]* ) versionc="$1";;
+        [6543]*  ) versionc="$1";;
         "custom" ) text="Custom";;
     esac
     if [[ $1 == "custom" ]]; then
@@ -8889,7 +9252,13 @@ menu_ipsw_browse() {
         pause
         return
     fi
-    if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
+    if [[ $1 == "special" ]]; then
+        if [[ $(cat Restore.plist | grep -c $device_type_special) == 0 ]]; then
+            log "Selected IPSW is not for device $device_type."
+            pause
+            return
+        fi
+    elif [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
         pause
         return
@@ -8989,6 +9358,10 @@ menu_ipsw_browse() {
                     check_vers="7.1.2"
                     base_vers="$check_vers"
                 ;;
+                iPod4,1 )
+                    check_vers="6.1.6"
+                    base_vers="$check_vers"
+                ;;
                 iPad1,1 | iPod3,1 )
                     check_vers="5.1.1"
                     base_vers="$check_vers"
@@ -9055,21 +9428,19 @@ menu_ipsw_browse() {
                 pause
                 return
             fi
-            versionc="powder"
         ;;
     esac
-    if [[ $versionc == "powder" ]]; then
-        :
-    elif [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
+    if [[ -n $versionc && $device_target_vers != "$versionc" ]]; then
         log "Selected IPSW ($device_target_vers) does not match target version ($versionc)."
         pause
         return
     fi
-    if [[ $1 != "custom" ]]; then
+    if [[ $1 == "special" ]]; then
+        ipsw_verify "$newpath" "$device_target_build" special
+        [[ $? != 0 ]] && return
+    elif [[ $1 != "custom" ]]; then
         ipsw_verify "$newpath" "$device_target_build"
-        if [[ -n $versionc && $? != 0 ]]; then
-            return
-        fi
+        [[ -n $versionc && $? != 0 ]] && return
     fi
     ipsw_path="$newpath"
 }
@@ -10131,6 +10502,9 @@ menu_justboot() {
         
         # Add other options
         menu_items+=("Enter Build Version" "Select IPSW")
+        if [[ $device_type == "iPod4,1" ]]; then
+            menu_items+=("iOS 7.1.2")
+        fi
         
         # Check for boot history files for current device type
         local history_count=$(find "../saved/$device_type" -name "justboot_*" -type f 2>/dev/null | wc -l)
@@ -10210,6 +10584,10 @@ menu_justboot() {
             "(*) Just Boot" )
                 echo "$vers" > $recent
                 mode="device_justboot"
+            ;;
+            "iOS 7.1.2" )
+                echo "7.1.2" > $recent
+                mode="device_justboot_ios7touch4"
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Go Back" ) back=1;;
@@ -10348,6 +10726,37 @@ device_justboot() {
         cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
     fi
     device_ramdisk justboot
+}
+
+device_justboot_ios7touch4() {
+    local patches="../resources/patch/touch4-ios7"
+    local saves="../saved/$device_type/touch4-ios7"
+    if [[ ! -s $saves/pwnediBEC.dfu ]]; then
+        error "Cannot find pwnediBEC file. Need to restore to iOS 7.1.2 first."
+    fi
+    select_yesno "Is the jailbreak option enabled for this restore?" 1
+    if [[ $? != 1 ]]; then
+        ipsw_jailbreak=
+        log "Jailbreak option disabled by user."
+    else
+        ipsw_jailbreak=1
+        log "Jailbreak option enabled."
+    fi
+    device_enter_mode pwnDFU
+    patch_ibss
+    log "Sending iBSS..."
+    $irecovery -f pwnediBSS.dfu
+    sleep 1
+    log "Sending iBEC..."
+    $irecovery -f $saves/pwnediBEC.dfu
+    device_find_mode Recovery
+    log "devicetree"
+    $irecovery -f $saves/devicetree
+    $irecovery -c devicetree
+    log "kernelcache"
+    $irecovery -f $saves/kernelcache$ipsw_jailbreak
+    $irecovery -c bootx
+    log "Device should now boot."
 }
 
 device_enter_ramdisk() {
