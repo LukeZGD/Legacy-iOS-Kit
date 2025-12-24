@@ -813,14 +813,14 @@ device_entry() {
     until [[ -n $device_type && $device_type == "iP"* ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
     done
-    if [[ $main_argmode == "device_justboot" || $main_argmode == "device_enter_ramdisk"* ]]; then
+    if [[ $main_argmode == "device_justboot"* || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
     elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" ]]; then
         until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
         done
     fi
-    if [[ -n $device_ecid && $main_argmode == "device_justboot" ]]; then
+    if [[ -n $device_ecid && $main_argmode == "device_justboot"* ]]; then
         cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
     fi
 }
@@ -2409,6 +2409,12 @@ device_fw_key_check() {
 ipsw_get_url() {
     local build_id="$1"
     local version="$2"
+    local device_type="$device_type"
+    local device_fw_dir="$device_fw_dir"
+    if [[ -n $3 ]]; then
+        device_type="$3"
+        device_fw_dir="../saved/firmware/$device_type"
+    fi
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
     local url_local="$url"
     ipsw_url=
@@ -2733,6 +2739,9 @@ ipsw_preference_set() {
 
     if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
         ipsw_canmemory=
+    elif [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
+         [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+        ipsw_canmemory=
     elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
           $device_type == "$device_disable_bbupdate" ]]; then
@@ -2847,8 +2856,18 @@ shsh_save() {
 ipsw_download() {
     local version="$device_target_vers"
     local build_id="$device_target_build"
+    local type="$device_type"
+    if [[ -n $2 && -n $3 ]]; then
+        version="$2"
+        build_id="$3"
+    elif [[ $2 == "latest" ]]; then
+        version="$device_latest_vers"
+        build_id="$device_latest_build"
+    elif [[ $2 == "special" ]]; then
+        type="$device_type_special"
+    fi
     local ipsw_dl="$1"
-    ipsw_get_url $build_id $version
+    ipsw_get_url $build_id $version $type
     if [[ -z $ipsw_dl ]]; then
         ipsw_dl="../${ipsw_url##*/}"
         ipsw_dl="${ipsw_dl%?????}"
@@ -4261,7 +4280,7 @@ ipsw_prepare_ios7touch4() {
     fi
 
     log "Preparing custom IPSW..."
-    mkdir -p $ipsw_custom/Firmware/dfu $ipsw_custom/Downgrade $all_flash2 $saves
+    mkdir -p $ipsw_custom/Firmware/dfu $ipsw_custom/Downgrade $all_flash2 $saves/$device_type_special
 
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk"
         "AppleLogo" "BatteryCharging0" "BatteryCharging1" "BatteryFull" "BatteryLow0" "BatteryLow1"
@@ -4312,7 +4331,7 @@ ipsw_prepare_ios7touch4() {
     $bspatch iBEC.dec iBEC.patched $patches/iBEC.${device_model}ap.RELEASE.patch
     "$dir/xpwntool" iBEC.patched $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
     "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug --ticket -b "-v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched $saves/pwnediBEC.dfu -t iBEC.orig
+    "$dir/xpwntool" iBEC.patched $saves/$device_type_special/pwnediBEC.dfu -t iBEC.orig
 
     log "Base manifest plist"
     file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
@@ -4371,15 +4390,16 @@ ipsw_prepare_ios7touch4() {
     mv kernelcache.release.$device_model_special kc
     "$dir/xpwntool" kc kc.dec -iv $kc_iv -k $kc_key
     $bspatch kc.dec kc.patched $patches/kc$ipsw_jailbreak.$device_model_special.patch # kc for non-jb, kc1 for jb
-    "$dir/xpwntool" kc.patched $ipsw_custom/kernelcache.release.$device_model -t kc -iv $kc_iv -k $kc_key
-    cp $ipsw_custom/kernelcache.release.$device_model $saves/kernelcache$ipsw_jailbreak
+    "$dir/xpwntool" kc.patched kc.new -t kc -iv $kc_iv -k $kc_key
+    "$dir/xpwntool" kc.new $saves/$device_type_special/kernelcache$ipsw_jailbreak -iv $kc_iv -k $kc_key -decrypt
+    cp kc.new $ipsw_custom/kernelcache.release.$device_model # wont be used, but needed for restore
 
     log "Target devicetree"
     file_extract_from_archive "$ipsw_path.ipsw" $all_flash_special/DeviceTree.${device_model_special}ap.img3
     mv DeviceTree.${device_model_special}ap.img3 dt
     "$dir/xpwntool" dt dt.dec -iv $dt_iv -k $dt_key -decrypt
     echo "0000006d: 38 31" | xxd -r - dt.dec
-    cp dt.dec $saves/devicetree
+    cp dt.dec $saves/$device_type_special/devicetree
 
     log "Target RootFS: extracting dmg from ipsw"
     file_extract_from_archive "$ipsw_path.ipsw" $rootfs_target_name
@@ -4396,12 +4416,9 @@ ipsw_prepare_ios7touch4() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         log "Target RootFS: untar jailbreak bootstrap"
         cp $jelbrek/freeze.tar.gz .
-        cp $jelbrek/jbloader.tar.lzma .
         gzip -d freeze.tar.gz
-        lzma -d jbloader.tar.lzma
         "$dir/hfsplus" rootfs.dec untar freeze.tar
-        "$dir/hfsplus" rootfs.dec untar $jelbrek/fstab7.tar
-        "$dir/hfsplus" rootfs.dec untar $jelbrek/jbloader.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/fstab_rw.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
         if [[ $ipsw_openssh == 1 ]]; then
             "$dir/hfsplus" rootfs.dec untar $jelbrek/sshdeb.tar
@@ -4413,7 +4430,7 @@ ipsw_prepare_ios7touch4() {
     echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
     log "Target RootFS: activation stuff"
     "$dir/hfsplus" rootfs.dec add data_ark.plist /var/root/Library/Lockdown/data_ark.plist
-    "$dir/hfsplus" rootfs.dec mv /Applications/Setup.app /Setup.app
+    "$dir/hfsplus" rootfs.dec mv Applications/Setup.app Setup.app
 
     log "Target RootFS: building dmg as $rootfs_name"
     "$dir/dmg" build rootfs.dec $ipsw_custom/$rootfs_name
@@ -4425,6 +4442,9 @@ ipsw_prepare_ios7touch4() {
     pushd $ipsw_custom >/dev/null
     zip -r0 $ipsw_custom.ipsw *
     popd >/dev/null
+
+    echo "device_type_special=$device_type_special
+    ipsw_jailbreak=$ipsw_jailbreak" > $saves/$device_ecid
 }
 
 ipsw_prepare_ios6touch3() {
@@ -4441,7 +4461,6 @@ ipsw_prepare_ios6touch3() {
         return
     fi
 
-    print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A"
     log "Preparing SundanceInH2A"
     if [[ -s $sundance/Sundancer ]]; then
         pushd $sundance >/dev/null
@@ -4455,6 +4474,7 @@ ipsw_prepare_ios6touch3() {
             "macos" ) repo="https://github.com/NyanSatan/SundanceInH2A";;
             "linux" ) repo="https://github.com/LukeZGD/SundanceInH2A";;
         esac
+        log "git clone: $repo"
         git clone $repo $sundance
     fi
 
@@ -5933,19 +5953,19 @@ restore_prepare() {
 # Function to get iOS version from build number using firmwares.json
 get_ios_version_from_build() {
     local build="$1"
-    
+
     # Ensure firmwares.json exists
     if [[ ! -s ../saved/firmwares.json ]]; then
         log "Downloading firmwares.json for build lookup..."
         file_download https://api.ipsw.me/v2.1/firmwares.json/condensed firmwares.json
         mv firmwares.json ../saved
     fi
-    
+
     # Use firmwares.json to find version
     local version=$(cat ../saved/firmwares.json | $jq -r --arg build "$build" '
-        [.. | objects | select(.buildid == $build) | .version] | 
+        [.. | objects | select(.buildid == $build) | .version] |
         if length > 0 then .[0] else empty end' 2>/dev/null)
-    
+
     if [[ -n "$version" && "$version" != "null" ]]; then
         echo "$version"
     else
@@ -8452,7 +8472,7 @@ ipsw_latest_set() {
     esac
     newpath="$ipsw_prefix"
     device_type2="$newpath"
-    newpath+="_${device_target_vers}_${device_target_build}"
+    newpath+="_${device_latest_vers}_${device_latest_build}"
     ipsw_custom_set $newpath
     ipsw_dfuipsw="../${newpath}_DFUIPSW"
     newpath+="_Restore"
@@ -8504,22 +8524,6 @@ menu_ipsw() {
         nav=" > Main Menu > Restore/Downgrade > $1"
         start+="Start Restore"
     fi
-
-    ipsw_24o=
-    ipsw_cancustomlogo=
-    ipsw_cancustomlogo2=
-    ipsw_customlogo=
-    ipsw_customrecovery=
-    ipsw_path=
-    ipsw_base_path=
-    shsh_path=
-    device_target_vers=
-    device_target_build=
-    device_base_vers=
-    device_base_build=
-    device_target_other=
-    device_target_powder=
-    device_target_tethered=
 
     while [[ -z "$mode" && -z "$back" ]]; do
         case $1 in
@@ -8642,6 +8646,9 @@ menu_ipsw() {
         echo
         if [[ $1 == *"powdersn0w"* ]]; then
             menu_items+=("Select Base IPSW")
+            if [[ $device_proc == 4 ]]; then
+                menu_items+=("Download Base IPSW")
+            fi
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
@@ -8676,6 +8683,7 @@ menu_ipsw() {
             esac
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base IPSW $text2: $ipsw_base_path.ipsw"
+                print "* Base Version: $device_base_vers-$device_base_build"
                 if [[ $ipsw_base_validate == 0 ]]; then
                     print "* Selected Base IPSW is validated"
                 else
@@ -8723,6 +8731,7 @@ menu_ipsw() {
             echo
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base IPSW (iOS 4.3.x): $ipsw_base_path.ipsw"
+                print "* Base Version: $device_base_vers-$device_base_build"
                 if [[ $ipsw_base_validate == 0 ]]; then
                     print "* Selected Base IPSW is validated"
                 else
@@ -8898,9 +8907,28 @@ menu_ipsw() {
             "Select Target SHSH" ) menu_shsh_browse "$1";;
             "Select Base SHSH" ) menu_shsh_browse "base";;
             "Download Target IPSW" ) ipsw_download "../$newpath";;
+            "Download Base IPSW" ) ipsw_download "../$ipsw_latest_path" latest;;
             "Select Apple Logo" ) menu_logo_browse "boot";;
             "Select Recovery Logo" ) menu_logo_browse "recovery";;
-            "Go Back" ) back=1;;
+            "Go Back" )
+                back=1
+
+                ipsw_24o=
+                ipsw_cancustomlogo=
+                ipsw_cancustomlogo2=
+                ipsw_customlogo=
+                ipsw_customrecovery=
+                ipsw_path=
+                ipsw_base_path=
+                shsh_path=
+                device_target_vers=
+                device_target_build=
+                device_base_vers=
+                device_base_build=
+                device_target_other=
+                device_target_powder=
+                device_target_tethered=
+            ;;
         esac
     done
 }
@@ -8922,10 +8950,6 @@ menu_ipsw_special() {
         nav=" > Main Menu > Restore/Downgrade > $1"
         start+="Start Restore"
     fi
-
-    ipsw_path=
-    ipsw_base_path=
-    device_target_tethered=
 
     while [[ -z "$mode" && -z "$back" ]]; do
         case $1 in
@@ -8961,7 +8985,7 @@ menu_ipsw_special() {
         echo
 
         if [[ -n $ipsw_path ]]; then
-            print "* Selected Target IPSW: $ipsw_path.ipsw"
+            print "* Selected Target IPSW ($target_text): $ipsw_path.ipsw"
             ipsw_print_warnings
         else
             print "* Select Target IPSW ($target_text) to continue"
@@ -8978,11 +9002,11 @@ menu_ipsw_special() {
             print "* Select Base IPSW ($base_text) to continue"
         fi
         echo
-        if [[ $1 == "iOS 7.1.2" ]]; then
-            warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing."
-            echo
-        fi
-        menu_items=("Select Target IPSW" "Select Base IPSW")
+        case $1 in
+            "iOS 7.1.2" ) warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing.";;
+            "iOS 6.0"   ) print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
+        esac
+        menu_items=("Select Target IPSW" "Select Base IPSW" "Download Target IPSW" "Download Base IPSW")
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
             menu_items+=("$start")
         fi
@@ -8997,7 +9021,15 @@ menu_ipsw_special() {
             "$start" ) mode="downgrade";;
             "Select Target IPSW" ) menu_ipsw_browse "special";;
             "Select Base IPSW" ) menu_ipsw_browse "base";;
-            "Go Back" ) back=1;;
+            "Download Target IPSW" ) ipsw_download "../${device_type_special}_${device_target_vers}_${device_target_build}_Restore" special;;
+            "Download Base IPSW" ) ipsw_download "../$ipsw_latest_path" latest;;
+            "Go Back" )
+                back=1
+
+                ipsw_path=
+                ipsw_base_path=
+                device_target_tethered=
+            ;;
         esac
     done
 }
@@ -9254,7 +9286,7 @@ menu_ipsw_browse() {
     fi
     if [[ $1 == "special" ]]; then
         if [[ $(cat Restore.plist | grep -c $device_type_special) == 0 ]]; then
-            log "Selected IPSW is not for device $device_type."
+            log "Selected IPSW is not for device $device_type_special."
             pause
             return
         fi
@@ -10485,7 +10517,7 @@ menu_justboot() {
     local back
     local vers
     local recent="../saved/$device_type/justboot_${device_ecid}"
-    
+
     # Store original device info to prevent it from being overwritten
     local original_device_type="$device_type"
     local original_device_ecid="$device_ecid"
@@ -10493,25 +10525,22 @@ menu_justboot() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
-        
+
         # Add Connected Device option first if it exists in boot history
         if [[ -s "$recent" ]]; then
             # Use stored device name to avoid overwriting global variables
             menu_items+=("Connected Device [$original_device_name]")
         fi
-        
+
         # Add other options
         menu_items+=("Enter Build Version" "Select IPSW")
-        if [[ $device_type == "iPod4,1" ]]; then
-            menu_items+=("iOS 7.1.2")
-        fi
-        
+
         # Check for boot history files for current device type
         local history_count=$(find "../saved/$device_type" -name "justboot_*" -type f 2>/dev/null | wc -l)
-        
+
         # Also check for any boot history files regardless of device type
         local total_history_count=$(find "../saved" -name "justboot_*" -type f 2>/dev/null | wc -l)
-        
+
         if [[ $history_count -gt 0 ]]; then
             menu_items+=("Boot History")
         elif [[ $total_history_count -gt 0 ]]; then
@@ -10519,6 +10548,9 @@ menu_justboot() {
         fi
         if [[ -n $vers ]]; then
             menu_items+=("(*) Just Boot")
+        fi
+        if [[ $device_type == "iPod4,1" ]]; then
+            menu_items+=("(*) iOS 7.1.2")
         fi
         menu_items+=("Custom Bootargs" "Go Back")
         menu_print_info
@@ -10585,7 +10617,7 @@ menu_justboot() {
                 echo "$vers" > $recent
                 mode="device_justboot"
             ;;
-            "iOS 7.1.2" )
+            "(*) iOS 7.1.2" )
                 echo "7.1.2" > $recent
                 mode="device_justboot_ios7touch4"
             ;;
@@ -10601,32 +10633,32 @@ menu_justboot_history() {
     local back
     local history_files
     local saved_dir="../saved"
-    
+
     history_files=($(find "$saved_dir" -name "justboot_*" -type f 2>/dev/null -exec ls -t {} +))
-    
+
     if [[ ${#history_files[@]} -eq 0 ]]; then
         warn "No boot history found"
         pause
         return
     fi
-    
+
     # Add all devices in chronological order (newest first)
     for file in "${history_files[@]}"; do
         local device_type_from_file=$(basename "$(dirname "$file")")
         local ecid=$(basename "$file" | sed 's/justboot_//')
-        
+
         local build_version=$(cat "$file" 2>/dev/null | tr -d '\n')
-        
+
         # Get device name
         local device_name=""
         local temp_device_type="$device_type_from_file"
         device_type="$temp_device_type"
         device_get_name
         device_name="$device_name"
-        
+
         # Get iOS version - prioritize firmwares.json as it's more reliable
         local ios_version=""
-        
+
         # First try firmwares.json (most reliable)
         local firmwares_file=""
         for path in "$saved_dir/firmwares.json" "saved/firmwares.json" "../saved/firmwares.json"; do
@@ -10635,7 +10667,7 @@ menu_justboot_history() {
                 break
             fi
         done
-        
+
         # Download firmwares.json if not found
         if [[ -z "$firmwares_file" ]]; then
             log "Downloading firmwares.json for iOS version lookup..."
@@ -10643,13 +10675,13 @@ menu_justboot_history() {
             mv firmwares.json "$saved_dir"
             firmwares_file="$saved_dir/firmwares.json"
         fi
-        
+
         if [[ -n "$firmwares_file" ]]; then
             ios_version=$(cat "$firmwares_file" | $jq -r --arg build "$build_version" '
-                [.. | objects | select(.buildid == $build) | .version] | 
+                [.. | objects | select(.buildid == $build) | .version] |
                 if length > 0 then .[0] else empty end' 2>/dev/null)
         fi
-        
+
         # Fallback to ver file if firmwares.json didn't work
         if [[ -z "$ios_version" ]]; then
             local ver_file="$saved_dir/$device_type_from_file/ver_$build_version"
@@ -10667,43 +10699,43 @@ menu_justboot_history() {
                 fi
             fi
         fi
-        
+
         if [[ -z "$ios_version" ]]; then
             ios_version="Build $build_version"
         fi
-        
+
         if [[ -n "$build_version" ]]; then
             # Format device name
             local display_name="$device_name"
             if [[ ${#display_name} -gt 18 ]]; then
                 display_name="${display_name:0:15}..."
             fi
-            
+
             # Format iOS version
             local display_ios="$ios_version"
             if [[ ${#display_ios} -gt 12 ]]; then
                 display_ios="${display_ios:0:9}..."
             fi
-            
+
             local menu_item="$(printf "%-20s | %-15s | %s" "$display_name" "$display_ios" "$build_version")"
             menu_items+=("$menu_item")
         fi
     done
-    
+
     menu_items+=("Go Back")
-    
+
     while [[ -z "$vers" && -z "$back" ]]; do
         menu_print_info
         print " > Main Menu > Just Boot > Boot History"
         print "* Select a build version from your boot history:"
         echo
-        
+
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
-        
+
         case $selected in
-            "Go Back" ) 
+            "Go Back" )
                 back=1
             ;;
             * )
@@ -10731,30 +10763,25 @@ device_justboot() {
 device_justboot_ios7touch4() {
     local patches="../resources/patch/touch4-ios7"
     local saves="../saved/$device_type/touch4-ios7"
-    if [[ ! -s $saves/pwnediBEC.dfu ]]; then
-        error "Cannot find pwnediBEC file. Need to restore to iOS 7.1.2 first."
-    fi
-    select_yesno "Is the jailbreak option enabled for this restore?" 1
-    if [[ $? != 1 ]]; then
-        ipsw_jailbreak=
-        log "Jailbreak option disabled by user."
+    if [[ -s $saves/$device_ecid ]]; then
+        source $saves/$device_ecid
     else
-        ipsw_jailbreak=1
-        log "Jailbreak option enabled."
+        error "Cannot find device file for $device_ecid in saved. Need to restore to iOS 7.1.2 first."
     fi
     device_enter_mode pwnDFU
+    device_rd_build=
     patch_ibss
     log "Sending iBSS..."
     $irecovery -f pwnediBSS.dfu
     sleep 1
     log "Sending iBEC..."
-    $irecovery -f $saves/pwnediBEC.dfu
+    $irecovery -f $saves/$device_type_special/pwnediBEC.dfu
     device_find_mode Recovery
     log "devicetree"
-    $irecovery -f $saves/devicetree
+    $irecovery -f $saves/$device_type_special/devicetree
     $irecovery -c devicetree
     log "kernelcache"
-    $irecovery -f $saves/kernelcache$ipsw_jailbreak
+    $irecovery -f $saves/$device_type_special/kernelcache$ipsw_jailbreak
     $irecovery -c bootx
     log "Device should now boot."
 }
@@ -11405,8 +11432,8 @@ for i in "$@"; do
         "--no-device"       ) device_argmode="none";;
 
         # entry parameters
-        "--device="*        ) device_type="${i#*=}"; device_argmode="entry";;
-        "--ecid="*          ) device_ecid="${i#*=}"; device_argmode="entry";;
+        "--device="*        ) device_type="${i#*=}";;
+        "--ecid="*          ) device_ecid="${i#*=}";;
 
         # main_argmode setters
         "--dfuhelper"       ) main_argmode="device_dfuhelper";;
@@ -11438,6 +11465,8 @@ if [[ $main_argmode == "device_justboot" && -z $device_rd_build ]]; then
     print "* Optional: --device=<type> --bootargs=\"<bootargs>\""
     print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
     error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
+elif [[ $main_argmode == "device_justboot" && $device_type == "iPod4,1" && $device_rd_build == "11D257" ]]; then
+    main_argmode="device_justboot_ios7touch4"
 fi
 
 trap "clean" EXIT
