@@ -4483,11 +4483,11 @@ ipsw_prepare_ios6touch3() {
         jb="-j"
         kc="$sundance/artifacts/kernelcache.jailbroken.n18ap.bin"
         kc_sha1="56baaebd7c260f3d41679fee686426ef2578bbd3"
-        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 -d | gunzip > $kc
+        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 --decode | gunzip > $kc
     else
         kc="$sundance/artifacts/kernelcache.n18ap.bin"
         kc_sha1="2c42a07b82d14dab69417f750d0e4ca118bf225c"
-        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 -d | gunzip > $kc
+        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 --decode | gunzip > $kc
     fi
     if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
         rm $kc
