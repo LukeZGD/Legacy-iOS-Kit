@@ -99,7 +99,7 @@
     - iPhone 4 CDMA - iOS 4.2.6 to 7.1.1
     - iPhone 4S, 5, 5C, iPad 2 Rev A, iPod touch 5 - iOS 5.0 to 9.3.5
     - iPad 1 - iOS 3.2 to 5.1
-    - iPod touch 3 - iOS 4.0 to 5.1 (3.1.x has issues)
+    - iPod touch 3 - iOS 3.1.1 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
         - No blob requirement for iPhone 4, iPad 1, iPod touch 3 (7.1.2 and 5.1.1 are signed)
         - For iPhone 5 and 5C, both 7.0.x and 7.1.x blobs can be used
@@ -111,6 +111,8 @@
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
+- [Restoring the iPod touch 3rd gen to iOS 6.0 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
+- [Restoring the iPod touch 4th gen to iOS 7.1.2 tethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
 - Jailbreaking for 32-bit devices and versions support:
     - iPhone 2G and touch 1 - 3.1.3 only
     - iPhone 3G and touch 2 - 4.2.1, 4.1, and 3.1.3

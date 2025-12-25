@@ -4670,9 +4670,9 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
-    if [[ $device_target_vers == "3.2"* ]]; then
-        log "3.2 options.plist"
-        cp ../resources/firmware/src/target/k48/options.plist $options_plist
+    if [[ $device_target_vers == "3."* ]]; then
+        log "3.x options.plist"
+        cp ../resources/firmware/src/target/${device_model}/options.plist $options_plist
     else
         log "Extract options.plist from $device_target_vers IPSW"
         "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
@@ -5449,6 +5449,14 @@ restore_idevicerestore() {
         log "Sending iBEC..."
         $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
+    elif [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+        rm -rf shsh
+        idevicerestore2=
+        [[ $platform == "linux" ]] && idevicerestore2="sudo "
+        idevicerestore2+="../saved/SundanceInH2A_$platform/executables/"
+        [[ $platform == "linux" ]] && idevicerestore2+="$(uname -m)/"
+        idevicerestore2+="idevicerestore"
+        ExtraArgs="-ey"
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
@@ -5771,7 +5779,10 @@ restore_deviceprepare() {
             if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
                [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
                 shsh_save version $device_latest_vers
-                device_buttons
+                case $device_type in
+                    iPod4,1 ) device_buttons;;
+                    iPod3,1 ) device_enter_mode pwnDFU;;
+                esac
             elif [[ $device_target_tethered == 1 ]]; then
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
@@ -7007,12 +7018,17 @@ device_ramdisk_setnvram() {
 
 device_ramdisk_ios3exploit() {
     log "iOS 3.x detected, running exploit commands"
-    local offset="$($ssh -p $ssh_port root@127.0.0.1 "echo -e 'p\nq\n' | fdisk -e /dev/rdisk0" | grep AF | head -1)"
+    local fdisk_out="$($ssh -p $ssh_port root@127.0.0.1 "fdisk /dev/rdisk0")"
+    echo "$fdisk_out"
+    local offset="$(echo "$fdisk_out" | grep AF | head -1)"
     offset="${offset##*-}"
     offset="$(echo ${offset%]*} | tr -d ' ')"
-    offset=$((offset+64))
+    offset=$((offset+63))
+    local sector_size="$(echo "$fdisk_out" | grep "Sector size" | awk '{print $3}')"
+    local partition_size=$((65536/sector_size))
     log "Got offset $offset"
-    $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 3\nAF\n\n${offset}\n8\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
+    log "Got sector size $sector_size. Partition size will be $partition_size"
+    $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 3\nAF\n\n${offset}\n${partition_size}\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
     echo
     log "Writing exploit ramdisk"
     $scp -P $ssh_port ../resources/firmware/src/target/$device_model/9B206/exploit root@127.0.0.1:/
@@ -10069,7 +10085,7 @@ device_jailbreak_gilbert() {
     mv freeze.tar payload/common/Cydia.tar
     log "Running g1lbertJB..."
     "../../$dir/gilbertjb"
-    rm payload/common/Cydia.tar
+    rm -rf payload/common/Cydia.tar private var
     popd >/dev/null
 }
 
