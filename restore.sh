@@ -8373,10 +8373,7 @@ menu_restore() {
             "More versions" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             "iOS 7.1.2" )
-                if [[ -z $device_is2012 ]]; then
-                    select_yesno "Select Y if your device is a 2012/16GB model, select N if not" 1
-                    device_is2012=$?
-                fi
+                device_is2012=1
                 menu_ipsw_special "$selected" "$1"
             ;;
             "iOS 6.0" ) menu_ipsw_special "$selected" "$1";;
@@ -10784,6 +10781,8 @@ device_justboot_ios7touch4() {
     local saves="../saved/$device_type/touch4-ios7"
     if [[ -s $saves/$device_ecid ]]; then
         source $saves/$device_ecid
+        log "device_type_special=$device_type_special"
+        log "ipsw_jailbreak=$ipsw_jailbreak"
     else
         error "Cannot find device file for $device_ecid in saved. Need to restore to iOS 7.1.2 first."
     fi
