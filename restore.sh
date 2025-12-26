@@ -1048,7 +1048,6 @@ device_manufacturing() {
         esac
         if [[ -n $year_half ]]; then
             print "* Manufactured in $year_half"
-            [[ $year_half == *"2012" ]] && device_is2012=1
         fi
     fi
     case $device_newbr in
@@ -8372,11 +8371,7 @@ menu_restore() {
             "DFU IPSW" ) device_dfuipsw_confirm $1;;
             "More versions" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
-            "iOS 7.1.2" )
-                device_is2012=1
-                menu_ipsw_special "$selected" "$1"
-            ;;
-            "iOS 6.0" ) menu_ipsw_special "$selected" "$1";;
+            "iOS 7.1.2" | "iOS 6.0" ) menu_ipsw_special "$selected" "$1";;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -8967,12 +8962,8 @@ menu_ipsw_special() {
     while [[ -z "$mode" && -z "$back" ]]; do
         case $1 in
             "iOS 7.1.2" )
-                device_type_special="iPhone3,1"
-                device_model_special="n90"
-                if [[ $device_is2012 == 1 ]]; then
-                    device_type_special="iPhone3,3"
-                    device_model_special="n92"
-                fi
+                device_type_special="iPhone3,3"
+                device_model_special="n92"
                 device_target_vers="7.1.2"
                 device_target_build="11D257"
                 device_target_tethered=1
@@ -9181,9 +9172,6 @@ ipsw_custom_set() {
     if [[ $device_target_powder == 1 && $device_target_vers == "4.3"* ]] || [[ $device_actrec == 1 ]] ||
        [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         ipsw_custom+="-$device_ecid"
-    fi
-    if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" && $device_is2012 == 1 ]]; then
-        ipsw_custom+="2"
     fi
 }
 
