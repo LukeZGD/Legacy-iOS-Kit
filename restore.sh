@@ -9185,6 +9185,9 @@ ipsw_custom_set() {
        [[ $device_type == "$device_disable_bbupdate" && $device_deadbb != 1 ]]; then
         ipsw_custom+="-$device_ecid"
     fi
+    if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" && $device_is2012 == 1 ]]; then
+        ipsw_custom+="2"
+    fi
 }
 
 menu_logo_browse() {
