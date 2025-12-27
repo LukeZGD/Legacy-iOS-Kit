@@ -2609,10 +2609,11 @@ ipsw_preference_set() {
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
         3* )
-            case $device_proc in
-                1 ) ipsw_canjailbreak=1;;
-                * ) ipsw_nojailbreak_message;;
-            esac
+            if [[ $device_proc == 1 || $ipsw_24o == 1 ]]; then
+                ipsw_canjailbreak=1
+            else
+                ipsw_nojailbreak_message
+            fi
         ;;
     esac
 
@@ -2736,8 +2737,8 @@ ipsw_preference_set() {
 
     if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
         ipsw_canmemory=
-    elif [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
-         [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+    elif [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
+         [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
         ipsw_canmemory=
     elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
@@ -3086,7 +3087,7 @@ ipsw_prepare_jailbreak() {
                     JBFiles[1]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                 fi
             ;;
-            3.1* )
+            3.1* | 4.0* )
                 if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
                     JBFiles[1]=
                 fi
@@ -5288,7 +5289,7 @@ ipsw_prepare_custom() {
     ipsw_prepare_jailbreak old
 
     mv "$ipsw_custom.ipsw" temp.ipsw
-    if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1 3.1.3
+    if [[ $ipsw_24o == 1 ]] && [[ $device_target_vers == "3.1"* || $device_target_vers == "4.0"* ]]; then # old bootrom ipod2,1
         ipsw_prepare_patchcomp LLB
         mv temp.ipsw "$ipsw_custom.ipsw"
         return
@@ -5446,7 +5447,7 @@ restore_idevicerestore() {
         log "Sending iBEC..."
         $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
-    elif [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+    elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
         rm -rf shsh
         idevicerestore2=
         [[ $platform == "linux" ]] && idevicerestore2="sudo "
@@ -5773,8 +5774,8 @@ restore_deviceprepare() {
         ;;
 
         4 )
-            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
-               [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
+               [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
                 shsh_save version $device_latest_vers
                 case $device_type in
                     iPod4,1 ) device_buttons;;
@@ -5843,8 +5844,8 @@ restore_prepare() {
         ;;
 
         4 )
-            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]] ||
-               [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
+               [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
                 restore_idevicerestore special
             elif [[ $device_target_tethered == 1 || $device_target_other == 1 ]] ||
                  [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
@@ -6022,9 +6023,9 @@ ipsw_prepare() {
         ;;
 
         4 )
-            if [[ $device_type == "iPod4,1" && $device_target_vers == "7.1.2" ]]; then
+            if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]]; then
                 ipsw_prepare_ios7touch4
-            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6.0" ]]; then
+            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
                 ipsw_prepare_ios6touch3
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
@@ -8297,7 +8298,11 @@ menu_restore() {
             iPod3,1 )
                 menu_items+=("iOS 4.1");;
             iPhone1,2 | iPod2,1 )
-                menu_items+=("4.1" "3.1.3");;
+                menu_items+=("4.1" "3.1.3")
+                if [[ $device_type == "iPod2,1" && $device_newbr != 1 && $device_mode != "none" ]]; then
+                    menu_items+=("More versions")
+                fi
+            ;;
         esac
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod3,1 )
@@ -8425,9 +8430,15 @@ menu_restore_more() {
     local back
 
     while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
-        menu_items+=("4.3.4" "4.3.3" "4.3.2" "4.3.1" "4.3" "4.2.1")
-        menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
+        menu_items=()
+        case $device_type in
+            iPhone2,1 )
+                menu_items+=("6.1.3" "6.1.2" "6.1" "6.0.1" "6.0" "5.1" "5.0.1" "5.0")
+                menu_items+=("4.3.4" "4.3.3" "4.3.2" "4.3.1" "4.3" "4.2.1")
+                menu_items+=("4.0.2" "4.0.1" "4.0" "3.1.2" "3.1" "3.0.1" "3.0")
+            ;;
+            iPod2,1 ) menu_items+=("4.0.2" "4.0" "3.1.2" "3.1.1");;
+        esac
         menu_items+=("Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
@@ -8435,11 +8446,13 @@ menu_restore_more() {
         else
             print " > Main Menu > Restore/Downgrade"
         fi
-        warn "3.1.x versions listed here might not restore properly"
-        if [[ $device_newbr != 0 && $device_mode != "none" ]]; then
-            print "* 3.0.x versions are not restorable on new bootrom devices"
-            menu_items=("${menu_items[@]::${#menu_items[@]}-3}")
-            menu_items+=("Go Back")
+        if [[ $device_type == "iPhone2,1" ]]; then
+            warn "3.1.x versions listed here might not restore properly"
+            if [[ $device_newbr != 0 && $device_mode != "none" ]]; then
+                print "* 3.0.x versions are not restorable on new bootrom devices"
+                menu_items=("${menu_items[@]::${#menu_items[@]}-3}")
+                menu_items+=("Go Back")
+            fi
             echo
         fi
         input "Select an option:"
@@ -8563,11 +8576,10 @@ menu_ipsw() {
                 if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
                     ipsw_cancustomlogo=1
                 fi
-                if [[ $device_type == "iPod2,1" && $device_newbr == 0 && $1 == "3.1.3" ]]; then
+                if [[ $device_type == "iPod2,1" && $device_newbr == 0 ]] &&
+                   [[ $1 == "4.0"* || $1 == "3.1"* ]]; then
                     ipsw_cancustomlogo=1
-                    if [[ $ipsw_jailbreak == 1 ]]; then
-                        ipsw_24o=1
-                    fi
+                    ipsw_24o=1
                 fi
             ;;
         esac
