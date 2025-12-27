@@ -530,6 +530,7 @@ set_tool_paths() {
         fi
         if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
             local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
+            error_msg+=$'\n* If the above command does not work, try this: sudo xcode-select --reset'
             error_msg+=$'\n* Please read the wiki and install the requirements needed: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/How-to-Use'
             xcode-select --install
             error "Xcode Command Line Tools not installed, cannot continue." "$error_msg"
@@ -719,6 +720,7 @@ version_update() {
             local error_msg=$'\n* If you have not installed/updated git, please install git from your package manager.'
             if [[ $platform == "macos" ]]; then
                 error_msg+=$'\n* On macOS, you may just need to install Xcode Command Line Tools with this command: xcode-select --install'
+                error_msg+=$'\n* If the above command does not work, try this: sudo xcode-select --reset'
                 xcode-select --install
             fi
             error "git clone failed. Please run the script again" "$error_msg"
@@ -1000,15 +1002,11 @@ device_manufacturing() {
     if [[ $device_type == "iPhone2,1" && $device_mode != "DFU" ]]; then
         local week=$(echo "$device_serial" | cut -c 2-)
         local year=$(echo "$device_serial" | cut -c 1)
-        case $year in
-            9 ) year="2009";;
-            0 ) year="2010";;
-            1 ) year="2011";;
-            2 ) year="2012";;
-        esac
-        if [[ $year != "2009" ]] || (( week >= 46 )); then
+        year=$((year+2010))
+        [[ $year == 2019 ]] && year=2009
+        if [[ $year != 2009 ]] || (( week >= 46 )); then
             device_newbr=1
-        elif [[ $year == "2009" ]] && (( week >= 40 )); then
+        elif [[ $year == 2009 ]] && (( week >= 40 )); then
             device_newbr=2 # gray area
         else
             device_newbr=0
@@ -1058,7 +1056,7 @@ device_manufacturing() {
     if [[ $device_type == "iPhone2,1" && $device_mode == "DFU" ]]; then
         print "* Cannot check for manufacturing date in DFU mode"
     elif [[ $device_type == "iPhone2,1" ]]; then
-        print "* Manufactured in Week $week $year"
+        print "* Manufactured in Week $week - $year"
     fi
 }
 
@@ -4279,7 +4277,7 @@ ipsw_prepare_ios7touch4() {
     fi
 
     log "Preparing custom IPSW..."
-    mkdir -p $ipsw_custom/Firmware/dfu $ipsw_custom/Downgrade $all_flash2 $saves/$device_type_special
+    mkdir -p $ipsw_custom/Firmware/dfu $ipsw_custom/Downgrade $all_flash2 $saves/$device_target_build 2>/dev/null
 
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk"
         "AppleLogo" "BatteryCharging0" "BatteryCharging1" "BatteryFull" "BatteryLow0" "BatteryLow1"
@@ -4330,7 +4328,7 @@ ipsw_prepare_ios7touch4() {
     $bspatch iBEC.dec iBEC.patched $patches/iBEC.${device_model}ap.RELEASE.patch
     "$dir/xpwntool" iBEC.patched $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
     "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug --ticket -b "-v amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched $saves/$device_type_special/pwnediBEC.dfu -t iBEC.orig
+    "$dir/xpwntool" iBEC.patched $saves/pwnediBEC.dfu -t iBEC.orig
 
     log "Base manifest plist"
     file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
@@ -4388,9 +4386,9 @@ ipsw_prepare_ios7touch4() {
     file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.$device_model_special
     mv kernelcache.release.$device_model_special kc
     "$dir/xpwntool" kc kc.dec -iv $kc_iv -k $kc_key
-    $bspatch kc.dec kc.patched $patches/kc$ipsw_jailbreak.$device_model_special.patch # kc for non-jb, kc1 for jb
+    $bspatch kc.dec kc.patched $patches/$device_target_build/kc$ipsw_jailbreak.$device_model_special.patch # kc for non-jb, kc1 for jb
     "$dir/xpwntool" kc.patched kc.new -t kc -iv $kc_iv -k $kc_key
-    "$dir/xpwntool" kc.new $saves/$device_type_special/kernelcache$ipsw_jailbreak -iv $kc_iv -k $kc_key -decrypt
+    "$dir/xpwntool" kc.new $saves/$device_target_build/kernelcache$ipsw_jailbreak -iv $kc_iv -k $kc_key -decrypt
     cp kc.new $ipsw_custom/kernelcache.release.$device_model # wont be used, but needed for restore
 
     log "Target devicetree"
@@ -4398,7 +4396,7 @@ ipsw_prepare_ios7touch4() {
     mv DeviceTree.${device_model_special}ap.img3 dt
     "$dir/xpwntool" dt dt.dec -iv $dt_iv -k $dt_key -decrypt
     echo "0000006d: 38 31" | xxd -r - dt.dec
-    cp dt.dec $saves/$device_type_special/devicetree
+    cp dt.dec $saves/$device_target_build/devicetree
 
     log "Target RootFS: extracting dmg from ipsw"
     file_extract_from_archive "$ipsw_path.ipsw" $rootfs_target_name
@@ -4442,7 +4440,7 @@ ipsw_prepare_ios7touch4() {
     zip -r0 $ipsw_custom.ipsw *
     popd >/dev/null
 
-    echo "device_type_special=$device_type_special
+    echo "device_target_build=$device_target_build
     ipsw_jailbreak=$ipsw_jailbreak" > $saves/$device_ecid
 }
 
@@ -4740,7 +4738,7 @@ ipsw_prepare_multipatch() {
 
     # 3.2.x ipad/4.2.x cdma fs workaround
     case $device_target_vers in
-    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* | 3.1.3 )
+    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* )
         local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
         local type="iPad1.1"
         [[ $device_type == "iPhone3,3" ]] && type="iPhone3.3"
@@ -7035,18 +7033,17 @@ device_ramdisk_ios3exploit() {
     if [[ $device_type == "iPad1,1" ]]; then
         $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
     fi
-    log "fstab"
-    $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
-    case $device_vers in
-        3.1.3 | 3.2* ) opt='y';;
-    esac
-    if [[ $opt == 'y' ]]; then
+    if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+        log "fstab"
+        $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
         untether="${device_type}_${device_build}.tar"
         log "Sending $untether"
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
         log "Extracting $untether"
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
     fi
+    log "Fixing autoboot and disks, please wait..."
+    $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1; fsck_hfs -f /dev/rdisk0s1; fsck_hfs -f /dev/rdisk0s2s1"
 }
 
 device_datetime_cmd() {
@@ -8672,13 +8669,13 @@ menu_ipsw() {
                 case $device_type in
                     iPhone3,1 ) lo=4.0; hi=7.1.1;;
                     iPhone3,2 ) lo=6.0; hi=7.1.1;; # lol
-                    iPhone3,3 ) lo=5.0; hi=7.1.1;; # lo=4.2.6 if 4.2.x didnt have issues
+                    iPhone3,3 ) lo=4.2.6; hi=7.1.1;;
                     iPhone4,1 | iPad2,[123] ) lo=5.0; hi=9.3.5;;
                     iPad2* | iPad3,[123]    ) lo=5.1; hi=9.3.5;;
                     iPhone5,[12] | iPad3,*  ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
-                    iPod3,1 ) lo=4.0; hi=5.1;; # lo=3.1.1 if 3.1.x didnt have issues
+                    iPod3,1 ) lo=3.1.1; hi=5.1;;
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
             fi
@@ -9051,31 +9048,21 @@ ipsw_print_warnings() {
     if [[ $1 == "powder" ]]; then
         case $device_target_build in
             8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
-            #7[CD]*  ) warn "Jailbreak option is not supported for this version. It is recommended to select 3.1.3 instead";;
-            8E* ) warn "iOS 4.2.x for the CDMA 4 is not supported. It may not restore/boot properly";;
-            8*  ) warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
-            7B* ) :;;
-            7*  ) warn "iOS 3.1.x for the touch 3 is not supported. It will get stuck at the activation screen";;
+            8*  ) [[ $device_type == "iPhone3,"* ]] && warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
         esac
         return
     fi
     case $device_type in
-        "iPhone3,"* )
-            if [[ $device_target_vers == "4.2"* ]]; then
-                warn "iOS 4.2.x for $device_type might fail to boot after the restore/jailbreak."
-                print "* It is recommended to select another version instead."
-            fi
-        ;;
-        "iPod4,1" )
+        iPhone3,1 | iPod4,1 )
             if [[ $device_target_vers == "4.2.1" ]]; then
-                warn "iOS 4.2.1 for iPod4,1 might fail to boot after the restore/jailbreak."
+                warn "iOS 4.2.1 for $device_type might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select another version instead."
             elif [[ $device_target_build == "8B118" ]]; then
                 warn "iOS 4.1 (8B118) for iPod4,1 might fail to boot after the restore/jailbreak."
                 print "* It is recommended to select 8B117 or another version instead."
             fi
         ;;
-        "iPhone2,1" )
+        iPhone2,1 )
             if [[ $device_target_vers == "3.0"* && $device_newbr != 0 ]]; then
                 warn "3.0.x versions are for old bootrom devices only. It will fail to restore/boot if your device is not compatible."
                 print "* It is recommended to select 3.1 or newer instead."
@@ -9441,7 +9428,7 @@ menu_ipsw_browse() {
             if [[ $device_target_build == "14"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
                 case $device_type in
-                    iPhone5,[12] ) print "* If you want untethered iOS 10, use p0insettia plus: https://github.com/LukeZGD/p0insettia-plus";;
+                    iPhone5,[12] ) print "* If you want to jailbreak iOS 10 untethered, use p0insettia plus: https://github.com/LukeZGD/p0insettia-plus";;
                 esac
                 pause
                 return
@@ -9567,7 +9554,7 @@ menu_flags() {
                 warn "This will enable the --disable-bbupdate flag."
                 print "* This will disable baseband update for custom IPSWs."
                 print "* This will enable usage of dumped baseband and stitch to IPSW."
-                print "* This applies to the following: iPhone 4S, 5, 5C, iPad 4, mini 1"
+                print "* This supports the following: iPhone 4S, 5, 5C, iPad 4, mini 1"
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
                 select_yesno "Do you want to enable the disable-bbupdate flag?" 0
@@ -9614,7 +9601,7 @@ menu_flags() {
             "Enable jailbreak flag" )
                 warn "This will enable the --jailbreak flag."
                 print "* This will enable the jailbreak option for the custom IPSW."
-                print "* This is only useful for 4.1 and lower, where jailbreak option is disabled in most cases."
+                print "* This is mostly useful for 4.1 and lower, where jailbreak option is disabled in most cases."
                 print "* It is disabled for those versions by default because of issues with the custom IPSW jailbreak."
                 print "* The recommended method is to jailbreak after the restore instead."
                 print "* Do not enable this if you do not know what you are doing."
@@ -9628,7 +9615,7 @@ menu_flags() {
             "Enable multipatch flag" )
                 warn "This will enable the --multipatch flag."
                 print "* This will enable \"multipatch\" for the custom IPSW."
-                print "* This is especially useful for iPhone 4S devices that have issues restoring due to battery replacement."
+                print "* This is especially useful for iPhone 4S devices that have issues restoring due to third party battery."
                 print "* This issue is called \"gas gauge\" error, also known as error 29 in iTunes."
                 print "* By enabling this, firmware components for 6.1.3 or lower will be used for restoring to get past the error."
                 print "* This also attempts to get past \"invalid ticket\" error and other restore errors."
@@ -9664,8 +9651,8 @@ menu_flags() {
             ;;
             "Enable no-finder flag" )
                 warn "This will enable the --no-finder flag."
-                print "* This will disable Finder device detection and keep it disabled after script exit."
-                print "* To re-enable it, run the script without this flag enabled and exit."
+                print "* This will disable Finder device detection and keep it disabled after the script exits."
+                print "* To re-enable it, run the script without this flag enabled then exit."
                 local opt
                 select_yesno "Do you want to enable the no-finder flag?" 0
                 if [[ $? != 0 ]]; then
@@ -9950,29 +9937,27 @@ device_jailbreak_confirm() {
             ;;
         esac
     elif [[ $device_proc == 1 ]]; then
-        warn "If you jailbreak with this option (ramdisk method), you will not be able to Bootlace or potentially other similar tools."
+        warn "If you jailbreak with this option (ramdisk method), you will not be able to Bootlace or other similar tools."
         print "* If you want to use the mentioned tools, go to \"Restore/Downgrade\" instead, and enable the jailbreak option."
-        if [[ $device_vers == "4.2.1" ]]; then
-            warn "Jailbreaking using the ramdisk method is not supported for the iPhone 3G on iOS 4.2.1."
-            print "* You will need to go to \"Restore/Downgrade\" instead."
-            pause
-            return
-        fi
     elif [[ $device_proc == 5 ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A5 devices."
         print "* Especially since this method may require the usage of checkm8-a5."
     elif [[ $device_proc == 6 && $platform == "linux" ]]; then
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
-    elif [[ $device_type == "iPod3,1" && $device_vers == "6"* ]]; then
-        warn "Jailbreaking the $device_name on iOS 6 is not supported."
-        print "* Use the jailbreak option in SundanceInH2A for this."
+    fi
+    if [[ $device_proc == 1 && $device_vers == "4.2.1" ]] ||
+       [[ $device_type == "iPod3,1" && $device_vers == "6"* ]] ||
+       [[ $device_type == "iPod4,1" && $device_vers == "7"* ]]; then
+        warn "Jailbreaking using the ramdisk method is not supported for the $device_type on iOS $device_vers."
+        print "* You will need to go to \"Restore/Downgrade\" instead."
         pause
         return
     fi
     if [[ $device_vers == "7"* ]]; then
         warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
         print "* It is recommended to use evasi0n7/Lyncis instead, or dump blobs and restore with the jailbreak option enabled."
-        [[ $ipsw_jailbreak == 1 ]] && warn "Jailbreak flag enabled. You may encounter issues when jailbreaking 7.x with ramdisk method, especially baseband issues."
+        warn "You will encounter issues when jailbreaking 7.x with ramdisk method, particularly baseband issues."
+        [[ $ipsw_jailbreak != 1 ]] && warn "You can bypass this by enabling the jailbreak flag, but only do this if you know what you are doing."
         echo
     fi
     if [[ $device_proc == 5 || $device_proc == 6 ]]; then
@@ -10022,7 +10007,7 @@ device_jailbreak_confirm() {
         ;;
         10* )
             print "* For this version, you can use socket and sideload it to your device."
-            print "* https://github.com/staturnzz/socket"
+            print "* https://github.com/LukeZGD/socket"
             pause
             return
         ;;
@@ -10080,10 +10065,11 @@ device_jailbreak_gilbert() {
 device_ssh_message() {
     log "Please read the message below:"
     print "* Follow these instructions to connect to the device."
-    print "1. Install \"OpenSSH\" in Cydia or Zebra."
     if [[ $device_det == 10 ]] && (( device_proc < 7 )); then
-        print "  - Jailbreak with socket: https://github.com/staturnzz/socket"
-        print "  - Also install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
+        print "1. Jailbreak with socket: https://github.com/LukeZGD/socket"
+        print "  - And install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
+    else
+        print "1. Install \"OpenSSH\" in Cydia or Zebra."
     fi
     print "2. You will be prompted to enter the root/mobile password of your iOS device."
     print "  - The default password is: alpine"
@@ -10767,13 +10753,29 @@ device_justboot() {
 device_justboot_ios7touch4() {
     local patches="../resources/patch/touch4-ios7"
     local saves="../saved/$device_type/touch4-ios7"
-    if [[ -s $saves/$device_ecid ]]; then
-        source $saves/$device_ecid
-        log "device_type_special=$device_type_special"
-        log "ipsw_jailbreak=$ipsw_jailbreak"
-    else
+    device_type_special="iPhone3,3"
+    if [[ ! -s $saves/$device_ecid ]]; then
         error "Cannot find device file for $device_ecid in saved. Need to restore to iOS 7.1.2 first."
     fi
+
+    source $saves/$device_ecid
+    [[ -z $device_target_build ]] && device_target_build="11D257"
+    log "device_target_build=$device_target_build"
+    log "ipsw_jailbreak=$ipsw_jailbreak"
+    if [[ -d "$saves/$device_type_special" ]]; then
+        # migrate from old location to new
+        local old="$saves/$device_type_special"
+        local new="$saves/$device_target_build"
+        mkdir -p "$new"
+        if [[ -s "$old/pwnediBEC.dfu" ]]; then
+            mv "$old/pwnediBEC.dfu" "$saves/"
+        fi
+        for f in devicetree "kernelcache$ipsw_jailbreak"; do
+            [[ -s "$old/$f" ]] && mv "$old/$f" "$new/"
+        done
+        rm -r "$old"
+    fi
+
     device_enter_mode pwnDFU
     device_rd_build=
     patch_ibss
@@ -10781,13 +10783,13 @@ device_justboot_ios7touch4() {
     $irecovery -f pwnediBSS.dfu
     sleep 1
     log "Sending iBEC..."
-    $irecovery -f $saves/$device_type_special/pwnediBEC.dfu
+    $irecovery -f $saves/pwnediBEC.dfu
     device_find_mode Recovery
     log "devicetree"
-    $irecovery -f $saves/$device_type_special/devicetree
+    $irecovery -f $saves/$device_target_build/devicetree
     $irecovery -c devicetree
     log "kernelcache"
-    $irecovery -f $saves/$device_type_special/kernelcache$ipsw_jailbreak
+    $irecovery -f $saves/$device_target_build/kernelcache$ipsw_jailbreak
     $irecovery -c bootx
     log "Device should now boot."
 }
