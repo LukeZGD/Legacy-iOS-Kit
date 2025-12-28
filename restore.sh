@@ -2405,13 +2405,13 @@ device_fw_key_check() {
 
 ipsw_get_url() {
     local build_id="$1"
-    local version="$2"
     local device_type="$device_type"
     local device_fw_dir="$device_fw_dir"
-    if [[ -n $3 ]]; then
-        device_type="$3"
+    if [[ -n $2 ]]; then
+        device_type="$2"
         device_fw_dir="../saved/firmware/$device_type"
     fi
+    local version="$3"
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
     local url_local="$url"
     ipsw_url=
@@ -2420,9 +2420,12 @@ ipsw_get_url() {
         rm -f "$device_fw_dir/$build_id/url"
         url=
     fi
-    if [[ $device_type == "iPod1,1" ]] && [[ $build_id == "5"* || $build_id == "7"* ]]; then
-        url="https://invoxiplaygames.uk/ipsw/${device_type}_${version}_${build_id}_Restore.ipsw"
-    elif [[ $device_type == "iPod2,1" && $build_id == "7"* ]]; then
+    if [[ $device_type == "iPod1,1" || $device_type == "iPod2,1" ]] &&
+       [[ $build_id == "5"* || $build_id == "7"* ]]; then
+        if [[ -z $version ]]; then
+            download_appledb ios $build_id
+            version="$(cat tmp.json | $jq -r ".version")"
+        fi
         url="https://invoxiplaygames.uk/ipsw/${device_type}_${version}_${build_id}_Restore.ipsw"
     fi
     if [[ -z $url ]]; then
@@ -2865,7 +2868,7 @@ ipsw_download() {
         type="$device_type_special"
     fi
     local ipsw_dl="$1"
-    ipsw_get_url $build_id $version $type
+    ipsw_get_url $build_id $type $version
     if [[ -z $ipsw_dl ]]; then
         ipsw_dl="../${ipsw_url##*/}"
         ipsw_dl="${ipsw_dl%?????}"
@@ -6500,7 +6503,7 @@ device_ramdisk() {
     version=$device_target_vers
     build_id=$device_target_build
     device_fw_key_check
-    ipsw_get_url $build_id $version
+    ipsw_get_url $build_id $device_type $version
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
     mkdir $ramdisk_path 2>/dev/null
     for getcomp in "${comps[@]}"; do
@@ -8299,7 +8302,7 @@ menu_restore() {
                 menu_items+=("iOS 4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3")
-                if [[ $device_type == "iPod2,1" && $device_newbr != 1 && $device_mode != "none" ]]; then
+                if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr != 1 || $device_mode != "none" ]]; then
                     menu_items+=("More versions")
                 fi
             ;;
@@ -8383,11 +8386,11 @@ menu_ipsw_downloader() {
     local menu_items
     local selected
     local back
-    local vers
+    local build
 
     while [[ -z "$back" ]]; do
         menu_items=("Enter Build Version")
-        if [[ -n $vers ]]; then
+        if [[ -n $build ]]; then
             menu_items+=("(*) Start Download")
         fi
         menu_items+=("Go Back")
@@ -8398,8 +8401,8 @@ menu_ipsw_downloader() {
             print " > Main Menu > Restore/Downgrade > IPSW Downloader"
         fi
         print "* To know more about build version, go here: https://theapplewiki.com/wiki/Firmware"
-        if [[ -n $vers ]]; then
-            print "* Build Version entered: $vers"
+        if [[ -n $build ]]; then
+            print "* Build Version entered: $build"
         else
             print "* Enter build version to continue"
         fi
@@ -8411,10 +8414,10 @@ menu_ipsw_downloader() {
             "Enter Build Version" )
                 print "* Enter the build version of the IPSW you want to download."
                 device_enter_build
-                vers="$device_rd_build"
+                build="$device_rd_build"
             ;;
             "(*) Start Download" )
-                device_target_build="$vers"
+                device_target_build="$build"
                 ipsw_download
                 log "IPSW downloading is done"
                 pause
@@ -8577,6 +8580,11 @@ menu_ipsw() {
                     ipsw_cancustomlogo=1
                 fi
                 if [[ $device_type == "iPod2,1" && $device_newbr == 0 ]] &&
+                   [[ $1 == "4.0"* || $1 == "3.1"* ]]; then
+                    ipsw_cancustomlogo=1
+                    ipsw_24o=1
+                fi
+                if [[ $device_type == "iPod2,1" && $device_mode == "none" && $1 != "3.1.3" ]] &&
                    [[ $1 == "4.0"* || $1 == "3.1"* ]]; then
                     ipsw_cancustomlogo=1
                     ipsw_24o=1
