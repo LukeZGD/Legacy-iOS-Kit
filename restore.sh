@@ -2414,14 +2414,18 @@ ipsw_get_url() {
     local version="$3"
     local url="$(cat "$device_fw_dir/$build_id/url" 2>/dev/null)"
     local url_local="$url"
+    local ipg_url
     ipsw_url=
     log "Checking URL in $device_fw_dir/$build_id/url"
     if [[ $(echo "$url" | grep -c '<') != 0 || $url != *"$build_id"* ]]; then
         rm -f "$device_fw_dir/$build_id/url"
         url=
     fi
-    if [[ $device_type == "iPod1,1" || $device_type == "iPod2,1" ]] &&
-       [[ $build_id == "5"* || $build_id == "7"* ]]; then
+    case $device_type in
+        iPod1,1 ) [[ $build_id == "5"* || $build_id == "7"* ]] && ipg_url=1;;
+        iPod2,1 ) [[ $build_id == "7"* ]] && ipg_url=1;;
+    esac
+    if [[ $ipg_url == 1 ]]; then
         if [[ -z $version ]]; then
             download_appledb ios $build_id
             version="$(cat tmp.json | $jq -r ".version")"
@@ -9704,8 +9708,8 @@ menu_miscutilities() {
                 else
                     menu_items+=("Export Battery Info")
                 fi
-                if (( device_det < 4 )); then
-                    warn "Device is on lower than iOS 4. Shutdown/Restart device options are not available"
+                if (( device_det < 4 )) || (( device_det == 4 && device_det2 < 2 )); then
+                    warn "Device is on lower than iOS 4.2.x. Shutdown/Restart device options are not available"
                 else
                     menu_items+=("Shutdown Device" "Restart Device")
                 fi
