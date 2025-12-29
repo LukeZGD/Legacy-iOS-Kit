@@ -4746,7 +4746,7 @@ ipsw_prepare_multipatch() {
 
     # 3.2.x ipad/4.2.x cdma fs workaround
     case $device_target_vers in
-    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* )
+    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* | 3.1.3 )
         local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
         local type="iPad1.1"
         [[ $device_type == "iPhone3,3" ]] && type="iPhone3.3"
