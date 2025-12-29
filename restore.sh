@@ -125,7 +125,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
                               This patch also attempts to get past "invalid ticket" error
     --memory                  Enable memory option for creating IPSW
     --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
-    --skip-first              Skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower
+    --skip-first              Skip first restore and flash part 2 IPSW only for powdersn0w 4.2.x and lower
     --skip-ibss               Assume that pwned iBSS has already been sent to the device
 
 For 64-bit checkm8 devices compatible with pwned restores:
@@ -4089,19 +4089,19 @@ ipsw_patch_file() {
 
 ipsw_prepare_ios4multipart() {
     local JBFiles=()
-    ipsw_custom_part2="${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
-    local all_flash2="$ipsw_custom_part2/$all_flash"
+    ipsw_custom_part1="../${device_type}_${device_target_vers}_${device_target_build}_CustomNP-${device_ecid}"
+    local all_flash2="$ipsw_custom_part1/$all_flash"
     local iboot
 
-    if [[ -e "../$ipsw_custom_part2.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
+    if [[ -e "$ipsw_custom_part1.ipsw" && -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSWs. Skipping IPSW creation."
         return
-    elif [[ -e "../$ipsw_custom_part2.ipsw" ]]; then
-        rm -f "../$ipsw_custom_part2.ipsw"
+    elif [[ -e "$ipsw_custom_part1.ipsw" ]]; then
+        rm -f "$ipsw_custom_part1.ipsw"
     fi
 
     log "Preparing NOR flash IPSW..."
-    mkdir -p $ipsw_custom_part2/Firmware/dfu $ipsw_custom_part2/Downgrade $all_flash2
+    mkdir -p $ipsw_custom_part1/Firmware/dfu $ipsw_custom_part1/Downgrade $all_flash2
 
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
     local name
@@ -4137,10 +4137,10 @@ ipsw_prepare_ios4multipart() {
         fi
         case $getcomp in
             "DeviceTree" )
-                "$dir/xpwntool" $name $ipsw_custom_part2/Downgrade/RestoreDeviceTree -iv $iv -k $key -decrypt
+                "$dir/xpwntool" $name $ipsw_custom_part1/Downgrade/RestoreDeviceTree -iv $iv -k $key -decrypt
             ;;
             "Kernelcache" )
-                "$dir/xpwntool" $name $ipsw_custom_part2/Downgrade/RestoreKernelCache -iv $iv -k $key -decrypt
+                "$dir/xpwntool" $name $ipsw_custom_part1/Downgrade/RestoreKernelCache -iv $iv -k $key -decrypt
             ;;
             * )
                 mv $name $getcomp.orig
@@ -4151,11 +4151,11 @@ ipsw_prepare_ios4multipart() {
 
     log "Patch iBSS"
     "$dir/iBoot32Patcher" iBSS.dec iBSS.patched --rsa
-    "$dir/xpwntool" iBSS.patched $ipsw_custom_part2/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
+    "$dir/xpwntool" iBSS.patched $ipsw_custom_part1/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
 
     log "Patch iBEC"
     "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --ticket -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff cs_enforcement_disable=1"
-    "$dir/xpwntool" iBEC.patched $ipsw_custom_part2/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
+    "$dir/xpwntool" iBEC.patched $ipsw_custom_part1/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
 
     log "Manifest plist"
     if [[ $vers == "$device_base_vers" ]]; then
@@ -4168,7 +4168,7 @@ ipsw_prepare_ios4multipart() {
     fi
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-    cp BuildManifest.plist $ipsw_custom_part2/
+    cp BuildManifest.plist $ipsw_custom_part1/
 
     log "Restore Ramdisk"
     local ramdisk_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
@@ -4176,7 +4176,7 @@ ipsw_prepare_ios4multipart() {
     "$dir/hfsplus" ramdisk.dec grow 18000000
 
     local rootfs_name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
-    touch $ipsw_custom_part2/$rootfs_name
+    touch $ipsw_custom_part1/$rootfs_name
     log "Dummy RootFS: $rootfs_name"
 
     log "Modify options.plist"
@@ -4199,7 +4199,7 @@ ipsw_prepare_ios4multipart() {
     ipsw_patch_file ramdisk.dec usr/sbin asr asr.patch
 
     log "Repack Restore Ramdisk"
-    "$dir/xpwntool" ramdisk.dec $ipsw_custom_part2/$ramdisk_name -t RestoreRamdisk.orig
+    "$dir/xpwntool" ramdisk.dec $ipsw_custom_part1/$ramdisk_name -t RestoreRamdisk.orig
 
     log "Extract all_flash from $device_base_vers base"
     file_extract_from_archive "$ipsw_base_path.ipsw" Firmware/all_flash/\* $all_flash2
@@ -4258,16 +4258,16 @@ ipsw_prepare_ios4multipart() {
         mv $logo_name manifest $all_flash2/
     fi
 
-    log "Creating $ipsw_custom_part2.ipsw..."
-    pushd $ipsw_custom_part2 >/dev/null
-    zip -r0 ../../$ipsw_custom_part2.ipsw *
+    log "Creating $ipsw_custom_part1.ipsw..."
+    pushd $ipsw_custom_part1 >/dev/null
+    zip -r0 $ipsw_custom_part1.ipsw *
     popd >/dev/null
 
     if [[ $ipsw_skip_first == 1 ]]; then
         return
     fi
 
-    # ------ part 2 (nor flash) ends here. start creating part 1 ipsw ------
+    # ------ part 1 (nor flash) ends here. start creating part 2 ipsw ------
     ipsw_prepare_32bit $iboot
 
     ipsw_prepare_ios4multipart_patch=1
@@ -5439,8 +5439,8 @@ restore_idevicerestore() {
     fi
     ipsw_extract custom
     case $1 in
-        "norflash" ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
-        "special"  ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
+        first   ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
+        special ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
     esac
     device_rd_build=
     if [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
@@ -5860,11 +5860,13 @@ restore_prepare() {
             elif [[ $device_target_powder == 1 ]]; then
                 case $device_target_vers in
                     3* | 4.[012]* )
+                        local ipsw_custom_part2="$ipsw_custom"
+                        ipsw_custom="$ipsw_custom_part1"
                         if [[ $ipsw_skip_first != 1 ]]; then
                             restore_idevicerestore first
                             log "Do not disconnect your device, not done yet"
                             print "* Please put the device in DFU mode after it reboots!"
-                            sleep 20
+                            sleep 5
                             device_mode=
                             log "Press Enter/Return when the device reboots and is on black screen, Apple logo, or iTunes logo."
                             device_enter_mode DFU
@@ -5873,10 +5875,10 @@ restore_prepare() {
                         until [[ -n $device_mode ]]; do
                             device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
                         done
-                        ipsw_custom="../$ipsw_custom_part2"
+                        ipsw_custom="$ipsw_custom_part2"
                         print "* If pwning fails here, re-enter DFU and run the script again with --skip-first flag enabled to continue the process."
                         device_enter_mode pwnDFU
-                        restore_idevicerestore norflash
+                        restore_idevicerestore
                     ;;
                     * ) restore_idevicerestore;;
                 esac
@@ -6948,6 +6950,7 @@ device_ramdisk() {
                     log "Running haxx_overwrite --${device_type}_${build}"
                     $ssh -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
                 fi
+
             else
                 log "Rebooting"
                 $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
@@ -7050,8 +7053,8 @@ device_ramdisk_ios3exploit() {
         log "Extracting $untether"
         $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
     fi
-    log "Fixing autoboot and disks, please wait..."
-    $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1; fsck_hfs -f /dev/rdisk0s1; fsck_hfs -f /dev/rdisk0s2s1"
+    log "Fixing autoboot"
+    $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1"
 }
 
 device_datetime_cmd() {
@@ -7643,7 +7646,7 @@ menu_print_info() {
             warn "gasgauge-patch/multipatch flag detected. multipatch enabled."
         fi
         if [[ $ipsw_skip_first == 1 ]]; then
-            warn "skip-first flag detected. Skipping first restore and flashing NOR IPSW only for powdersn0w 4.2.x and lower"
+            warn "skip-first flag detected. Skipping first restore and flashing part 2 IPSW only for powdersn0w 4.2.x and lower"
         fi
     elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
         if [[ $restore_useskipblob == 1 ]]; then
@@ -9073,6 +9076,7 @@ ipsw_print_warnings() {
         case $device_target_build in
             8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
             8*  ) [[ $device_type == "iPhone3,"* ]] && warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
+            7[CDE]* ) warn "Not all devices support iOS 3 versions. It may not restore/boot properly";;
         esac
         return
     fi
@@ -9294,8 +9298,14 @@ menu_ipsw_browse() {
         pause
         return
     fi
-    if [[ $device_target_vers == "$device_latest_vers" && $device_target_other == 1 ]]; then
-        log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other (Use SHSH Blobs)\""
+    if [[ $device_target_vers == "$device_latest_vers" ]] &&
+       [[ $device_target_other == 1 || $device_target_tethered == 1 ]]; then
+        log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other\""
+        pause
+        return
+    elif [[ $device_target_vers == "10"* && $device_proc == 6 ]]; then
+        log "Selected IPSW ($device_target_vers) is not supported as target version."
+        print "* iOS 10 versions that are not 10.3.3/10.3.4 are not supported for 32-bit devices."
         pause
         return
     fi
@@ -9652,7 +9662,7 @@ menu_flags() {
             ;;
             "Enable skip-first flag" )
                 warn "This will enable the --skip-first flag."
-                print "* This will skip first restore and flash NOR IPSW only for powdersn0w 4.2.x and lower."
+                print "* This will skip first restore and flash part 2 IPSW only for powdersn0w 4.2.x and lower."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
                 select_yesno "Do you want to enable the skip-ibss flag?" 0
