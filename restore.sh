@@ -3094,7 +3094,7 @@ ipsw_prepare_jailbreak() {
                     JBFiles[1]=$jelbrek/greenpois0n/${device_type}_${device_target_build}.tar
                 fi
             ;;
-            3.1* | 4.0* )
+            3.1* )
                 if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $ipsw_24o == 1 ]]; then
                     JBFiles[1]=
                 fi
@@ -5296,7 +5296,7 @@ ipsw_prepare_custom() {
     ipsw_prepare_jailbreak old
 
     mv "$ipsw_custom.ipsw" temp.ipsw
-    if [[ $ipsw_24o == 1 ]] && [[ $device_target_vers == "3.1"* || $device_target_vers == "4.0"* ]]; then # old bootrom ipod2,1
+    if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1
         ipsw_prepare_patchcomp LLB
         mv temp.ipsw "$ipsw_custom.ipsw"
         return
@@ -8309,7 +8309,7 @@ menu_restore() {
                 menu_items+=("iOS 4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3")
-                if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr != 1 || $device_mode != "none" ]]; then
+                if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr == 0 || $device_mode != "none" ]]; then
                     menu_items+=("More versions")
                 fi
             ;;
