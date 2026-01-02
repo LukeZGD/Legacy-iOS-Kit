@@ -395,8 +395,8 @@ set_tool_paths() {
         zenity="$(command -v zenity)"
         scp2="$dir/scp"
         ssh2="$dir/ssh"
-        cp $ssh2 .
-        chmod +x ssh
+        cp $ssh2 . 2>/dev/null
+        chmod +x ssh 2>/dev/null
         export LD_LIBRARY_PATH="$dir/lib"
 
         # live cd/usb check
@@ -590,7 +590,7 @@ set_tool_paths() {
     primepwn+="$dir/primepwn"
     sshfs="$(command -v sshfs)"
 
-    cp ../resources/ssh_config .
+    cp ../resources/ssh_config . 2>/dev/null
     if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
           $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
         echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
@@ -769,6 +769,8 @@ version_get() {
     elif [[ -e ./resources/git_hash ]]; then
         version_current="$(cat ./resources/version)"
         git_hash="$(cat ./resources/git_hash)"
+    elif [[ -e ./resources/new ]]; then
+        :
     else
         log ".git directory and git_hash file not found, cannot determine version."
         if [[ $no_version_check != 1 ]]; then
@@ -6769,7 +6771,14 @@ device_ramdisk() {
             build=$device_build
 
             if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
-                warn "Your device seems to be already jailbroken. Cannot continue."
+                warn "Your device seems to be already jailbroken. Cannot continue jailbreaking."
+                if [[ $ipsw_openssh == 1 ]]; then
+                    log "Will try installing OpenSSH anyway..."
+                    log "Mounting data partition"
+                    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+                    device_send_rdtar sshdeb.tar
+                fi
+                log "Rebooting"
                 $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
                 return
             fi

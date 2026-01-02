@@ -24,58 +24,21 @@ jobs:
           echo "${{ env.SHA_SHORT }}" | tee ./resources/git_hash
           echo "v${{ env.DATE }}.${{ env.COUNT }}" | tee ./resources/version
 
-      - name: Download some files
+      - name: Move binaries
         run: |
-          mkdir -p saved/firmware
-          pushd resources
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/ea998f27d737611a30e0d10fbf251d66967022f6.zip -o ipwndfu_python3.zip
-          curl -L https://github.com/LukeZGD/ipwndfu/archive/2bc68605dd0dd31ab27fa720452e4ccd4e638d0d.zip -o ipwndfu.zip
-          curl -L https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/archive/refs/heads/master.zip -o keys.zip
-          unzip keys.zip -d .
-          cp -r Legacy-iOS-Kit-Keys-master/* ../saved/firmware
-          unzip ipwndfu_python3.zip -d .
-          mv ipwndfu*/ ../saved/ipwndfu_python3
-          unzip ipwndfu.zip -d .
-          mv ipwndfu*/ ../saved/ipwndfu
-          rm -rf Legacy-iOS-Kit-Keys-master/ ipwndfu*.zip keys.zip
-          echo "7eb59cc50d31078fa7bbc2fddb1e76f74e43c040" > ../saved/ipwndfu_python3/sha1check
-          echo "88d8a39c3250d0603086c5ce6911c3df1b43e9cd" > ../saved/ipwndfu/sha1check
-          popd
+          mkdir -p ./exclude/bin ./exclude/resources
+          mv ./bin/* ./exclude/bin
+          mv ./resources/* ./exclude/resources
+          rm -r ./bin/*
+          mkdir -p ./bin/macos/arm64 ./bin/linux/arm64 ./bin/linux/x86_64
+          mv ./exclude/bin/linux/arm64/jq ./bin/linux/arm64
+          mv ./exclude/bin/linux/x86_64/jq ./bin/linux/x86_64
+          mv ./exclude/bin/macos/jq ./bin/macos
+          mv ./exclude/bin/macos/arm64/jq ./bin/macos/arm64
+          touch ./resources/new
 
-      - name: Move linux binaries
-        run: |
-          mkdir -p ./exclude/bin
-          cp -R ./bin/* ./exclude/bin
-          rm -r ./bin/linux
-
-      - name: Zip macos files
-        run: zip -r ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
-
-      - name: Move macos binaries
-        run: |
-          rm -r ./bin/macos
-          mkdir ./bin/linux
-          cp -R ./exclude/bin/linux/x86_64 ./bin/linux
-
-      - name: Zip linux x86_64 files
-        run: zip -r ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
-
-      - name: Move linux x86_64 binaries and other files
-        run: |
-          rm -r ./bin/linux/x86_64
-          cp -R ./exclude/bin/linux/arm64 ./bin/linux
-
-      - name: Zip linux arm64 files
-        run: zip -r ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
-
-      - name: Move linux binaries and other files
-        run: rm -r ./bin/linux
-
-      - name: Copy exclude files back
-        run: cp -R ./exclude/bin/* ./bin
-
-      - name: Zip complete files
-        run: zip -r ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md saved/
+      - name: Zip files
+        run: zip -r ${{ github.event.repository.name }}_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md
 
       - name: Create this file to get latest git hash
         run: |
@@ -104,10 +67,7 @@ jobs:
         run: |
           gh release upload latest \
             git-hash_${{ env.DATE_OLD }}-${{ env.SHA_SHORT }}.zip \
-            ${{ github.event.repository.name }}_complete_v${{ env.DATE }}.${{ env.COUNT }}.zip \
-            ${{ github.event.repository.name }}_macos_v${{ env.DATE }}.${{ env.COUNT }}.zip \
-            ${{ github.event.repository.name }}_linux_arm64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
-            ${{ github.event.repository.name }}_linux_x86_64_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_v${{ env.DATE }}.${{ env.COUNT }}.zip \
             --clobber -R ${{ github.repository }}
 
           gh release edit latest \
