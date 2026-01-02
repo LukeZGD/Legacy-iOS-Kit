@@ -27,9 +27,9 @@ jobs:
       - name: Move binaries
         run: |
           mkdir -p ./exclude/bin ./exclude/resources
-          mv ./bin/* ./exclude/bin
-          mv ./resources/* ./exclude/resources
-          rm -r ./bin/*
+          cp -R ./bin/* ./exclude/bin
+          cp -R ./resources/* ./exclude/resources
+          rm -rf ./bin/* ./resources/*
           mkdir -p ./bin/macos/arm64 ./bin/linux/arm64 ./bin/linux/x86_64
           mv ./exclude/bin/linux/arm64/jq ./bin/linux/arm64
           mv ./exclude/bin/linux/x86_64/jq ./bin/linux/x86_64
