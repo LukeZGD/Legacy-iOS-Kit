@@ -31,10 +31,10 @@ jobs:
           cp -R ./resources/* ./exclude/resources
           rm -rf ./bin/* ./resources/*
           mkdir -p ./bin/macos/arm64 ./bin/linux/arm64 ./bin/linux/x86_64
-          mv ./exclude/bin/linux/arm64/jq ./bin/linux/arm64
-          mv ./exclude/bin/linux/x86_64/jq ./bin/linux/x86_64
-          mv ./exclude/bin/macos/jq ./bin/macos
-          mv ./exclude/bin/macos/arm64/jq ./bin/macos/arm64
+          mv ./exclude/bin/linux/arm64/aria2c ./exclude/bin/linux/arm64/jq ./bin/linux/arm64
+          mv ./exclude/bin/linux/x86_64/aria2c ./exclude/bin/linux/x86_64/jq ./bin/linux/x86_64
+          mv ./exclude/bin/macos/aria2c ./exclude/bin/macos/jq ./bin/macos
+          mv ./exclude/bin/macos/arm64/aria2c ./exclude/bin/macos/arm64/jq ./bin/macos/arm64
           touch ./resources/new
 
       - name: Zip files

@@ -679,15 +679,28 @@ install_depends() {
     exit
 }
 
+download_from_url() {
+    local url="$1"
+    local file="$2"
+    if [[ -n "$file" ]]; then
+        rm -f "$file"
+        $aria2c "$url" -o "$file" || \
+        $curl -L "$url" -o "$file" || \
+        wget -O "$file" "$url"
+        return
+    fi
+    $aria2c "$url" || \
+    $curl -LO "$url" || \
+    wget "$url"
+}
+
 version_update_check() {
     pushd "tmp$$" >/dev/null
     if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
         /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
-    rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
-    [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
+    download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" latest
     github_api=$(cat latest 2>/dev/null)
     version_latest=$(echo "$github_api" | $jq -r '.name')
     version_latest=${version_latest#Latest-}
@@ -1553,9 +1566,7 @@ device_get_info() {
     # if still not set and on linux, get from ipsw.me
     if [[ -z $device_latest_vers && $platform == "linux" ]]; then
         log "Getting latest iOS version for $device_type"
-        rm -f tmp.json
-        $aria2c "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
-        [[ $? != 0 ]] && $curl -L "https://api.ipsw.me/v4/device/$device_type?type=ipsw" -o tmp.json
+        download_from_url "https://api.ipsw.me/v4/device/$device_type?type=ipsw" tmp.json
         local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
         device_latest_vers="$(echo "$latestver" | $jq -j ".version")"
         device_latest_build="$(echo "$latestver" | $jq -j ".buildid")"
@@ -2380,8 +2391,7 @@ device_fw_key_check() {
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
             log "Getting firmware keys for $device_type-$build: $i"
-            $aria2c "$i" -o index.html
-            [[ $? != 0 ]] && $curl -L "$i" -o index.html
+            download_from_url "$i" index.html
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
                 break
             fi
@@ -2479,10 +2489,8 @@ download_appledb() {
     local try=("https://api.appledb.dev/${query}.json"
                "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/${query}.json")
     for request in "${try[@]}"; do
-        rm -f tmp.json
         log "AppleDB request: $request"
-        $aria2c "$request" -o tmp.json
-        [[ $? != 0 ]] && $curl -L "$request" -o tmp.json
+        download_from_url "$request" tmp.json
         [[ -s tmp.json ]] && break
     done
     if [[ ! -s tmp.json ]]; then
@@ -5555,9 +5563,7 @@ restore_futurerestore() {
             return
         fi
         log "Checking for futurerestore updates..."
-        #rm -f commits
-        #$aria2c "https://api.github.com/repos/futurerestore/futurerestore/commits"
-        #[[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/futurerestore/futurerestore/commits"
+        #download_from_url "https://api.github.com/repos/futurerestore/futurerestore/commits" commits
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
         local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
         local fr_branch="main"
@@ -7241,9 +7247,7 @@ menu_ramdisk() {
                     continue
                 fi
                 log "Checking for latest TrollStore"
-                rm -f latest
-                $aria2c "https://api.github.com/repos/opa334/TrollStore/releases/latest"
-                [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/opa334/TrollStore/releases/latest"
+                download_from_url "https://api.github.com/repos/opa334/TrollStore/releases/latest" latest
                 local latest="$(cat latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version 2>/dev/null || echo "none")"
                 log "Latest version: $latest, current version: $current"
@@ -7540,9 +7544,7 @@ shsh_convert_onboard() {
 }
 
 shsh_save_cydia() {
-    rm -f tmp.json
-    $aria2c "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" -o tmp.json
-    [[ $? != 0 ]] && $curl -L "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" -o tmp.json
+    download_from_url "https://api.ipsw.me/v4/device/${device_type}?type=ipsw" tmp.json
     local json=$(cat tmp.json)
     local len=$(echo "$json" | $jq -r ".firmwares | length")
     local builds=()
@@ -8059,9 +8061,7 @@ device_sideloader() {
     fi
     sideloader+="$arch"
     log "Checking for latest Sideloader"
-    rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest"
-    [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest"
+    download_from_url "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest" latest
     local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
@@ -10913,9 +10913,7 @@ device_altserver() {
         mv AltServer-$arch $altserver
     fi
     log "Checking for latest anisette-server"
-    rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Provision/releases/latest"
-    [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/LukeZGD/Provision/releases/latest"
+    download_from_url "https://api.github.com/repos/LukeZGD/Provision/releases/latest" latest
     local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
@@ -11346,8 +11344,6 @@ main() {
         fi
     fi
 
-    version_check
-
     local checks=(curl git patch xxd)
     local check_fail
     for check in "${checks[@]}"; do
@@ -11367,6 +11363,8 @@ main() {
     if [[ ! -e "../resources/firstrun" || $(cat "../resources/firstrun") != "$platform_ver" || $check_fail == 1 ]]; then
         install_depends
     fi
+
+    version_check
 
     device_get_info
     mkdir -p ../saved/baseband ../saved/$device_type ../saved/shsh
