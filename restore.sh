@@ -2272,6 +2272,9 @@ device_send_unpacked_ibss() {
     device_pwnd="$(echo "$irec" | grep "PWND" | cut -c 7-)"
     if [[ -z $device_pwnd && $irec != "ERROR"* ]]; then
         log "Device should now be in $pwnrec mode."
+    elif [[ $device_proc == 5 ]]; then
+        error "Device failed to enter $pwnrec mode." \
+        "If you are using Arduino for checkm8-a5, make sure you are using my (LukeZGD) or synackuk fork of checkm8-a5. Do not use a1exdandy checkm8-a5."
     else
         error "Device failed to enter $pwnrec mode."
     fi
@@ -8315,7 +8318,7 @@ menu_restore() {
             iPhone2,1 )
                 menu_items+=("5.1.1" "4.3.5" "4.1" "3.1.3" "More versions");;
             iPod3,1 )
-                menu_items+=("iOS 4.1");;
+                menu_items+=("4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3")
                 if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr == 0 || $device_mode != "none" ]]; then
@@ -8331,8 +8334,8 @@ menu_restore() {
             menu_items+=("Latest iOS ($device_latest_vers)")
         fi
         case $device_type in
-            iPod4,1 ) menu_items+=("iOS 7.1.2");;
-            iPod3,1 ) menu_items+=("iOS 6.0");;
+            iPod4,1 ) menu_items+=("7.1.2");;
+            iPod3,1 ) menu_items+=("6.0" "6.1.3" "6.1.6");;
         esac
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
@@ -8392,7 +8395,18 @@ menu_restore() {
             "DFU IPSW" ) device_dfuipsw_confirm $1;;
             "More versions" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
-            "iOS 7.1.2" | "iOS 6.0" ) menu_ipsw_special "$selected" "$1";;
+            7.* )
+                case $device_type in
+                    iPod4,1 ) menu_ipsw_special "$selected" "$1";;
+                    * ) menu_ipsw "$selected" "$1";;
+                esac
+            ;;
+            6.* )
+                case $device_type in
+                    iPod3,1 ) menu_ipsw_special "$selected" "$1";;
+                    * ) menu_ipsw "$selected" "$1";;
+                esac
+            ;;
             * ) menu_ipsw "$selected" "$1";;
         esac
     done
@@ -8993,20 +9007,23 @@ menu_ipsw_special() {
     fi
 
     while [[ -z "$mode" && -z "$back" ]]; do
+        device_target_vers="$1"
         case $1 in
-            "iOS 7.1.2" )
+            7.* )
                 device_type_special="iPhone3,3"
                 device_model_special="n92"
-                device_target_vers="7.1.2"
-                device_target_build="11D257"
                 device_target_tethered=1
             ;;
-            "iOS 6.0" )
+            6.* )
                 device_type_special="iPhone2,1"
                 device_model_special="n88"
-                device_target_vers="6.0"
-                device_target_build="10A403"
             ;;
+        esac
+        case $1 in
+            7.1.2 ) device_target_build="11D257";;
+            6.1.6 ) device_target_build="10B500";;
+            6.1.3 ) device_target_build="10B329";;
+            6.0   ) device_target_build="10A403";;
         esac
         all_flash_special="Firmware/all_flash/all_flash.${device_model_special}ap.production"
         device_base_vers="$device_latest_vers"
@@ -9040,8 +9057,8 @@ menu_ipsw_special() {
         fi
         echo
         case $1 in
-            "iOS 7.1.2" ) warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing.";;
-            "iOS 6.0"   ) print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
+            7.* ) warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing.";;
+            6.* ) print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
         esac
         menu_items=("Select Target IPSW" "Select Base IPSW" "Download Target IPSW" "Download Base IPSW")
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
