@@ -682,9 +682,13 @@ install_depends() {
 download_from_url() {
     local url="$1"
     local file="$2"
+    local extra
+    if [[ $file == *".ipsw" ]]; then
+        extra="-c -s 16 -x 16 -k 1M -j 1"
+    fi
     if [[ -n "$file" ]]; then
         rm -f "$file"
-        $aria2c "$url" -o "$file" || \
+        $aria2c "$url" $extra -o "$file" || \
         $curl -L "$url" -o "$file" || \
         wget -O "$file" "$url"
         return
@@ -2356,8 +2360,7 @@ file_download() {
     # usage: file_download {link} {target location} {sha1}
     local filename="$(basename $2)"
     log "Downloading $filename..."
-    $aria2c "$1" -o $2
-    [[ $? != 0 ]] && $curl -L "$1" -o $2
+    download_from_url "$1" "$2"
     if [[ ! -s $2 ]]; then
         error "Downloading $2 failed. Please run the script again"
     fi
@@ -2875,6 +2878,7 @@ ipsw_download() {
     local version="$device_target_vers"
     local build_id="$device_target_build"
     local type="$device_type"
+    local special
     if [[ -n $2 && -n $3 ]]; then
         version="$2"
         build_id="$3"
@@ -2883,6 +2887,7 @@ ipsw_download() {
         build_id="$device_latest_build"
     elif [[ $2 == "special" ]]; then
         type="$device_type_special"
+        special="special"
     fi
     local ipsw_dl="$1"
     ipsw_get_url $build_id $type $version
@@ -2896,10 +2901,10 @@ ipsw_download() {
         fi
         print "* If you want to download it yourself, here is the link: $ipsw_url"
         log "Downloading IPSW... (Press Ctrl+C to cancel)"
-        $aria2c "$ipsw_url" -c -s 16 -x 16 -k 1M -j 1 -o temp.ipsw
+        download_from_url "$ipsw_url" temp.ipsw
         mv temp.ipsw "$ipsw_dl.ipsw"
     fi
-    ipsw_verify "$ipsw_dl" "$build_id"
+    ipsw_verify "$ipsw_dl" "$build_id" $special
 }
 
 ipsw_verify() {
@@ -4470,9 +4475,16 @@ ipsw_prepare_ios6touch3() {
     local ipsw_path2="${device_type_special}_${device_target_vers}_${device_target_build}_Restore"
     local ipsw_base_path2="${device_type}_${device_base_vers}_${device_base_build}_Restore"
     local ipsw_custom2="${device_type}_${device_target_vers}_${device_target_build}_Custom"
-    local kc
-    local kc_sha1
     local jb
+    local kc="$sundance/artifacts/kernelcache.n18ap.bin"
+    local kc_sha1="56baaebd7c260f3d41679fee686426ef2578bbd3"
+    local kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64"
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        jb="-j"
+        kc="$sundance/artifacts/kernelcache.jailbroken.n18ap.bin"
+        kc_sha1="2c42a07b82d14dab69417f750d0e4ca118bf225c"
+        kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64"
+    fi
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -4496,17 +4508,18 @@ ipsw_prepare_ios6touch3() {
         git clone $repo $sundance
     fi
 
-    log "Downloading kernelcache"
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        jb="-j"
-        kc="$sundance/artifacts/kernelcache.jailbroken.n18ap.bin"
-        kc_sha1="56baaebd7c260f3d41679fee686426ef2578bbd3"
-        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64 | base64 --decode | gunzip > $kc
-    else
-        kc="$sundance/artifacts/kernelcache.n18ap.bin"
-        kc_sha1="2c42a07b82d14dab69417f750d0e4ca118bf225c"
-        [[ ! -s $kc ]] && curl https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64 | base64 --decode | gunzip > $kc
+    if [[ -s $kc ]]; then
+        if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
+            rm $kc
+        fi
     fi
+
+    if [[ ! -s $kc ]]; then
+        log "Downloading kernelcache: $(basename $kc)"
+        download_from_url "$kc_url" kc.b64
+        base64 --decode kc.b64 | gunzip > $kc
+    fi
+
     if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
         rm $kc
         error "Downloading/verifying kernelcache failed. Please run the script again"
@@ -4796,7 +4809,7 @@ ipsw_prepare_multipatch() {
         fi
         if [[ ! -s "$ipsw_name.ipsw" ]]; then
             log "Downloading FS IPSW..."
-            $aria2c -c -s 16 -x 16 -k 1M -j 1 "$ipsw_url" -o temp2.ipsw
+            download_from_url "$ipsw_url" temp2.ipsw
             log "Getting SHA1 hash for FS IPSW..."
             sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
             if [[ $sha1L != "$sha1E" ]]; then
@@ -5260,7 +5273,7 @@ ipsw_prepare_s5l8900() {
 
     if [[ $device_type != "iPhone1,2" ]]; then
         log "Downloading IPSW: $ipsw_url"
-        $aria2c -c -s 16 -x 16 -k 1M -j 1 "$ipsw_url" -o temp.ipsw
+        download_from_url "$ipsw_url" temp.ipsw
         log "Getting SHA1 hash for IPSW..."
         sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
         if [[ $sha1L != "$sha1E" ]]; then
@@ -5519,7 +5532,7 @@ restore_futurerestore() {
         log "httpserver PID: $httpserver_pid"
         popd >/dev/null
         log "Waiting for local server"
-        until [[ $(curl http://127.0.0.1:$port 2>/dev/null) ]]; do
+        until [[ $($curl http://127.0.0.1:$port 2>/dev/null) ]]; do
             sleep 1
         done
     fi
@@ -8452,7 +8465,7 @@ menu_ipsw_downloader() {
                 log "IPSW downloading is done"
                 pause
             ;;
-            "Go Back" ) back=1;;
+            "Go Back" ) device_rd_build=; back=1;;
         esac
     done
 }
@@ -10822,19 +10835,6 @@ device_justboot_ios7touch4() {
     [[ -z $device_target_build ]] && device_target_build="11D257"
     log "device_target_build=$device_target_build"
     log "ipsw_jailbreak=$ipsw_jailbreak"
-    if [[ -d "$saves/$device_type_special" ]]; then
-        # migrate from old location to new
-        local old="$saves/$device_type_special"
-        local new="$saves/$device_target_build"
-        mkdir -p "$new"
-        if [[ -s "$old/pwnediBEC.dfu" ]]; then
-            mv "$old/pwnediBEC.dfu" "$saves/"
-        fi
-        for f in devicetree "kernelcache$ipsw_jailbreak"; do
-            [[ -s "$old/$f" ]] && mv "$old/$f" "$new/"
-        done
-        rm -r "$old"
-    fi
 
     device_enter_mode pwnDFU
     device_rd_build=
@@ -10950,7 +10950,7 @@ device_altserver() {
     local ready=0
     log "Waiting for Anisette"
     while [[ $ready != 1 ]]; do
-        [[ $(curl 127.0.0.1:6969 2>/dev/null) ]] && ready=1
+        [[ $($curl 127.0.0.1:6969 2>/dev/null) ]] && ready=1
         sleep 1
     done
     export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
