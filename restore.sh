@@ -1531,7 +1531,11 @@ device_get_info() {
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-        iPad3,[456] | iPhone5,[1234] )
+        iPad3,4 | iPhone5,[34] )
+            device_use_vers="10.3.4"
+            device_use_build="14G60"
+        ;;
+        iPad3,[56] | iPhone5,[12] )
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
