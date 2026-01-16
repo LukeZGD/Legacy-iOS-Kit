@@ -4578,6 +4578,14 @@ ipsw_prepare_multipatch() {
         vers="$device_target_vers"
         build="$device_target_build"
     fi
+    case $device_target_vers in
+        4.3* ) vers="4.3.5"; build="8L1";;
+        5* ) vers="5.1.1"; build="9B206";;
+        6* ) vers="6.1.3"; build="10B329";;
+        7* ) vers="7.1.2"; build="11D257";;
+        8* ) vers="8.4.1"; build="12H321";;
+        9* ) vers="9.3.5"; build="13G36";;
+    esac
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         vers="6.1.3"
         build="10B329"
