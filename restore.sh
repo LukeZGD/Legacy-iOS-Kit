@@ -63,7 +63,7 @@ clean() {
 clean_sudo() {
     clean
     sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/"
-    sudo kill $sudoloop_pid
+    sudo kill $sudoloop_pid 2>/dev/null
 }
 
 clean_usbmuxd() {
@@ -548,7 +548,7 @@ set_tool_paths() {
         ssh2="/usr/bin/ssh"
 
         # kill macos daemons
-        killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
+        killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater 2>/dev/null
 
     else
         error "Your platform ($OSTYPE) is not supported." "* Supported platforms: Linux, macOS"
@@ -1502,6 +1502,7 @@ device_get_info() {
 
     # set device_use_vers, device_use_build (where to get the baseband and manifest from for ota/other)
     # for a7/a8 other restores 11.3+, device_latest_vers and device_latest_build are used
+    # these latest versions are not expected to change anymore (maybe except for 18.x)
     case $device_type in
         iPhone1,1 | iPod1,1 )
             device_use_vers="3.1.3"
@@ -1531,7 +1532,7 @@ device_get_info() {
             device_use_vers="9.3.6"
             device_use_build="13G37"
         ;;
-        iPad3,[456] | iPhone5,[1234] )
+        iPad3,[456] | iPhone5,[1234] ) # 10.3.4 works for ALL A6(X) devices
             device_use_vers="10.3.4"
             device_use_build="14G61"
         ;;
@@ -4569,6 +4570,7 @@ ipsw_prepare_multipatch() {
         use_ticket=
     fi
 
+    # for 4.2.1 and lower powdersn0w multipatch
     vers="4.2.1"
     build="8C148"
     if [[ $ipsw_isbeta == 1 ]]; then
@@ -4578,6 +4580,7 @@ ipsw_prepare_multipatch() {
         vers="$device_target_vers"
         build="$device_target_build"
     fi
+    # for betas multipatch
     case $device_target_vers in
         4.3* ) vers="4.3.5"; build="8L1";;
         5* ) vers="5.1.1"; build="9B206";;
@@ -4586,6 +4589,7 @@ ipsw_prepare_multipatch() {
         8* ) vers="8.4.1"; build="12H321";;
         9* ) vers="9.3.5"; build="13G36";;
     esac
+    # for gasgauge multipatch
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         vers="6.1.3"
         build="10B329"
@@ -4594,6 +4598,7 @@ ipsw_prepare_multipatch() {
             build="11D257"
         fi
     fi
+
     saved_path="../saved/$device_type/$build"
     ipsw_get_url $build
     url="$ipsw_url"
@@ -5644,7 +5649,7 @@ restore_futurerestore() {
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
-    kill $httpserver_pid
+    kill $httpserver_pid 2>/dev/null
 }
 
 restore_latest() {
@@ -9352,7 +9357,7 @@ menu_ipsw_browse() {
         return
     elif [[ $device_target_vers == "10"* && $device_proc == 6 ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
-        print "* iOS 10 versions that are not 10.3.3/10.3.4 are not supported for 32-bit devices."
+        print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
         pause
         return
     fi
