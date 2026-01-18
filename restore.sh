@@ -1237,8 +1237,8 @@ device_get_info() {
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
-                device_det=$(echo "$device_vers" | cut -d. -f1)
-                device_det2=$(echo "$device_vers" | cut -d. -f2)
+                device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
+                device_vers_min=$(echo "$device_vers" | cut -d. -f2)
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
@@ -1468,7 +1468,7 @@ device_get_info() {
             print "* To fix this, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
             pause
             device_proc=1
-            device_det=1
+            device_vers_maj=1
         fi
     fi
     if [[ $device_type == "AppleTV"* || $device_type == "Watch"* ]]; then
@@ -1703,7 +1703,7 @@ device_find_mode() {
 device_sshpass() {
     # ask for device password and use sshpass for scp and ssh
     ssh_user="root"
-    if (( device_det >= 15 )); then
+    if (( device_vers_maj >= 15 )); then
         log "iOS 15+ device detected. Connecting to device SSH as mobile..."
         ssh_user="mobile"
     fi
@@ -1950,16 +1950,16 @@ device_enter_mode() {
             fi
 
             echo "chmod +x /tmp/kloader*" > kloaders
-            if [[ $device_det == 10 ]]; then
+            if [[ $device_vers_maj == 10 ]]; then
                 echo '[[ $(uname -a | grep -c "MarijuanARM") == 1 ]] && /tmp/kloader_hgsp /tmp/pwnediBSS || \
                 /tmp/kloader /tmp/pwnediBSS' >> kloaders
                 sendfiles+=("../resources/kloader/kloader_hgsp" "../resources/kloader/kloader")
-            elif (( device_det <= 5 )); then
+            elif (( device_vers_maj <= 5 )); then
                 opt="kloader_axi0mX"
                 case $device_type in
                     iPad2,4 | iPad3,* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
                 esac
-                log "Using $opt for $device_type iOS $device_det"
+                log "Using $opt for $device_type iOS $device_vers_maj"
                 echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
                 sendfiles+=("../resources/kloader/$opt")
             else
@@ -1981,7 +1981,7 @@ device_enter_mode() {
             log "Entering kDFU mode..."
             print "* This may take a while, but should not take longer than a minute."
             log "Sending files to device: ${sendfiles[*]}"
-            if [[ $device_det == 10 ]]; then
+            if [[ $device_vers_maj == 10 ]]; then
                 for file in "${sendfiles[@]}"; do
                     cat $file | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
                 done
@@ -1997,11 +1997,11 @@ device_enter_mode() {
                 $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
             else
                 warn "Failed to connect to device via USB SSH."
-                if [[ $device_det == 10 ]]; then
+                if [[ $device_vers_maj == 10 ]]; then
                     print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
                     print "* Alternatively, place your device in DFU mode (see \"Troubleshooting\" wiki page for details)"
                     print "* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-for-32-bit-devices"
-                elif (( device_det <= 5 )); then
+                elif (( device_vers_maj <= 5 )); then
                     print "* Try to re-install OpenSSH, reboot, and try again."
                 else
                     print "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."
@@ -3042,7 +3042,7 @@ ipsw_prepare_logos_convert() {
         logoname=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         if [[ $device_target_powder == 1 ]]; then
             fourcc="logb"
-            case $target_det in
+            case $target_vers_maj in
                 [34] ) fourcc="log4";;
             esac
         fi
@@ -4624,7 +4624,7 @@ ipsw_prepare_multipatch() {
 
     if [[ $(cat BuildManifest.plist | grep -c "Downgrade") == 0 ]]; then
         local ind=(0)
-        if [[ $device_proc == 6 && $target_det == 10 ]]; then
+        if [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
             ind+=(2 4)
             [[ $device_type == "iPhone5,"* ]] && ind+=(6)
         fi
@@ -4679,11 +4679,11 @@ ipsw_prepare_multipatch() {
             log "Patch $getcomp"
             "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug $ticket -b "rd=md0 -v nand-enable-reformat=1 amfi=0xff amfi_get_out_of_my_way=1 cs_enforcement_disable=1 pio-error=0"
             "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
-            if [[ $target_det == 10 ]]; then
+            if [[ $target_vers_maj == 10 ]]; then
                 cp ${path}$name ${path}$getcomp.iphone5.RELEASE.dfu
                 cp ${path}$name ${path}$getcomp.iphone5b.RELEASE.dfu
                 cp ${path}$name ${path}$getcomp.ipad3b.RELEASE.dfu
-            elif (( target_det >= 8 )); then
+            elif (( target_vers_maj >= 8 )); then
                 cp ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu
             fi
             zip -r0 temp.ipsw ${path}$getcomp*
@@ -5577,7 +5577,7 @@ restore_futurerestore() {
                 * ) ExtraArr+=("--no-baseband");;
             esac
         fi
-        if (( target_det < 16 )) && [[ $ipsw_ipx != 1 ]]; then
+        if (( target_vers_maj < 16 )) && [[ $ipsw_ipx != 1 ]]; then
             ExtraArr+=("--no-rsep")
         fi
         if [[ $device_target_setnonce == 1 ]]; then
@@ -5596,7 +5596,7 @@ restore_futurerestore() {
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
         local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
         local fr_branch="main"
-        if (( target_det >= 16 )); then
+        if (( target_vers_maj >= 16 )); then
             fr_latest="870bdb8f876de752078c9000a185fed119d60af9"
             fr_branch="dev"
         fi
@@ -5656,12 +5656,22 @@ restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
     local noextract
+    local newidr
+
+    # remove erase arg if update
     [[ $1 == "update" ]] && ExtraArgs=
-    if [[ $device_latest_vers == "12"* || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
+
+    # use newer idr for newer ios
+    local major=$(echo "$device_latest_vers" | cut -d. -f1)
+    if (( major >= 12 )); then
+        newidr=1
+    fi
+    if [[ $newidr == 1 ]]; then
         idevicerestore2+="2"
         ExtraArgs+=" -y"
         noextract=1
     fi
+
     if [[ $1 == "custom" ]]; then
         ExtraArgs+=" -c"
         ipsw_path="$ipsw_custom"
@@ -6120,11 +6130,11 @@ ipsw_prepare() {
         ;;
 
         [789] | 10 )
-            if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]] && (( target_det <= 15 )); then
+            if [[ $device_type == "iPhone10,3" || $device_type == "iPhone10,6" ]] && (( target_vers_maj <= 15 )); then
                 # patch restored_external for iPhone X downgrades to 14.3-15.x
                 ipsw_ipx=1
                 ipsw_prepare_ipx
-            elif [[ $ipsw_ipx == 1 && $target_det == 14 ]] && (( target_det2 >= 2 )); then
+            elif [[ $ipsw_ipx == 1 && $target_vers_maj == 14 ]] && (( target_vers_min >= 2 )); then
                 # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
                 ipsw_prepare_ipx
             else
@@ -6208,7 +6218,7 @@ ipsw_prepare_ipx() {
     "$dir/img4" -i $kernelcache -o kcache.im4p -T rkrn -P kcache.bpatch -J
 
     local restoreramdisk2
-    if [[ $target_det == 14 ]] && (( target_det2 >= 2 )); then
+    if [[ $target_vers_maj == 14 ]] && (( target_vers_min >= 2 )); then
         # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
         if [[ -s ../saved/$device_type/18A8395.dmg ]]; then
             log "Using downloaded 14.1 ramdisk"
@@ -7426,7 +7436,7 @@ shsh_save_onboard64() {
         print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
         print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
         print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
-    elif (( device_det >= 16 )); then
+    elif (( device_vers_maj >= 16 )); then
         print "* Make sure to have the following installed for Cryptex:"
         print "    libkrw0 1.1.2, libkrw0-tfp0 1.1.2, libx8a4-1, x8A4"
         print "* You may install these from this repo: https://cydia.ichitaso.com/secret-repo"
@@ -7448,7 +7458,7 @@ shsh_save_onboard64() {
     if [[ $ssh_user == "mobile" ]]; then
         disk="echo $ssh_pass | sudo -S "
     fi
-    if (( device_det >= 16 )); then
+    if (( device_vers_maj >= 16 )); then
         shsh2="$shsh"
         shsh="temp.shsh2"
         disk+="cat /dev/disk2"
@@ -7791,7 +7801,7 @@ menu_appmanage() {
             break
         fi
         menu_items=("Install IPA (AppSync)")
-        if (( device_det >= 4 )); then
+        if (( device_vers_maj >= 4 )); then
             menu_items+=("Dump App as IPA" "Dump All Apps as IPA")
         fi
         menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
@@ -7824,12 +7834,12 @@ menu_datamanage() {
     else
         menu_items+=("Mount Device" "Mount Device (Raw File System)" "Cydia App Install")
     fi
-    if (( device_det < 4 )); then
+    if (( device_vers_maj < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
         menu_items+=("Backup" "Restore")
     fi
-    if (( device_det >= 9 )); then
+    if (( device_vers_maj >= 9 )); then
         menu_items+=("Erase All Content and Settings")
     fi
     menu_items+=("Pair Device" "Go Back")
@@ -7969,7 +7979,7 @@ menu_ipa() {
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that your iOS device is connected to the Internet."
-            if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
+            if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
                 print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
             fi
             print "* If you have AppSync installed, or are installing an app with a valid"
@@ -7991,7 +8001,7 @@ menu_ipa() {
             print "* Selected IPA: $ipa_path"
             if [[ $1 == "Sideload"* ]]; then
                 menu_items+=("Install IPA using Sideloader")
-                if [[ $platform == "linux" ]] && (( device_det >= 9 )); then
+                if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
                     menu_items+=("Install IPA using AltServer")
                 fi
             else
@@ -8199,8 +8209,8 @@ menu_shsh() {
                 device_target_build="8B117"
             ;;
         esac
-        target_det=$(echo "$device_target_vers" | cut -d. -f1)
-        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+        target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
+        target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
         case $selected in
             *"iOS"* ) shsh_save; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
@@ -8647,8 +8657,8 @@ menu_ipsw() {
                 fi
             ;;
         esac
-        target_det=$(echo "$device_target_vers" | cut -d. -f1)
-        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+        target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
+        target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
         if [[ $device_type != "iPhone"* ]]; then
             ipsw_canhacktivate=
         fi
@@ -9054,8 +9064,8 @@ menu_ipsw_special() {
         all_flash_special="Firmware/all_flash/all_flash.${device_model_special}ap.production"
         device_base_vers="$device_latest_vers"
         device_base_build="$device_latest_build"
-        target_det=$(echo "$device_target_vers" | cut -d. -f1)
-        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+        target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
+        target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
         base_text="$device_type-$device_base_vers"
         target_text="$device_type_special-$device_target_vers"
         ipsw_latest_set
@@ -9175,8 +9185,8 @@ ipsw_version_set() {
     else
         device_target_vers="$vers"
         device_target_build="$build"
-        target_det=$(echo "$device_target_vers" | cut -d. -f1)
-        target_det2=$(echo "$device_target_vers" | cut -d. -f2)
+        target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
+        target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
     fi
 }
 
@@ -9187,7 +9197,7 @@ ipsw_custom_set() {
     fi
 
     ipsw_custom="../${device_type}"
-#     if (( target_det >= 10 )); then
+#     if (( target_vers_maj >= 10 )); then
 #         ipsw_custom="../${ipsw_prefix}"
 #     fi
     ipsw_custom+="_${device_target_vers}_${device_target_build}_Custom"
@@ -9765,12 +9775,12 @@ menu_miscutilities() {
                     iPad2,[123] ) menu_items+=("FourThree Utility");;
                 esac
                 menu_items+=("Pair Device" "Export Device Info")
-                if (( device_det < 5 )); then
+                if (( device_vers_maj < 5 )); then
                     warn "Device is on lower than iOS 5. Battery info is not available"
                 else
                     menu_items+=("Export Battery Info")
                 fi
-                if (( device_det < 4 )) || (( device_det == 4 && device_det2 < 2 )); then
+                if (( device_vers_maj < 4 )) || (( device_vers_maj == 4 && device_vers_min < 2 )); then
                     warn "Device is on lower than iOS 4.2.x. Shutdown/Restart device options are not available"
                 else
                     menu_items+=("Shutdown Device" "Restart Device")
@@ -10151,7 +10161,7 @@ device_jailbreak_gilbert() {
 device_ssh_message() {
     log "Please read the message below:"
     print "* Follow these instructions to connect to the device."
-    if [[ $device_det == 10 ]] && (( device_proc < 7 )); then
+    if [[ $device_vers_maj == 10 ]] && (( device_proc < 7 )); then
         print "1. Jailbreak with socket: https://github.com/LukeZGD/socket"
         print "  - And install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
     else
@@ -10359,12 +10369,12 @@ device_activate() {
     log "Attempting to activate device with ideviceactivation"
     if [[ $device_type == "iPhone"* ]] && (( device_proc <= 4 )); then
         print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        if (( device_det <= 6 )); then
+        if (( device_vers_maj <= 6 )); then
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
         fi
     fi
     $ideviceactivation activate
-    if [[ $device_name == "iPod"* ]] && (( device_det <= 3 )); then
+    if [[ $device_name == "iPod"* ]] && (( device_vers_maj <= 3 )); then
         $ideviceactivation itunes
     fi
     print "* If it returns an error, just try again."
@@ -10887,7 +10897,7 @@ device_enter_ramdisk() {
     elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
         log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
         device_rd_build="13A452"
-    elif (( device_proc >= 5 )) && (( device_det <= 8 )) && [[ $device_mode == "Normal" ]]; then
+    elif (( device_proc >= 5 )) && (( device_vers_maj <= 8 )) && [[ $device_mode == "Normal" ]]; then
         :
     elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
@@ -10998,7 +11008,7 @@ device_dumpapp() {
     local dumper_binary="ipainstaller"
     local selected2
     local selected3="ipainstaller" # Default for everyone else
-    if (( device_det >= 5 && device_det <= 11 )) || (( device_det == 12 && device_det2 < 1 )); then
+    if (( device_vers_maj >= 5 && device_vers_maj <= 11 )) || (( device_vers_maj == 12 && device_vers_min < 1 )); then
         available_dumpers=("ipainstaller" "Clutch" "Go Back")
         echo
         print "* You should choose ipainstaller over Clutch for dumping most apps."
@@ -11008,7 +11018,7 @@ device_dumpapp() {
         selected3="${available_dumpers[$?]}"
         case $selected3 in
             "Clutch" )
-                case $device_det in
+                case $device_vers_maj in
                     5    ) dumper_binary="clutch13";;  # iOS 5
                     [67] ) dumper_binary="clutch204";; # iOS 6 - 7
                     *    ) dumper_binary="clutch";;    # iOS 8 - 12.0.x
@@ -11018,13 +11028,13 @@ device_dumpapp() {
             * ) :;;
         esac
     fi
-    if [[ $dumper_binary == "ipainstaller" ]] && (( device_det <= 10 )); then
+    if [[ $dumper_binary == "ipainstaller" ]] && (( device_vers_maj <= 10 )); then
         dumper_binary="ipainstaller_legacy"
     fi
     local dumper="../resources/appdump/$dumper_binary"
 
     log "Sending $selected3 to device"
-    if [[ $device_det == 10 ]]; then
+    if [[ $device_vers_maj == 10 ]]; then
         cat $dumper | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
         $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
         sleep 3
@@ -11085,7 +11095,7 @@ device_dumpapp() {
 
                 "Clutch" )
                     local ipa
-                    if [[ $device_det == 5 ]]; then
+                    if [[ $device_vers_maj == 5 ]]; then
                         $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
@@ -11115,9 +11125,9 @@ device_dumpapp() {
         done
     else
         warn "Failed to connect to device via USB SSH."
-        if [[ $device_det == 10 ]]; then
+        if [[ $device_vers_maj == 10 ]]; then
             print "* Try to re-install both OpenSSH and Dropbear, reboot, re-jailbreak, and try again."
-        elif (( device_det <= 8 )); then
+        elif (( device_vers_maj <= 8 )); then
             print "* Try to re-install OpenSSH, reboot, and try again."
         else
             print "* Try to re-install OpenSSH, reboot, re-jailbreak, and try again."

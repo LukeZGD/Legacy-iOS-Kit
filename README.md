@@ -111,8 +111,8 @@
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
-- [Restoring the iPod touch 3rd gen to iOS 6.0 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
-- [Restoring the iPod touch 4th gen to iOS 7.1.2 tethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
+- [Restoring the iPod touch 3rd gen to iOS 6 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
+- [Restoring the iPod touch 4th gen to iOS 7 tethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
 - Jailbreaking for 32-bit devices and versions support:
     - iPhone 2G and touch 1 - 3.1.3 only
     - iPhone 3G and touch 2 - 4.2.1, 4.1, and 3.1.3
