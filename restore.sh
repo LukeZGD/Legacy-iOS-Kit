@@ -10067,7 +10067,7 @@ device_jailbreak_confirm() {
         esac
         if [[ $platform == "linux" ]]; then
             case $device_vers in
-                [689]* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
+                6* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
             esac
         fi
     fi
@@ -10086,13 +10086,13 @@ device_jailbreak_confirm() {
             [[ $ipsw_jailbreak != 1 ]] && return
         ;;
         8* | 9.0* )
-            print "* For this version, you can use EverPwnage and sideload it to your device."
-            print "* https://github.com/LukeZGD/EverPwnage"
+            print "* For this version, you can use Carbon to jailbreak your device."
+            print "* https://ios.cfw.guide/using-carbon/"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         9.3.[56] )
-            print "* For this version, you can use EverPwnage and sideload it to your device."
-            print "* https://github.com/LukeZGD/EverPwnage"
+            print "* For this version, use Carbon to jailbreak your device."
+            print "* https://ios.cfw.guide/using-carbon/"
             pause
             return
         ;;
@@ -10102,7 +10102,7 @@ device_jailbreak_confirm() {
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
         10* )
-            print "* For this version, you can use socket and sideload it to your device."
+            print "* For this version, use socket to jailbreak your device."
             print "* https://github.com/LukeZGD/socket"
             pause
             return
