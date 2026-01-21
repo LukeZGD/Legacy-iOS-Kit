@@ -2159,6 +2159,11 @@ device_enter_mode() {
                 fi
             fi
 
+            if [[ $platform == "linux" ]]; then
+                log "CPU: $(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
+                print "* Include this in your log/screenshot for pwning assistance if needed."
+            fi
+
             if [[ $tool == "gaster" ]]; then
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
@@ -2237,6 +2242,9 @@ device_pwnerror() {
     error_msg+=$'\n* Troubleshooting links:
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
+    if [[ $platform == "linux" ]]; then
+        log "CPU: $(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
+    fi
     error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
 }
 
