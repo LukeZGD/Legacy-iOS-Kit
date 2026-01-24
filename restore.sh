@@ -1256,7 +1256,7 @@ device_get_info() {
     fi
 
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
-    device_model="${device_model%??}" # remove "ap" from the end
+    device_model="${device_model%ap}" # remove "ap" from the end
     # device_model fallback/failsafe (this will be up to checkm8 devices only)
     case $device_model in
         k48  ) device_type="iPad1,1";;
