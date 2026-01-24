@@ -773,16 +773,24 @@ version_get() {
             fi
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
-        local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
-        version_current=v${dm//-/.}.
-        dm="20$dm"
-        if [[ $(uname) == "Darwin" ]]; then
-            dm="$(date -j -f "%Y-%m-%d %H:%M:%S" "${dm}-01 00:00:00" +%s)"
+
+        export TZ=UTC
+        local ts=$(git log -1 --format=%ct)
+        local yy
+        local mm
+        local month_start
+        if [[ $(uname) == Darwin ]]; then
+            yy=$(date -r "$ts" +%y)
+            mm=$(date -r "$ts" +%m)
+            month_start=$(date -j -f "%Y-%m-%d %H:%M:%S" "20$yy-$mm-01 00:00:00" +%s)
         else
-            dm="$(date --date="${dm}-01" +%s)"
+            yy=$(date -d "@$ts" +%y)
+            mm=$(date -d "@$ts" +%m)
+            month_start=$(date -d "20$yy-$mm-01 00:00:00" +%s)
         fi
-        dm=$((dm-1))
-        version_current+=$(git rev-list --count HEAD --since=$dm | xargs printf "%02d")
+        local count=$(git rev-list --count HEAD --since="$month_start")
+        version_current="v$yy.$mm.$(printf "%02d" "$count")"
+
     elif [[ -e ./resources/git_hash ]]; then
         version_current="$(cat ./resources/version)"
         git_hash="$(cat ./resources/git_hash)"
@@ -832,17 +840,18 @@ device_entry() {
     # enable manual entry
     log "Manual device/ECID entry is enabled."
     until [[ -n $device_type && $device_type == "iP"* ]]; do
-        read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type
+        read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type_entry
+        device_type="$device_type_entry"
     done
     if [[ $main_argmode == "device_justboot"* || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
-    elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" ]]; then
-        until [[ -n $device_ecid ]] && [ "$device_ecid" -eq "$device_ecid" ]; do
-            read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid
+    elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" && $device_mode != "Normal" ]]; then
+        until [[ -n $device_ecid_entry ]] && [ "$device_ecid_entry" -eq "$device_ecid_entry" ]; do
+            read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid_entry
         done
     fi
-    if [[ -n $device_ecid && $main_argmode == "device_justboot"* ]]; then
-        cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
+    if [[ -n $device_ecid_entry && $main_argmode == "device_justboot"* ]]; then
+        cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid_entry}"
     fi
 }
 
@@ -1014,6 +1023,18 @@ device_get_name() {
     fi
 }
 
+device_paired_info() {
+    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
+    device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
+    device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
+    device_platform=$($ideviceinfo -k HardwarePlatform)
+    # workaround attempt for https://github.com/LukeZGD/Legacy-iOS-Kit/issues/932#issuecomment-3794394200
+    if [[ $device_platform == "s5l8940x" && $device_model == "k93a" ]] || [[ $device_type_entry == "iPad2,1" ]]; then
+        device_type="iPad2,1"
+        device_model="k93"
+    fi
+}
+
 device_manufacturing() {
     if (( device_proc > 10 )) || [[ $device_proc != 1 && $device_argmode == "none" ]]; then
         return
@@ -1065,6 +1086,11 @@ device_manufacturing() {
         esac
         if [[ -n $year_half ]]; then
             print "* Manufactured in $year_half"
+        elif (( device_proc >= 5 )); then
+            print "* Select Pair Device to get more device information"
+            if [[ -n $device_use_bb ]] && (( device_proc <= 6 )); then
+                print "* This will also check if your device is affected by the 9900 IMEI activation issue"
+            fi
         fi
     fi
     case $device_newbr in
@@ -1228,8 +1254,8 @@ device_get_info() {
             else
                 device_type=$($ideviceinfo -s -k ProductType)
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
-                device_ecid=$($ideviceinfo -s -k UniqueChipID)
             fi
+            device_ecid=$($ideviceinfo -s -k UniqueChipID)
             device_model=$($ideviceinfo -s -k HardwareModel)
             if [[ $device_model == "N81AP" ]]; then
                 device_type="iPod4,1" # this is needed since touch 4 devices on ios 7 show as iphone3,1/3,3
@@ -1241,12 +1267,13 @@ device_get_info() {
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
-                if [[ $device_type == "iPod2,1" ]]; then
-                    device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
-                fi
-                device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
-                device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
-                device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
+                # forced pair for ipad2,1 on start because of possible issues with device type and model
+                # i'd like to force pair for all it but would prob get annoying quick especially on linux
+                case $device_type in
+                    "iPod2,1" ) device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')";;
+                    "iPad2,1" ) [[ -z $device_type_entry ]] && device_pair;;
+                esac
+                device_paired_info
             fi
         ;;
     esac
@@ -7769,7 +7796,11 @@ menu_main() {
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Useful Utilities")
         fi
-        menu_items+=("Misc Utilities" "Exit")
+        menu_items+=("Misc Utilities")
+        if [[ $device_mode == "Normal" ]] && (( device_vers_maj >= 7 )); then
+            menu_items+=("Pair Device")
+        fi
+        menu_items+=("Exit")
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
@@ -7784,7 +7815,7 @@ menu_main() {
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
             "Just Boot" ) menu_justboot;;
-            "Enter pwnDFU Mode" ) device_s5l8900xall;;
+            "Pair Device" ) device_pair;;
             "Exit" ) mode="exit";;
         esac
     done
@@ -7845,7 +7876,7 @@ menu_datamanage() {
     if (( device_vers_maj >= 9 )); then
         menu_items+=("Erase All Content and Settings")
     fi
-    menu_items+=("Pair Device" "Go Back")
+    menu_items+=("Go Back")
     while [[ -z "$mode" && -z "$back" ]]; do
         echo
         print " > Main Menu > Data Management"
@@ -7893,7 +7924,6 @@ menu_datamanage() {
                 kill $iproxy_pid $sshfs_pid
             ;;
             "Connect to SSH" ) device_ssh;;
-            "Pair Device" ) device_pair;;
         esac
     done
 }
@@ -9777,7 +9807,7 @@ menu_miscutilities() {
                 case $device_type in
                     iPad2,[123] ) menu_items+=("FourThree Utility");;
                 esac
-                menu_items+=("Pair Device" "Export Device Info")
+                menu_items+=("Export Device Info")
                 if (( device_vers_maj < 5 )); then
                     warn "Device is on lower than iOS 5. Battery info is not available"
                 else
@@ -9834,7 +9864,6 @@ menu_miscutilities() {
                 fi
                 log "Battery Info exported to: $info"
             ;;
-            "Pair Device" ) device_pair;;
             "Shutdown Device" ) mode="shutdown";;
             "Restart Device" ) mode="restart";;
             "Enter Recovery Mode" ) mode="enterrecovery";;
@@ -9971,11 +10000,14 @@ device_pair() {
     "$dir/idevicepair" pair
     if [[ $? != 0 ]]; then
         log "Unlock and press \"Trust\" on the device before pressing Enter/Return."
+        print "* If you denied the trust dialog, unplug and replug the device."
         pause
         log "Attempting idevicepair"
     fi
     "$dir/idevicepair" pair
-    if [[ $? != 0 ]]; then
+    if [[ $? == 0 ]]; then
+        device_paired_info
+    else
         warn "Unable to pair with device..?"
     fi
 }

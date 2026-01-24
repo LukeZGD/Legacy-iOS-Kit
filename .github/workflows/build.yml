@@ -13,9 +13,14 @@ jobs:
 
       - name: Create name version env
         run: |
-          sudo timedatectl set-timezone Asia/Singapore
-          echo "DATE=$(date +%y.%m)" >> $GITHUB_ENV
-          echo "COUNT=$(git rev-list --count HEAD --since=$(date --date="$(date +%Y-%m-01) - 1 second" +%s) | xargs printf "%02d")" >> $GITHUB_ENV
+          export TZ=UTC
+          ts=$(git log -1 --format=%ct)
+          yy=$(date -d "@$ts" +%y)
+          mm=$(date -d "@$ts" +%m)
+          month_start=$(date -d "20$yy-$mm-01 00:00:00" +%s)
+          count=$(git rev-list --count HEAD --since="$month_start")
+          version_current="v$yy.$mm.$(printf "%02d" "$count")"
+          echo "VERSION_CURRENT=$version_current" >> $GITHUB_ENV
 
       - name: Move binaries
         run: |
@@ -31,7 +36,7 @@ jobs:
           touch ./resources/new
 
       - name: Zip files
-        run: zip -r ${{ github.event.repository.name }}_v${{ env.DATE }}.${{ env.COUNT }}.zip bin/ LICENSE resources/ restore.sh README.md
+        run: zip -r ${{ github.event.repository.name }}_${{ env.VERSION_CURRENT }}.zip bin/ LICENSE resources/ restore.sh README.md
 
       - name: Remove all assets from latest release
         env:
@@ -54,9 +59,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload latest \
-            ${{ github.event.repository.name }}_v${{ env.DATE }}.${{ env.COUNT }}.zip \
+            ${{ github.event.repository.name }}_${{ env.VERSION_CURRENT }}.zip \
             --clobber -R ${{ github.repository }}
 
           gh release edit latest \
-            --title "Latest-v${{ env.DATE }}.${{ env.COUNT }}" \
+            --title "Latest-${{ env.VERSION_CURRENT }}" \
             --target ${{ github.sha }} -R ${{ github.repository }}
