@@ -1180,11 +1180,9 @@ device_get_info() {
             else
                 device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
-                if [[ $device_mode != "WTF" ]]; then
-                    device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
-                fi
+                device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             fi
-            if [[ $device_mode != "DFU" && -z $device_argmode ]]; then
+            if [[ $device_mode != "DFU" && -z $device_argmode ]] && [[ $device_model == "m68ap" ]]; then
                 device_argmode="entry"
                 log "Found an S5L8900 device in $device_mode mode."
                 print "* Device Type Option"
