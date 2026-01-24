@@ -1184,9 +1184,9 @@ device_get_info() {
                     device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
                 fi
             fi
-            if [[ $device_mode == "WTF" && -z $device_argmode ]]; then
+            if [[ $device_mode != "DFU" && -z $device_argmode ]]; then
                 device_argmode="entry"
-                log "Found device in WTF mode."
+                log "Found an S5L8900 device in $device_mode mode."
                 print "* Device Type Option"
                 print "* Select your device in the options below. Make sure to select correctly."
                 local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
@@ -1198,6 +1198,7 @@ device_get_info() {
                     "iPhone 3G"    ) device_type="iPhone1,2";;
                     "iPod touch 1" ) device_type="iPod1,1";;
                 esac
+                device_model=
             fi
             if [[ $device_mode == "Recovery" ]]; then
                 device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
@@ -10093,23 +10094,18 @@ device_jailbreak_confirm() {
             pause
             [[ $ipsw_jailbreak != 1 ]] && return
         ;;
-        8* | 9.0* )
-            print "* For this version, you can use Carbon to jailbreak your device."
-            print "* https://ios.cfw.guide/using-carbon/"
-            print "* You may still continue if you really want to do the ramdisk method instead."
-        ;;
         9.3.[56] )
             print "* For this version, use Carbon to jailbreak your device."
             print "* https://ios.cfw.guide/using-carbon/"
             pause
             return
         ;;
-        9* )
-            print "* For this version, you can use JailbreakMe 4.0 to jailbreak your device."
-            print "* https://ios.cfw.guide/using-jailbreakme-4-0/"
+        [89].* )
+            print "* For this version, you can use Carbon to jailbreak your device."
+            print "* https://ios.cfw.guide/using-carbon/"
             print "* You may still continue if you really want to do the ramdisk method instead."
         ;;
-        10* )
+        10.* )
             print "* For this version, use socket to jailbreak your device."
             print "* https://github.com/LukeZGD/socket"
             pause
