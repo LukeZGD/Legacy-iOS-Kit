@@ -1027,12 +1027,6 @@ device_paired_info() {
     device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
     device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
     device_imei=$($ideviceinfo -k InternationalMobileEquipmentIdentity)
-    device_platform=$($ideviceinfo -k HardwarePlatform)
-    # workaround attempt for https://github.com/LukeZGD/Legacy-iOS-Kit/issues/932#issuecomment-3794394200
-    if [[ $device_platform == "s5l8940x" && $device_model == "k93a" ]] || [[ $device_type_entry == "iPad2,1" ]]; then
-        device_type="iPad2,1"
-        device_model="k93"
-    fi
 }
 
 device_manufacturing() {
@@ -1267,12 +1261,10 @@ device_get_info() {
                 device_build=$($ideviceinfo -s -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
-                # forced pair for ipad2,1 on start because of possible issues with device type and model
+                if [[ $device_type == "iPod2,1" ]]; then
+                    device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')"
+                fi
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
-                case $device_type in
-                    "iPod2,1" ) device_newbr="$($ideviceinfo -k ModelNumber | grep -c 'C')";;
-                    "iPad2,1" ) [[ -z $device_type_entry ]] && device_pair;;
-                esac
                 device_paired_info
             fi
         ;;
@@ -1284,6 +1276,10 @@ device_get_info() {
 
     device_model="$(echo $device_model | tr '[:upper:]' '[:lower:]')"
     device_model="${device_model%ap}" # remove "ap" from the end
+    # workaround for https://github.com/LukeZGD/Legacy-iOS-Kit/issues/932, hopefully this is the only case where this is needed
+    if [[ $device_type == "iPad2,1" ]]; then
+        device_model="k93"
+    fi
     # device_model fallback/failsafe (this will be up to checkm8 devices only)
     case $device_model in
         k48  ) device_type="iPad1,1";;
