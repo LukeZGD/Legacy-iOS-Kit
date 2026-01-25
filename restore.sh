@@ -490,6 +490,7 @@ set_tool_paths() {
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
         platform_ver="${1:-$(sw_vers -productVersion)}"
+        IFS='.' read -r mac_majver mac_minver mac_patch <<< "$platform_ver"
         dir="../bin/macos"
 
         platform_arch="$(uname -m)"
@@ -498,10 +499,7 @@ set_tool_paths() {
         fi
 
         # macos checks
-        mac_majver="${platform_ver:0:2}"
         if [[ $mac_majver == 10 ]]; then
-            mac_minver=${platform_ver:3}
-            mac_minver=${mac_minver%.*}
             if (( mac_minver < 11 )); then
                 error "Your macOS version ($platform_ver - $platform_arch) is not supported." \
                 "* Supported macOS versions are 10.11 and newer."
@@ -524,7 +522,6 @@ set_tool_paths() {
             15 ) mac_name="Sequoia";;
             26 ) mac_name="Tahoe";;
         esac
-        mac_ver="$platform_ver"
         if [[ -n $mac_name ]]; then
             platform_ver="$mac_name $platform_ver"
         fi
@@ -555,7 +552,7 @@ set_tool_paths() {
     fi
     log "Running on platform: $platform ($platform_ver - $platform_arch)"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if (( mac_majver == 14 && mac_minver < 6 )) || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     fi
@@ -1080,7 +1077,7 @@ device_manufacturing() {
         esac
         if [[ -n $year_half ]]; then
             print "* Manufactured in $year_half"
-        elif (( device_proc >= 5 )); then
+        elif [[ $device_mode == "Normal" ]] && (( device_proc >= 5 )); then
             print "* Select Pair Device to get more device information"
             if [[ -n $device_use_bb ]] && (( device_proc <= 6 )); then
                 print "* This will also check if your device is affected by the 9900 IMEI activation issue"
@@ -2787,8 +2784,7 @@ ipsw_preference_set() {
 
     if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
         ipsw_canmemory=
-    elif [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
-         [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
+    elif [[ -n $device_type_special ]]; then
         ipsw_canmemory=
     elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
@@ -5854,8 +5850,7 @@ restore_deviceprepare() {
         ;;
 
         4 )
-            if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
-               [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
+            if [[ -n $device_type_special ]]; then
                 shsh_save version $device_latest_vers
                 case $device_type in
                     iPod4,1 ) device_buttons;;
@@ -5924,8 +5919,7 @@ restore_prepare() {
         ;;
 
         4 )
-            if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]] ||
-               [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
+            if [[ -n $device_type_special ]]; then
                 restore_idevicerestore special
             elif [[ $device_target_tethered == 1 || $device_target_other == 1 ]] ||
                  [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
@@ -6109,6 +6103,8 @@ ipsw_prepare() {
                 ipsw_prepare_ios7touch4
             elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
                 ipsw_prepare_ios6touch3
+#             elif [[ $device_type == "iPad1,1" && $device_target_vers == "6."* ]]; then
+#                 ipsw_prepare_ios6ipad1
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_other == 1 || $ipsw_gasgauge_patch == 1 ]] ||
@@ -6175,7 +6171,11 @@ ipsw_prepare() {
 }
 
 restore_usepwndfu64_option() {
-    if [[ $device_target_vers == "$device_latest_vers" || $restore_usepwndfu64 == 1 ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" ]]; then
+        return
+    elif [[ $restore_usepwndfu64 == 1 ]]; then
+        log "use-pwndfu flag detected, Pwned Restore Option enabled."
+        restore_usepwndfu64=1
         return
     elif [[ $restore_useskipblob == 1 ]]; then
         log "skip-blob flag detected, Pwned Restore Option enabled."
@@ -6186,9 +6186,18 @@ restore_usepwndfu64_option() {
         print "* If you want to disable Pwned Restore Option, place the device in Normal/Recovery mode"
         restore_usepwndfu64=1
         return
-    elif [[ $device_target_vers == "10.3.3" && $device_target_other != 1 &&
-            $platform == "macos" ]] && [[ $platform_arch == "arm64" || $mac_cocoa == 1 ]] ||
-         [[ $device_target_setnonce == 1 ]]; then
+    elif [[ $device_target_vers == "10.3.3" && $device_target_other != 1 && $platform == "macos" ]]; then
+        if [[ $platform_arch == "arm64" ]]; then
+            log "arm64 Mac detected, Pwned Restore Option enabled for 10.3.3 restore."
+            restore_usepwndfu64=1
+            return
+        elif [[ $mac_cocoa == 1 ]]; then
+            log "OS X El Capitan detected, Pwned Restore Option enabled for 10.3.3 restore."
+            restore_usepwndfu64=1
+            return
+        fi
+    elif [[ $device_target_setnonce == 1 ]]; then
+        log "Set Nonce Only mode detected, Pwned Restore Option enabled."
         restore_usepwndfu64=1
         return
     fi
@@ -7658,7 +7667,7 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if [[ $mac_majver == 14 && $mac_ver != "14.6"* && $mac_ver != "14.7"* ]] || (( mac_majver < 14 )); then
+        if (( mac_majver == 14 && mac_minver < 6 )) || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
         fi
     fi
@@ -9074,14 +9083,16 @@ menu_ipsw_special() {
     while [[ -z "$mode" && -z "$back" ]]; do
         device_target_vers="$1"
         case $1 in
-            7.* )
+            7.* ) # for touch 4
                 device_type_special="iPhone3,3"
                 device_model_special="n92"
                 device_target_tethered=1
             ;;
-            6.* )
-                device_type_special="iPhone2,1"
-                device_model_special="n88"
+            6.* ) # for touch 3
+                case $device_type in
+                    iPod3,1 ) device_type_special="iPhone2,1"; device_model_special="n88";;
+                    #iPad1,1 ) :;; # for future use
+                esac
             ;;
         esac
         case $1 in
@@ -9147,6 +9158,8 @@ menu_ipsw_special() {
 
                 ipsw_path=
                 ipsw_base_path=
+                device_type_special=
+                device_model_special=
                 device_target_tethered=
             ;;
         esac
