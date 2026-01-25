@@ -8395,7 +8395,7 @@ menu_restore() {
                 menu_items+=("4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3")
-                if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr == 0 || $device_mode != "none" ]]; then
+                if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr == 0 || $device_mode == "none" ]]; then
                     menu_items+=("More versions")
                 fi
             ;;
@@ -11412,8 +11412,8 @@ main() {
         local try=("google.com" "www.apple.com" "208.67.222.222")
         local check
         for i in "${try[@]}"; do
-            ping -c1 $i >/dev/null
-            check=$?
+            ping -c1 $i | sed -n '1,2p'
+            check=${PIPESTATUS[0]}
             if [[ $check == 0 ]]; then
                 break
             fi
