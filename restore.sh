@@ -1394,8 +1394,8 @@ device_get_info() {
         iPad6,4  ) device_model="j128";;
         iPad6,7  ) device_model="j98a";;
         iPad6,8  ) device_model="j99a";;
-        iPad6,11 ) device_model="j71s";;
-        iPad6,12 ) device_model="j72s";;
+        #iPad6,11 ) device_model="j71s";;
+        #iPad6,12 ) device_model="j72s";;
         iPad7,1  ) device_model="j120";;
         iPad7,2  ) device_model="j121";;
         iPad7,3  ) device_model="j207";;
@@ -1419,9 +1419,9 @@ device_get_info() {
         iPhone6,2) device_model="n53";;
         iPhone7,1) device_model="n56";;
         iPhone7,2) device_model="n61";;
-        iPhone8,1) device_model="n71";;
-        iPhone8,2) device_model="n66";;
-        iPhone8,4) device_model="n69";;
+        #iPhone8,1) device_model="n71";;
+        #iPhone8,2) device_model="n66";;
+        #iPhone8,4) device_model="n69";;
         iPhone9,1) device_model="d10";;
         iPhone9,2) device_model="d11";;
         iPhone9,3) device_model="d101";;
