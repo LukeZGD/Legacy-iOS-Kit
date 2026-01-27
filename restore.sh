@@ -847,6 +847,9 @@ device_entry() {
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid_entry
         done
     fi
+    if [[ $device_argmode == "none" ]]; then
+        device_ecid="$device_ecid_entry"
+    fi
     if [[ -n $device_ecid_entry && $main_argmode == "device_justboot"* ]]; then
         cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid_entry}"
     fi
@@ -1558,24 +1561,24 @@ device_get_info() {
     esac
     case $device_type in
         iPad4,* | iPhone[67],* | iPod7,1 )
-            device_latest_vers="12.5.7"
-            device_latest_build="16H81"
+            device_latest_vers="12.5.8"
+            device_latest_build="16H88"
         ;;
         iPad5,* | iPhone[89],* | iPod9,1 )
-            device_latest_vers="15.8.5"
-            device_latest_build="19H394"
+            device_latest_vers="15.8.6"
+            device_latest_build="19H402"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.12"
-            device_latest_build="20H364"
+            device_latest_vers="16.7.13"
+            device_latest_build="20H365"
         ;;
         iPad7,[123456] )
             device_latest_vers="17.7.10"
             device_latest_build="21H450"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.3"
-            device_latest_build="22H217"
+            device_latest_vers="18.7.4"
+            device_latest_build="22H218"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
