@@ -1569,8 +1569,8 @@ device_get_info() {
             device_latest_build="19H402"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.13"
-            device_latest_build="20H365"
+            device_latest_vers="16.7.12"
+            device_latest_build="20H364"
         ;;
         iPad7,[123456] )
             device_latest_vers="17.7.10"
