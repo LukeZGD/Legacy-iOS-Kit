@@ -10535,15 +10535,27 @@ restore_customipsw() {
 }
 
 device_dfuipsw_confirm() {
-    print "* You are about to restore with a DFU IPSW."
-    print "* This will force the device to enter DFU mode, which is useful for devices with broken buttons."
-    print "* All device data will be wiped! Only proceed if you have backed up your data."
-    print "* Expect the restore to fail and the device to be stuck in DFU mode."
+    local msg1="restore"
+    local msg2="This"
+    if [[ $1 == "ipsw" ]]; then
+        msg1="create"
+        msg2+=" IPSW"
+    fi
+    print "* You are about to $msg1 a DFU IPSW."
+    print "* $msg2 will force the device to enter DFU mode, which is useful for devices with broken buttons."
+    if [[ $1 != "ipsw" ]]; then
+        print "* All device data will be wiped! Only proceed if you have backed up your data."
+        print "* Expect the restore to fail and the device to be stuck in DFU mode."
+    fi
     select_yesno
     if [[ $? != 1 ]]; then
         return
     fi
     mode="device_dfuipsw$1"
+}
+
+device_dfuipswipsw() {
+    device_dfuipsw ipsw
 }
 
 device_dfuipsw() {
@@ -11502,7 +11514,6 @@ main() {
                 print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
             fi
         ;;
-        "dfuipswipsw"  ) device_dfuipsw ipsw;;
         "customipsw"   ) restore_customipsw;;
         "getversion"   ) device_enter_ramdisk getversion;;
         "shutdown"     ) $idevicediagnostics shutdown;;
