@@ -772,6 +772,7 @@ version_get() {
             fi
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
+        [[ -n $(git status --porcelain --untracked-files=no) ]] && git_hash+="-dirty"
 
         export TZ=UTC
         local ts=$(git log -1 --format=%ct)
@@ -2249,9 +2250,9 @@ device_enter_mode() {
 device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
-        [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
+        [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates on AMD desktop CPUs if you have one.'
         [[ $device_proc == 6 || $device_proc == 7 ]] && error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
-        error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
+        error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options if needed.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
             error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
             error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Zebra.'
@@ -5801,8 +5802,7 @@ device_buttons() {
     if [[ $device_proc == 5 ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
-        warn "Selecting pwnDFU will require usage of checkm8-a5."
-        print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+        warn "Selecting pwnDFU will require usage of checkm8-a5. For more info, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $platform_cpu == "AMD"* ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
@@ -5810,7 +5810,7 @@ device_buttons() {
         if [[ $platform_cpu == "AMD"* ]]; then
             case $device_type in
                 iPhone3,* | iPad1,1 | iPod4,1 ) :;;
-                * ) warn "Selecting pwnDFU will use checkm8 which has low success rates on AMD CPUs.";;
+                * ) warn "Selecting pwnDFU will use checkm8 which has low success rates on AMD desktop CPUs if you have one.";;
             esac
         fi
     else
