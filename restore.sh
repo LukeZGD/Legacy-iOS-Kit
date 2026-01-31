@@ -491,7 +491,7 @@ set_tool_paths() {
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
-        platform_ver="$(sysctl -n hw.model) - ${1:-$(sw_vers -productVersion)}"
+        platform_ver="${1:-$(sw_vers -productVersion)}"
         IFS='.' read -r mac_majver mac_minver mac_patch <<< "$platform_ver"
         dir="../bin/macos"
 
@@ -525,7 +525,7 @@ set_tool_paths() {
             26 ) mac_name="Tahoe";;
         esac
         if [[ -n $mac_name ]]; then
-            platform_ver="$mac_name $platform_ver"
+            platform_ver="$(sysctl -n hw.model) - $mac_name $platform_ver"
         fi
         if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
             local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
