@@ -338,6 +338,8 @@ set_tool_paths() {
         fi
         dir+="$platform_arch"
 
+        platform_cpu="$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
+
         # version check
         if [[ -n $UBUNTU_CODENAME ]]; then
             case $UBUNTU_CODENAME in
@@ -489,7 +491,7 @@ set_tool_paths() {
 
     elif [[ $OSTYPE == "darwin"* ]]; then
         platform="macos"
-        platform_ver="${1:-$(sw_vers -productVersion)}"
+        platform_ver="$(sysctl -n hw.model) - ${1:-$(sw_vers -productVersion)}"
         IFS='.' read -r mac_majver mac_minver mac_patch <<< "$platform_ver"
         dir="../bin/macos"
 
@@ -2178,7 +2180,7 @@ device_enter_mode() {
             fi
 
             if [[ $platform == "linux" ]]; then
-                log "CPU: $(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
+                log "CPU: $platform_cpu"
                 print "* Include this in your log/screenshot for pwning assistance if needed."
             fi
 
@@ -2247,8 +2249,8 @@ device_enter_mode() {
 device_pwnerror() {
     local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
-        error_msg+=$'\n\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
-        error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
+        [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates for PCs with an AMD desktop CPU if you have one.'
+        [[ $device_proc == 6 || $device_proc == 7 ]] && error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
             error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
@@ -2261,7 +2263,7 @@ device_pwnerror() {
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
     if [[ $platform == "linux" ]]; then
-        log "CPU: $(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
+        log "CPU: $platform_cpu"
     fi
     error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
 }
@@ -2405,12 +2407,12 @@ device_fw_key_check() {
     # check and download keys for device_target_build, then set the variable device_fw_key (or device_fw_key_base)
     local key
     local build="$device_target_build"
-    if [[ $1 == "base" ]]; then
-        build="$device_base_build"
-    elif [[ $1 == "temp" ]]; then
-        build="$2"
-    fi
-    local keys_path="$device_fw_dir/$build"
+    local device_type="$device_type"
+    case $1 in
+        base ) build="$device_base_build";;
+        temp ) build="$2";;
+    esac
+    local keys_path="../saved/firmware/$device_type/$build"
 
     log "Checking firmware keys in $keys_path"
     if [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "$build") != 1 ]]; then
@@ -4568,6 +4570,11 @@ ipsw_prepare_ios6touch3() {
     popd >/dev/null
     rm -rf "$ipsw_custom2"
     popd >/dev/null
+    mv "$ipsw_custom.ipsw" temp.ipsw
+    ipsw_prepare_ios4patches
+    log "Add all to custom IPSW"
+    zip -r0 temp.ipsw Firmware/dfu/*
+    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_multipatch() {
@@ -4916,17 +4923,27 @@ ipsw_prepare_ios4patches() {
     local key
     local name
     local path="Firmware/dfu/"
-    log "Applying iOS 4 patches"
+    local build_id="$device_target_build"
+    local ipsw_path="$ipsw_path"
+    local ticket
+    if [[ -n $device_type_special ]]; then
+        build_id="$device_base_build"
+        ipsw_path="$ipsw_base_path"
+    fi
+    device_fw_key_check temp $build_id
+    log "Applying iBSS/iBEC patches"
     mkdir -p $all_flash $path
     for getcomp in "${comps[@]}"; do
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
+        iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
+        key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
         name="$getcomp.${device_model}ap.RELEASE.dfu"
         log "Patch $getcomp"
         file_extract_from_archive "$ipsw_path.ipsw" ${path}$name
         mv $name $getcomp.orig
         "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
-        "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
+        ticket=
+        [[ -n $device_type_special && $getcomp == "iBEC" ]] && ticket="--ticket"
+        "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
         "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
     done
 }
@@ -5518,14 +5535,6 @@ restore_idevicerestore() {
         log "Sending iBEC..."
         $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
-    elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
-        rm -rf shsh
-        idevicerestore2=
-        [[ $platform == "linux" ]] && idevicerestore2="sudo "
-        idevicerestore2+="../saved/SundanceInH2A_$platform/executables/"
-        [[ $platform == "linux" ]] && idevicerestore2+="$(uname -m)/"
-        idevicerestore2+="idevicerestore"
-        ExtraArgs="-ey"
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
@@ -5789,15 +5798,21 @@ device_buttons() {
     fi
     input "pwnDFU/kDFU Mode Option"
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
-    if [[ $device_proc == 6 && $platform != "macos" ]]; then
-        print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
-        print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
-        warn "Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
-    elif [[ $device_proc == 5 ]]; then
+    if [[ $device_proc == 5 ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
         warn "Selecting pwnDFU will require usage of checkm8-a5."
         print "* For more info about checkm8-a5, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
+    elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $platform_cpu == "AMD"* ]]; then
+        print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
+        print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
+        [[ $device_proc == 6 ]] && warn "Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
+        if [[ $platform_cpu == "AMD"* ]]; then
+            case $device_type in
+                iPhone3,* | iPad1,1 | iPod4,1 ) :;;
+                * ) warn "Selecting pwnDFU will use checkm8 which has low success rates on AMD CPUs.";;
+            esac
+        fi
     else
         selection=("pwnDFU" "kDFU")
         print "* Selecting pwnDFU is recommended. Both your home and power buttons must be working properly for entering DFU mode."
@@ -5855,10 +5870,7 @@ restore_deviceprepare() {
         4 )
             if [[ -n $device_type_special ]]; then
                 shsh_save version $device_latest_vers
-                case $device_type in
-                    iPod4,1 ) device_buttons;;
-                    iPod3,1 ) device_enter_mode pwnDFU;;
-                esac
+                device_buttons
             elif [[ $device_target_tethered == 1 ]]; then
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
