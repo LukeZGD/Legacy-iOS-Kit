@@ -858,6 +858,23 @@ device_entry() {
     fi
 }
 
+device_entry_s5l8900() {
+    device_argmode="entry"
+    log "Found an S5L8900 device in $device_mode mode."
+    print "* Device Type Option"
+    print "* Select your device in the options below. Make sure to select correctly."
+    local selection=("iPhone 2G" "iPod touch 1")
+    [[ $device_protocol != 1 ]] && selection+=("iPhone 3G")
+    input "Select your option:"
+    select_option "${selection[@]}"
+    local opt2="${selection[$?]}"
+    case $opt2 in
+        "iPhone 2G"    ) device_type="iPhone1,1";;
+        "iPhone 3G"    ) device_type="iPhone1,2";;
+        "iPod touch 1" ) device_type="iPod1,1";;
+    esac
+    device_model=
+}
 device_get_name() {
     # all devices that run iOS/iPhoneOS/iPadOS
     # adding more entries here is no longer necessary since AppleDB is now used as fallback
@@ -1206,20 +1223,7 @@ device_get_info() {
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             if [[ $device_mode != "DFU" && -z $device_argmode && $device_model == "m68ap" ]]; then
-                device_argmode="entry"
-                log "Found an S5L8900 device in $device_mode mode."
-                print "* Device Type Option"
-                print "* Select your device in the options below. Make sure to select correctly."
-                local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
-                input "Select your option:"
-                select_option "${selection[@]}"
-                local opt2="${selection[$?]}"
-                case $opt2 in
-                    "iPhone 2G"    ) device_type="iPhone1,1";;
-                    "iPhone 3G"    ) device_type="iPhone1,2";;
-                    "iPod touch 1" ) device_type="iPod1,1";;
-                esac
-                device_model=
+                device_entry_s5l8900
             fi
             if [[ $device_mode == "Recovery" ]]; then
                 device_vers=$(echo "/exit" | $irecovery -s | grep -a "iBoot-")
@@ -1259,9 +1263,11 @@ device_get_info() {
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
                 device_vers=$($ideviceinfo -s -k ProductVersion)
+                [[ -z $device_vers ]] && device_vers=$($ideviceinfo -k ProductVersion)
                 device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
                 device_vers_min=$(echo "$device_vers" | cut -d. -f2)
                 device_build=$($ideviceinfo -s -k BuildVersion)
+                [[ -z $device_build ]] && device_build=$($ideviceinfo -k BuildVersion)
                 device_udid=$($ideviceinfo -s -k UniqueDeviceID)
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
                 if [[ $device_type == "iPod2,1" ]]; then
@@ -1269,6 +1275,10 @@ device_get_info() {
                 fi
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_paired_info
+            fi
+            device_protocol=$($ideviceinfo -s -k ProtocolVersion)
+            if [[ $device_protocol == 1 ]]; then
+                device_entry_s5l8900
             fi
         ;;
     esac
@@ -1481,16 +1491,12 @@ device_get_info() {
         iPad[67],* ) device_checkm8ipad=1;;
     esac
     device_get_name
-    if [[ -z $device_name && $device_mode == "Normal" ]]; then
-        device_name=$($ideviceinfo -s -k DeviceName)
-        if [[ -n $device_name ]]; then
-            warn "Unable to detect device model and iOS version. Is your device on 2.x or lower?"
-            warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
-            print "* To fix this, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
-            pause
-            device_proc=1
-            device_vers_maj=1
-        fi
+    if [[ $device_mode == "Normal" && -z $device_ecid ]]; then
+        warn "Unable to detect device type/ECID. Is your device on 2.x or lower?"
+        warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
+        print "* For better support, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
+        pause
+        device_vers_maj=1
     fi
     if [[ $device_type == "AppleTV"* || $device_type == "Watch"* ]]; then
         device_proc=11
@@ -1838,6 +1844,10 @@ device_dfuhelper() {
     if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         rec=
     fi
+    if [[ $device_mode == "DFU" && $1 == "DFUreal" ]]; then
+        log "Device is already in DFU mode"
+        return
+    fi
     if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" && $device_proc != 1 ]]; then
         log "Device is already in DFU mode"
         return
@@ -1958,7 +1968,7 @@ device_enter_mode() {
             elif [[ $device_mode == "DFU" ]]; then
                 return
             fi
-            device_dfuhelper
+            device_dfuhelper DFUreal
         ;;
 
         "kDFU" )
@@ -6605,6 +6615,10 @@ device_ramdisk() {
     fi
     version=$device_target_vers
     build_id=$device_target_build
+    if [[ -z $ipsw_justboot_path ]]; then
+        local ipsw_path="../${device_type}_${version}_${build_id}_Restore"
+        [[ -s "$ipsw_path.ipsw" ]] && ipsw_justboot_path="$ipsw_path"
+    fi
     device_fw_key_check
     ipsw_get_url $build_id $device_type $version
     ramdisk_path="../saved/$device_type/ramdisk_$build_id"
@@ -7767,7 +7781,7 @@ menu_print_info() {
     if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Misc Utilities -> Get iOS Version"
     fi
-    if [[ $device_proc != 1 ]]; then
+    if [[ $device_proc != 1 || $device_type == "iPhone1,2" ]]; then
         print "* ECID: $device_ecid"
     fi
     if [[ -n $device_pwnd ]]; then
@@ -10515,7 +10529,7 @@ restore_customipsw_confirm() {
         print "* Another option is to just do 2.x restores on Linux instead."
         print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#restoring-to-iphoneosios-2x-on-macos"
     fi
-    if [[ $device_proc == 1 ]]; then
+    if [[ $device_type == "iPhone1,"* ]]; then
         echo
         print "* Note that you might need to restore twice, due to NOR flash."
         print "* For iPhone 2G/3G, the second restore may fail due to baseband."
@@ -10577,13 +10591,13 @@ device_dfuipsw() {
     # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
     # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
     local ExtraArgs="-e"
-    device_target_vers="$device_latest_vers"
-    device_target_build="$device_latest_build"
     if [[ $device_proc == 1 ]]; then
         ExtraArgs+="c"
-        device_target_vers="3.1.3"
-        device_target_build="7E18"
+        device_latest_vers="3.1.3"
+        device_latest_build="7E18"
     fi
+    device_target_vers="$device_latest_vers"
+    device_target_build="$device_latest_build"
     ipsw_latest_set
     ipsw_path="../$ipsw_latest_path"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
