@@ -62,8 +62,8 @@ clean() {
 
 clean_sudo() {
     clean
-    sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/"
-    sudo kill $sudoloop_pid 2>/dev/null
+    $sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/"
+    $sudo kill $sudoloop_pid 2>/dev/null
 }
 
 clean_usbmuxd() {
@@ -71,16 +71,16 @@ clean_usbmuxd() {
     if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
         return
     fi
-    sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+    $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
     sleep 1
     if [[ $(command -v restorecon) ]]; then
-        sudo restorecon /var/run/usbmuxd
-        sudo systemctl restart usbmuxd
+        $sudo restorecon /var/run/usbmuxd
+        $sudo systemctl restart usbmuxd
     fi
     if [[ $(command -v systemctl) ]]; then
-        sudo systemctl restart usbmuxd
+        $sudo systemctl restart usbmuxd
     elif [[ $(command -v rc-service) ]]; then
-        sudo rc-service usbmuxd start
+        $sudo rc-service usbmuxd start
     fi
 }
 
@@ -436,20 +436,25 @@ set_tool_paths() {
             trap "clean_sudo" EXIT
         fi
         if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $live_cdusb == 1 ]]; then
+            sudo="/usr/bin/sudo"
+            if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
+                log "sudo-rs detected. Switching to sudo.ws"
+                sudo+=".ws"
+            fi
             if [[ $live_cdusb != 1 ]]; then
                 print "* Enter your user password when prompted"
             fi
-            sudo -v
-            (while true; do sudo -v; sleep 60; done) &
+            $sudo -v
+            (while true; do $sudo -v; sleep 60; done) &
             sudoloop_pid=$!
-            futurerestore="sudo "
-            gaster="sudo "
-            idevicerestore="sudo LD_LIBRARY_PATH=$dir/lib "
-            ipwnder="sudo "
-            irecovery="sudo "
-            irecovery2="sudo "
-            irecovery3="sudo "
-            primepwn="sudo "
+            futurerestore="$sudo "
+            gaster="$sudo "
+            idevicerestore="$sudo LD_LIBRARY_PATH=$dir/lib "
+            ipwnder="$sudo "
+            irecovery="$sudo "
+            irecovery2="$sudo "
+            irecovery3="$sudo "
+            primepwn="$sudo "
             if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
                 log "Running on platform: $platform ($platform_ver - $platform_arch)"
                 error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
@@ -463,20 +468,20 @@ set_tool_paths() {
                 fi
                 if [[ $othertmp == 0 ]]; then
                     if [[ $(command -v systemctl) ]]; then
-                        sudo systemctl stop usbmuxd
+                        $sudo systemctl stop usbmuxd
                     elif [[ $(command -v rc-service) ]]; then
-                        sudo rc-service usbmuxd zap
+                        $sudo rc-service usbmuxd zap
                     else
-                        sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+                        $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
                     fi
-                    #sudo killall usbmuxd 2>/dev/null
+                    #$sudo killall usbmuxd 2>/dev/null
                     #sleep 1
                     if [[ $use_usbmuxd2 == 1 ]]; then
                         log "Running usbmuxd2"
-                        sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
+                        $sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
                     else
                         log "Running usbmuxd"
-                        sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                        $sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
                     fi
                 else
                     warn "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
@@ -563,7 +568,7 @@ set_tool_paths() {
         "* Re-download Legacy iOS Kit from releases (or do a git clone/reset)"
     fi
     if [[ $device_sudoloop == 1 ]]; then
-        sudo chmod +x $dir/*
+        $sudo chmod +x $dir/*
         if [[ $? != 0 ]]; then
             error "Failed to set up execute permissions of binaries, cannot continue. Try to move Legacy iOS Kit somewhere else."
         fi
@@ -624,22 +629,22 @@ install_depends() {
 
     log "Installing dependencies..."
     if [[ $distro == "arch" ]]; then
-        sudo pacman -Sy --noconfirm --needed aria2 base-devel ca-certificates ca-certificates-mozilla curl git libimobiledevice openssh python sshfs udev unzip usbmuxd usbutils vim zenity zip zstd
+        $sudo pacman -Sy --noconfirm --needed aria2 base-devel ca-certificates ca-certificates-mozilla curl git libimobiledevice openssh python sshfs udev unzip usbmuxd usbutils vim zenity zip zstd
         prepare_udev_rules root storage
 
     elif [[ $distro == "debian" ]]; then
         if [[ -n $ubuntu_ver ]]; then
-            sudo add-apt-repository -y universe
+            $sudo add-apt-repository -y universe
         fi
-        sudo apt update
-        sudo apt install -m -y aria2 ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
+        $sudo apt update
+        $sudo apt install -m -y aria2 ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
-            sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
+            $sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        sudo dnf install -y aria2 ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
-        sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
+        $sudo dnf install -y aria2 ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
+        $sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
         prepare_udev_rules root usbmuxd
 
     elif [[ $distro == "fedora-atomic" ]]; then
@@ -650,27 +655,27 @@ install_depends() {
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
-        sudo zypper -n install aria2 ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
+        $sudo zypper -n install aria2 ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
         prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
-        sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        $sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
 
     elif [[ $distro == "void" ]]; then
-        sudo xbps-install aria2 curl git patch openssh python3 unzip xxd zenity zip
+        $sudo xbps-install aria2 curl git patch openssh python3 unzip xxd zenity zip
     fi
 
     echo "$platform_ver" > "../resources/firstrun"
     if [[ $platform == "linux" && $distro != "fedora-atomic" ]]; then
         # from linux_fix and libirecovery-rules by Cryptiiiic
         if [[ $(command -v systemctl) ]]; then
-            sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
+            $sudo systemctl enable --now systemd-udevd usbmuxd 2>/dev/null
         fi
-        sudo cp 39-libirecovery.rules /etc/udev/rules.d/39-libirecovery.rules
-        sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
-        sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
-        sudo udevadm control --reload-rules
-        sudo udevadm trigger -s usb
+        $sudo cp 39-libirecovery.rules /etc/udev/rules.d/39-libirecovery.rules
+        $sudo chown root:root /etc/udev/rules.d/39-libirecovery.rules
+        $sudo chmod 0644 /etc/udev/rules.d/39-libirecovery.rules
+        $sudo udevadm control --reload-rules
+        $sudo udevadm trigger -s usb
     fi
 
     log "Install script done! Please run the script again to proceed"
@@ -747,7 +752,7 @@ version_update() {
     cp resources/firstrun tmp$$ 2>/dev/null
     rm -r bin/ LICENSE README.md restore.sh
     if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf resources/
+        $sudo rm -rf resources/
     fi
     rm -r resources/ 2>/dev/null
     mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git .
@@ -2330,7 +2335,7 @@ ipwndfu_init() {
     local ipwndfu_sha1="7eb59cc50d31078fa7bbc2fddb1e76f74e43c040"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
-        psudo="sudo"
+        psudo="$sudo"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
@@ -2368,7 +2373,7 @@ device_alloc8() {
     $psudo ./ipwndfu -x
     tool_pwned=$?
     if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
+        $sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
     fi
     popd >/dev/null
 
@@ -2390,7 +2395,7 @@ device_ipwndfu() {
     $psudo ./ipwndfu -p
     tool_pwned=$?
     if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
+        $sudo rm -rf __pycache__/ *.pyc libusbfinder/*.pyc usb/*.pyc usb/backend/*.pyc
     fi
     popd >/dev/null
 
