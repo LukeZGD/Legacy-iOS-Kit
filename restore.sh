@@ -875,6 +875,7 @@ device_entry_s5l8900() {
     esac
     device_model=
 }
+
 device_get_name() {
     # all devices that run iOS/iPhoneOS/iPadOS
     # adding more entries here is no longer necessary since AppleDB is now used as fallback
@@ -1496,7 +1497,7 @@ device_get_info() {
         warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
         print "* For better support, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
         pause
-        device_vers_maj=1
+        [[ -z $device_vers_maj ]] && device_vers_maj=1
     fi
     if [[ $device_type == "AppleTV"* || $device_type == "Watch"* ]]; then
         device_proc=11
@@ -2418,12 +2419,11 @@ device_fw_key_check() {
     # check and download keys for device_target_build, then set the variable device_fw_key (or device_fw_key_base)
     local key
     local build="$device_target_build"
-    local device_type="$device_type"
     case $1 in
         base ) build="$device_base_build";;
         temp ) build="$2";;
     esac
-    local keys_path="../saved/firmware/$device_type/$build"
+    local keys_path="$device_fw_dir/$build"
 
     log "Checking firmware keys in $keys_path"
     if [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "$build") != 1 ]]; then
@@ -8439,6 +8439,7 @@ menu_restore() {
         case $device_type in
             iPod4,1 ) menu_items+=("7.1.2");;
             iPod3,1 ) menu_items+=("6.0" "6.1.3" "6.1.6");;
+            #iPad1,1 ) :;; # for future use
         esac
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
@@ -8506,7 +8507,7 @@ menu_restore() {
             ;;
             6.* )
                 case $device_type in
-                    iPod3,1 ) menu_ipsw_special "$selected" "$1";;
+                    iPod3,1 | iPad1,1 ) menu_ipsw_special "$selected" "$1";;
                     * ) menu_ipsw "$selected" "$1";;
                 esac
             ;;
@@ -8625,7 +8626,6 @@ ipsw_latest_set() {
         * ) ipsw_prefix="${device_type}";;
     esac
     newpath="$ipsw_prefix"
-    device_type2="$newpath"
     newpath+="_${device_latest_vers}_${device_latest_build}"
     ipsw_custom_set $newpath
     ipsw_dfuipsw="../${newpath}_DFUIPSW"
@@ -9359,7 +9359,7 @@ menu_ipsw_browse() {
 
     ipsw_latest_set
     local menu_items=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
-    [[ $device_type2 != "$device_type" ]] && menu_items+=($(ls ../$device_type2*$device_latest_vers*Restore.ipsw 2>/dev/null))
+    [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
         text="Base"
         menu_items=()
@@ -9383,8 +9383,7 @@ menu_ipsw_browse() {
     if [[ $1 == "custom" ]]; then
         menu_items=()
     elif [[ $versionc == "$device_latest_vers" ]]; then
-        menu_items=($(ls ../$device_type*$device_latest_vers*Restore.ipsw 2>/dev/null))
-        [[ $device_type2 != "$device_type" ]] && menu_items+=($(ls ../$device_type2*$device_latest_vers*Restore.ipsw 2>/dev/null))
+        menu_items+=($(ls ../${ipsw_prefix}_${device_latest_vers}_${device_latest_build}_Restore.ipsw 2>/dev/null))
     elif [[ -n $versionc ]]; then
         menu_items=($(ls ../${device_type}_${versionc}*Restore.ipsw 2>/dev/null))
     fi
@@ -9639,14 +9638,42 @@ menu_shsh_browse() {
     local newpath
     local text="Target"
     local val="$ipsw_path.ipsw"
-    [[ $1 == "base" ]] && text="Base"
+    local picker
 
-    input "Select your $text SHSH file in the file selection window."
-    menu_zenity_check
-    newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
-    log "Selected SHSH file: $newpath"
+    local menu_items=($(ls ../*${device_type}*${device_target_vers}*shsh* ../saved/shsh/*${device_type}*${device_target_vers}*shsh* 2>/dev/null))
+    if [[ $1 == "base" ]]; then
+        text="Base"
+        menu_items=($(ls ../*${device_type}*${device_base_vers}*shsh* ../saved/shsh/*${device_type}*${device_base_vers}*shsh* 2>/dev/null))
+    fi
+    menu_items+=("Open File Picker" "Enter Path" "Go Back")
+
+    if [[ "${menu_items[0]}" == *"shsh"* ]]; then
+        print "* Select $text SHSH Menu"
+        while true; do
+            input "Select an option:"
+            select_option "${menu_items[@]}"
+            selected="${menu_items[$?]}"
+            case $selected in
+                "Open File Picker" ) picker=1; break;;
+                "Enter Path" ) break;;
+                *shsh* ) newpath="$selected"; break;;
+                "Go Back" ) return;;
+            esac
+        done
+    else
+        picker=1
+    fi
+
+    if [[ $picker == 1 ]]; then
+        input "Select your $text SHSH file in the file selection window."
+        menu_zenity_check
+        newpath="$($zenity --file-selection --file-filter='SHSH | *.bshsh2 *.shsh *.shsh2' --title="Select $text SHSH file")"
+    fi
+
     if [[ -n "$newpath" && ! -s "$newpath" ]]; then
         warn "The selected SHSH blob file seems to be empty/invalid. It cannot be used for restoring."
+        pause
+        return
     fi
     if [[ ! -s "$newpath" ]]; then
         print "* Enter the full path to the SHSH file to be used."
@@ -9654,6 +9681,7 @@ menu_shsh_browse() {
         read -p "$(input "Path to $text SHSH file (or press Enter/Return or Ctrl+C to cancel): ")" newpath
     fi
     [[ ! -s "$newpath" ]] && return
+    log "Selected SHSH file: $newpath"
     log "Validating..."
     if (( device_proc >= 7 )); then
         file_extract_from_archive "$val" BuildManifest.plist
