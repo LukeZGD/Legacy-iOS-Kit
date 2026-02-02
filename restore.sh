@@ -4520,14 +4520,11 @@ ipsw_prepare_ios6touch3() {
     local ipsw_base_path2="${device_type}_${device_base_vers}_${device_base_build}_Restore"
     local ipsw_custom2="${device_type}_${device_target_vers}_${device_target_build}_Custom"
     local jb
-    local kc="$sundance/artifacts/kernelcache.n18ap.bin"
-    local kc_sha1="56baaebd7c260f3d41679fee686426ef2578bbd3"
-    local kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/7fa62c2cb54855d72b2a91c2aa3d57cab7318246/magic-A63970m.b64"
+    local kc="../saved/SundanceResources.b64"
+    local kc_sha1="ebf508aff198fa80204bf3d6df0114e9b645f1c0"
+    local kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/54c6ad7554710af454c87ec2d99f869e6e669c99/SundanceResources.b64"
     if [[ $ipsw_jailbreak == 1 ]]; then
         jb="-j"
-        kc="$sundance/artifacts/kernelcache.jailbroken.n18ap.bin"
-        kc_sha1="2c42a07b82d14dab69417f750d0e4ca118bf225c"
-        kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/095022a2e8635ec3f3ee3400feb87280fd2c9f17/magic-A63970m-jb.b64"
     fi
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
@@ -4559,15 +4556,23 @@ ipsw_prepare_ios6touch3() {
     fi
 
     if [[ ! -s $kc ]]; then
-        log "Downloading kernelcache: $(basename $kc)"
-        download_from_url "$kc_url" kc.b64
-        base64 --decode kc.b64 | gunzip > $kc
+        log "Downloading resources: $(basename $kc)"
+        download_from_url "$kc_url" "$kc"
     fi
 
     if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
         rm $kc
         error "Downloading/verifying kernelcache failed. Please run the script again"
     fi
+
+    log "Preparing resources"
+    if [[ $platform == "macos" ]]; then
+        base64 --decode $kc | tar -xvf -
+    else
+        base64 --decode $kc | xz -d | tar -xvf -
+    fi
+    mv artifacts/* $sundance/artifacts/
+    mv resources/* $sundance/resources/
 
     log "Copying IPSWs..."
     cp "$ipsw_path.ipsw" "$sundance/$ipsw_path2.ipsw"
@@ -6131,10 +6136,9 @@ ipsw_prepare() {
         4 )
             if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]]; then
                 ipsw_prepare_ios7touch4
-            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]]; then
+            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]] ||
+                 [[ $device_type == "iPad1,1" && $device_target_vers == "6."* ]]; then
                 ipsw_prepare_ios6touch3
-#             elif [[ $device_type == "iPad1,1" && $device_target_vers == "6."* ]]; then
-#                 ipsw_prepare_ios6ipad1
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_other == 1 || $ipsw_gasgauge_patch == 1 ]] ||
@@ -8444,7 +8448,7 @@ menu_restore() {
         case $device_type in
             iPod4,1 ) menu_items+=("7.1.2");;
             iPod3,1 ) menu_items+=("6.0" "6.1.3" "6.1.6");;
-            #iPad1,1 ) :;; # for future use
+            iPad1,1 ) menu_items+=("6.1.3");;
         esac
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
@@ -9125,7 +9129,7 @@ menu_ipsw_special() {
             6.* ) # for touch 3
                 case $device_type in
                     iPod3,1 ) device_type_special="iPhone2,1"; device_model_special="n88";;
-                    #iPad1,1 ) :;; # for future use
+                    iPad1,1 ) device_type_special="iPad2,1"; device_model_special="k93";;
                 esac
             ;;
         esac
@@ -9168,7 +9172,7 @@ menu_ipsw_special() {
         echo
         case $1 in
             7.* ) warn "This is a tethered upgrade and has many broken device features. Not recommended unless you know what you are doing.";;
-            6.* ) print "* iOS 6 on touch 3 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
+            6.* ) print "* iOS 6 on touch 3/iPad 1 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
         esac
         menu_items=("Select Target IPSW" "Select Base IPSW" "Download Target IPSW" "Download Base IPSW")
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
