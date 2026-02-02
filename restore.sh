@@ -4567,7 +4567,7 @@ ipsw_prepare_ios6touch3() {
 
     log "Preparing resources"
     if [[ $platform == "macos" ]]; then
-        base64 --decode $kc | tar -xvf -
+        cat $kc | base64 --decode | tar -xvf -
     else
         base64 --decode $kc | xz -d | tar -xvf -
     fi
