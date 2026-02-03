@@ -1584,8 +1584,8 @@ device_get_info() {
             device_latest_build="19H402"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.12"
-            device_latest_build="20H364"
+            device_latest_vers="16.7.14"
+            device_latest_build="20H370"
         ;;
         iPad7,[123456] )
             device_latest_vers="17.7.10"
@@ -6136,8 +6136,7 @@ ipsw_prepare() {
         4 )
             if [[ $device_type == "iPod4,1" && $device_target_vers == "7."* ]]; then
                 ipsw_prepare_ios7touch4
-            elif [[ $device_type == "iPod3,1" && $device_target_vers == "6."* ]] ||
-                 [[ $device_type == "iPad1,1" && $device_target_vers == "6."* ]]; then
+            elif [[ -n $device_type_special ]]; then
                 ipsw_prepare_ios6touch3
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
