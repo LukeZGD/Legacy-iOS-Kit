@@ -2128,8 +2128,8 @@ device_enter_mode() {
                 esac
                 return
             elif [[ $device_mode == "DFU" && $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
-                 [[ $device_proc == 5 || $device_proc == 6 ]]; then
-                log "No SRTG for A${device_proc}(X) device in DFU mode! Already pwned iBSS mode?"
+                 [[ $device_proc == 4 || $device_proc == 5 || $device_proc == 6 ]]; then
+                log "No SRTG for device in DFU mode! Already pwned iBSS mode?"
                 print "* If your device is not in pwnDFU/kDFU mode, sending iBEC will fail."
                 return
             fi
@@ -5943,10 +5943,11 @@ restore_deviceprepare() {
 restore_prepare() {
     case $device_proc in
         1 )
-            if [[ $device_target_vers == "4"* && $ipsw_jailbreak != 1 ]]; then
-                restore_latest
-                return
-            elif [[ $ipsw_jailbreak != 1 ]]; then
+            if [[ $ipsw_jailbreak != 1 ]]; then
+                if [[ $target_vers_maj == 4 ]]; then
+                    restore_latest
+                    return
+                fi
                 device_enter_mode Recovery
                 ipsw_custom="$ipsw_path"
             fi
@@ -6150,7 +6151,7 @@ ipsw_prepare() {
             elif [[ $device_target_powder == 1 ]] && [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
                 shsh_save version $device_latest_vers
                 case $device_target_vers in
-                    "4.3"* ) ipsw_prepare_ios4powder;;
+                    4.3* ) ipsw_prepare_ios4powder;;
                     * ) ipsw_prepare_ios4multipart;;
                 esac
             elif [[ $device_target_powder == 1 ]]; then
@@ -6177,10 +6178,7 @@ ipsw_prepare() {
             if [[ $ipsw_fourthree == 1 ]]; then
                 ipsw_prepare_fourthree_part2
             elif [[ $ipsw_isbeta == 1 || $ipsw_gasgauge_patch == 1 ]]; then
-                case $device_target_vers in
-                    [59] ) :;;
-                    * ) ipsw_prepare_multipatch;;
-                esac
+                ipsw_prepare_multipatch
             fi
         ;;
 
