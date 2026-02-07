@@ -2176,12 +2176,12 @@ device_enter_mode() {
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 tool="ipwnder"
                 if [[ $platform == "macos" ]]; then
-                    tool="reipwnder"
+                    tool="ipwnder_lite"
                 fi
             elif [[ $device_type == "iPod2,1" || $device_proc == 4 ]]; then
                 tool="primepwn"
                 if [[ $platform == "macos" && $platform_arch == "arm64" && $device_type != "iPod2,1" ]]; then
-                    tool="reipwnder"
+                    tool="ipwnder_lite"
                 fi
             elif [[ $device_proc == 6 ]]; then
                 tool="ipwnder"
@@ -2232,12 +2232,6 @@ device_enter_mode() {
             elif [[ $tool == "primepwn" ]]; then
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
-                tool_pwned=$?
-            elif [[ $tool == "reipwnder" ]]; then
-                log "Placing device in pwnDFU mode using reipwnder"
-                mkdir shellcode
-                cp ../resources/limera1n-shellcode.bin shellcode/
-                ../bin/macos/reipwnder -p
                 tool_pwned=$?
             fi
             sleep 1
@@ -2659,7 +2653,8 @@ ipsw_preference_set() {
     case $device_latest_vers in
         [76543]* ) ipsw_canjailbreak=1;;
     esac
-    if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]] ||
+       [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]]; then
         ipsw_gasgauge_patch=1
     fi
     if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
@@ -2806,6 +2801,8 @@ ipsw_preference_set() {
     if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
         ipsw_canmemory=
     elif [[ -n $device_type_special ]]; then
+        ipsw_canmemory=
+    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]]; then
         ipsw_canmemory=
     elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
@@ -3828,7 +3825,7 @@ ipsw_prepare_32bit() {
     case $device_target_vers in
         [23]* | 4.[01]* ) ipsw_prepare_jailbreak $1; return;;
         10* )
-            if [[ ! -s "$ipsw_custom.ipsw" ]]; then
+            if [[ ! -s "$ipsw_custom.ipsw" && $ipsw_gasgauge_patch == 1 ]]; then
                 log "Copying custom IPSW..."
                 cp "$ipsw_path.ipsw" "$ipsw_custom.ipsw"
             fi
@@ -4024,8 +4021,10 @@ ipsw_bbreplace() {
         return
     fi
 
-    log "Extracting BuildManifest from IPSW"
-    file_extract_from_archive temp.ipsw BuildManifest.plist
+    if [[ $1 != "exist" ]]; then
+        log "Extracting BuildManifest from IPSW"
+        file_extract_from_archive temp.ipsw BuildManifest.plist
+    fi
     mkdir Firmware 2>/dev/null
     restore_download_bbsep
     cp $restore_baseband Firmware/$device_use_bb
@@ -4682,11 +4681,35 @@ ipsw_prepare_multipatch() {
             [[ $device_type == "iPhone5,"* ]] && ind+=(6)
         fi
         log "Modifying BuildManifest..."
-        for i in "${ind[@]}"; do
-            $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
-            $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-        done
-        zip -r0 temp.ipsw BuildManifest.plist
+        if [[ $platform == "macos" ]]; then
+            for i in "${ind[@]}"; do
+                $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+                $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+            done
+        else
+            awk -i inplace '
+                /^[[:space:]]*<key>RestoreDeviceTree<\/key>/ { mode = "rdt" }
+                /^[[:space:]]*<key>RestoreKernelCache<\/key>/ { mode = "rkc" }
+                /^[[:space:]]*<key>Path<\/key>/ && mode {
+                    print
+                    getline
+                    match($0, /^[[:space:]]*/)
+                    indent = substr($0, RSTART, RLENGTH)
+                    if (mode == "rdt") {
+                        sub(/^[[:space:]]*.*/, indent "<string>Downgrade/RestoreDeviceTree</string>")
+                    } else if (mode == "rkc" && $0 ~ /<string>.*kernelcache.*<\/string>/) {
+                        sub(/^[[:space:]]*.*/, indent "<string>Downgrade/RestoreKernelCache</string>")
+                    }
+                    mode = ""
+                }
+                { print }
+            ' BuildManifest.plist
+        fi
+        if [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_vers != "$device_latest_vers" ]]; then
+            ipsw_bbreplace exist
+        else
+            zip -r0 temp.ipsw BuildManifest.plist
+        fi
     fi
 
     mkdir -p $saved_path Downgrade Firmware/dfu 2>/dev/null
@@ -4736,7 +4759,8 @@ ipsw_prepare_multipatch() {
                 cp ${path}$name ${path}$getcomp.iphone5.RELEASE.dfu
                 cp ${path}$name ${path}$getcomp.iphone5b.RELEASE.dfu
                 cp ${path}$name ${path}$getcomp.ipad3b.RELEASE.dfu
-            elif (( target_vers_maj >= 8 )); then
+            fi
+            if (( target_vers_maj >= 8 )); then
                 cp ${path}$name ${path}$getcomp.$device_model.RELEASE.dfu
             fi
             zip -r0 temp.ipsw ${path}$getcomp*
@@ -8948,6 +8972,8 @@ menu_ipsw() {
                 fi
                 if [[ $shsh_validate == 0 ]]; then
                     print "* Selected SHSH file is validated"
+                elif [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
+                    warn "Validation does not work for 32-bit iOS 10 blobs."
                 else
                     warn "Selected SHSH file failed validation, proceed with caution"
                     if (( device_proc >= 7 )); then
@@ -8955,7 +8981,6 @@ menu_ipsw() {
                     elif (( device_proc < 5 )); then
                         warn "Validation might be a false negative for A4 and older devices."
                     fi
-                    echo
                 fi
                 if (( device_proc >= 7 )); then
                     print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
@@ -9441,7 +9466,7 @@ menu_ipsw_browse() {
         log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other\""
         pause
         return
-    elif [[ $device_target_vers == "10"* && $device_proc == 6 ]]; then
+    elif [[ $device_target_vers == "10"* && $device_proc == 6 && $device_target_other != 1 ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
         pause
@@ -9692,6 +9717,10 @@ menu_shsh_browse() {
     if (( device_proc >= 7 )); then
         file_extract_from_archive "$val" BuildManifest.plist
         shsh_validate=$("$dir/img4tool" -s "$newpath" --verify BuildManifest.plist | tee /dev/tty | grep -c "APTicket is BAD!")
+    elif [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
+        shsh_validate=1
+        shsh_path="$newpath"
+        return
     else
         if [[ $1 == "base" ]]; then
             val="$ipsw_base_path.ipsw"

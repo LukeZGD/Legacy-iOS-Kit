@@ -146,7 +146,6 @@
 - [gaster](https://github.com/LukeZGD/gaster) - 0x7ff; LukeZGD fork
 - [primepwn](https://github.com/LukeZGD/primepwn)
 - [a6meowing](https://github.com/kok3shidoll/a6meowing) - dora/kok3shidoll
-- [reipwnder](https://github.com/kok3shidoll/reipwnder) - dora/kok3shidoll
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/LukeeGD/libimobiledevice) - libimobiledevice
