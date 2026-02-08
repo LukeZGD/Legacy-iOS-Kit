@@ -3349,6 +3349,7 @@ ipsw_prepare_keys() {
         fw_key="$device_fw_key_base"
     fi
     local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+    [[ $name == *".dmg" ]] && name="${name%%.dmg*}.dmg"
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
     if [[ -z $name && $device_proc != 1 ]]; then
@@ -3360,7 +3361,10 @@ ipsw_prepare_keys() {
             if [[ -z $name ]]; then
                 name="$getcomp.${device_model}ap.RELEASE.dfu"
             fi
-            echo "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string><key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            echo "<key>$comp</key><dict><key>File</key><string>Firmware/dfu/$name</string>" >> $NewPlist
+            if [[ -n $iv && -n $key ]]; then
+                echo "<key>IV</key><string>$iv</string><key>Key</key><string>$key</string>" >> $NewPlist
+            fi
             if [[ $ipsw_prepare_usepowder == 1 ]]; then
                 echo "<key>Patch</key><true/>" >> $NewPlist
             elif [[ -s $FirmwareBundle/$comp.${device_model}ap.RELEASE.patch ]]; then
@@ -3583,6 +3587,7 @@ ipsw_prepare_bundle() {
     file_extract_from_archive "$ipsw_p.ipsw" $all_flash/manifest
     mv manifest $FirmwareBundle/
     local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+    ramdisk_name="${ramdisk_name%%.dmg*}.dmg"
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
     if [[ -z $ramdisk_name ]]; then
@@ -3616,6 +3621,7 @@ ipsw_prepare_bundle() {
     fi
     RootSize=$((RootSize+30))
     local rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
+    rootfs_name="${rootfs_name%%.dmg*}.dmg"
     local rootfs_key="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')"
     if [[ -z $rootfs_name ]]; then
         error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
@@ -9389,14 +9395,18 @@ menu_ipsw_browse() {
     local picker
 
     ipsw_latest_set
-    local menu_items=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
+    local menu_items=($(ls ../$(echo "$device_type" | tr '[:upper:]' '[:lower:]')*restore.ipsw 2>/dev/null))
+    menu_items+=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
     [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
         text="Base"
         menu_items=()
         case $device_proc in
             4 ) menu_items=($(ls ../${device_type}_${device_base_vers}_${device_base_build}_Restore.ipsw 2>/dev/null));;
-            6 ) menu_items=($(ls ../${device_type}_7.*Restore.ipsw 2>/dev/null));;
+            6 )
+                menu_items=($(ls ../$(echo "$device_type" | tr '[:upper:]' '[:lower:]')_7.*restore.ipsw 2>/dev/null))
+                menu_items+=($(ls ../${device_type}_7.*Restore.ipsw 2>/dev/null))
+            ;;
             * ) menu_items=($(ls ../${device_type}_7.1*Restore.ipsw 2>/dev/null));;
         esac
     elif [[ $1 == "special" ]]; then
