@@ -40,7 +40,7 @@ error() {
         print "* Legacy iOS Kit"
     fi
     if [[ -n $platform ]]; then
-        print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+        print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     fi
     exit 1
 }
@@ -403,14 +403,14 @@ set_tool_paths() {
 
         # live cd/usb check
         if [[ $(id -u $USER) == 999 || $USER == "liveuser" || $(df | grep -c "/cow") != 0 ]]; then
-            live_cdusb=1
-            live_cdusb_str="Live session"
+            live_session=1
+            live_session_str="Live session"
             log "Linux Live session detected."
             if [[ $(pwd) == "/home/"* ]]; then
                 df . -h
                 if [[ $(lsblk -o label | grep -c "casper-rw") == 1 || $(lsblk -o label | grep -c "persistence") == 1 ]]; then
                     log "Detected Legacy iOS Kit running on persistent storage."
-                    live_cdusb_str+=" - Persistent storage"
+                    live_session_str+=" - Persistent storage"
                 else
                     warn "Detected Legacy iOS Kit running on temporary storage."
                     print "* You may run out of space and get errors during the restore process."
@@ -419,7 +419,7 @@ set_tool_paths() {
                     print "* To use one USB drive only, create the live USB using Rufus with Persistent Storage enabled."
                     sleep 5
                     pause
-                    live_cdusb_str+=" - Temporary storage"
+                    live_session_str+=" - Temporary storage"
                 fi
             fi
         fi
@@ -428,21 +428,23 @@ set_tool_paths() {
         if [[ $(pwd) == *"/media/"* ]]; then
             warn "You might get permission errors like \"Permission denied\" on getting device info."
             print "* If this is the case, try moving Legacy iOS Kit to the Desktop or Documents folder."
-            live_cdusb_str+=" - External storage"
+            live_session_str+=" - External storage"
         fi
 
+        [[ $device_argmode == "none" ]] && device_disable_sudoloop=1
         if [[ -z $device_disable_sudoloop ]]; then
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
             trap "clean_sudo" EXIT
         fi
-        if [[ $(uname -m) == "a"* || $device_sudoloop == 1 || $live_cdusb == 1 ]]; then
+        if [[ $device_sudoloop == 1 || $live_session == 1 ]]; then
             sudo="/usr/bin/sudo"
             if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
                 log "sudo-rs detected. Switching to sudo.ws"
                 sudo+=".ws"
             fi
-            if [[ $live_cdusb != 1 ]]; then
+            if [[ $live_session != 1 ]]; then
                 print "* Enter your user password when prompted"
+                print "* Your password input will not be visible, but it is still being entered."
             fi
             $sudo -v
             (while true; do $sudo -v; sleep 60; done) &
@@ -7730,7 +7732,7 @@ menu_print_info() {
     if [[ $git_hash_latest != "$git_hash" ]]; then
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
-    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+    print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         if (( mac_majver == 14 && mac_minver < 6 )) || (( mac_majver < 14 )); then
             warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
@@ -11632,7 +11634,7 @@ main() {
     echo
     print "* Save the terminal output now if needed. (macOS: Cmd+S, Konsole: Ctrl+Shift+S)"
     print "* Legacy iOS Kit $version_current ($git_hash)"
-    print "* Platform: $platform ($platform_ver - $platform_arch) $live_cdusb_str"
+    print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     echo
 }
 
