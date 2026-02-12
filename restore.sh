@@ -1594,8 +1594,8 @@ device_get_info() {
             device_latest_build="21H450"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.4"
-            device_latest_build="22H218"
+            device_latest_vers="18.7.5"
+            device_latest_build="22H311"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
@@ -2275,9 +2275,7 @@ device_pwnerror() {
     error_msg+=$'\n* Troubleshooting links:
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting
     - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Pwning-Using-Another-iOS-Device'
-    if [[ $platform == "linux" ]]; then
-        log "CPU: $platform_cpu"
-    fi
+    [[ $platform == "linux" ]] && log "CPU: $platform_cpu"
     error "Failed to enter pwnDFU mode. Please run the script again." "$error_msg"
 }
 
@@ -4527,12 +4525,10 @@ ipsw_prepare_ios6touch3() {
     local ipsw_base_path2="${device_type}_${device_base_vers}_${device_base_build}_Restore"
     local ipsw_custom2="${device_type}_${device_target_vers}_${device_target_build}_Custom"
     local jb
-    local kc="../saved/SundanceResources.b64"
-    local kc_sha1="ebf508aff198fa80204bf3d6df0114e9b645f1c0"
-    local kc_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/54c6ad7554710af454c87ec2d99f869e6e669c99/SundanceResources.b64"
-    if [[ $ipsw_jailbreak == 1 ]]; then
-        jb="-j"
-    fi
+    [[ $ipsw_jailbreak == 1 ]] && jb="-j"
+    local sr="../saved/SundanceResources.b64"
+    local sr_sha1="ebf508aff198fa80204bf3d6df0114e9b645f1c0"
+    local sr_url="https://gist.githubusercontent.com/NyanSatan/1cf6921821484a2f8f788e567b654999/raw/54c6ad7554710af454c87ec2d99f869e6e669c99/SundanceResources.b64"
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
@@ -4556,27 +4552,27 @@ ipsw_prepare_ios6touch3() {
         git clone $repo $sundance
     fi
 
-    if [[ -s $kc ]]; then
-        if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
-            rm $kc
+    if [[ -s $sr ]]; then
+        if [[ $($sha1sum $sr 2>/dev/null | awk '{print $1}') != "$sr_sha1" ]]; then
+            rm $sr
         fi
     fi
 
-    if [[ ! -s $kc ]]; then
-        log "Downloading resources: $(basename $kc)"
-        download_from_url "$kc_url" "$kc"
+    if [[ ! -s $sr ]]; then
+        log "Downloading resources: $(basename $sr)"
+        download_from_url "$sr_url" "$sr"
     fi
 
-    if [[ $($sha1sum $kc 2>/dev/null | awk '{print $1}') != "$kc_sha1" ]]; then
-        rm $kc
-        error "Downloading/verifying kernelcache failed. Please run the script again"
+    if [[ $($sha1sum $sr 2>/dev/null | awk '{print $1}') != "$sr_sha1" ]]; then
+        rm $sr
+        error "Downloading/verifying resources failed. Please run the script again"
     fi
 
     log "Preparing resources"
     if [[ $platform == "macos" ]]; then
-        cat $kc | base64 --decode | tar -xvf -
+        cat $sr | base64 --decode | tar -xvf -
     else
-        base64 --decode $kc | xz -d | tar -xvf -
+        base64 --decode $sr | xz -d | tar -xvf -
     fi
     mv artifacts/* $sundance/artifacts/
     mv resources/* $sundance/resources/
@@ -4598,6 +4594,7 @@ ipsw_prepare_ios6touch3() {
     popd >/dev/null
     rm -rf "$ipsw_custom2"
     popd >/dev/null
+    # "re-patch" ibss and ibec with iboot32patcher to make this work in kdfu
     mv "$ipsw_custom.ipsw" temp.ipsw
     ipsw_prepare_ios4patches
     log "Add all to custom IPSW"
@@ -4812,7 +4809,7 @@ ipsw_prepare_multipatch() {
     if [[ $ipsw_prepare_ios4multipart_patch == 1 || $device_target_tethered == 1 ]]; then
         printf "<key>FlashNOR</key><false/>\n" >> options2.plist
     fi
-    if [[ -n $device_disable_bbupdate && $(cat options2.plist | grep -c "UpdateBaseband") == 0 ]]; then
+    if [[ $device_type == "$device_disable_bbupdate" && $(cat options2.plist | grep -c "UpdateBaseband") == 0 ]]; then
         printf "<key>UpdateBaseband</key><false/>\n" >> options2.plist
     fi
     printf "</dict>\n</plist>\n" >> options2.plist
@@ -8654,7 +8651,7 @@ ipsw_latest_set() {
         iPhone10,[36]  ) ipsw_prefix="iPhone10,3,iPhone10,6";;
         iPhone11,[246] ) ipsw_prefix="iPhone11,2,iPhone11,4,iPhone11,6";;
         iPod[79],1     ) ipsw_prefix="iPodtouch";;
-        iPad4,[789] | iPad5*     ) ipsw_prefix="iPad_64bit_TouchID";;
+        iPad4,[789] | iPad5,*    ) ipsw_prefix="iPad_64bit_TouchID";;
         iPad6,1[12] | iPad7,[56] ) ipsw_prefix="iPad_64bit_TouchID_ASTC";;
         iPhone6,[12] | iPhone8,4 ) ipsw_prefix="iPhone_4.0_64bit";;
         iPhone7,1 | iPhone8,2    ) ipsw_prefix="iPhone_5.5";;
@@ -9156,7 +9153,7 @@ menu_ipsw_special() {
                 device_model_special="n92"
                 device_target_tethered=1
             ;;
-            6.* ) # for touch 3
+            6.* ) # for touch 3 and ipad 1
                 case $device_type in
                     iPod3,1 ) device_type_special="iPhone2,1"; device_model_special="n88";;
                     iPad1,1 ) device_type_special="iPad2,1"; device_model_special="k93";;
@@ -9481,6 +9478,7 @@ menu_ipsw_browse() {
     elif [[ $device_target_vers == "10"* && $device_proc == 6 && $device_target_other != 1 ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
+        print "* The only exception is for restoring with 32-bit iOS 10 blobs."
         pause
         return
     fi
@@ -10215,7 +10213,7 @@ device_jailbreak_confirm() {
         esac
         if [[ $platform == "linux" ]]; then
             case $device_vers in
-                6* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
+                [689]* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
             esac
         fi
     fi
