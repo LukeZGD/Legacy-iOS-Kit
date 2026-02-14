@@ -561,8 +561,8 @@ set_tool_paths() {
     fi
     log "Running on platform: $platform ($platform_ver - $platform_arch)"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if (( mac_majver == 14 && mac_minver < 6 )) || (( mac_majver < 14 )); then
-            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
+        if (( mac_majver == 12 && mac_minver < 6 )) || (( mac_majver < 12 )); then
+            warn "Updating to macOS 12.6 or newer is recommended for Apple Silicon Macs."
         fi
     fi
     if [[ ! -d $dir ]]; then
@@ -757,7 +757,7 @@ version_update() {
         $sudo rm -rf resources/
     fi
     rm -r resources/ 2>/dev/null
-    mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git .
+    mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git* .
     cp tmp$$/firstrun resources 2>/dev/null
     pushd "tmp$$" >/dev/null
     log "Done! Please run the script again"
@@ -1828,13 +1828,18 @@ device_dfuhelper2() {
 }
 
 device_dfuhelper3() {
+    local sec=10
+    if [[ $device_mode == "Recovery" ]]; then
+        sec=8
+    fi
     echo -e "\n$(print "* Hold TOP and HOME buttons.")"
-    for i in {10..1}; do
-        echo -n "$i "
+    while (( sec > 0 )); do
+        echo -n "$sec "
         sleep 1
+        sec=$((sec-1))
     done
     echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-    for i in {11..1}; do
+    for i in {13..1}; do
         echo -n "$i "
         sleep 1
     done
@@ -2668,16 +2673,10 @@ ipsw_preference_set() {
     # it also does it correctly on 3.1.3-4.x for s5l8900 devices, so its also enabled there.
     # for 3.x 3gs, and old br 3.1.3 touch 2, kernel is patched so its also supposed to be enabled for those
     # but since there is an issue with ios 3 asr when fs is modified, they are disabled for now
+    # update: should be fixed after updating xpwn ipsw, will revert if reports say otherwise or if other issues pop up
     ipsw_canjailbreak=
     case $device_target_vers in
-        9.3.[4321] | 9.3 | 9.[210]* | [8765]* | 4.[32]* ) ipsw_canjailbreak=1;;
-        3* )
-            if [[ $device_proc == 1 || $ipsw_24o == 1 ]]; then
-                ipsw_canjailbreak=1
-            else
-                ipsw_nojailbreak_message
-            fi
-        ;;
+        9.3.[4321] | 9.3 | 9.[210]* | [876543].* ) ipsw_canjailbreak=1;;
     esac
 
     if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
@@ -3963,7 +3962,7 @@ ipsw_prepare_32bit() {
 
     if [[ ! -e temp.ipsw ]]; then
         if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+            warn "Updating to macOS 12.6 or newer is recommended for Apple Silicon Macs to resolve issues."
         fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
@@ -4577,6 +4576,11 @@ ipsw_prepare_ios6touch3() {
     mv artifacts/* $sundance/artifacts/
     mv resources/* $sundance/resources/
 
+    log "Copying freeze.tar to Cydia.tar"
+    cp $jelbrek/freeze.tar.gz .
+    gzip -d freeze.tar.gz
+    mv freeze.tar $sundance/resources/Cydia.tar
+
     log "Copying IPSWs..."
     cp "$ipsw_path.ipsw" "$sundance/$ipsw_path2.ipsw"
     cp "$ipsw_base_path.ipsw" "$sundance/$ipsw_base_path2.ipsw"
@@ -5064,7 +5068,7 @@ ipsw_prepare_ios4powder() {
 
     if [[ ! -e temp.ipsw ]]; then
         if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+            warn "Updating to macOS 12.6 or newer is recommended for Apple Silicon Macs to resolve issues."
         fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
@@ -5191,7 +5195,7 @@ ipsw_prepare_powder() {
 
     if [[ ! -e temp.ipsw ]]; then
         if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs to resolve issues."
+            warn "Updating to macOS 12.6 or newer is recommended for Apple Silicon Macs to resolve issues."
         fi
         error "Failed to find custom IPSW. Please run the script again" \
         "* You may try selecting N for memory option"
@@ -7731,8 +7735,8 @@ menu_print_info() {
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
-        if (( mac_majver == 14 && mac_minver < 6 )) || (( mac_majver < 14 )); then
-            warn "Updating to macOS 14.6 or newer is recommended for Apple Silicon Macs."
+        if (( mac_majver == 12 && mac_minver < 6 )) || (( mac_majver < 12 )); then
+            warn "Updating to macOS 12.6 or newer is recommended for Apple Silicon Macs."
         fi
     fi
     echo
@@ -9475,7 +9479,7 @@ menu_ipsw_browse() {
         log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other\""
         pause
         return
-    elif [[ $device_target_vers == "10"* && $device_proc == 6 && $device_target_other != 1 ]]; then
+    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other != 1 ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
         print "* The only exception is for restoring with 32-bit iOS 10 blobs."

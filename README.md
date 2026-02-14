@@ -126,7 +126,7 @@
 #### Supported architectures: x86_64, arm64
 
 - **macOS** 10.11 and newer
-    - macOS 14.6 and newer recommended for Apple Silicon Macs
+    - macOS 12.6 and newer recommended for Apple Silicon Macs
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
 - [**Fedora**](https://getfedora.org/) 40 and newer, Fedora Atomic (Silverblue, Kinoite, etc.) also supported
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
