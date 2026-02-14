@@ -2638,21 +2638,6 @@ patch_ibec() {
     log "Pwned iBEC img3 saved at: saved/$device_type/pwnediBEC.dfu"
 }
 
-ipsw_nojailbreak_message() {
-    local hac
-    local tohac
-    case $device_type in
-        iPhone[23],1 ) hac=" (and hacktivate)"; tohac=1;;
-    esac
-    log "Jailbreak option is not available for this version. You may jailbreak$hac later after the restore"
-    print "* To jailbreak after the restore, select \"Jailbreak Device\" in the main menu"
-    if [[ $tohac == 1 ]]; then
-        print "* To hacktivate, go to \"Useful Utilities -> Hacktivate Device\" after jailbreaking"
-    fi
-    print "* For advanced users, you may enable the jailbreak option for the IPSW by enabling the --jailbreak flag, but this may have issues regarding ASR errors on iOS 3.x during restore."
-    echo
-}
-
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
@@ -2678,16 +2663,6 @@ ipsw_preference_set() {
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [876543].* ) ipsw_canjailbreak=1;;
     esac
-
-    if [[ $device_type == "iPhone1,2" || $device_type == "iPhone2,1" || $device_type == "iPod2,1" ]]; then
-        case $device_target_vers in
-            4* ) ipsw_canjailbreak=1;;
-        esac
-    else
-        case $device_target_vers in
-            4.[10]* ) ipsw_nojailbreak_message;;
-        esac
-    fi
 
     # ipsw_nskip being 1 means that it will always create/use a custom ipsw.
     # useful for disabling baseband update, or in the case of macos arm64, not having to use futurerestore for 32-bit.
