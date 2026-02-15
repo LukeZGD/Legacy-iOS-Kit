@@ -3035,9 +3035,7 @@ ipsw_preference_set() {
         ;;
     esac
 
-    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
-        ipsw_canmemory=
-    elif [[ -n $device_type_special ]]; then
+    if [[ -n $device_type_special ]]; then
         ipsw_canmemory=
     elif [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
         ipsw_canmemory=
@@ -5885,63 +5883,26 @@ ipsw_prepare_s5l8900() {
     elif [[ $device_target_vers == "4.2.1" ]]; then
         rname="038-0029-002.dmg"
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
-    elif [[ $device_type == "iPhone1,1" && $ipsw_hacktivate == 1 ]]; then
-        ipsw_url+="iPhone1.1_3.1.3_7E18_CustomHJ.ipsw"
-        sha1E="8140ed162c6712a6e8d1608d3a36257998253d82"
-    elif [[ $device_type == "iPhone1,1" ]]; then
-        ipsw_url+="iPhone1.1_3.1.3_7E18_CustomJ.ipsw"
-        sha1E="4aa139672835d95bebdd2945f713321dcc4965b5"
-    elif [[ $device_type == "iPod1,1" ]]; then
-        ipsw_url+="iPod1.1_3.1.3_7E18_CustomJ.ipsw"
-        sha1E="39d0e16536c281c3f98db91923e3d53b6fad6c6c"
     fi
 
     if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
         log "Checking RestoreRamdisk hash of custom IPSW"
         file_extract_from_archive "$ipsw_custom.ipsw" $rname
         sha1L="$($sha1sum $rname | awk '{print $1}')"
-    elif [[ -e "$ipsw_custom2.ipsw" ]]; then
-        log "Getting SHA1 hash for $ipsw_custom2.ipsw..."
-        sha1L=$($sha1sum "$ipsw_custom2.ipsw" | awk '{print $1}')
-    fi
-    if [[ $sha1L == "$sha1E" && $ipsw_customlogo2 == 1 ]]; then
-        log "Verified existing Custom IPSW. Preparing custom logo images and IPSW"
-        rm -f "$ipsw_custom.ipsw"
-        cp "$ipsw_custom2.ipsw" temp.ipsw
-        device_fw_key_check
-        ipsw_prepare_logos_convert
-        ipsw_prepare_logos_add
-        mv temp.ipsw "$ipsw_custom.ipsw"
+        if [[ $sha1L == "$sha1E" ]]; then
+            log "Verified existing Custom IPSW. Skipping IPSW creation."
+            return
+        else
+            log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
+        fi
+    elif [[ -e "$ipsw_custom.ipsw" ]]; then
+        log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $sha1L == "$sha1E" ]]; then
-        log "Verified existing Custom IPSW. Skipping IPSW creation."
-        return
-    else
-        log "Verifying IPSW failed. Expected $sha1E, got $sha1L"
     fi
 
     if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Deleting existing custom IPSW"
         rm "$ipsw_custom.ipsw"
-    fi
-
-    if [[ $device_type != "iPhone1,2" ]]; then
-        log "Downloading IPSW: $ipsw_url"
-        download_from_url "$ipsw_url" temp.ipsw
-        log "Getting SHA1 hash for IPSW..."
-        sha1L=$($sha1sum temp.ipsw | awk '{print $1}')
-        if [[ $sha1L != "$sha1E" ]]; then
-            error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
-                  "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
-        fi
-        if [[ $ipsw_customlogo2 == 1 ]]; then
-            cp temp.ipsw "$ipsw_custom2.ipsw"
-            device_fw_key_check
-            ipsw_prepare_logos_convert
-            ipsw_prepare_logos_add
-        fi
-        mv temp.ipsw "$ipsw_custom.ipsw"
-        return
     fi
 
     ipsw_prepare_jailbreak old
@@ -9692,8 +9653,6 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 ipsw_print_warnings
                 can_start=1
-            elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
-                can_start=1
             else
                 print "* Select $1 IPSW to continue"
             fi
@@ -10013,14 +9972,8 @@ ipsw_custom_set() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         ipsw_custom+="J"
     fi
-    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
-        ipsw_custom2="$ipsw_custom"
-    fi
     if [[ -n $ipsw_customlogo || -n $ipsw_customrecovery ]]; then
         ipsw_custom+="L"
-        if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
-            ipsw_customlogo2=1
-        fi
     fi
     if [[ $ipsw_24o == 1 ]]; then
         ipsw_custom+="O"
