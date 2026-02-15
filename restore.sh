@@ -3192,7 +3192,7 @@ ipsw_prepare_jailbreak() {
 
     ipsw_prepare_logos_add
     ipsw_bbreplace
-    if [[ $device_type == "iPhone2,1" && $device_target_other == 1 ]] && (( target_vers_maj >= 5 )); then
+    if [[ $device_type == "iPhone2,1" ]] && (( target_vers_maj >= 5 )); then
         ipsw_prepare_ios4patches
         log "Add all to custom IPSW"
         zip -r0 temp.ipsw Firmware/dfu/*
