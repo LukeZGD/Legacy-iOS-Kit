@@ -3192,6 +3192,11 @@ ipsw_prepare_jailbreak() {
 
     ipsw_prepare_logos_add
     ipsw_bbreplace
+    if [[ $device_type == "iPhone2,1" && $device_target_other == 1 ]] && (( target_vers_maj >= 5 )); then
+        ipsw_prepare_ios4patches
+        log "Add all to custom IPSW"
+        zip -r0 temp.ipsw Firmware/dfu/*
+    fi
 
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
@@ -3945,7 +3950,7 @@ ipsw_prepare_32bit() {
 
     ipsw_prepare_fourthree
     ipsw_bbreplace
-    if [[ $device_target_vers == "4"* ]]; then
+    if [[ $target_vers_maj == 4 ]]; then
         ipsw_prepare_ios4patches
         log "Add all to custom IPSW"
         zip -r0 temp.ipsw Firmware/dfu/*
@@ -4915,7 +4920,9 @@ ipsw_prepare_ios4patches() {
         mv $name $getcomp.orig
         "$dir/xpwntool" $getcomp.orig $getcomp.dec -iv $iv -k $key
         ticket=
-        [[ -n $device_type_special && $getcomp == "iBEC" ]] && ticket="--ticket"
+        if [[ $getcomp == "iBEC" ]] && (( target_vers_maj >= 5 )); then
+            ticket="--ticket"
+        fi
         "$dir/iBoot32Patcher" $getcomp.dec $getcomp.patched --rsa --debug $ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1 pio-error=0"
         "$dir/xpwntool" $getcomp.patched ${path}$name -t $getcomp.orig
     done
