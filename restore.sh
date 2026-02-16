@@ -2671,7 +2671,8 @@ ipsw_preference_set() {
     esac
     if [[ $ipsw_gasgauge_patch != 1 && $ipsw_jailbreak != 1 && $device_target_vers == "$device_latest_vers" ]]; then
         ipsw_nskip=
-    elif [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    elif [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]] ||
+         [[ $device_proc == 5 && $target_vers_maj == 4 ]]; then
         ipsw_nskip=1
     fi
 
