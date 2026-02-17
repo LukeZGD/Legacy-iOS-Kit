@@ -1078,6 +1078,9 @@ device_manufacturing() {
         print "* Cannot check $device_name bootrom model in Recovery mode. Enter DFU mode to get bootrom model"
         return
     elif [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]]; then
+        case $device_type in
+            iPhone4,1 | iPhone5,2 | iPad3,[26] ) device_9900candidate=1;;
+        esac
         if [[ $device_type == "DFU" ]]; then
             print "* Cannot check for manufacturing date in DFU mode"
             return
@@ -1110,7 +1113,7 @@ device_manufacturing() {
             print "* Manufactured in $year_half"
         elif [[ $device_mode == "Normal" ]] && (( device_proc >= 5 )); then
             print "* Select Pair Device to get more device information"
-            if [[ -n $device_use_bb ]] && (( device_proc <= 6 )); then
+            if [[ -n $device_use_bb && $device_9900candidate == 1 ]]; then
                 print "* This will also check if your device is affected by the 9900 IMEI activation issue"
             fi
         fi
@@ -7708,14 +7711,23 @@ menu_print_info() {
     fi
     if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
         case $device_proc in
-            [56] ) [[ $device_imei == "9900"* ]] && warn "Your device's IMEI starts with 9900. These devices are affected by an activation looping issue."
+            [56] )
+                if [[ $device_imei == "9900"* ]]; then
+                    warn "Your device's IMEI starts with 9900. These devices are affected by an activation issue."
+                elif [[ $device_9900candidate == 1 && $device_mode == "Normal" && -n $device_imei ]]; then
+                    print "* Your device's IMEI does not start with 9900. Your device should be safe from the activation issue."
+                elif [[ $device_9900candidate == 1 && $device_mode != "Normal" ]]; then
+                    warn "Your device is possibly affected by an activation issue. Please check your device's IMEI."
+                    print "* If it starts with 9900, enable Activation Records stitching in Misc Utilities"
+                fi
+            ;;
         esac
         if [[ $device_auto_actrec == 1 ]]; then
-            print "* Activated A${device_proc}(X) device with 9900 IMEI detected. Activation record stitching enabled."
+            print "* Activated A${device_proc}(X) device with 9900 IMEI detected. Activation Records stitching enabled."
         elif [[ $device_auto_actrec == 2 ]]; then
-            print "* Existing activation records detected. Activation record stitching enabled."
+            print "* Existing activation records detected. Activation Records stitching enabled."
         elif [[ $device_actrec == 1 ]]; then
-            warn "activation-records flag detected. Activation record stitching enabled."
+            warn "activation-records flag detected. Activation Records stitching enabled."
         fi
         if [[ $device_pwnrec == 1 ]]; then
             warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
