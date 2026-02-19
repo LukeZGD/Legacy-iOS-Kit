@@ -4875,12 +4875,13 @@ ipsw_prepare_tethered() {
     ipsw_prepare_32bit
 
     log "Extract RestoreRamdisk and options.plist"
+    mv "$ipsw_custom.ipsw" temp.ipsw
+    file_extract_from_archive temp.ipsw BuildManifest.plist
+    name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
+    file_extract_from_archive temp.ipsw $name
     device_fw_key_check temp $device_target_build
-    name=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
-    mv "$ipsw_custom.ipsw" temp.ipsw
-    file_extract_from_archive temp.ipsw $name
     mv $name ramdisk.orig
     "$dir/xpwntool" ramdisk.orig ramdisk.dec -iv $iv -k $key
     "$dir/hfsplus" ramdisk.dec extract usr/local/share/restore/$options_plist
