@@ -5582,12 +5582,12 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
-    elif [[ $device_proc == 7 && $device_target_other != 1 &&
-            $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
+    elif [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
+            $restore_usepwndfu64 != 1 && $platform == "linux" && $platform_arch == "arm64" ]]; then
         futurerestore2+="_new"
     else
         futurerestore2="../saved/futurerestore_$platform"
-        if [[ $device_target_vers == "10"* ]]; then
+        if [[ $target_vers_maj == 10 ]]; then
             export FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD=1 # required since custom-latest-ota is broken
         else
             ExtraArr=("--latest-sep")
@@ -5619,6 +5619,8 @@ restore_futurerestore() {
             fr_latest="870bdb8f876de752078c9000a185fed119d60af9"
             fr_branch="dev"
         fi
+        fr_latest="b981d8a0d574ab4c9da3c271624f8ff735d2fe0d"
+        fr_branch="dev2"
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
         log "futurerestore $fr_branch branch will be used for this restore"
         if [[ $fr_latest != "$fr_current" ]]; then
@@ -5645,6 +5647,10 @@ restore_futurerestore() {
     fi
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     for arg in "$@"; do
+        if [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
+              $arg == "--skip-blob" && $FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD == 1 ]]; then
+            arg+="2" # --skip-blob2
+        fi
         [[ -n "$arg" ]] && ExtraArr+=("$arg")
     done
     if [[ $debug_mode == 1 ]]; then
@@ -6181,16 +6187,6 @@ restore_usepwndfu64_option() {
         print "* If you want to disable Pwned Restore Option, place the device in Normal/Recovery mode"
         restore_usepwndfu64=1
         return
-    elif [[ $device_target_vers == "10.3.3" && $device_target_other != 1 && $platform == "macos" ]]; then
-        if [[ $platform_arch == "arm64" ]]; then
-            log "arm64 Mac detected, Pwned Restore Option enabled for 10.3.3 restore."
-            restore_usepwndfu64=1
-            return
-        elif [[ $mac_cocoa == 1 ]]; then
-            log "OS X El Capitan detected, Pwned Restore Option enabled for 10.3.3 restore."
-            restore_usepwndfu64=1
-            return
-        fi
     elif [[ $device_target_setnonce == 1 ]]; then
         log "Set Nonce Only mode detected, Pwned Restore Option enabled."
         restore_usepwndfu64=1
@@ -6202,9 +6198,10 @@ restore_usepwndfu64_option() {
     if [[ $device_target_other == 1 ]]; then
         print "* When disabled, user must set the device generator manually before the restore."
     fi
-    if [[ $device_proc == 7 ]]; then
+    if [[ $device_proc == 7 && $device_target_vers == "10.3.3" && $device_target_other != 1 ]] ||
+       [[ $device_proc == 7 && $platform == "linux" ]]; then
         if [[ $device_target_vers == "10.3.3" && $device_target_other != 1 ]]; then
-            print "* It is recommended to disable this option for 10.3.3 OTA restores."
+            print "* It is recommended to disable this option for A7 10.3.3 restores."
         fi
         print "* This option is disabled by default (N). Select this option if unsure."
         select_yesno "Enable this option?" 0
