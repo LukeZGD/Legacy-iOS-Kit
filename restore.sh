@@ -6347,7 +6347,6 @@ device_ramdisk64() {
     local path
     local url
     local decrypt
-    local ios8
     local opt
     local build_id="16A366"
     if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* ]]; then
@@ -6355,10 +6354,6 @@ device_ramdisk64() {
     fi
 
     if [[ $device_ramdisk_ios8 == 1 ]]; then
-        ios8=1
-    fi
-
-    if [[ $ios8 == 1 ]]; then
         build_id="12B410"
         if [[ $device_type == "iPhone"* ]]; then
             build_id="12B411"
@@ -6408,7 +6403,7 @@ device_ramdisk64() {
             "Trustcache" ) path="Firmware/";;
             * ) path="";;
         esac
-        if [[ $ios8 == 1 && $getcomp == "DeviceTree" ]]; then
+        if [[ $device_ramdisk_ios8 == 1 && $getcomp == "DeviceTree" ]]; then
             path="$all_flash/"
         fi
         if [[ -z $name ]]; then
@@ -6447,7 +6442,7 @@ device_ramdisk64() {
                 reco+="$(echo $getcomp | tr '[:upper:]' '[:lower:]') -A"
                 "$dir/img4" -i $getcomp.orig -o $getcomp.dec -k ${iv}${key}
                 mv $getcomp.orig $getcomp.orig0
-                if [[ $ios8 == 1 ]]; then
+                if [[ $device_ramdisk_ios8 == 1 ]]; then
                     $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/ios8/$name.patch
                 else
                     $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
@@ -6455,7 +6450,7 @@ device_ramdisk64() {
             ;;
             "Kernelcache" )
                 reco+="rkrn"
-                if [[ $ios8 == 1 ]]; then
+                if [[ $device_ramdisk_ios8 == 1 ]]; then
                     mv $getcomp.orig $getcomp.orig0
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key} -D
                 else
@@ -6467,7 +6462,7 @@ device_ramdisk64() {
             ;;
             "DeviceTree" )
                 reco+="rdtr"
-                if [[ $ios8 == 1 ]]; then
+                if [[ $device_ramdisk_ios8 == 1 ]]; then
                     reco+=" -A"
                     mv $getcomp.orig $getcomp.orig0
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
@@ -6477,7 +6472,7 @@ device_ramdisk64() {
             "RestoreRamdisk" )
                 reco+="rdsk -A"
                 mv $getcomp.orig $getcomp.orig0
-                if [[ $ios8 == 1 ]]; then
+                if [[ $device_ramdisk_ios8 == 1 ]]; then
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
                     "$dir/hfsplus" $getcomp.orig grow 50000000
                 else
@@ -6508,7 +6503,7 @@ device_ramdisk64() {
     $irecovery -c ramdisk
     $irecovery -f $ramdisk_path/DeviceTree.img4
     $irecovery -c devicetree
-    if [[ $ios8 != 1 ]]; then
+    if [[ $device_ramdisk_ios8 != 1 ]]; then
         $irecovery -f $ramdisk_path/Trustcache.img4
         $irecovery -c firmware
     fi
@@ -6516,7 +6511,7 @@ device_ramdisk64() {
     $irecovery -c bootx
     sleep 6
 
-    if [[ $ios8 == 1 ]]; then
+    if [[ $device_ramdisk_ios8 == 1 ]]; then
         device_iproxy no-logging 44
         print "* Booted SSH ramdisk is based on: https://ios7.iarchive.app/downgrade/making-ramdisk.html"
     else
@@ -7185,7 +7180,7 @@ device_ramdisk_iosvers() {
 
 menu_ramdisk() {
     local loop
-    local menu_items=("Connect to SSH" "Dump Blobs")
+    local menu_items=("Connect to SSH")
     local reboot="reboot_bak"
     if (( device_proc >= 7 )); then
         reboot="/sbin/reboot"
@@ -7194,25 +7189,29 @@ menu_ramdisk() {
     fi
     if [[ $1 == "18C66" ]]; then
         menu_items+=("Install TrollStore")
-    elif [[ $device_proc == 7 && $1 == "12"* ]]; then
+    elif [[ $device_proc == 7 && $device_ramdisk_ios8 == 1 ]]; then
         log "Ramdisk should now boot and fix iOS 7 not booting."
     fi
-    if (( device_proc <= 8 )); then
-        menu_items+=("Erase All (iOS 7 and 8)")
+    if [[ $device_ramdisk_ios8 != 1 ]]; then
+        menu_items+=("Dump Blobs")
+        if (( device_proc <= 8 )); then
+            menu_items+=("Erase All (iOS 7 and 8)")
+        fi
+        if (( device_proc >= 5 )); then
+            menu_items+=("Erase All (iOS 9+)")
+        fi
+        if [[ $device_canpowder == 1 ]]; then
+            menu_items+=("Disable/Enable Exploit")
+        fi
+        if (( device_proc >= 7 )) && [[ $device_proc != 10 ]]; then
+            menu_items+=("Install Bootstrap (iOS 7/8/9)")
+        fi
+        if [[ $device_proc == 7 ]]; then
+            menu_items+=("Install Untether (iOS 7)")
+        fi
+        menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime")
     fi
-    if (( device_proc >= 5 )); then
-        menu_items+=("Erase All (iOS 9+)")
-    fi
-    if [[ $device_canpowder == 1 ]]; then
-        menu_items+=("Disable/Enable Exploit")
-    fi
-    if (( device_proc >= 7 )) && [[ $device_proc != 10 ]]; then
-        menu_items+=("Install Bootstrap (iOS 7/8/9)")
-    fi
-    if [[ $device_proc == 7 ]]; then
-        menu_items+=("Install Untether (iOS 7)")
-    fi
-    menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime" "Reboot Device" "Exit")
+    menu_items+=("Reboot Device" "Exit")
 
     print "* For accessing data, note the following:"
     print "* Host: sftp://127.0.0.1 | User: root | Password: alpine | Port: $ssh_port"
@@ -7254,7 +7253,7 @@ menu_ramdisk() {
         case $mode in
             "ssh" )
                 log "Use the \"exit\" command to go back to SSH Ramdisk Menu"
-                if (( device_proc >= 7 )) && [[ $1 == "12"* ]]; then
+                if [[ $device_ramdisk_ios8 == 1 ]]; then
                     $ssh -p $ssh_port root@127.0.0.1 &
                     ssh_pid=$!
                     sleep 1
@@ -7266,14 +7265,7 @@ menu_ramdisk() {
             "exit" ) loop=1;;
             "dump-blobs" )
                 local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
-                if [[ $1 == "12"* ]]; then
-                    warn "Dumping blobs may fail on iOS 8 ramdisk."
-                    print "* It is recommended to do this on iOS $device_ramdiskver ramdisk instead."
-                    select_yesno
-                    if [[ $? != 1 ]]; then
-                        continue
-                    fi
-                elif (( device_proc < 7 )); then
+                if (( device_proc < 7 )); then
                     warn "This is the wrong place to dump onboard blobs for 32-bit devices."
                     print "* Reboot your device, run the script again and go to Save SHSH Blobs -> Onboard Blobs"
                     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Saving-onboard-SHSH-blobs-of-current-iOS-version"
@@ -10975,26 +10967,19 @@ device_justboot_ios7touch4() {
 }
 
 device_enter_ramdisk() {
-    if (( device_proc >= 7 )); then
-        if (( device_proc <= 8 )) && [[ $device_type != "iPad5,1" && $device_type != "iPad5,2" ]]; then
-            device_ramdiskver="12"
-            if [[ $device_type == "iPad5"* ]]; then
-                device_ramdiskver="14"
-            fi
-            local ver="$device_ramdiskver"
-            input "Version Select Option"
-            print "* The version of the SSH Ramdisk is set to iOS $ver by default. This is the recommended option."
-            print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS $ver ramdisk."
-            print "* If not sure, just press Enter/Return. This will select the default version."
-            select_yesno "Select Y to use iOS $ver, select N to use iOS 8" 1
-            if [[ $? != 1 ]]; then
-                device_ramdisk_ios8=1
-            fi
+    if [[ $device_proc == 7 ]]; then
+        input "Version Select Option"
+        print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
+        print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS 12 ramdisk."
+        print "* If not sure, just press Enter/Return. This will select the default version."
+        select_yesno "Select Y to use iOS 12, select N to use iOS 8" 1
+        if [[ $? != 1 ]]; then
+            device_ramdisk_ios8=1
         fi
-    elif (( device_proc >= 5 )) && [[ $device_vers == "9"* || $device_vers == "10"* ]]; then
+    elif (( device_proc >= 5 && device_vers_maj >= 9 )); then
         log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
         device_rd_build="13A452"
-    elif (( device_proc >= 5 )) && (( device_vers_maj <= 8 )) && [[ $device_mode == "Normal" ]]; then
+    elif (( device_proc >= 5 )) && [[ $device_mode == "Normal" ]]; then
         :
     elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
         print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
