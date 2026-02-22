@@ -129,9 +129,8 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --skip-ibss               Assume that pwned iBSS has already been sent to the device
 
 For 64-bit checkm8 devices compatible with pwned restores:
-    --enable-ipx              Use iOS 14.1 ramdisk for 14.2-14.8 restores to avoid root seal
-                              Likely needs --skip-blob too but not sure
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
+    --use-dev                 Use dev branch of futurerestore nightly
     --use-pwndfu              Enable futurerestore pwned restore option
 
     * Default IPSW path: <script location>/<name of IPSW file>.ipsw
@@ -392,6 +391,7 @@ set_tool_paths() {
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
+        PlistBuddy2="${PlistBuddy}2"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
@@ -547,6 +547,7 @@ set_tool_paths() {
         cocoadialog="$(command -v cocoadialog)"
         gaster+="../bin/macos/gaster"
         PlistBuddy="/usr/libexec/PlistBuddy"
+        PlistBuddy2="$PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
         zenity="$dir/zenity"
@@ -5615,12 +5616,11 @@ restore_futurerestore() {
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
         local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
         local fr_branch="main"
-        if (( target_vers_maj >= 16 )); then
-            fr_latest="870bdb8f876de752078c9000a185fed119d60af9"
-            fr_branch="dev"
+        if (( target_vers_maj >= 16 )) || [[ $restore_usedev == 1 ]] ||
+           [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+            fr_latest="c473a1748559b4673e0c43fa73cfa4421857be12"
+            fr_branch="dev2"
         fi
-        fr_latest="26fe608bc372fba6cb57675b5d6dc21895ef95b2"
-        fr_branch="dev2"
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
         log "futurerestore $fr_branch branch will be used for this restore"
         if [[ $fr_latest != "$fr_current" ]]; then
@@ -6228,8 +6228,8 @@ ipsw_prepare_ipx() {
     log "Extracting BuildManifest.plist from IPSW"
     file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
-    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
-    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
+    local kernelcache=$($PlistBuddy2 -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
+    local restoreramdisk=$($PlistBuddy2 -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
     log "KernelCache: $kernelcache"
     log "RestoreRamDisk: $restoreramdisk"
 
@@ -6244,29 +6244,29 @@ ipsw_prepare_ipx() {
     log "Repacking KernelCache"
     "$dir/img4" -i $kernelcache -o kcache.im4p -T rkrn -P kcache.bpatch -J
 
-    local restoreramdisk2
-    if [[ $target_vers_maj == 14 ]] && (( target_vers_min >= 2 )); then
-        # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
-        if [[ -s ../saved/$device_type/18A8395.dmg ]]; then
-            log "Using downloaded 14.1 ramdisk"
-            cp ../saved/$device_type/18A8395.dmg $restoreramdisk
-        else
-            ipsw_get_url 18A8395
-            "$dir/pzb" -g "BuildManifest.plist" -o BuildManifest2.plist "$ipsw_url"
-            log "Get 14.1 paths"
-            restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist | tr -d '"')
-            log "Download 14.1 ramdisk"
-            "$dir/pzb" -g "$restoreramdisk2" -o $restoreramdisk2 "$ipsw_url"
-            if [[ ! -s $restoreramdisk2 ]]; then
-                error "Failed to download 14.1 ramdisk. Please run the script again"
-            fi
-            mv $restoreramdisk2 $restoreramdisk
-            cp $restoreramdisk ../saved/$device_type/18A8395.dmg
-        fi
-    else
+#     local restoreramdisk2
+#     if [[ $target_vers_maj == 14 ]] && (( target_vers_min >= 2 )); then
+#         # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
+#         if [[ -s ../saved/$device_type/18A8395.dmg ]]; then
+#             log "Using downloaded 14.1 ramdisk"
+#             cp ../saved/$device_type/18A8395.dmg $restoreramdisk
+#         else
+#             ipsw_get_url 18A8395
+#             "$dir/pzb" -g "BuildManifest.plist" -o BuildManifest2.plist "$ipsw_url"
+#             log "Get 14.1 paths"
+#             restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist | tr -d '"')
+#             log "Download 14.1 ramdisk"
+#             "$dir/pzb" -g "$restoreramdisk2" -o $restoreramdisk2 "$ipsw_url"
+#             if [[ ! -s $restoreramdisk2 ]]; then
+#                 error "Failed to download 14.1 ramdisk. Please run the script again"
+#             fi
+#             mv $restoreramdisk2 $restoreramdisk
+#             cp $restoreramdisk ../saved/$device_type/18A8395.dmg
+#         fi
+#     else
         log "Extracting RestoreRamDisk from IPSW"
         file_extract_from_archive "$ipsw_path.ipsw" $restoreramdisk
-    fi
+#     fi
 
     local platform2="$platform"
     [[ $platform2 == "macos" ]] && platform2+="x"
@@ -7733,6 +7733,9 @@ menu_print_info() {
     elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
         if [[ $restore_useskipblob == 1 ]]; then
             warn "skip-blob flag detected. futurerestore will have --skip-blob enabled."
+        fi
+        if [[ $restore_usedev == 1 ]]; then
+            warn "use-dev flag detected. futurerestore dev branch will be used."
         fi
         if [[ $restore_usepwndfu64 == 1 ]]; then
             warn "use-pwndfu flag detected. futurerestore will have --use-pwndfu enabled."
@@ -11590,8 +11593,9 @@ for i in "$@"; do
         "--skip-ibss"       ) device_skip_ibss=1;;
 
         # options for 64-bit devices
-        "--enable-ipx"      ) ipsw_ipx=1;;
+#         "--enable-ipx"      ) ipsw_ipx=1;;
         "--skip-blob"       ) restore_useskipblob=1;;
+        "--use-dev"         ) restore_usedev=1;;
         "--use-pwndfu"      ) restore_usepwndfu64=1;;
 
         # device_argmode setters
