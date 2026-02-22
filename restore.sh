@@ -7206,7 +7206,7 @@ menu_ramdisk() {
         if [[ $device_proc == 7 ]]; then
             menu_items+=("Install Untether (iOS 7)")
         fi
-        menu_items+=("Install OpenSSH (iOS 10 and lower)" "Clear NVRAM" "Get iOS Version" "Update DateTime")
+        menu_items+=("Clear NVRAM" "Get iOS Version" "Update DateTime")
     fi
     menu_items+=("Reboot Device" "Exit")
 
@@ -7243,7 +7243,6 @@ menu_ramdisk() {
                 "Update DateTime" ) mode="datetime";;
                 "Install Bootstrap (iOS 7/8/9)" ) mode="bootstrap";;
                 "Install Untether (iOS 7)" ) mode="untether7";;
-                "Install OpenSSH (iOS 10 and lower)" ) mode="openssh";;
                 "Exit" ) mode="exit";;
             esac
         done
@@ -7402,11 +7401,6 @@ menu_ramdisk() {
                 if [[ $device_vers == "9"* ]]; then
                     cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
                 fi
-                cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
-                gzip -d openssh.tar.gz
-                gzip -d openssl.tar.gz
-                cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 case $device_vers in
                     9.3.[45] ) :;;
                     9.[23]*  ) $scp -P $ssh_port $jelbrek/io.pangu93.loader.plist root@127.0.0.1:/mnt1/Library/LaunchDaemons;;
@@ -7455,27 +7449,6 @@ menu_ramdisk() {
                 else
                     log "Stashing disabled."
                 fi
-            ;;
-            "openssh" )
-                log "Please read the message below:"
-                warn "This will install files for OpenSSH to your device. Make sure that your device is jailbroken, and filesystems are already mounted."
-                warn "Do NOT continue if your device is not jailbroken. Also do this at your own risk."
-                select_yesno
-                if [[ $? != 1 ]]; then
-                    continue
-                fi
-                if (( device_proc < 7 )); then
-                    device_ramdisk_iosvers
-                fi
-                cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
-                gzip -d openssh.tar.gz
-                gzip -d openssl.tar.gz
-                cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                if (( device_proc < 7 )); then
-                    cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                fi
-                log "Done."
             ;;
         esac
     done
