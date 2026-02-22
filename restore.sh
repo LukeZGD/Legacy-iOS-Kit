@@ -5619,7 +5619,7 @@ restore_futurerestore() {
             fr_latest="870bdb8f876de752078c9000a185fed119d60af9"
             fr_branch="dev"
         fi
-        fr_latest="b981d8a0d574ab4c9da3c271624f8ff735d2fe0d"
+        fr_latest="26fe608bc372fba6cb57675b5d6dc21895ef95b2"
         fr_branch="dev2"
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
         log "futurerestore $fr_branch branch will be used for this restore"
