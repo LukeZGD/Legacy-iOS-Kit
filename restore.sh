@@ -1268,12 +1268,12 @@ device_get_info() {
                 device_type=$($ideviceinfo -s -k ProductType)
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
             fi
-            device_ecid=$($ideviceinfo -s -k UniqueChipID)
-            device_model=$($ideviceinfo -s -k HardwareModel)
-            if [[ $device_model == "N81AP" ]]; then
-                device_type="iPod4,1" # this is needed since touch 4 devices on ios 7 show as iphone3,1/3,3
-            fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
+                device_ecid=$($ideviceinfo -s -k UniqueChipID)
+                device_model=$($ideviceinfo -s -k HardwareModel)
+                if [[ $device_model == "N81AP" ]]; then
+                    device_type="iPod4,1" # this is needed since touch 4 devices on ios 7 show as iphone3,1/3,3
+                fi
                 device_vers=$($ideviceinfo -s -k ProductVersion)
                 [[ -z $device_vers ]] && device_vers=$($ideviceinfo -k ProductVersion)
                 device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
@@ -1287,10 +1287,10 @@ device_get_info() {
                 fi
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_paired_info
-            fi
-            device_protocol=$($ideviceinfo -s -k ProtocolVersion)
-            if [[ $device_protocol == 1 ]]; then
-                device_entry_s5l8900
+                device_protocol=$($ideviceinfo -s -k ProtocolVersion)
+                if [[ $device_protocol == 1 ]]; then
+                    device_entry_s5l8900
+                fi
             fi
         ;;
     esac
@@ -1503,7 +1503,7 @@ device_get_info() {
         iPad[67],* ) device_checkm8ipad=1;;
     esac
     device_get_name
-    if [[ $device_mode == "Normal" && -z $device_ecid ]]; then
+    if [[ $device_mode == "Normal" && -z $device_ecid && $main_argmode != "device_enter_ramdisk"* ]]; then
         warn "Unable to detect device type/ECID. Is your device on 2.x or lower?"
         warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
         print "* For better support, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
