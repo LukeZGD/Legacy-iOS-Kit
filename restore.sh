@@ -5614,12 +5614,11 @@ restore_futurerestore() {
         log "Checking for futurerestore updates..."
         #download_from_url "https://api.github.com/repos/futurerestore/futurerestore/commits" commits
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
-        local fr_latest="15f26141aaf1c980a5d5c44e429194d5225f531c"
+        local fr_latest="45d0267ee24854d8bb9f5dbef29c3226af0d48db"
         local fr_branch="main"
-        if (( target_vers_maj >= 16 )) || [[ $restore_usedev == 1 ]] ||
-           [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+        if (( target_vers_maj >= 16 )) || [[ $restore_usedev == 1 ]]; then
             fr_latest="c473a1748559b4673e0c43fa73cfa4421857be12"
-            fr_branch="dev2"
+            fr_branch="dev"
         fi
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
         log "futurerestore $fr_branch branch will be used for this restore"
