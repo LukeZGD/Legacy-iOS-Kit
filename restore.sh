@@ -5585,7 +5585,7 @@ restore_futurerestore() {
         futurerestore2+="_old"
     elif [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
             $restore_usepwndfu64 != 1 && $platform == "linux" && $platform_arch == "arm64" ]]; then
-        futurerestore2+="_new"
+        futurerestore2+="_new" # no futurerestore nightly build for linux arm64
     else
         futurerestore2="../saved/futurerestore_$platform"
         if [[ $target_vers_maj == 10 ]]; then
@@ -5647,7 +5647,8 @@ restore_futurerestore() {
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     for arg in "$@"; do
         if [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
-              $arg == "--skip-blob" && $FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD == 1 ]]; then
+              $restore_usepwndfu64 != 1 && $arg == "--skip-blob" &&
+              $FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD == 1 ]]; then
             arg+="2" # --skip-blob2
         fi
         [[ -n "$arg" ]] && ExtraArr+=("$arg")
