@@ -10748,13 +10748,14 @@ menu_justboot() {
         elif [[ $total_history_count -gt 0 ]]; then
             menu_items+=("Boot History (All Devices)")
         fi
-        if [[ -n $vers ]]; then
-            menu_items+=("(*) Just Boot")
-        fi
+        menu_items+=("Custom Bootargs")
         if [[ $device_type == "iPod4,1" ]]; then
             menu_items+=("(*) iOS 7.1.2")
         fi
-        menu_items+=("Custom Bootargs" "Go Back")
+        if [[ -n $vers ]]; then
+            menu_items+=("(*) Just Boot")
+        fi
+        menu_items+=("Go Back")
         menu_print_info
         print " > Main Menu > Just Boot"
         print "* You are about to do a tethered boot."
