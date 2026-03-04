@@ -3,6 +3,7 @@
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
 device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 device_bootargs_default="pio-error=0 debug=0x2014e serial=3"
+device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
 ssh_port=6414
 
@@ -94,7 +95,8 @@ List of options:
     --debug                   Enable script debugging (set -x and debug mode)
     --device=<type>           Specify device type
     --dfuhelper               Launch to DFU Mode Helper only
-    --disable-sudoloop        Disable running tools as root for Linux
+    --disable-usbmuxd         Disable use of own usbmuxd instance on Linux
+    --enable-sudoloop         Enable running some tools as root on Linux
     --ecid=<ecid>             Specify device ECID
     --entry-device            Enable manual device type and ECID entry
     --exit-recovery           Attempt to exit recovery mode
@@ -108,7 +110,7 @@ List of options:
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
-    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd for Linux
+    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd on Linux
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
@@ -436,18 +438,20 @@ set_tool_paths() {
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
             trap "clean_sudo" EXIT
         fi
-        if [[ $device_sudoloop == 1 || $live_session == 1 ]]; then
-            sudo="/usr/bin/sudo"
-            if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
+        sudo="/usr/bin/sudo"
+        if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
+            if [[ -z $device_disable_sudoloop && -z $device_disable_usbmuxd ]]; then
                 log "sudo-rs detected. Switching to sudo.ws"
-                sudo+=".ws"
             fi
+            sudo+=".ws"
+        fi
+        if [[ $device_sudoloop == 1 || $live_session == 1 ]]; then
             if [[ $live_session != 1 ]]; then
                 print "* Enter your user password when prompted"
                 print "* Your password input will not be visible, but it is still being entered."
             fi
             $sudo -v
-            (while true; do $sudo -v; sleep 60; done) &
+            #(while true; do $sudo -v; sleep 60; done) &
             sudoloop_pid=$!
             futurerestore="$sudo "
             gaster="$sudo "
@@ -457,38 +461,37 @@ set_tool_paths() {
             irecovery2="$sudo "
             irecovery3="$sudo "
             primepwn="$sudo "
-            if [[ ! -d $dir && $(ls ../bin/linux) ]]; then
-                log "Running on platform: $platform ($platform_ver - $platform_arch)"
-                error "Failed to find bin directory for $platform_arch, found $(ls -x ../bin/linux) instead." \
-                "* Download the \"linux_$platform_arch\" or \"complete\" version to continue (or do a git clone)"
+        fi
+        if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 ]]; then
+            trap "clean_usbmuxd" EXIT
+            if [[ $(command -v gio) ]]; then
+                log "gio detected. Unmounting all iOS devices with it"
+                gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
             fi
-            if [[ $device_argmode != "none" ]]; then
-                trap "clean_usbmuxd" EXIT
-                if [[ $(command -v gio) ]]; then
-                    log "gio detected. Unmounting all iOS devices with it"
-                    gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
+            if [[ $othertmp == 0 ]]; then
+                if [[ $live_session != 1 && $device_disable_sudoloop == 1 ]]; then
+                    print "* Enter your user password when prompted"
+                    print "* Your password input will not be visible, but it is still being entered."
                 fi
-                if [[ $othertmp == 0 ]]; then
-                    if [[ $(command -v systemctl) ]]; then
-                        $sudo systemctl stop usbmuxd
-                    elif [[ $(command -v rc-service) ]]; then
-                        $sudo rc-service usbmuxd zap
-                    else
-                        $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
-                    fi
-                    #$sudo killall usbmuxd 2>/dev/null
-                    #sleep 1
-                    if [[ $use_usbmuxd2 == 1 ]]; then
-                        log "Running usbmuxd2"
-                        $sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
-                    else
-                        log "Running usbmuxd"
-                        $sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
-                    fi
+                if [[ $(command -v systemctl) ]]; then
+                    $sudo systemctl stop usbmuxd
+                elif [[ $(command -v rc-service) ]]; then
+                    $sudo rc-service usbmuxd zap
                 else
-                    warn "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
-                    warn "Not running usbmuxd"
+                    $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
                 fi
+                #$sudo killall usbmuxd 2>/dev/null
+                #sleep 1
+                if [[ $use_usbmuxd2 == 1 ]]; then
+                    log "Running usbmuxd2"
+                    $sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
+                else
+                    log "Running usbmuxd"
+                    $sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
+                fi
+            else
+                warn "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
+                warn "Not running usbmuxd"
             fi
         fi
         gaster+="$dir/gaster"
@@ -11597,7 +11600,8 @@ for i in "$@"; do
     case $i in
         # general options
         "--debug"           ) set -x; debug_mode=1; menu_old=1;;
-        "--disable-sudoloop") device_disable_sudoloop=1;;
+        "--disable-usbmuxd" ) device_disable_usbmuxd=1;;
+        "--enable-sudoloop" ) device_disable_sudoloop=;;
         "--help"            ) display_help; exit;;
         "--no-color"        ) no_color=1;;
         "--no-finder"       ) no_finder=1;;
