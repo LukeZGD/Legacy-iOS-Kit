@@ -43,6 +43,7 @@ error() {
     if [[ -n $platform ]]; then
         print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     fi
+    clean_usbmuxd clean
     exit 1
 }
 
@@ -68,7 +69,22 @@ clean_sudo() {
 }
 
 clean_usbmuxd() {
-    clean_sudo
+    if [[ $1 == "clean" ]]; then
+        if [[ -z $device_disable_usbmuxd ]]; then
+            log "Terminating own usbmuxd instance(s)"
+            if [[ $live_session != 1 ]]; then
+                print "* Enter your user password when prompted"
+                print "* Your password input will not be visible, but it is still being entered."
+            fi
+            $sudo -v
+        fi
+        return
+    fi
+    if [[ -z $device_disable_sudoloop ]]; then
+        clean_sudo
+    else
+        clean
+    fi
     if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
         return
     fi
@@ -462,12 +478,12 @@ set_tool_paths() {
             irecovery3="$sudo "
             primepwn="$sudo "
         fi
+        if [[ $(command -v gio) ]]; then
+            log "gio detected. Unmounting all iOS devices with it"
+            gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
+        fi
         if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 ]]; then
             trap "clean_usbmuxd" EXIT
-            if [[ $(command -v gio) ]]; then
-                log "gio detected. Unmounting all iOS devices with it"
-                gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
-            fi
             if [[ $othertmp == 0 ]]; then
                 if [[ $live_session != 1 && $device_disable_sudoloop == 1 ]]; then
                     print "* Enter your user password when prompted"
@@ -1473,7 +1489,7 @@ device_get_info() {
     esac
 
     case $device_type in
-        iPhone3,[13] | iPhone[45],* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;;
+        iPhone3,[13] | iPhone[45],* | iPad1,1 | iPad2,4 | iPod[35],1 ) device_canpowder=1;; # powdersn0w device support
     esac
 
     device_fw_dir="../saved/firmware/$device_type"
@@ -8446,6 +8462,7 @@ menu_restore() {
             local text2="7.1.x"
             case $device_type in
                 iPhone5,[1234] ) text2="7.x";;
+                iPad3,[456]    ) text2="7.0.x";;
             esac
             menu_items+=("Other (powdersn0w $text2 blobs)")
         fi
@@ -11594,6 +11611,7 @@ main() {
     print "* Legacy iOS Kit $version_current ($git_hash)"
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     echo
+    clean_usbmuxd clean
 }
 
 for i in "$@"; do
