@@ -478,11 +478,11 @@ set_tool_paths() {
             irecovery3="$sudo "
             primepwn="$sudo "
         fi
-        if [[ $(command -v gio) ]]; then
+        if [[ $(command -v gio) && ! -e ../resources/new ]]; then
             log "gio detected. Unmounting all iOS devices with it"
             gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
         fi
-        if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 ]]; then
+        if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 ]] && [[ ! -e ../resources/new ]]; then
             trap "clean_usbmuxd" EXIT
             if [[ $othertmp == 0 ]]; then
                 if [[ $live_session != 1 && $device_disable_sudoloop == 1 ]]; then
@@ -639,6 +639,8 @@ install_depends() {
     if [[ $platform == "linux" ]]; then
         print "* Legacy iOS Kit will be installing dependencies from your distribution's package manager"
         print "* Enter your user password when prompted"
+        print "* Your password input will not be visible, but it is still being entered."
+
         if [[ $distro != "debian" && $distro != "fedora-atomic" ]]; then
             echo
             warn "Before continuing, make sure that your system is fully updated first!"
@@ -837,7 +839,7 @@ version_get() {
 }
 
 version_check() {
-    if [[ $no_version_check == 1 ]]; then
+    if [[ $no_version_check == 1 && ! -e ../resources/new ]]; then
         warn "No version check flag detected, update check is disabled and no support will be provided."
         return
     fi
@@ -1194,6 +1196,9 @@ device_get_info() {
     device_latest_bb, device_latest_bb_sha1, device_proc
     '
 
+    if [[ ! -s $ideviceinfo ]]; then
+        error "ideviceinfo not found. Make sure to update the script and/or check your Internet connection."
+    fi
     if [[ $device_argmode == "none" ]]; then
         log "No device mode is enabled."
         device_mode="none"
