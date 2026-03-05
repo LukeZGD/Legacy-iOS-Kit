@@ -1624,9 +1624,13 @@ device_get_info() {
             device_latest_vers="17.7.10"
             device_latest_build="21H450"
         ;;
-        iPad7,1[12] | iPhone11,* )
+        iPad7,1[12] )
             device_latest_vers="18.7.5"
             device_latest_build="22H311"
+        ;;
+        iPhone11,* )
+            device_latest_vers="18.7.6"
+            device_latest_build="22H320"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
