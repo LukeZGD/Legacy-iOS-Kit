@@ -449,7 +449,10 @@ set_tool_paths() {
             live_session_str+=" - External storage"
         fi
 
-        [[ $device_argmode == "none" ]] && device_disable_sudoloop=1
+        if [[ $device_argmode == "none" ]]; then
+            device_disable_sudoloop=1
+            device_disable_usbmuxd=1
+        fi
         if [[ -z $device_disable_sudoloop ]]; then
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
             trap "clean_sudo" EXIT
@@ -482,7 +485,7 @@ set_tool_paths() {
             log "gio detected. Unmounting all iOS devices with it"
             gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
         fi
-        if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 ]] && [[ ! -e ../resources/new ]]; then
+        if [[ $device_argmode != "none" && $device_disable_usbmuxd != 1 && ! -e ../resources/new ]]; then
             trap "clean_usbmuxd" EXIT
             if [[ $othertmp == 0 ]]; then
                 if [[ $live_session != 1 && $device_disable_sudoloop == 1 ]]; then
