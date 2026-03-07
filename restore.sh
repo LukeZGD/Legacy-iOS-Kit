@@ -69,6 +69,7 @@ clean_sudo() {
 }
 
 clean_usbmuxd() {
+    [[ $platform != "linux" ]] && return
     if [[ $1 == "clean" ]]; then
         if [[ -z $device_disable_usbmuxd ]]; then
             log "Terminating own usbmuxd instance(s)"
