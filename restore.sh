@@ -11050,8 +11050,8 @@ device_enter_ramdisk() {
     fi
 
     if [[ $1 == "menu" ]]; then
-        clear
-        device_iproxy
+        [[ $debug_mode != 1 ]] && clear
+        device_iproxy no-logging
         device_sshpass alpine
         menu_ramdisk
         return
