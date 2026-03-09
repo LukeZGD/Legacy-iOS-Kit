@@ -22,7 +22,7 @@ sleep 1s
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.mobile.softwareupdated.plist
 rm -rf /mnt1/System/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist
 
-if [[ -e "/ios71" ]]; then
+if [[ -e "/ios7" ]]; then
   # step1
   mv -v /mnt1/System/Library/LaunchDaemons/* /mnt1/Library/LaunchDaemons/
   sleep 3s
@@ -34,8 +34,10 @@ if [[ -e "/ios71" ]]; then
   mv -v /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
 
   # step3
+  mv -v /mnt1/Library/LaunchDaemons/com.apple.sandboxd.plist /mnt1/System/Library/LaunchDaemons/
+  mv -v /mnt1/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist /mnt1/System/Library/LaunchDaemons/
   mv -v /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup
-  ln -sf /lyncis /mnt1/usr/libexec/CrashHousekeeping
+  ln -sf /aquila /mnt1/usr/libexec/CrashHousekeeping
 fi
 
 Data_GUID="$((echo -e "i\n2\nq") | gptfdisk /dev/rdisk0s1 2>/dev/null | sed -n -e 's/^.*Partition unique GUID: //p')"

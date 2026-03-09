@@ -183,7 +183,7 @@
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
 - [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
 - [EverPwnage](https://github.com/LukeZGD/EverPwnage)
-- [Lyncis](https://github.com/staturnzz/lyncis)
+- [Aquila](https://github.com/staturnzz/aquila)
 - [Pangu](https://www.theapplewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theapplewiki.com/wiki/p0sixspwn)
 - [evasi0n7](https://www.theapplewiki.com/wiki/Evasi0n7)
