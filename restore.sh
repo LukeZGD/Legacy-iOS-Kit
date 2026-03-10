@@ -1105,7 +1105,7 @@ device_manufacturing() {
         return
     elif [[ $device_type != "iPhone2,1" && $device_type != "iPod2,1" ]]; then
         case $device_type in
-            iPhone4,1 | iPhone5,2 | iPad3,[26] ) device_9900candidate=1;;
+            iPhone4,1 | iPhone5,2 | iPad2,7 | iPad3,[26] ) device_9900candidate=1;;
         esac
         if [[ $device_type == "DFU" ]]; then
             print "* Cannot check for manufacturing date in DFU mode"
