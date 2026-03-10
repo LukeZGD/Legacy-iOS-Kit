@@ -482,7 +482,7 @@ set_tool_paths() {
             irecovery3="$sudo "
             primepwn="$sudo "
         fi
-        if [[ $(command -v gio) && ! -e ../resources/new ]]; then
+        if [[ $(command -v gio) && ! -e ../resources/new && $device_argmode != "none" ]]; then
             log "gio detected. Unmounting all iOS devices with it"
             gio mount -l | awk '/gphoto2:\/\/Apple_Inc|afc:\/\// {print $NF}' | while read -r m; do gio mount -u "$m"; done
         fi
@@ -1417,6 +1417,7 @@ device_get_info() {
         n102 ) device_type="iPod7,1";;
         n112 ) device_type="iPod9,1";;
     esac
+    device_type_lower="$(echo "$device_type" | tr '[:upper:]' '[:lower:]')"
     # device_model fallback/failsafe
     case $device_type in
         iPad1,1  ) device_model="k48";;
@@ -9336,24 +9337,27 @@ menu_ipsw_browse() {
     local newpath
     local text="Target"
     local picker
+    local scan
 
     ipsw_latest_set
-    local menu_items=($(ls ../$(echo "$device_type" | tr '[:upper:]' '[:lower:]')*restore.ipsw 2>/dev/null))
-    menu_items+=($(ls ../$device_type*Restore.ipsw 2>/dev/null))
-    [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
+    local menu_items=($(ls ../$device_type_lower*restore.ipsw $HOME/Downloads/$device_type_lower*restore.ipsw 2>/dev/null))
+    menu_items+=($(ls ../$device_type*Restore.ipsw $HOME/Downloads/$device_type*Restore.ipsw 2>/dev/null))
+    [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw $HOME/Downloads/${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
         text="Base"
         menu_items=()
         case $device_proc in
-            4 ) menu_items=($(ls ../${device_type}_${device_base_vers}_${device_base_build}_Restore.ipsw 2>/dev/null));;
+            4 ) scan="${device_type}_${device_base_vers}_${device_base_build}_Restore.ipsw";;
             6 )
-                menu_items=($(ls ../$(echo "$device_type" | tr '[:upper:]' '[:lower:]')_7.*restore.ipsw 2>/dev/null))
-                menu_items+=($(ls ../${device_type}_7.*Restore.ipsw 2>/dev/null))
+                menu_items=($(ls ../${device_type_lower}_7.*restore.ipsw $HOME/Downloads/${device_type_lower}_7.*restore.ipsw 2>/dev/null))
+                scan="${device_type}_7.*Restore.ipsw"
             ;;
-            * ) menu_items=($(ls ../${device_type}_7.1*Restore.ipsw 2>/dev/null));;
+            * ) scan="${device_type}_7.1*Restore.ipsw";;
         esac
+        menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     elif [[ $1 == "special" ]]; then
-        menu_items=($(ls ../${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw 2>/dev/null))
+        scan="${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw"
+        menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     fi
     case $1 in
         "iOS 10.3.3"  ) versionc="10.3.3";;
