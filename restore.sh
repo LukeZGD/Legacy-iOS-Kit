@@ -8077,15 +8077,17 @@ menu_ipa() {
             "Install IPA using Sideloader" )
                 device_sideloader
                 log "Checking for any existing certificates..."
-                $sideloader cert list
-                if [[ $? != 0 ]]; then
+                local temp=$(mktemp)
+                $sideloader cert list | tee /dev/tty > "$temp"
+                local check=${PIPESTATUS[0]}
+                local revoke=$(grep -m1 "serial number" "$temp" | sed -E 's/.*number `//' | cut -c -32 | tr -dc '[:alnum:]')
+                if [[ $check != 0 ]]; then
                     warn "Sideloader returned an error. Incorrect Apple ID credentials?"
                     pause
                     continue
                 fi
-                local revoke=$($sideloader cert list | grep -m1 "serial number" | sed -E 's/.*number `//' | cut -c -32 | tr -dc '[:alnum:]')
                 if [[ -n $revoke ]]; then
-                    log "Revoking existing certificate..."
+                    log "Revoking existing certificate: $revoke"
                     $sideloader cert revoke $revoke
                 fi
                 log "Installing IPA using Sideloader..."
