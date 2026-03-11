@@ -55,7 +55,9 @@ pause() {
 clean() {
     kill $httpserver_pid $iproxy_pid $anisette_pid $sshfs_pid 2>/dev/null
     popd &>/dev/null
-    rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/" 2>/dev/null
+    [[ -d "$(dirname "$0")/tmp$$/" ]] && rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/tmp$$/"
+    [[ $noclean == 1 ]] && return
+    rm -rf "$(dirname "$0")/iP"*/
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 &&
           $no_finder != 1 ]]; then
         killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
@@ -64,7 +66,9 @@ clean() {
 
 clean_sudo() {
     clean
-    $sudo rm -rf /tmp/futurerestore /tmp/*.json "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/iP"*/ "$(dirname "$0")/tmp$$/"
+    [[ -d "$(dirname "$0")/tmp$$/" ]] && $sudo rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/tmp$$/"
+    [[ $noclean == 1 ]] && return
+    $sudo rm -rf "$(dirname "$0")/iP"*/ /tmp/futurerestore /tmp/*.json
     $sudo kill $sudoloop_pid 2>/dev/null
 }
 
@@ -86,9 +90,7 @@ clean_usbmuxd() {
     else
         clean
     fi
-    if [[ $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) != 0 ]]; then
-        return
-    fi
+    [[ $noclean == 1 ]] && return
     $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
     sleep 1
     if [[ $(command -v restorecon) ]]; then
@@ -11766,18 +11768,21 @@ fi
 trap "clean" EXIT
 trap "exit 1" INT TERM
 
-clean
-
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 if [[ $othertmp != 0 ]]; then
+    noclean=1
     log "Detected existing tmp folder(s)."
     print "* There might be other Legacy iOS Kit instance(s) running, or residual tmp folder(s) not deleted."
     print "* Running multiple instances is not fully supported and can cause unexpected behavior."
     print "* It is recommended to only use a single instance and/or delete all existing \"tmp\" folders in your Legacy iOS Kit folder before continuing."
     select_yesno "Select Y to remove all tmp folders, N to run as is" 1
     if [[ $? == 1 ]]; then
+        noclean=
         rm -r "$(dirname "$0")/tmp"*
+        clean
     fi
+else
+    clean
 fi
 othertmp=$(ls "$(dirname "$0")" | grep -c tmp)
 
