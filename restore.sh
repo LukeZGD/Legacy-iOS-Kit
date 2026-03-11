@@ -3185,7 +3185,10 @@ ipsw_prepare_jailbreak() {
         fi
         ExtraArgs+=" -S 30" # system partition add
         if [[ $ipsw_openssh == 1 ]]; then
-            JBFiles+=("$jelbrek/sshdeb.tar")
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
         fi
         case $device_target_vers in
             [43]* ) :;;
@@ -3927,7 +3930,10 @@ ipsw_prepare_32bit() {
             JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
         fi
         if [[ $ipsw_openssh == 1 ]]; then
-            JBFiles+=("$jelbrek/sshdeb.tar")
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
         fi
         case $device_target_vers in
             [43]* ) :;;
@@ -4486,7 +4492,12 @@ ipsw_prepare_ios7touch4() {
         "$dir/hfsplus" rootfs.dec untar $jelbrek/fstab_rw.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
         if [[ $ipsw_openssh == 1 ]]; then
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
             "$dir/hfsplus" rootfs.dec untar $jelbrek/sshdeb.tar
+            "$dir/hfsplus" rootfs.dec untar openssh.tar
+            "$dir/hfsplus" rootfs.dec untar openssl.tar
         fi
         touch .cydia_no_stash
         "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
@@ -4959,7 +4970,10 @@ ipsw_prepare_ios4powder() {
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
         if [[ $ipsw_openssh == 1 ]]; then
-            JBFiles+=("$jelbrek/sshdeb.tar")
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
         fi
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
@@ -5065,7 +5079,10 @@ ipsw_prepare_powder() {
             * ) ExtraArgs+=" freeze.tar";;
         esac
         if [[ $ipsw_openssh == 1 ]]; then
-            ExtraArgs+=" $jelbrek/sshdeb.tar"
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            ExtraArgs+=" $jelbrek/sshdeb.tar openssh.tar openssl.tar"
         fi
         ExtraArgs+=" $jelbrek/LukeZGD.tar"
         cp $jelbrek/freeze.tar.gz .
@@ -6320,7 +6337,7 @@ menu_remove4() {
 
 device_send_rdtar() {
     log "Sending and extracting $1"
-    if [[ $2 == "data" ]]; then
+    if [[ $2 == "gz" ]]; then
         cp $jelbrek/$1.gz .
         gzip -d $1.gz
         cat $1 | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
@@ -6842,6 +6859,8 @@ device_ramdisk() {
                     log "Mounting data partition"
                     $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
                     device_send_rdtar sshdeb.tar
+                    device_send_rdtar openssh.tar gz
+                    device_send_rdtar openssl.tar gz
                 fi
                 log "Rebooting"
                 $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
@@ -6961,15 +6980,17 @@ device_ramdisk() {
             if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
                 # 4.3.x 3gs'es have little free space in rootfs. workaround: extract an older strap that takes less space
                 cp ../saved/freeze5.tar.gz $jelbrek/
-                device_send_rdtar freeze5.tar data
+                device_send_rdtar freeze5.tar gz
                 rm $jelbrek/freeze5.tar.gz
             else
-                device_send_rdtar freeze.tar data
+                device_send_rdtar freeze.tar gz
             fi
 
             # extras extraction
             if [[ $ipsw_openssh == 1 ]]; then
                 device_send_rdtar sshdeb.tar
+                device_send_rdtar openssh.tar gz
+                device_send_rdtar openssl.tar gz
             fi
             case $vers in
                 [543]* ) device_send_rdtar cydiasubstrate.tar;;
@@ -11325,6 +11346,11 @@ device_fourthree_step3() {
     if [[ $ipsw_openssh == 1 ]]; then
         log "Installing OpenSSH"
         cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+        cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+        gzip -d openssh.tar.gz
+        gzip -d openssl.tar.gz
+        cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+        cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
     fi
     log "Unmounting filesystems"
     $ssh -p $ssh_port root@127.0.0.1 "umount /mnt1/private/var; umount /mnt1"
