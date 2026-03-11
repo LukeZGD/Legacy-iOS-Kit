@@ -3073,6 +3073,50 @@ ipsw_prepare_1033() {
     log "Pwned iBSS and iBEC saved at: saved/$device_type"
 }
 
+ipsw_prepare_openssh_plist() {
+    [[ $ipsw_openssh != 1 ]] && return
+    echo "echo '<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+
+<dict>
+    <key>Label</key>
+    <string>com.openssh.sshd</string>
+
+    <key>Program</key>
+    <string>/usr/libexec/sshd-keygen-wrapper</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/sbin/sshd</string>
+        <string>-i</string>
+    </array>
+
+    <key>SessionCreate</key>
+    <true/>
+
+    <key>Sockets</key>
+    <dict>
+        <key>Listeners</key>
+        <dict>
+            <key>SockServiceName</key>
+            <string>ssh</string>
+        </dict>
+    </dict>
+
+    <key>StandardErrorPath</key>
+    <string>/dev/null</string>
+
+    <key>inetdCompatibility</key>
+    <dict>
+        <key>Wait</key>
+        <false/>
+    </dict>
+</dict>
+
+</plist>' > /mnt1/Library/LaunchDaemons/com.openssh.sshd.plist" | tee -a reboot.sh
+}
+
 ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
@@ -3084,6 +3128,7 @@ ipsw_prepare_rebootsh() {
         echo "mv /mnt1/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist /mnt1/System/Library/LaunchDaemons/" | tee -a reboot.sh
         echo "mv /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup" | tee -a reboot.sh
         echo "ln -sf /aquila /mnt1/usr/libexec/CrashHousekeeping" | tee -a reboot.sh
+        ipsw_prepare_openssh_plist
         echo "/sbin/reboot_" | tee -a reboot.sh
     else
         echo "/usr/bin/haxx_overwrite --${device_type}_${device_target_build}" | tee -a reboot.sh
@@ -9444,7 +9489,7 @@ menu_ipsw_browse() {
         log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other\""
         pause
         return
-    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other != 1 ]]; then
+    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other != 1 && $device_target_powder != 1 ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
         print "* The only exception is for restoring with 32-bit iOS 10 blobs."
