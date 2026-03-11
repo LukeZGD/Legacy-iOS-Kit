@@ -3192,10 +3192,16 @@ ipsw_prepare_jailbreak() {
         JBFiles+=("fstab_rw.tar")
         case $device_target_vers in
             7.*  ) JBFiles+=("aquila_7.tar");;
-            6.*  ) JBFiles+=("aquila_6.tar");;
-            5.*  ) JBFiles+=("aquila_5.tar");;
+            #6.*  ) JBFiles+=("aquila_6.tar");;
+            #5.*  ) JBFiles+=("aquila_5.tar");;
             4.3* ) JBFiles+=("aquila_4.tar");;
             4.[10]* | 3.2* | 3.1.3 ) JBFiles+=("greenpois0n/${device_type}_${device_target_build}.tar");;
+
+            # temporary measure
+            6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
+            6.* ) JBFiles+=("evasi0n6-untether.tar");;
+            5.* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+
         esac
         case $device_target_vers in
             [43]* ) JBFiles[0]="fstab_old.tar"
@@ -3223,11 +3229,18 @@ ipsw_prepare_jailbreak() {
         case $device_target_vers in
             [543]* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
         esac
-        if [[ $device_target_vers == "3"* ]]; then
+        if [[ $device_target_vers == "3."* ]]; then
             JBFiles+=("$jelbrek/cydiahttpatch.tar")
-        elif [[ $device_target_vers == "5"* ]]; then
+        fi
+
+        # temporary measure
+        if [[ $device_target_vers == "5."* ]]; then
             JBFiles+=("$jelbrek/g1lbertJB.tar")
         fi
+        if [[ $device_target_tethered == 1 && $device_target_vers == "5."* ]]; then
+            JBFiles+=("$jelbrek/g1lbertJB/install.tar")
+        fi
+
         ExtraArgs+=" -S 30" # system partition add
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
@@ -3948,9 +3961,15 @@ ipsw_prepare_32bit() {
             9.3.[56] ) :;;
             9.*  ) JBFiles+=("everuntether.tar");;
             7.*  ) JBFiles+=("aquila_7.tar");;
-            6.*  ) JBFiles+=("aquila_6.tar");;
-            5.*  ) JBFiles+=("aquila_5.tar");;
+            #6.*  ) JBFiles+=("aquila_6.tar");;
+            #5.*  ) JBFiles+=("aquila_5.tar");;
             4.3* ) JBFiles+=("aquila_4.tar");;
+
+            # temporary measure
+            6.1.[3456] ) JBFiles+=("p0sixspwn.tar");;
+            6.* ) JBFiles+=("evasi0n6-untether.tar");;
+            5.* ) JBFiles+=("g1lbertJB/${device_type}_${device_target_build}.tar");;
+
         esac
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
@@ -3972,7 +3991,7 @@ ipsw_prepare_32bit() {
         if [[ $device_target_vers == "9"* ]]; then
             JBFiles+=("$jelbrek/launchctl.tar")
         elif [[ $device_target_vers == "5"* ]]; then
-            JBFiles+=("$jelbrek/cydiasubstrate.tar" "$jelbrek/g1lbertJB.tar")
+            JBFiles+=("$jelbrek/cydiasubstrate.tar")
         fi
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
@@ -3980,6 +3999,15 @@ ipsw_prepare_32bit() {
             gzip -d openssl.tar.gz
             JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
         fi
+
+        # temporary measure
+        if [[ $device_target_vers == "5."* ]]; then
+            JBFiles+=("$jelbrek/g1lbertJB.tar")
+        fi
+        if [[ $device_target_tethered == 1 && $device_target_vers == "5."* ]]; then
+            JBFiles+=("$jelbrek/g1lbertJB/install.tar")
+        fi
+
         case $device_target_vers in
             [43]* ) :;;
             * ) JBFiles+=("$jelbrek/LukeZGD.tar");;
@@ -6917,9 +6945,15 @@ device_ramdisk() {
                 9.*  ) untether="everuntether.tar";;
                 8.*  ) untether="daibutsu/untether.tar";;
                 7.*  ) untether="aquila_7.tar";;
-                6.*  ) untether="aquila_6.tar";;
-                5.*  ) untether="aquila_5.tar";;
+                #6.*  ) untether="aquila_6.tar";;
+                #5.*  ) untether="aquila_5.tar";;
                 4.3* ) untether="aquila_4.tar";;
+
+                # temporary measure
+                6.1.[6543] ) untether="p0sixspwn.tar";;
+                6.*        ) untether="evasi0n6-untether.tar";;
+                5.*        ) untether="g1lbertJB/${device_type}_${build}.tar";;
+
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
                     untether="greenpois0n/${device_type}_${build}.tar"
                 ;;
@@ -6992,8 +7026,13 @@ device_ramdisk() {
                     $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
                 ;;
             esac
+
+            # temporary measure
             case $vers in
                 5.* ) device_send_rdtar g1lbertJB.tar;;
+            esac
+
+            case $vers in
                 [43].* )
                     log "fstab"
                     local fstab="fstab_new" # disk0s2s1 data
