@@ -689,7 +689,7 @@ install_depends() {
         prepare_udev_rules usbmux usbmux # idk if this is right
 
     elif [[ $distro == "gentoo" ]]; then
-        $sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev unzip usbmuxd usbutils vim zenity zip
+        $sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev app-arch/unzip usbmuxd usbutils vim zenity app-arch/zip
 
     elif [[ $distro == "void" ]]; then
         $sudo xbps-install aria2 curl git patch openssh python3 unzip xxd zenity zip
