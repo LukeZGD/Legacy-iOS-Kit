@@ -878,6 +878,26 @@ device_entry() {
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type_entry
         device_type="$device_type_entry"
     done
+    case $device_type in
+    iPad6,1[12] | iPhone8,* )
+        local valid
+        local allowed
+        case $device_type in
+            iPhone8,1 ) allowed="n71 n71m";;
+            iPhone8,2 ) allowed="n66 n66m";;
+            iPhone8,4 ) allowed="n69 n69u";;
+            iPad6,11  ) allowed="j71s j71t";;
+            iPad6,12  ) allowed="j72s j72t";;
+        esac
+        until [[ $valid == 1 ]]; do
+            read -p "$(input 'Enter device model (without ap, eg. n71): ')" device_model
+            for m in $allowed; do
+                [[ $device_model == "$m" ]] && valid=1 && break
+            done
+        done
+    ;;
+    esac
+
     if [[ $main_argmode == "device_justboot"* || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
     elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" && $device_mode != "Normal" ]]; then
@@ -11085,7 +11105,9 @@ device_justboot_ios7touch4() {
 }
 
 device_enter_ramdisk() {
-    if [[ $device_proc == 7 ]]; then
+    if (( device_proc > 7 )); then
+        :
+    elif [[ $device_proc == 7 ]]; then
         input "Version Select Option"
         print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
         print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS 12 ramdisk."
