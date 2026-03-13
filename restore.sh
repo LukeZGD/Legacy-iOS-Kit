@@ -352,7 +352,7 @@ set_tool_paths() {
         platform_arch="$(uname -m)"
         if [[ $platform_arch == "aarch64" ]]; then
             platform_arch="arm64"
-        else
+        elif [[ $platform_arch != "x86_64" ]]; then
             error "Your architecture ($platform_arch) is not supported."
         fi
         dir+="$platform_arch"
