@@ -349,12 +349,11 @@ set_tool_paths() {
         dir="../bin/linux/"
 
         # architecture check
-        if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
+        platform_arch="$(uname -m)"
+        if [[ $platform_arch == "aarch64" ]]; then
             platform_arch="arm64"
-        elif [[ $(uname -m) == "x86_64" ]]; then
-            platform_arch="x86_64"
         else
-            error "Your architecture ($(uname -m)) is not supported."
+            error "Your architecture ($platform_arch) is not supported."
         fi
         dir+="$platform_arch"
 
@@ -528,9 +527,8 @@ set_tool_paths() {
         dir="../bin/macos"
 
         platform_arch="$(uname -m)"
-        if [[ $platform_arch == "arm64" ]]; then
-            dir+="/arm64"
-        fi
+        [[ $(sysctl -in hw.optional.arm64) == 1 ]] && platform_arch="arm64"
+        [[ $platform_arch == "arm64" ]] && dir+="/arm64"
 
         # macos checks
         if [[ $mac_majver == 10 ]]; then
