@@ -74,7 +74,7 @@ clean_sudo() {
 
 clean_usbmuxd() {
     [[ $platform != "linux" ]] && return
-    if [[ $1 == "clean" ]]; then
+    if [[ $1 == "clean" && $noclean != 1 ]]; then
         if [[ -z $device_disable_usbmuxd ]]; then
             log "Terminating own usbmuxd instance(s)"
             if [[ $live_session != 1 ]]; then
@@ -6946,15 +6946,18 @@ device_ramdisk() {
             build=$device_build
 
             if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+                log "Mounting data partition"
+                $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
                 warn "Your device seems to be already jailbroken. Cannot continue jailbreaking."
                 if [[ $ipsw_openssh == 1 ]]; then
                     log "Will try installing OpenSSH anyway..."
-                    log "Mounting data partition"
-                    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
                     device_send_rdtar sshdeb.tar
                     device_send_rdtar openssh.tar gz
                     device_send_rdtar openssl.tar gz
                 fi
+                case $vers in
+                    4.[10]* | 3.[21]* ) $ssh -p $ssh_port root@127.0.0.1 "touch /mnt1/private/var/db/.launchd_use_gmalloc";;
+                esac
                 log "Rebooting"
                 $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
                 return
