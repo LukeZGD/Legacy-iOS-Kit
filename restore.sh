@@ -3971,14 +3971,15 @@ ipsw_prepare_32bit() {
             4.3* ) JBFiles=("aquila_4.tar");;
         esac
 
-        # temporary measure for a6 ios 6
-        if [[ $device_proc == 6 ]]; then
+        # temporary measure for a5/a6 ios 6
+        if [[ $device_proc == 5 || $device_proc == 6 ]]; then
             case $device_target_vers in
                 6.1.[3456] ) JBFiles=("p0sixspwn.tar");;
                 6.*        ) JBFiles=("evasi0n6-untether.tar");;
             esac
+        fi
         # temporary measure for a5 ios 5
-        elif [[ $device_proc == 5 && $device_target_vers == "5."* ]]; then
+        if [[ $device_proc == 5 && $device_target_vers == "5."* ]]; then
             JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar")
         fi
 
@@ -6990,14 +6991,15 @@ device_ramdisk() {
                 ;;
             esac
 
-            # temporary measure for a6 ios 6
-            if [[ $device_proc == 6 ]]; then
+            # temporary measure for a5/a6 ios 6
+            if [[ $device_proc == 5 || $device_proc == 6 ]]; then
                 case $vers in
                     6.1.[3456] ) untether="p0sixspwn.tar";;
                     6.*        ) untether="evasi0n6-untether.tar";;
                 esac
+            fi
             # temporary measure for a5 ios 5
-            elif [[ $device_proc == 5 && $vers == "5."* ]]; then
+            if [[ $device_proc == 5 && $vers == "5."* ]]; then
                 untether="g1lbertJB/${device_type}_${build}.tar"
             fi
 
