@@ -4495,7 +4495,7 @@ ipsw_prepare_ios7touch4() {
     local ramdisk_name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     log "Restore Ramdisk: $ramdisk_name"
     mv RestoreRamdisk.dec ramdisk.dec
-    "$dir/hfsplus" ramdisk.dec grow 11000000
+    "$dir/hfsplus" ramdisk.dec grow 13000000
 
     log "Patch ASR"
     ipsw_patch_file ramdisk.dec usr/sbin asr $patches/asr.patch
@@ -4503,6 +4503,16 @@ ipsw_prepare_ios7touch4() {
     log "Modify options.plist"
     "$dir/hfsplus" ramdisk.dec rm usr/local/share/restore/options.n81.plist
     "$dir/hfsplus" ramdisk.dec add $patches/options.n81.plist usr/local/share/restore/options.n81.plist
+
+    if [[ $ipsw_jailbreak == 1 ]]; then
+        ipsw_prepare_rebootsh aquila
+        log "Jailbreak stuff in ramdisk"
+        "$dir/hfsplus" ramdisk.dec untar $jelbrek/daibutsu/bin.tar
+        "$dir/hfsplus" ramdisk.dec mv sbin/reboot sbin/reboot_
+        "$dir/hfsplus" ramdisk.dec add reboot.sh sbin/reboot
+        "$dir/hfsplus" ramdisk.dec chmod 755 sbin/reboot
+        "$dir/hfsplus" ramdisk.dec chown 0:0 sbin/reboot
+    fi
 
     log "Repack Restore Ramdisk"
     "$dir/xpwntool" ramdisk.dec $ipsw_custom/$ramdisk_name -t RestoreRamdisk.orig
@@ -4541,9 +4551,9 @@ ipsw_prepare_ios7touch4() {
     file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.$device_model_special
     mv kernelcache.release.$device_model_special kc
     "$dir/xpwntool" kc kc.dec -iv $kc_iv -k $kc_key
-    $bspatch kc.dec kc.patched $patches/$device_target_build/kc$ipsw_jailbreak.$device_model_special.patch # kc for non-jb, kc1 for jb
+    $bspatch kc.dec kc.patched $patches/$device_target_build/kc.$device_model_special.patch
     "$dir/xpwntool" kc.patched kc.new -t kc -iv $kc_iv -k $kc_key
-    "$dir/xpwntool" kc.new $saves/$device_target_build/kernelcache$ipsw_jailbreak -iv $kc_iv -k $kc_key -decrypt
+    "$dir/xpwntool" kc.new $saves/$device_target_build/kernelcache -iv $kc_iv -k $kc_key -decrypt
     cp kc.new $ipsw_custom/kernelcache.release.$device_model # wont be used, but needed for restore
 
     log "Target devicetree"
@@ -4570,9 +4580,13 @@ ipsw_prepare_ios7touch4() {
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
         "$dir/hfsplus" rootfs.dec untar freeze.tar
-        "$dir/hfsplus" rootfs.dec untar $jelbrek/fstab_rw.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
+        touch .cydia_no_stash
+        "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
+        log "Target RootFS: untar jailbreak untether"
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7.tar
         if [[ $ipsw_openssh == 1 ]]; then
+            log "Target RootFS: untar jailbreak openssh"
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
             gzip -d openssh.tar.gz
             gzip -d openssl.tar.gz
@@ -4580,8 +4594,6 @@ ipsw_prepare_ios7touch4() {
             "$dir/hfsplus" rootfs.dec untar openssh.tar
             "$dir/hfsplus" rootfs.dec untar openssl.tar
         fi
-        touch .cydia_no_stash
-        "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
     fi
 
     echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
@@ -4938,8 +4950,9 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
-    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8"* && $ipsw_everuntether != 1 ]]; then
-        # daibutsu haxx overwrite
+    elif [[ $ipsw_jailbreak == 1 && $device_target_vers == "8."* && $ipsw_everuntether != 1 ]] ||
+         [[ $ipsw_jailbreak == 1 && $device_target_vers == "7."* ]]; then
+        # daibutsu/everpwnage haxx overwrite and aquila reboot.sh
         "$dir/hfsplus" RestoreRamdisk.dec untar bin.tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add reboot.sh sbin/reboot
@@ -11093,7 +11106,7 @@ device_justboot_ios7touch4() {
     $irecovery -f $saves/$device_target_build/devicetree
     $irecovery -c devicetree
     log "kernelcache"
-    $irecovery -f $saves/$device_target_build/kernelcache$ipsw_jailbreak
+    $irecovery -f $saves/$device_target_build/kernelcache
     $irecovery -c bootx
     log "Device should now boot."
 }
