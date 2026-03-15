@@ -3568,9 +3568,15 @@ ipsw_prepare_paths() {
 ipsw_prepare_config() {
     # usage: ipsw_prepare_config [jailbreak (true/false)] [needpref (true/false)]
     # creates config file to FirmwareBundles/config.plist
-    local verbose="false"
+    local bootargs_enabled="false"
+    local bootargs="$device_bootargs_default"
     if [[ $ipsw_verbose == 1 ]]; then
-        verbose="true"
+        bootargs_enabled="true"
+        bootargs="pio-error=0 -v"
+    fi
+    if [[ -n $device_bootargs ]]; then
+        bootargs_enabled="true"
+        bootargs+=" $device_bootargs"
     fi
     log "Preparing config file"
     echo "<plist>
@@ -3584,9 +3590,9 @@ ipsw_prepare_config() {
         <key>debugEnabled</key>
         <false/>
         <key>bootArgsInjection</key>
-        <$verbose/>
+        <$bootargs_enabled/>
         <key>bootArgsString</key>
-        <string>-v</string>
+        <string>$bootargs</string>
     </dict>
 </dict>
 </plist>" | tee FirmwareBundles/config.plist
@@ -4365,6 +4371,7 @@ ipsw_prepare_ios4multipart() {
     if [[ $ipsw_verbose == 1 ]]; then
         bootargs="pio-error=0 -v"
     fi
+    [[ -n $device_bootargs ]] && bootargs+=" $device_bootargs"
     ExtraArr+=("-b" "$bootargs")
     patch_iboot "${ExtraArr[@]}"
 
@@ -4731,14 +4738,11 @@ ipsw_prepare_multipatch() {
     fi
 
     # for 4.2.1 and lower powdersn0w multipatch
-    vers="4.2.1"
-    build="8C148"
+    vers="$device_target_vers"
+    build="$device_target_build"
     if [[ $ipsw_isbeta == 1 ]]; then
-        :
-    elif [[ $device_type == "iPad1,1" || $device_type == "iPhone3,3" ]] ||
-         [[ $device_type == "iPod3,1" && $device_target_vers == "3"* ]]; then
-        vers="$device_target_vers"
-        build="$device_target_build"
+        vers="4.2.1"
+        build="8C148"
     fi
     # for betas multipatch
     case $device_target_vers in
@@ -5099,6 +5103,7 @@ ipsw_prepare_ios4powder() {
     if [[ $ipsw_verbose == 1 ]]; then
         bootargs="pio-error=0 -v"
     fi
+    [[ -n $device_bootargs ]] && bootargs+=" $device_bootargs"
     ExtraArr+=("-b" "$bootargs")
     patch_iboot "${ExtraArr[@]}"
 
@@ -6034,7 +6039,7 @@ restore_prepare() {
             if [[ -n $device_type_special ]]; then
                 restore_idevicerestore special
             elif [[ $device_target_tethered == 1 || $device_target_other == 1 ]] ||
-                 [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 ]]; then
+                 [[ $device_target_vers == "4.1" && $ipsw_jailbreak == 1 && $device_target_powder != 1 ]]; then
                 restore_idevicerestore
             elif [[ $device_target_powder == 1 ]]; then
                 case $device_target_vers in
@@ -6957,9 +6962,6 @@ device_ramdisk() {
                     device_send_rdtar openssh.tar gz
                     device_send_rdtar openssl.tar gz
                 fi
-                case $vers in
-                    4.[10]* | 3.[21]* ) $ssh -p $ssh_port root@127.0.0.1 "touch /mnt1/private/var/db/.launchd_use_gmalloc";;
-                esac
                 log "Rebooting"
                 $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
                 return
@@ -8990,6 +8992,14 @@ menu_ipsw() {
                     echo
                 fi
             fi
+            if [[ -n $device_bootargs ]]; then
+                print "* Custom Bootargs: $device_bootargs"
+            else
+                print "* You may enter custom bootargs (optional, experimental option)"
+                print "* Default Bootargs: $device_bootargs_default"
+            fi
+            echo
+            menu_items+=("Custom Bootargs")
             if [[ -n $ipsw_path && -n $ipsw_base_path ]] && [[ -n $shsh_path || $2 == "ipsw" ]]; then
                 menu_items+=("$start")
             fi
@@ -9185,6 +9195,7 @@ menu_ipsw() {
             "Download Base IPSW" ) ipsw_download "../$ipsw_latest_path" latest;;
             "Select Apple Logo" ) menu_logo_browse "boot";;
             "Select Recovery Logo" ) menu_logo_browse "recovery";;
+            "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Go Back" )
                 back=1
 
@@ -9203,6 +9214,7 @@ menu_ipsw() {
                 device_target_other=
                 device_target_powder=
                 device_target_tethered=
+                device_bootargs=
             ;;
         esac
     done
