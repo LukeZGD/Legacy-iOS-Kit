@@ -3211,7 +3211,6 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         JBFiles+=("fstab_rw.tar")
         case $device_target_vers in
-            7.*  ) JBFiles+=("aquila_7.tar");;
             6.*  ) JBFiles+=("aquila_6.tar");;
             5.*  ) JBFiles+=("aquila_5.tar");;
             4.3* ) JBFiles+=("aquila_4.tar");;
@@ -11169,6 +11168,7 @@ device_enter_ramdisk_menu() {
 }
 
 device_ideviceinstaller() {
+    device_pair
     log "Installing selected IPA(s) to device using ideviceinstaller..."
     IFS='|' read -r -a ipa_files <<< "$ipa_path"
     for i in "${ipa_files[@]}"; do
