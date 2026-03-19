@@ -1635,12 +1635,12 @@ device_get_info() {
             device_latest_build="16H88"
         ;;
         iPad5,* | iPhone[89],* | iPod9,1 )
-            device_latest_vers="15.8.6"
-            device_latest_build="19H402"
+            device_latest_vers="15.8.7"
+            device_latest_build="19H411"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.14"
-            device_latest_build="20H370"
+            device_latest_vers="16.7.15"
+            device_latest_build="20H380"
         ;;
         iPad7,[123456] )
             device_latest_vers="17.7.10"
