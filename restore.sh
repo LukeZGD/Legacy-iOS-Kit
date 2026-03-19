@@ -3998,8 +3998,8 @@ ipsw_prepare_32bit() {
             4.3* ) JBFiles=("aquila_4.tar");;
         esac
 
-        # temporary measure for a5/a6 ios 6
-        if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+        # temporary measure for a6 ios 6
+        if [[ $device_proc == 6 ]]; then
             case $device_target_vers in
                 6.1.[3456] ) JBFiles=("p0sixspwn.tar");;
                 6.*        ) JBFiles=("evasi0n6-untether.tar");;
@@ -5954,6 +5954,8 @@ device_buttons2() {
     if [[ $device_mode != "Normal" ]]; then
         device_enter_mode pwnDFU
         return
+    elif [[ $device_jailbrokenselected == 1 ]]; then
+        return
     fi
     input "Jailbroken/pwnDFU Mode Option"
     print "* This device needs to be jailbroken/in pwnDFU mode before proceeding."
@@ -7014,8 +7016,8 @@ device_ramdisk() {
                 ;;
             esac
 
-            # temporary measure for a5/a6 ios 6
-            if [[ $device_proc == 5 || $device_proc == 6 ]]; then
+            # temporary measure for a6 ios 6
+            if [[ $device_proc == 6 ]]; then
                 case $vers in
                     6.1.[3456] ) untether="p0sixspwn.tar";;
                     6.*        ) untether="evasi0n6-untether.tar";;
