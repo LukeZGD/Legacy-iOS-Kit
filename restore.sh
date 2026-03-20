@@ -3984,7 +3984,6 @@ ipsw_prepare_32bit() {
         case $device_target_vers in
             9.3.[56] ) :;;
             9.*  ) JBFiles=("everuntether.tar");;
-            7.*  ) JBFiles=("aquila_7.tar");;
             6.*  ) JBFiles=("aquila_6.tar");;
             5.*  ) JBFiles=("aquila_5.tar");;
             4.3* ) JBFiles=("aquila_4.tar");;
@@ -3993,8 +3992,8 @@ ipsw_prepare_32bit() {
         # temporary measure for a6 ios 6
         if [[ $device_proc == 6 ]]; then
             case $device_target_vers in
-                6.1.[3456] ) JBFiles=("p0sixspwn.tar");;
-                6.*        ) JBFiles=("evasi0n6-untether.tar");;
+                6.1.[34] ) JBFiles=("p0sixspwn.tar");;
+                6.*      ) JBFiles=("evasi0n6-untether.tar");;
             esac
         fi
         # temporary measure for a5 ios 5
@@ -6370,29 +6369,8 @@ ipsw_prepare_ipx() {
     log "Repacking KernelCache"
     "$dir/img4" -i $kernelcache -o kcache.im4p -T rkrn -P kcache.bpatch -J
 
-#     local restoreramdisk2
-#     if [[ $target_vers_maj == 14 ]] && (( target_vers_min >= 2 )); then
-#         # use 14.1 ramdisk for 14.2-14.8 to attempt avoiding root seal
-#         if [[ -s ../saved/$device_type/18A8395.dmg ]]; then
-#             log "Using downloaded 14.1 ramdisk"
-#             cp ../saved/$device_type/18A8395.dmg $restoreramdisk
-#         else
-#             ipsw_get_url 18A8395
-#             "$dir/pzb" -g "BuildManifest.plist" -o BuildManifest2.plist "$ipsw_url"
-#             log "Get 14.1 paths"
-#             restoreramdisk2=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest2.plist | tr -d '"')
-#             log "Download 14.1 ramdisk"
-#             "$dir/pzb" -g "$restoreramdisk2" -o $restoreramdisk2 "$ipsw_url"
-#             if [[ ! -s $restoreramdisk2 ]]; then
-#                 error "Failed to download 14.1 ramdisk. Please run the script again"
-#             fi
-#             mv $restoreramdisk2 $restoreramdisk
-#             cp $restoreramdisk ../saved/$device_type/18A8395.dmg
-#         fi
-#     else
-        log "Extracting RestoreRamDisk from IPSW"
-        file_extract_from_archive "$ipsw_path.ipsw" $restoreramdisk
-#     fi
+    log "Extracting RestoreRamDisk from IPSW"
+    file_extract_from_archive "$ipsw_path.ipsw" $restoreramdisk
 
     local platform2="$platform"
     [[ $platform2 == "macos" ]] && platform2+="x"
@@ -7011,8 +6989,8 @@ device_ramdisk() {
             # temporary measure for a6 ios 6
             if [[ $device_proc == 6 ]]; then
                 case $vers in
-                    6.1.[3456] ) untether="p0sixspwn.tar";;
-                    6.*        ) untether="evasi0n6-untether.tar";;
+                    6.1.[34] ) untether="p0sixspwn.tar";;
+                    6.*      ) untether="evasi0n6-untether.tar";;
                 esac
             fi
             # temporary measure for a5 ios 5
@@ -8259,6 +8237,7 @@ menu_ipa() {
                     pushd "/tmp/$ipa_base"
                     zip -r0 Payload.ipa Payload
                     popd
+                    device_pair
                     $ideviceinstaller install "/tmp/$ipa_base/Payload.ipa"
                 fi
                 print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
@@ -9417,9 +9396,6 @@ ipsw_custom_set() {
     fi
 
     ipsw_custom="../${device_type}"
-#     if (( target_vers_maj >= 10 )); then
-#         ipsw_custom="../${ipsw_prefix}"
-#     fi
     ipsw_custom+="_${device_target_vers}_${device_target_build}_Custom"
     if [[ -n $1 ]]; then
         ipsw_custom="../$1_Custom"
@@ -10461,7 +10437,7 @@ device_dump() {
             return
         fi
     fi
-    if [[ $device_mode == "Normal" ]]; then
+    if [[ $device_mode == "Normal" ]] && (( device_proc < 7 )); then
         device_buttons2
     else
         log "Recovery/DFU mode device detected, entering pwnDFU mode to continue for SSH ramdisk."
@@ -11782,7 +11758,6 @@ for i in "$@"; do
         "--skip-ibss"       ) device_skip_ibss=1;;
 
         # options for 64-bit devices
-#         "--enable-ipx"      ) ipsw_ipx=1;;
         "--skip-blob"       ) restore_useskipblob=1;;
         "--use-dev"         ) restore_usedev=1;;
         "--use-pwndfu"      ) restore_usepwndfu64=1;;
