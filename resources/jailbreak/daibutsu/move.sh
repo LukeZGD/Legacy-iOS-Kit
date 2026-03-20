@@ -13,7 +13,6 @@ mv /mnt1/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist /mnt1/Sys
 mv /mnt1/Library/LaunchDaemons/com.apple.jetsamproperties.*.plist /mnt1/System/Library/LaunchDaemons/
 if [[ $1 == "7"* ]]; then
     mv /mnt1/Library/LaunchDaemons/com.apple.sandboxd.plist /mnt1/System/Library/LaunchDaemons/
-    mv /mnt1/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist /mnt1/System/Library/LaunchDaemons/
     mv /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup
     ln -sf /aquila /mnt1/usr/libexec/CrashHousekeeping
 else

@@ -2695,6 +2695,20 @@ patch_ibec() {
     log "Pwned iBEC img3 saved at: saved/$device_type/pwnediBEC.dfu"
 }
 
+ipsw_nojailbreak_message() {
+    local hac
+    local tohac
+    case $device_type in
+        iPhone[23],1 ) hac=" (and hacktivate)"; tohac=1;;
+    esac
+    log "Jailbreak option is not available for this version. You may jailbreak$hac later after the restore"
+    print "* To jailbreak after the restore, select \"Jailbreak Device\" in the main menu"
+    if [[ $tohac == 1 ]]; then
+        print "* To hacktivate, go to \"Useful Utilities -> Hacktivate Device\" after jailbreaking"
+    fi
+    echo
+}
+
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
@@ -2720,6 +2734,14 @@ ipsw_preference_set() {
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [876543].* ) ipsw_canjailbreak=1;;
     esac
+    if [[ $device_target_powder == 1 ]]; then
+        case $device_target_vers in
+        4.[10]* )
+            ipsw_canjailbreak=
+            ipsw_nojailbreak_message
+        ;;
+        esac
+    fi
 
     # ipsw_nskip being 1 means that it will always create/use a custom ipsw.
     # useful for disabling baseband update, or in the case of macos arm64, not having to use futurerestore for 32-bit.
@@ -7061,7 +7083,12 @@ device_ramdisk() {
             fi
             log "Nice, iOS $vers is compatible."
 
-            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* && ! -s ../saved/freeze5.tar.gz ]]; then
+            local otherfreeze
+            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
+                otherfreeze=1
+            fi
+
+            if [[ $otherfreeze == 1 && ! -s ../saved/freeze5.tar.gz ]]; then
                 file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/freeze5.tar.gz freeze5.tar.gz 15c92613d4f7e6bbabd9bd3521db8e4baf032265
                 mv freeze5.tar.gz ../saved/
             fi
@@ -7132,7 +7159,7 @@ device_ramdisk() {
             esac
 
             # bootstrap extraction
-            if [[ $device_type == "iPhone2,1" && $vers == "4.3"* ]]; then
+            if [[ $otherfreeze == 1 ]]; then
                 # 4.3.x 3gs'es have little free space in rootfs. workaround: extract an older strap that takes less space
                 cp ../saved/freeze5.tar.gz $jelbrek/
                 device_send_rdtar freeze5.tar gz
