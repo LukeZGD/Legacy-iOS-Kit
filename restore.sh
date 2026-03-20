@@ -3770,15 +3770,7 @@ ipsw_prepare_bundle() {
             8* | 9* ) echo "<key>package</key><string>src/ios9.tar</string>" >> $NewPlist;;
         esac
         printf "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist
-        case $vers in
-            3* ) printf "3" >> $NewPlist;;
-            4* ) printf "4" >> $NewPlist;;
-            5* ) printf "5" >> $NewPlist;;
-            6* ) printf "6" >> $NewPlist;;
-            7* ) printf "7" >> $NewPlist;;
-            8* ) printf "8" >> $NewPlist;;
-            9* ) printf "9" >> $NewPlist;;
-        esac
+        [[ $ipsw_jailbreak == 1 ]] && printf "%s" "${vers:0:1}" >> "$NewPlist"
         echo "</string></dict>" >> $NewPlist
     elif [[ $ipsw_prepare_usepowder == 1 ]]; then
         echo "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
