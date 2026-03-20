@@ -3163,12 +3163,14 @@ ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
     echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
-    echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
-    if [[ $1 == "aquila" ]]; then
+    [[ $1 != "aquila2" ]] && echo "nvram -d boot-partition; nvram -d boot-ramdisk" | tee -a reboot.sh
+    if [[ $1 == "aquila"* ]]; then
         echo "mv /mnt1/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist_ /mnt1/Library/LaunchDaemons/com.apple.mDNSResponder.plist" | tee -a reboot.sh
         echo "mv /mnt1/Library/LaunchDaemons/com.apple.sandboxd.plist /mnt1/System/Library/LaunchDaemons/" | tee -a reboot.sh
         echo "mv /mnt1/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist /mnt1/System/Library/LaunchDaemons/" | tee -a reboot.sh
-        echo "mv /mnt1/usr/libexec/CrashHousekeeping /mnt1/usr/libexec/CrashHousekeeping.backup" | tee -a reboot.sh
+        local crash
+        [[ $1 == "aquila" ]] && crash+="_o"
+        echo "mv /mnt1/usr/libexec/CrashHousekeeping$crash /mnt1/usr/libexec/CrashHousekeeping.backup" | tee -a reboot.sh
         echo "ln -sf /aquila /mnt1/usr/libexec/CrashHousekeeping" | tee -a reboot.sh
         ipsw_prepare_openssh_plist
         echo "/sbin/reboot_" | tee -a reboot.sh
@@ -4525,7 +4527,7 @@ ipsw_prepare_ios7touch4() {
     "$dir/hfsplus" ramdisk.dec add $patches/options.n81.plist usr/local/share/restore/options.n81.plist
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        ipsw_prepare_rebootsh aquila
+        ipsw_prepare_rebootsh aquila2
         log "Jailbreak stuff in ramdisk"
         "$dir/hfsplus" ramdisk.dec untar $jelbrek/daibutsu/bin.tar
         "$dir/hfsplus" ramdisk.dec mv sbin/reboot sbin/reboot_
