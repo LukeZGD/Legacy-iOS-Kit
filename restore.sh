@@ -2258,6 +2258,8 @@ device_enter_mode() {
                         fi
                     fi
                 fi
+            elif [[ $device_proc == 7 && $platform == "macos" && $platform_arch == "arm64" ]]; then
+                tool="ipwnder_lite"
             fi
 
             if [[ $platform == "linux" ]]; then
@@ -2293,6 +2295,8 @@ device_enter_mode() {
                 $ipwnder -d
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
+                log "gaster reset"
+                $gaster reset
             elif [[ $tool == "primepwn" ]]; then
                 log "Placing device to pwnDFU mode using primepwn"
                 $primepwn
@@ -5975,6 +5979,9 @@ restore_deviceprepare() {
     if [[ $device_actrec == 1 ]]; then
         device_dump activation
     fi
+    if [[ $mode == "custom-ipsw" ]]; then
+        return
+    fi
     case $device_proc in
         1 )
             if [[ $device_target_vers == "4"* && $ipsw_jailbreak == 1 ]]; then
@@ -7815,17 +7822,6 @@ menu_print_info() {
     fi
     if [[ $device_disable_actrec == 1 ]]; then
         warn "disable-actrec flag detected, activation dumping/stitching disabled. Proceed with caution"
-    fi
-    if [[ $device_argmode == "none" ]]; then
-        if [[ $device_type == "$device_disable_bbupdate" && -z $device_deadbb ]]; then
-            warn "disable-bbupdate flag detected, but cannot be used in no-device mode."
-            device_disable_bbupdate=
-            device_deadbb=
-        fi
-        if [[ $device_actrec == 1 && -z $device_auto_actrec ]]; then
-            warn "Activation records flag detected, but cannot be used in no-device mode."
-            device_actrec=
-        fi
     fi
     if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
         if [[ $device_deadbb == 1 ]]; then
@@ -10446,6 +10442,8 @@ device_dump() {
     fi
     if [[ $device_mode == "Normal" ]] && (( device_proc < 7 )); then
         device_buttons2
+    elif [[ $device_mode == "none" ]]; then
+        error "No existing $arg dump found while in no device mode. Cannot continue."
     else
         log "Recovery/DFU mode device detected, entering pwnDFU mode to continue for SSH ramdisk."
         if [[ $platform == "linux" || $device_proc == 5 ]]; then
@@ -10455,8 +10453,10 @@ device_dump() {
     fi
     if [[ $device_mode == "Normal" ]]; then
         device_iproxy
-        device_ssh_message
-        device_sshpass
+        if [[ -z $ssh_pass ]]; then
+            device_ssh_message
+            device_sshpass
+        fi
         if [[ $arg == "activation" ]]; then
             log "Creating $arg.tar"
             $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
@@ -11694,6 +11694,7 @@ main() {
     case $mode in
         "custom-ipsw" )
             ipsw_preference_set
+            restore_deviceprepare
             ipsw_prepare
             log "Done creating custom IPSW"
         ;;
