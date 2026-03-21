@@ -7978,22 +7978,25 @@ menu_appmanage() {
     menu_print_info
     print "* For more info about App Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/App-Management"
     while [[ -z "$mode" && -z "$back" ]]; do
+        menu_items=()
         if [[ $device_unactivated == 1 ]]; then
-            warn "Device is not activated. App Management options including Install IPA (AppSync) are not available."
-            pause
-            break
+            warn "Device is not activated. Most App Management options are not available."
         fi
-        menu_items=("Install IPA (AppSync)")
+        if (( device_vers_maj >= 5 )); then
+            menu_items+=("Install IPA (appinst)")
+        fi
+        [[ $device_unactivated != 1 ]] && menu_items+=("Install IPA (AppSync)")
         if (( device_vers_maj >= 4 )); then
             menu_items+=("Dump App as IPA" "Dump All Apps as IPA")
         fi
-        menu_items+=("List User Apps" "List System Apps" "List All Apps" "Go Back")
+        [[ $device_unactivated != 1 ]] && menu_items+=("List User Apps" "List System Apps" "List All Apps")
+        menu_items+=("Go Back")
         print " > Main Menu > App Management"
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
-            "Install IPA (AppSync)" ) menu_ipa "$selected";;
+            "Install IPA"*          ) menu_ipa "$selected";;
             "Dump App as IPA"       ) device_dumpapp;;
             "Dump All Apps as IPA"  ) device_dumpapp all;;
             "List User Apps"        ) $ideviceinstaller list --user;;
@@ -8153,7 +8156,9 @@ menu_ipa() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Select IPA")
         menu_print_info
-        if [[ $1 == "Install"* ]]; then
+        if [[ $1 == "Install IPA (appinst)" ]]; then
+            print "* Make sure that appinst and OpenSSH are installed on your device."
+        elif [[ $1 == "Install IPA (AppSync)" ]]; then
             print "* Make sure that AppSync Unified (iOS 5+) or some other variant of AppSync"
             print "  is installed on your device, if the IPA you are installing is cracked."
             print "* Install IPA (AppSync) will not work if your device is not activated."
@@ -8165,7 +8170,7 @@ menu_ipa() {
                 print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
             fi
             print "* If you have AppSync installed, or are installing an app with a valid"
-            print "  signature, go to App Management -> Install IPA (AppSync) instead."
+            print "  signature, go to App Management -> Install IPA (AppSync) or (appinst) instead."
             if [[ $device_unactivated == 1 ]]; then
                 echo
                 warn "Device is not activated. Sideload IPA option is not available."
@@ -8206,7 +8211,11 @@ menu_ipa() {
         case $selected in
             "Select IPA" ) menu_ipa_browse;;
             "Install IPA" )
-                device_ideviceinstaller
+                if [[ $1 == "Install IPA (AppSync)" ]]; then
+                    device_ideviceinstaller
+                else
+                    device_appinst
+                fi
                 pause
             ;;
             "Install IPA using AltServer" )
@@ -11174,6 +11183,29 @@ device_ideviceinstaller() {
         log "Installing: $i"
         $ideviceinstaller install "$i"
     done
+}
+
+device_appinst() {
+    device_iproxy no-logging
+    device_ssh_message
+    device_sshpass
+    log "Checking for appinst..."
+    $ssh -p $ssh_port root@127.0.0.1 "appinst >/dev/null"
+    if [[ $? != 6 ]]; then
+        warn "appinst not detected. Please install appinst and OpenSSH first before using this option."
+        kill $iproxy_pid
+        return
+    fi
+    log "Installing selected IPA(s) to device using appinst..."
+    IFS='|' read -r -a ipa_files <<< "$ipa_path"
+    for i in "${ipa_files[@]}"; do
+        local app="$(basename $i)"
+        log "Transferring: $app"
+        $scp -P $ssh_port "$i" root@127.0.0.1:/tmp
+        log "Installing: $app"
+        $ssh -p $ssh_port root@127.0.0.1 "appinst '/tmp/$app'; rm '/tmp/$app'"
+    done
+    kill $iproxy_pid
 }
 
 device_altserver() {
