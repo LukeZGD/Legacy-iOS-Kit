@@ -7583,6 +7583,7 @@ menu_ramdisk() {
                 fi
                 if (( device_proc < 7 )); then
                     device_ramdisk_iosvers
+                    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
                 fi
                 cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
                 gzip -d openssh.tar.gz
@@ -8159,9 +8160,7 @@ menu_ipa() {
         if [[ $1 == "Install IPA (appinst)" ]]; then
             print "* Make sure that appinst and OpenSSH are installed on your device."
         elif [[ $1 == "Install IPA (AppSync)" ]]; then
-            print "* Make sure that AppSync Unified (iOS 5+) or some other variant of AppSync"
-            print "  is installed on your device, if the IPA you are installing is cracked."
-            print "* Install IPA (AppSync) will not work if your device is not activated."
+            print "* Make sure that AppSync is installed on your device, if the IPA you are installing is cracked."
         else
             print "* Sideload IPA is for iOS 6 and newer. Sideloading will require an Apple ID."
             print "* Your Apple ID and password will only be sent to Apple servers."
@@ -8177,19 +8176,16 @@ menu_ipa() {
                 pause
                 break
             fi
-            if [[ $platform == "macos" ]]; then
-                echo
-                warn "It is recommended to use Sideloadly instead of using this option."
-                print "* Download Sideloadly from here: https://sideloadly.io"
-            fi
         fi
         echo
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
             if [[ $1 == "Sideload"* ]]; then
-                menu_items+=("Install IPA using Sideloader")
-                if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
-                    menu_items+=("Install IPA using AltServer")
+                if [[ $platform == "linux" ]]; then
+                    menu_items+=("Install IPA using Sideloader")
+                    if (( device_vers_maj >= 9 )); then
+                        menu_items+=("Install IPA using AltServer")
+                    fi
                 fi
             else
                 menu_items+=("Install IPA")
@@ -11199,7 +11195,7 @@ device_appinst() {
     log "Installing selected IPA(s) to device using appinst..."
     IFS='|' read -r -a ipa_files <<< "$ipa_path"
     for i in "${ipa_files[@]}"; do
-        local app="$(basename $i)"
+        local app="$(basename "$i")"
         log "Transferring: $app"
         $scp -P $ssh_port "$i" root@127.0.0.1:/tmp
         log "Installing: $app"
