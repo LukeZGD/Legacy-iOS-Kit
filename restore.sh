@@ -2867,7 +2867,7 @@ ipsw_preference_set() {
         ipsw_canmemory=
     elif [[ $device_target_powder == 1 || $device_target_tethered == 1 ||
           $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ||
-          $device_type == "$device_disable_bbupdate" ]]; then
+          $device_type == "$device_disable_bbupdate" || $device_actrec == 1 ]]; then
         ipsw_canmemory=1
     fi
 
