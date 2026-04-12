@@ -4741,7 +4741,9 @@ ipsw_prepare_specialios7() {
         echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
         log "Target RootFS: activation stuff"
         "$dir/hfsplus" rootfs.dec add data_ark.plist /var/root/Library/Lockdown/data_ark.plist
-        "$dir/hfsplus" rootfs.dec mv Applications/Setup.app Setup.app
+        gestalt="private/var/mobile/Library/Caches/com.apple.MobileGestalt.plist"
+        log "Target RootFS: adding gestalt"
+        "$dir/hfsplus" rootfs.dec add $patches/gestalt-ipod.plist $gestalt
     fi
 
     log "Target RootFS: building dmg as $rootfs_name"
