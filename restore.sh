@@ -2245,7 +2245,7 @@ device_enter_mode() {
                     esac
                 fi
             elif [[ $device_proc == 6 ]]; then
-                tool="ipwnder" # to change to a6meowing
+                tool="ipwnder" # to change if a6xmeowing
                 if [[ $platform == "macos" ]]; then
                     tool="ipwnder32"
                     if [[ $platform_arch == "arm64" ]]; then
@@ -2267,32 +2267,27 @@ device_enter_mode() {
             fi
 
             print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
+            log "Placing device to pwnDFU mode using $tool"
             if [[ $tool == "gaster" ]]; then
-                log "Placing device to pwnDFU mode using gaster"
                 $gaster pwn
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
             elif [[ $tool == "a6meowing" ]]; then
-                log "Placing device to pwnDFU mode using a6meowing"
                 $a6meowing
                 tool_pwned=$?
             elif [[ $tool == "ipwnder32" ]]; then
-                log "Placing device to pwnDFU mode using ipwnder32"
                 "$dir/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $tool == "ipwnder" ]]; then
-                log "Placing device to pwnDFU mode using ipwnder"
                 $ipwnder -p
                 tool_pwned=$?
             elif [[ $tool == "ipwnder2" ]]; then
-                log "Placing device to pwnDFU mode using ipwnder"
                 "$dir/ipwnder2" -p
                 tool_pwned=$?
                 log "gaster reset"
                 $gaster reset
             elif [[ $tool == "ipwnder_lite" ]]; then
-                log "Placing device to pwnDFU mode using ipwnder_lite"
                 [[ $device_proc == 6 ]] && print "* If it gets stuck at \"[set_global_state] (2/3) e0004051\" or e000404f, the exploit failed. Just press Ctrl+C to cancel, then re-enter DFU and retry."
                 mkdir -p image3 ../saved/image3
                 cp ../saved/image3/* image3/ 2>/dev/null
@@ -8139,9 +8134,16 @@ menu_appmanage() {
             warn "Device is not activated. Most App Management options are not available."
         fi
         if (( device_vers_maj >= 5 )); then
-            menu_items+=("Install IPA (appinst)")
+            if [[ $device_vers_maj == 10 ]]; then
+                [[ $device_unactivated != 1 ]] && menu_items+=("Install IPA (ideviceinstaller)")
+                menu_items+=("Install IPA (appinst)")
+            else
+                menu_items+=("Install IPA (appinst)")
+                [[ $device_unactivated != 1 ]] && menu_items+=("Install IPA (ideviceinstaller)")
+            fi
+        else
+            [[ $device_unactivated != 1 ]] && menu_items+=("Install IPA (ideviceinstaller)")
         fi
-        [[ $device_unactivated != 1 ]] && menu_items+=("Install IPA (ideviceinstaller)")
         if (( device_vers_maj >= 4 )); then
             menu_items+=("Dump App as IPA" "Dump All Apps as IPA")
         fi
