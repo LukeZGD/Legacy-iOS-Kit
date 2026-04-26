@@ -133,6 +133,8 @@ List of options:
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
+    --bruteforce              Create and boot a bruteforce ramdisk (32-bit devices, iOS 6.0-10.3.4)
+    --bruteforce-menu         Re-enter SSH ramdisk menu for a running bruteforce session
     --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd on Linux
 
 For 32-bit devices compatible with restores/downgrades (see README):
@@ -6777,6 +6779,120 @@ device_ramdisk64() {
     menu_ramdisk $build_id
 }
 
+device_ramdisk_bruteforce_setup() {
+    local bruteforce_dir="../saved/bruteforce-bins"
+    local base_url="https://github.com/AsyJAIZ/iphone-dataprotection/releases/download/0.9"
+    mkdir -p $bruteforce_dir
+
+    log "Getting bruteforce binaries..."
+    for bin in bruteforce device_infos restored_external; do
+        if [[ ! -s $bruteforce_dir/$bin ]]; then
+            log "Downloading $bin..."
+            file_download "$base_url/$bin" "$bin"
+            if [[ ! -s $bin ]]; then
+                error "Failed to download $bin from $base_url/$bin"
+            fi
+            mv "$bin" "$bruteforce_dir/$bin"
+        fi
+    done
+
+    log "Adding bruteforce binaries to ramdisk..."
+    "$dir/hfsplus" Ramdisk.raw add $bruteforce_dir/bruteforce usr/bin/bruteforce
+    "$dir/hfsplus" Ramdisk.raw chmod 755 usr/bin/bruteforce
+    "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/bin/bruteforce
+
+    "$dir/hfsplus" Ramdisk.raw add $bruteforce_dir/device_infos usr/bin/device_infos
+    "$dir/hfsplus" Ramdisk.raw chmod 755 usr/bin/device_infos
+    "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/bin/device_infos
+
+    "$dir/hfsplus" Ramdisk.raw add $bruteforce_dir/restored_external usr/local/bin/restored_external.sshrd
+    "$dir/hfsplus" Ramdisk.raw chmod 755 usr/local/bin/restored_external.sshrd
+    "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/local/bin/restored_external.sshrd
+
+    case $build_id in
+        "12"* | "13"* | "14"* )
+            # For iOS 8+: the restored_external_o was already created by device_ramdisk;
+            # replace the wrapper to call mount.sh + bruteforce instead
+            {
+                echo '#!/bin/sh'
+                echo '/usr/local/bin/restored_external.sshrd > /dev/console'
+                echo '/bin/mount.sh > /dev/console'
+                echo '/usr/bin/bruteforce > /dev/console &'
+                echo 'exec /usr/local/bin/restored_external_o'
+            } > restored_external_bf
+            "$dir/hfsplus" Ramdisk.raw rm usr/local/bin/restored_external
+            "$dir/hfsplus" Ramdisk.raw add restored_external_bf usr/local/bin/restored_external
+            "$dir/hfsplus" Ramdisk.raw chmod 755 usr/local/bin/restored_external
+            "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/local/bin/restored_external
+            rm restored_external restored_external_bf 2>/dev/null
+        ;;
+        * )
+            # For iOS 6/7: rc.boot (from ssh.tar) starts sshd, then calls restored_external.
+            # Inject mount.sh + bruteforce into rc.boot right after sshd starts.
+            "$dir/hfsplus" Ramdisk.raw extract private/etc/rc.boot
+            {
+                grep -v '^/usr/local/bin/restored_external$' rc.boot | \
+                grep -v '^/usr/local/bin/restored_update$' | \
+                grep -v '^/usr/local/bin/restored$' | \
+                grep -v '^/usr/libexec/ramrod/ramrod$'
+                echo ''
+                echo '/bin/mount.sh > /dev/console'
+                echo '/usr/bin/bruteforce > /dev/console &'
+                echo ''
+                echo '/usr/local/bin/restored_external.sshrd > /dev/console'
+                echo '/usr/local/bin/restored_update'
+                echo '/usr/local/bin/restored'
+                echo '/usr/libexec/ramrod/ramrod'
+            } > rc.boot.bf
+            "$dir/hfsplus" Ramdisk.raw rm private/etc/rc.boot
+            "$dir/hfsplus" Ramdisk.raw add rc.boot.bf private/etc/rc.boot
+            "$dir/hfsplus" Ramdisk.raw chmod 755 private/etc/rc.boot
+            "$dir/hfsplus" Ramdisk.raw chown 0:0 private/etc/rc.boot
+            rm rc.boot rc.boot.bf 2>/dev/null
+        ;;
+    esac
+    log "Bruteforce setup complete"
+}
+
+device_ramdisk_kernel_patch_aes() {
+    log "Patching kernelcache for IOAESAccelerator (bruteforce)..."
+    cp Kernelcache.dec Kernelcache.aes_in
+    "$dir/xpwntool" Kernelcache.aes_in Kernelcache.aes_raw
+    if [[ ! -s Kernelcache.aes_raw ]]; then
+        error "Failed to extract raw kernelcache for AES patch"
+    fi
+    python3 - <<'PYEOF'
+import sys
+data = bytearray(open('Kernelcache.aes_raw', 'rb').read())
+# Pattern: B0 F5 FA 6F 00 F0 ?? 80 — last two bytes differ by iOS version
+# iOS 6: 92 80 | iOS 7: A2 80 | iOS 8/9: 82 80
+# Replace the 4-byte conditional branch (00 F0 xx 80) with two NOP thumb instructions (0C 46 0C 46)
+patterns = [
+    (b'\xB0\xF5\xFA\x6F\x00\xF0\x82\x80', b'\xB0\xF5\xFA\x6F\x0C\x46\x0C\x46'),  # iOS 8/9
+    (b'\xB0\xF5\xFA\x6F\x00\xF0\xA2\x80', b'\xB0\xF5\xFA\x6F\x0C\x46\x0C\x46'),  # iOS 7
+    (b'\xB0\xF5\xFA\x6F\x00\xF0\x92\x80', b'\xB0\xF5\xFA\x6F\x0C\x46\x0C\x46'),  # iOS 6
+]
+patched = False
+for pattern, replacement in patterns:
+    idx = data.find(pattern)
+    if idx != -1:
+        data[idx:idx+len(replacement)] = replacement
+        patched = True
+        print(f'IOAESAccelerator patch applied at offset 0x{idx:x}')
+        break
+if not patched:
+    print('ERROR: IOAESAccelerator patch pattern not found in kernelcache', file=sys.stderr)
+    sys.exit(1)
+open('Kernelcache.aes_patched', 'wb').write(data)
+PYEOF
+    if [[ $? != 0 ]]; then
+        error "Failed to apply IOAESAccelerator patch to kernelcache"
+    fi
+    "$dir/xpwntool" Kernelcache.aes_patched Kernelcache.dec -t Kernelcache.aes_in
+    rm -f Kernelcache.aes_in Kernelcache.aes_raw Kernelcache.aes_patched
+    log "IOAESAccelerator patch applied successfully"
+}
+
 device_ramdisk() {
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache")
     local name
@@ -6936,6 +7052,9 @@ device_ramdisk() {
                     "$dir/hfsplus" Ramdisk.raw chown 0:0 usr/local/bin/restored_external
                 ;;
             esac
+            if [[ $1 == "bruteforce" ]]; then
+                device_ramdisk_bruteforce_setup
+            fi
             "$dir/xpwntool" Ramdisk.raw Ramdisk.dmg -t RestoreRamdisk.dec
         fi
         log "Patch iBSS"
@@ -6971,6 +7090,10 @@ device_ramdisk() {
         "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
         $bspatch Kernelcache.raw Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.${build_id}.patch
         "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache0.dec
+    fi
+
+    if [[ $1 == "bruteforce" ]]; then
+        device_ramdisk_kernel_patch_aes
     fi
 
     mv iBSS iBEC DeviceTree.dec Kernelcache.dec Ramdisk.dmg $ramdisk_path 2>/dev/null
@@ -7474,6 +7597,13 @@ menu_ramdisk() {
     print "    nvram oblit-inprogress=5"
     print "* To reboot, use this command:"
     print "    $reboot"
+    if (( device_proc < 7 )) && (( device_proc > 1 )) && [[ $device_type != "iPod2,1" ]]; then
+        echo
+        print "* Bruteforce: if you booted a bruteforce ramdisk, the process starts automatically."
+        print "* Check progress by connecting to SSH and running: device_infos"
+        print "* To start from a specific passcode:  kill bruteforce PID, then run:"
+        print "    /usr/bin/bruteforce -r PASSCODE > /dev/console &"
+    fi
     echo
 
     while [[ $loop != 1 ]]; do
@@ -10338,6 +10468,9 @@ menu_usefulutilities() {
         if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
             menu_items+=("SSH Ramdisk" "Update DateTime")
         fi
+        if (( device_proc >= 2 && device_proc <= 6 )) && [[ $device_type != "iPod2,1" ]]; then
+            menu_items+=("Bruteforce Ramdisk")
+        fi
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache" "Console")
         fi
@@ -10374,6 +10507,7 @@ menu_usefulutilities() {
             "Enter kDFU Mode" ) mode="kdfu";;
             "Disable/Enable Exploit" ) menu_remove4;;
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
+            "Bruteforce Ramdisk" ) mode="device_enter_ramdisk_bruteforce";;
             "Clear NVRAM" ) mode="ramdisknvram";;
             "Send Pwned iBSS" | "Enter pwnDFU Mode" ) mode="pwned-ibss";;
             "Install alloc8 Exploit" )
@@ -11399,6 +11533,31 @@ device_enter_ramdisk_menu() {
     device_enter_ramdisk menu
 }
 
+device_enter_ramdisk_bruteforce() {
+    if (( device_proc >= 7 )); then
+        error "Bruteforce is only supported on 32-bit devices (A6 and older, iOS 6.0-10.3.4)"
+    fi
+    if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
+        error "Bruteforce is not supported for this device"
+    fi
+    print "* Bruteforce mode: will create and boot a ramdisk with the bruteforce passcode cracker."
+    print "* Supported: 32-bit devices (iPhone 3GS through iPhone 5S) on iOS 6.0 - 10.3.4."
+    print "* The device must have a numeric-type passcode."
+    print "* A 4-digit PIN takes about 5-13 minutes. See README for longer passcode estimates."
+    echo
+    if (( device_proc >= 5 && device_vers_maj >= 9 )); then
+        log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
+        device_rd_build="13A452"
+    elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
+        print "* Choose the ramdisk iOS base version carefully:"
+        print "* If your device's main system is iOS 9/10, pick a 9.x base (e.g. 13A452)."
+        print "* For iOS 8 or lower, leave blank for the default (iOS 6.1.3)."
+        print "* If not sure, just press Enter/Return to use the default."
+        device_enter_build
+    fi
+    device_ramdisk bruteforce
+}
+
 device_ideviceinstaller() {
     device_pair
     log "Installing selected IPA(s) to device using ideviceinstaller..."
@@ -12063,6 +12222,8 @@ for i in "$@"; do
         "--pwn"             ) main_argmode="pwned-ibss";;
         "--sshrd"           ) main_argmode="device_enter_ramdisk";;
         "--sshrd-menu"      ) device_argmode="entry"; main_argmode="device_enter_ramdisk_menu";;
+        "--bruteforce"      ) main_argmode="device_enter_ramdisk_bruteforce";;
+        "--bruteforce-menu" ) device_argmode="entry"; main_argmode="device_enter_ramdisk_menu";;
 
         # please dont use these, unless you know what youre doing
         "--no-internet-check") no_internet_check=1;;
