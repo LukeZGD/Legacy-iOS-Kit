@@ -1,0 +1,24 @@
+<common_patterns>
+  <pattern name="macos_sidebar_layout">
+    <description>The standard application shell with a translucent sidebar.</description>
+    <structure>
+      Use `App.svelte` to combine `Sidebar.svelte`, `Toolbar.svelte`, and `ContentArea.svelte`.
+      Ensure sidebar leverages `rgba()` or specific tokens to support vibrancy where supported.
+    </structure>
+  </pattern>
+
+  <pattern name="wizard_flow">
+    <description>Multi-step wizard for complex operations like Restore or Jailbreak.</description>
+    <structure>
+      Use a state machine or a reactive `$state` variable (e.g., `currentStep = 1`) to toggle visibility of `WizardStep` components. Include a `WizardProgress` indicator.
+    </structure>
+  </pattern>
+  
+  <pattern name="tauri_ipc_invocation">
+    <description>Frontend API wrappers for calling Tauri commands.</description>
+    <structure>
+      Keep IPC calls in `src/lib/api/` files. Use standard async/await to call `invoke('command_name')`.
+      Catch and format errors to display in Toast notifications or inline alerts.
+    </structure>
+  </pattern>
+</common_patterns>

@@ -1,0 +1,46 @@
+<best_practices>
+  <general_principles>
+    <principle priority="high">
+      <name>Svelte 5 Runes</name>
+      <description>Use Svelte 5 runes (`$state`, `$derived`, `$effect`, `$props`) instead of traditional Svelte stores or export let syntax.</description>
+      <rationale>LegacyKit uses Svelte 5 for its reactive paradigm, which provides better performance and clearer state management.</rationale>
+    </principle>
+    <principle priority="high">
+      <name>macOS Design Tokens</name>
+      <description>Strictly use the CSS custom properties defined in the UI rebuild plan (e.g., `--color-accent`, `--radius-md`).</description>
+      <rationale>Ensures a consistent, native-feeling GUI that adapts correctly to system light/dark mode preferences.</rationale>
+    </principle>
+  </general_principles>
+
+  <code_conventions>
+    <convention category="styling">
+      <rule>Use component-scoped CSS where possible, referencing global tokens.</rule>
+      <template>
+        <style>
+          .card {
+            background-color: var(--color-bg-secondary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-border);
+          }
+        </style>
+      </template>
+    </convention>
+
+    <convention category="structure">
+      <rule>Separate logical domains into specific folders (components, views, stores, api).</rule>
+    </convention>
+  </code_conventions>
+
+  <common_pitfalls>
+    <pitfall>
+      <description>Hardcoding colors</description>
+      <why_problematic>Breaks dark mode support and ruins the native macOS feel.</why_problematic>
+      <correct_approach>Always use `var(--color-...)` tokens.</correct_approach>
+    </pitfall>
+    <pitfall>
+      <description>Modifying backend logic</description>
+      <why_problematic>UI Developer mode is restricted to the frontend. Modifying Rust code falls outside your permitted scope.</why_problematic>
+      <correct_approach>Hand off to the Architect or Code mode for backend Tauri adjustments.</correct_approach>
+    </pitfall>
+  </common_pitfalls>
+</best_practices>

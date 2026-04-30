@@ -1,0 +1,20 @@
+<error_handling>
+  <error_scenarios>
+    <scenario type="backend_dependency">
+      <description>The requested UI feature requires a missing Tauri command.</description>
+      <handling>
+        <step>Create the UI component with placeholder/mock data.</step>
+        <step>Document the expected IPC payload shape.</step>
+        <step>Explicitly notify the user that backend changes are needed and suggest switching modes.</step>
+      </handling>
+    </scenario>
+
+    <scenario type="styling_conflict">
+      <description>The requested design conflicts with the macOS HIG tokens defined in the rebuild plan.</description>
+      <handling>
+        <step>Alert the user to the deviation from the design system.</step>
+        <step>Provide the closest matching token-based alternative.</step>
+      </handling>
+    </scenario>
+  </error_scenarios>
+</error_handling>

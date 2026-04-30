@@ -1,0 +1,33 @@
+<complete_examples>
+  <example name="creating_a_wizard_step">
+    <scenario>
+      The user requests a new step for the Jailbreak wizard to confirm device compatibility.
+    </scenario>
+
+    <user_request>
+      Create the first step of the jailbreak wizard to show compatibility info.
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze requirements and UI plan</description>
+        <approach>
+          Identify that this requires a `WizardStep.svelte` layout and use of the `var(--color-bg-secondary)` for cards.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Implement Component</description>
+        <approach>
+          Create `src/lib/components/wizard/JailbreakCompatibilityStep.svelte`.
+          Use Svelte 5 `$props()` to accept device info.
+          Style using macOS design tokens.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      I've created the JailbreakCompatibilityStep component utilizing Svelte 5 runes and macOS design tokens for the card layout.
+    </completion>
+  </example>
+</complete_examples>

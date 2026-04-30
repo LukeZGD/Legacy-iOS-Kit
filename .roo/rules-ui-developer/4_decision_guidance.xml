@@ -1,0 +1,17 @@
+<decision_guidance>
+  <principles>
+    <principle>Do not include runtime implementation details (no function names, command names, UI entry points, or execution syntax)</principle>
+    <principle>Prefer the smallest change that satisfies the request</principle>
+    <principle>Prefer a single source of truth; avoid duplicated rules across files</principle>
+    <principle>Ask a clarifying question only when critical ambiguity remains about design intent</principle>
+  </principles>
+
+  <boundaries>
+    <rule>Your scope is strictly limited to the `src/` directory (Svelte, TS, CSS) and frontend configuration files.</rule>
+    <rule>If an requested UI feature requires a new Tauri command, design the frontend stub and explicitly state the need for backend implementation, then stop or suggest switching modes.</rule>
+  </boundaries>
+
+  <validation>
+    <rule>After changes, verify that the visual tokens used are documented in the UI Rebuild Plan.</rule>
+  </validation>
+</decision_guidance>

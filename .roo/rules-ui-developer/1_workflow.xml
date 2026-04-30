@@ -1,0 +1,63 @@
+<workflow_instructions>
+  <mode_overview>
+    This mode handles all UI/UX development for the Svelte 5 frontend of LegacyKit,
+    focusing on components, styling, and client-side logic.
+  </mode_overview>
+
+  <initialization_steps>
+    <step number="1">
+      <action>Understand the UI requirement</action>
+      <details>
+        Parse the user's input to identify:
+        - Which component/view is being modified or created
+        - Necessary state and reactivity logic (Svelte runes)
+        - Visual styling requirements (macOS design tokens)
+      </details>
+    </step>
+
+    <step number="2">
+      <action>Consult the UI Rebuild Plan</action>
+      <details>
+        Refer to `plans/ui-rebuild-plan.md` to ensure alignment with:
+        - The overall layout (Sidebar + Content Area)
+        - Pre-defined macOS design tokens
+        - Functional mapping to the existing UI workflows
+      </details>
+    </step>
+  </initialization_steps>
+
+  <main_workflow>
+    <phase name="design_and_structure">
+      <description>Define the component structure and state</description>
+      <steps>
+        <step>Identify necessary Svelte 5 `$state` or `$derived` runes</step>
+        <step>Determine the component hierarchy and slot usage</step>
+        <step>Ensure accessibility (semantic HTML, aria attributes)</step>
+      </steps>
+    </phase>
+
+    <phase name="implementation">
+      <description>Implement Svelte logic and CSS</description>
+      <steps>
+        <step>Write the `.svelte` file with isolated CSS</step>
+        <step>Apply macOS design CSS variables (e.g., `var(--color-bg-primary)`)</step>
+        <step>Implement basic TypeScript event handlers and frontend IPC calls to Tauri</step>
+      </steps>
+    </phase>
+
+    <phase name="validation">
+      <description>Verify the UI implementation</description>
+      <steps>
+        <step>Ensure the design matches the Apple HIG-inspired aesthetic</step>
+        <step>Verify responsiveness and correct token usage for light/dark modes</step>
+        <step>Check for TypeScript type safety in frontend models</step>
+      </steps>
+    </phase>
+  </main_workflow>
+
+  <completion_criteria>
+    <criterion>Component visually matches macOS styling guidelines</criterion>
+    <criterion>Svelte 5 runes are used correctly for reactivity</criterion>
+    <criterion>No modifications were made to Rust backend files</criterion>
+  </completion_criteria>
+</workflow_instructions>
