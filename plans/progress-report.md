@@ -1,7 +1,7 @@
 # LegacyKit UI Rebuild — Progress Report
 
 **Date:** 2026-04-30  
-**Status:** Phase 1 Complete, Phase 2 Complete, Phase 3 Complete, Phase 4 Complete, Phase 5 Complete
+**Status:** Phase 1 Complete, Phase 2 Complete, Phase 3 Complete, Phase 4 Complete, Phase 5 Complete, Phase 6 Complete
 
 ---
 
@@ -92,6 +92,22 @@
 | `src/lib/api/shsh.ts` | Created | Typed `saveShshBlob`, `fetchCydiaBlobs`, `dumpOnboardBlob`, `listSavedBlobs` wrappers |
 | `src/lib/views/SHSHView.svelte` | Replaced | Functional 4-tab UI (tsschecker / Cydia servers / Onboard dump / Library); auto-fills device type/ECID/iOS from `deviceStore`; library view parses tsschecker filenames into device + iOS + build columns and refreshes after every save/fetch/dump |
 
+### Phase 6: App & Data Management (Complete)
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src-tauri/src/models/apps.rs` | Created | `AppListScope` (User/System/All), `InstalledApp`, `ListAppsRequest/Result`, `InstallIpaRequest/Result`, `UninstallAppRequest/Result` |
+| `src-tauri/src/models/data.rs` | Created | `BackupCreateRequest/Result`, `BackupRestoreRequest/Result`, `EraseDeviceRequest/Result`, `BackupEncryptionAction` (On/Off/ChangePassword) + request/result, `BackupEntry`, `ListBackupsRequest/Result` |
+| `src-tauri/src/models/mod.rs` | Modified | Registered `apps` and `data` modules |
+| `src-tauri/src/commands/apps.rs` | Created | `list_installed_apps` (parses ideviceinstaller CSV output, with quoted-field + doubled-quote support; 4 unit tests), `install_ipa` (multi-IPA), `uninstall_app` |
+| `src-tauri/src/commands/data.rs` | Created | `create_backup` (timestamped subdir under root; uses zero-dependency `unix_to_components` for filenames with 3 unit tests), `restore_backup` (--system/--settings/--reboot toggles), `erase_device` (gated on exact "Yes, do as I say" phrase), `set_backup_encryption` (on/off/changepw), `list_backups` (recursive size; sorted newest-first) |
+| `src-tauri/src/commands/mod.rs` | Modified | Registered `apps` and `data` modules |
+| `src-tauri/src/lib.rs` | Modified | Registered eight new invoke handlers |
+| `src/lib/api/apps.ts` | Created | Typed `listInstalledApps`, `installIpa`, `uninstallApp` wrappers |
+| `src/lib/api/data.ts` | Created | Typed `createBackup`, `restoreBackup`, `eraseDevice`, `setBackupEncryption`, `listBackups` wrappers + `ERASE_CONFIRMATION` constant |
+| `src/lib/views/AppsView.svelte` | Replaced | Functional UI: device summary, multi-IPA install textarea, scope-filtered (User/System/All) installed-app table with bundle/version/display name and per-row uninstall (with confirm) |
+| `src/lib/views/DataView.svelte` | Replaced | Functional 4-tab UI: Backup (full toggle), Restore (radio-pick a backup + system/settings/reboot flags), Encryption (on/off/change password), Erase (typed confirmation phrase + native confirm dialog) |
+
 ### Phase 3: Restore & Downgrade (Complete)
 
 | File | Action | Description |
@@ -143,13 +159,18 @@
 - [x] Blob storage and organization (`services/shsh_store.rs` with filename parsing + `list_saved_blobs`)
 - [→ Phase 4/SSH ramdisk] On-device raw dump capture from `/dev/rdisk1` (UI exposes the conversion step; raw capture flows through the SSH ramdisk view)
 
-### Phase 6: App & Data Management
-- [ ] IPA install via ideviceinstaller
-- [ ] App dump via clutch
-- [ ] AppsView functional UI
-- [ ] Backup/restore via idevicebackup2
-- [ ] DataView functional UI
-- [ ] Filesystem mount/erase operations
+### Phase 6: App & Data Management ✅
+- [x] IPA install via ideviceinstaller (`commands/apps.rs::install_ipa`, multi-path)
+- [x] App listing + uninstall (`commands/apps.rs::list_installed_apps`, `uninstall_app`; CSV parser with 4 tests)
+- [x] AppsView functional UI (install textarea, scope-filtered list, per-row uninstall with confirm)
+- [x] Backup via idevicebackup2 (`commands/data.rs::create_backup`, timestamped subdirectories)
+- [x] Restore via idevicebackup2 (`commands/data.rs::restore_backup`, --system/--settings/--reboot)
+- [x] Backup encryption controls (`commands/data.rs::set_backup_encryption`, on/off/changepw)
+- [x] Erase All Content and Settings (`commands/data.rs::erase_device`, exact-phrase confirmation gate)
+- [x] List backups with size + mtime (`commands/data.rs::list_backups`, sorted newest-first)
+- [x] DataView functional UI (4 tabs: Backup / Restore / Encryption / Erase)
+- [→ future] Filesystem mount via sshfs (requires userspace driver + jailbroken device; will live next to SSH Ramdisk view)
+- [→ future] App dumping via Clutch / ipainstaller (requires SSH ramdisk session; will live next to SSH Ramdisk view)
 
 ### Phase 7: Utilities & Polish
 - [ ] UtilitiesView functional UI (enter/exit recovery, activation, syslog, diagnostics)

@@ -34,6 +34,14 @@ pub fn run() {
             commands::shsh::fetch_cydia_blobs,
             commands::shsh::dump_onboard_blob,
             commands::shsh::list_saved_blobs,
+            commands::apps::list_installed_apps,
+            commands::apps::install_ipa,
+            commands::apps::uninstall_app,
+            commands::data::create_backup,
+            commands::data::restore_backup,
+            commands::data::erase_device,
+            commands::data::set_backup_encryption,
+            commands::data::list_backups,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
