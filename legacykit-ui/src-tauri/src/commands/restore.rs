@@ -1,10 +1,12 @@
 use crate::error::AppError;
 use crate::models::device::DeviceInfo;
 use crate::models::restore::{
-    IpswDownloadRequest, IpswDownloadResult, IpswVerifyRequest, IpswVerifyResult,
-    RestoreCommandPreview, RestoreOptionsResponse, RestoreRunRequest, RestoreTool,
+    IpswDownloadRequest, IpswDownloadResult, IpswPrepareRequest, IpswPrepareResult,
+    IpswVerifyRequest, IpswVerifyResult, RestoreCommandPreview, RestoreOptionsResponse,
+    RestoreRunRequest, RestoreTool,
 };
 use crate::platform::resolve_binary_path;
+use crate::services::ipsw_prep;
 use crate::services::restore_options::determine_restore_options;
 use crate::services::sha1::sha1_file;
 use serde::Serialize;
@@ -145,6 +147,70 @@ pub async fn start_restore(
     emit_restore_log(&app, "info", "Restore tool finished");
 
     Ok(preview)
+}
+
+#[tauri::command]
+pub async fn prepare_ipsw(
+    app: AppHandle,
+    request: IpswPrepareRequest,
+) -> Result<IpswPrepareResult, AppError> {
+    let ipsw_path = request.ipsw_path.trim();
+    if ipsw_path.is_empty() {
+        return Err(AppError::Parse("Source IPSW path is required".to_string()));
+    }
+    if !Path::new(ipsw_path).exists() {
+        return Err(AppError::Parse(format!(
+            "Source IPSW does not exist: {ipsw_path}"
+        )));
+    }
+
+    let output_dir = request.output_dir.trim();
+    if output_dir.is_empty() {
+        return Err(AppError::Parse("Output directory is required".to_string()));
+    }
+    fs::create_dir_all(output_dir)?;
+
+    let shsh_path = request
+        .shsh_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if let Some(shsh) = shsh_path {
+        if !Path::new(shsh).exists() {
+            return Err(AppError::Parse(format!(
+                "SHSH blob does not exist: {shsh}"
+            )));
+        }
+    }
+
+    let ecid = request
+        .device_ecid
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let output_path = ipsw_prep::powdersn0w_output_path(ipsw_path, output_dir)?;
+    let args = ipsw_prep::build_powdersn0w_args(ipsw_path, &output_path, shsh_path, ecid);
+
+    let binary = resolve_binary_path(&app, "powdersn0w").map_err(AppError::CommandFailed)?;
+    emit_restore_log(&app, "info", "Preparing custom IPSW with powdersn0w...");
+    run_process_streaming(&app, binary, &args)?;
+
+    if !output_path.exists() {
+        return Err(AppError::CommandFailed(format!(
+            "powdersn0w finished but output IPSW was not created at {}",
+            output_path.display()
+        )));
+    }
+
+    emit_restore_log(
+        &app,
+        "info",
+        &format!("Custom IPSW ready: {}", output_path.display()),
+    );
+    Ok(IpswPrepareResult {
+        output_path: output_path.to_string_lossy().to_string(),
+    })
 }
 
 fn build_restore_command(request: &RestoreRunRequest) -> Result<RestoreCommandPreview, AppError> {

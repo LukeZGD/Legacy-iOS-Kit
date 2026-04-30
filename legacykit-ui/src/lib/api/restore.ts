@@ -76,6 +76,17 @@ export interface RestoreCommandPreview {
   warnings: string[];
 }
 
+export interface IpswPrepareRequest {
+  ipswPath: string;
+  outputDir: string;
+  shshPath: string | null;
+  deviceEcid: string | null;
+}
+
+export interface IpswPrepareResult {
+  outputPath: string;
+}
+
 export function getRestoreOptions(device: DeviceInfo): Promise<RestoreOptionsResponse> {
   return invoke<RestoreOptionsResponse>('get_restore_options', { device });
 }
@@ -86,6 +97,10 @@ export function downloadIpsw(request: IpswDownloadRequest): Promise<IpswDownload
 
 export function verifyIpsw(request: IpswVerifyRequest): Promise<IpswVerifyResult> {
   return invoke<IpswVerifyResult>('verify_ipsw', { request });
+}
+
+export function prepareIpsw(request: IpswPrepareRequest): Promise<IpswPrepareResult> {
+  return invoke<IpswPrepareResult>('prepare_ipsw', { request });
 }
 
 export function previewRestoreCommand(request: RestoreRunRequest): Promise<RestoreCommandPreview> {
