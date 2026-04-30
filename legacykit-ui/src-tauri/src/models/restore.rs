@@ -98,3 +98,18 @@ pub struct RestoreCommandPreview {
     pub args: Vec<String>,
     pub warnings: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpswPrepareRequest {
+    pub ipsw_path: String,
+    pub output_dir: String,
+    pub shsh_path: Option<String>,
+    pub device_ecid: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpswPrepareResult {
+    pub output_path: String,
+}

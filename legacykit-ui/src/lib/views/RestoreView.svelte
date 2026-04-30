@@ -2,9 +2,11 @@
   import {
     downloadIpsw,
     getRestoreOptions,
+    prepareIpsw,
     previewRestoreCommand,
     startRestore,
     verifyIpsw,
+    type IpswPrepareResult,
     type IpswVerifyResult,
     type RestoreCommandPreview,
     type RestoreOption,
@@ -41,11 +43,20 @@
   let latestBaseband = $state(false);
   let preview = $state<RestoreCommandPreview | null>(null);
 
+  let prepOutputDir = $state('');
+  let isPreparing = $state(false);
+  let prepResult = $state<IpswPrepareResult | null>(null);
+
   let selectedOption = $derived(restoreOptions?.options[selectedIndex] ?? null);
+  let needsPrepStep = $derived(selectedOption?.kind === 'powdersnow');
+  let effectiveIpswPath = $derived(prepResult?.outputPath || ipswPath);
   let commandRequest = $derived(buildCommandRequest());
-  let canVerify = $derived(ipswPath.trim().endsWith('.ipsw') && !isWorking);
-  let canPreview = $derived(!!ipswPath.trim() && !isWorking);
-  let canRun = $derived(!!preview && !isWorking);
+  let canVerify = $derived(ipswPath.trim().endsWith('.ipsw') && !isWorking && !isPreparing);
+  let canPrep = $derived(
+    needsPrepStep && ipswPath.trim().endsWith('.ipsw') && prepOutputDir.trim() !== '' && !isWorking && !isPreparing
+  );
+  let canPreview = $derived(!!effectiveIpswPath.trim() && !isWorking && !isPreparing);
+  let canRun = $derived(!!preview && !isWorking && !isPreparing);
 
   $effect(() => {
     const device = { ...deviceStore.state };
@@ -58,6 +69,8 @@
 
     selectedTool = defaultToolForOption(option);
     setNonce = option.kind === 'setNonce';
+    usePwndfu = option.kind === 'tethered';
+    prepResult = null;
     preview = null;
   });
 
@@ -166,7 +179,7 @@
   function buildCommandRequest(): RestoreRunRequest {
     return {
       tool: selectedTool,
-      ipswPath,
+      ipswPath: effectiveIpswPath,
       shshPath: shshPath || null,
       erase,
       update,
@@ -181,10 +194,34 @@
   }
 
   function defaultToolForOption(option: RestoreOption): RestoreTool {
-    if (option.kind === 'blobRestore' || option.kind === 'setNonce') {
+    if (option.kind === 'blobRestore' || option.kind === 'setNonce' || option.kind === 'tethered') {
       return 'futureRestore';
     }
     return 'ideviceRestore';
+  }
+
+  async function handlePrepareIpsw() {
+    isPreparing = true;
+    prepResult = null;
+    errorMessage = null;
+    preview = null;
+    const device = deviceStore.state;
+
+    logStore.append('Preparing custom IPSW with powdersn0w...', 'info');
+    try {
+      prepResult = await prepareIpsw({
+        ipswPath,
+        outputDir: prepOutputDir,
+        shshPath: selectedOption?.requiresBlobs ? (shshPath || null) : null,
+        deviceEcid: device.ecid || null,
+      });
+      logStore.append(`Custom IPSW ready: ${prepResult.outputPath}`, 'info');
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+      logStore.append(`Preparation failed: ${errorMessage}`, 'stderr');
+    } finally {
+      isPreparing = false;
+    }
   }
 </script>
 
@@ -313,9 +350,45 @@
       </div>
     </section>
 
+    {#if needsPrepStep}
+      <section class="panel">
+        <div class="section-title">
+          <span>3</span>
+          <h2>Prepare Custom IPSW</h2>
+        </div>
+        <p class="prep-note">
+          powdersn0w will patch the source IPSW and write a custom IPSW to the output directory.
+          The custom IPSW is then used automatically in the restore step.
+        </p>
+        <div class="form-grid">
+          <label>
+            <span>Output Directory</span>
+            <input bind:value={prepOutputDir} placeholder="/path/to/output" />
+          </label>
+          {#if selectedOption?.requiresBlobs}
+            <label>
+              <span>SHSH Blob Path</span>
+              <input bind:value={shshPath} placeholder="Required for blob-based restore" />
+            </label>
+          {/if}
+        </div>
+        <div class="actions">
+          <button class="secondary" onclick={handlePrepareIpsw} disabled={!canPrep}>
+            {isPreparing ? 'Preparing…' : 'Prepare Custom IPSW'}
+          </button>
+        </div>
+        {#if prepResult}
+          <div class="prep-result">
+            <span>Output:</span>
+            <code>{prepResult.outputPath}</code>
+          </div>
+        {/if}
+      </section>
+    {/if}
+
     <section class="panel">
       <div class="section-title">
-        <span>3</span>
+        <span>{needsPrepStep ? '4' : '3'}</span>
         <h2>Restore Command</h2>
       </div>
 
@@ -664,6 +737,33 @@
   .preview-warnings span {
     color: var(--color-warning);
     font-size: 0.8rem;
+  }
+
+  .prep-note {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin: 0 0 var(--spacing-md);
+  }
+
+  .prep-result {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm);
+    border: 1px solid color-mix(in srgb, var(--color-success) 45%, var(--color-border));
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+
+  .prep-result code {
+    color: var(--color-text-primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
   }
 
   @media (max-width: 720px) {

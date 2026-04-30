@@ -1,7 +1,7 @@
 # LegacyKit UI Rebuild — Progress Report
 
 **Date:** 2026-04-30  
-**Status:** Phase 1 Complete, Phase 2 Complete, Phase 3 Mostly Complete
+**Status:** Phase 1 Complete, Phase 2 Complete, Phase 3 Complete, Phase 4 Complete, Phase 5 Complete
 
 ---
 
@@ -63,48 +63,85 @@
 | Device UI | `DeviceCard` now reads product type, iOS version, and mode from `deviceStore` |
 | Settings | Theme, auto-detect polling, terminal visibility, terminal height, and poll interval now affect app behavior |
 
-### Phase 3: Restore & Downgrade (Started)
+### Phase 4: Jailbreak & SSH Ramdisk (Complete)
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src-tauri/src/models/restore.rs` | Created | Typed restore option models |
+| `src-tauri/Cargo.toml` | Modified | Added `zip = "2"` for IPSW component extraction |
+| `src-tauri/src/commands/jailbreak.rs` | Created | `run_gaster` (pwn/reset), `run_kloader` (boot patched iBSS/iBEC), `run_g1lbertjb` and `run_evasi0n` (untether wrappers with passthrough flags) |
+| `src-tauri/src/commands/firmware.rs` | Created | `extract_ipsw_component` (Rust zip-based), `patch_iboot` (iBoot32Patcher / iBoot64Patcher), `pack_img4` (img4tool), `repack_img3` (xpwntool), `patch_kernel` (Kernel32Patcher / Kernel64Patcher), and `modify_ramdisk` (hfsplus wrapper: add / remove / resize) |
+| `src-tauri/src/commands/mod.rs` | Modified | Registered `firmware` and `jailbreak` modules |
+| `src-tauri/src/lib.rs` | Modified | Registered all new invoke handlers |
+| `src/lib/api/jailbreak.ts` | Created | Typed `runGaster`, `runKloader`, `runG1lbertJB`, `runEvasi0n` wrappers |
+| `src/lib/api/firmware.ts` | Created | Typed `extractIpswComponent`, `patchIboot`, `packImg4`, `repackImg3`, `patchKernel`, `modifyRamdisk` wrappers |
+| `src/lib/components/device/DfuHelper.svelte` | Created | Generation-aware DFU guide (Home + Power vs. Side + Volume Down); guided countdown timer; live mode pill |
+| `src/lib/views/JailbreakView.svelte` | Replaced | Functional UI: device summary, DFU helper, gaster pwn/reset controls, g1lbertJB / evasi0n untether controls with eligibility + mode warnings |
+| `src/lib/views/SSHRamdiskView.svelte` | Replaced | Step-driven build pipeline: extract → patch iBoot/kernel → grow ramdisk → inject SSH binaries → repack as IMG3/IMG4 → kloader boot |
+
+### Phase 5: SHSH Blob Management (Complete)
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src-tauri/src/models/shsh.rs` | Created | Request/response models for tsschecker save, Cydia batch fetch, onboard raw → SHSH conversion, and saved-blob listing |
+| `src-tauri/src/models/mod.rs` | Modified | Registered `shsh` module |
+| `src-tauri/src/services/shsh_store.rs` | Created | Directory listing + filename parsing for tsschecker (`ECID_DEVICE_BOARDap_VERSION-BUILD_NONCE.shsh*`) and dash forms; `is_blob_file` filter; sorts by mtime; unit tests |
+| `src-tauri/src/services/mod.rs` | Modified | Registered `shsh_store` module |
+| `src-tauri/src/commands/shsh.rs` | Created | `save_shsh_blob` (tsschecker wrapper, default generator `0x1111111111111111`, optional APNonce/board/manifest), `fetch_cydia_blobs` (batch via `cydia.saurik.com` with rename-on-success), `dump_onboard_blob` (img4tool `--convert`), `list_saved_blobs`; all stream stdout/stderr via `log_event` |
+| `src-tauri/src/commands/mod.rs` | Modified | Registered `shsh` module |
+| `src-tauri/src/lib.rs` | Modified | Registered four new invoke handlers |
+| `src/lib/api/shsh.ts` | Created | Typed `saveShshBlob`, `fetchCydiaBlobs`, `dumpOnboardBlob`, `listSavedBlobs` wrappers |
+| `src/lib/views/SHSHView.svelte` | Replaced | Functional 4-tab UI (tsschecker / Cydia servers / Onboard dump / Library); auto-fills device type/ECID/iOS from `deviceStore`; library view parses tsschecker filenames into device + iOS + build columns and refreshes after every save/fetch/dump |
+
+### Phase 3: Restore & Downgrade (Complete)
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src-tauri/src/models/restore.rs` | Created | Typed restore option models + `IpswPrepareRequest`/`IpswPrepareResult` |
 | `src-tauri/src/services/restore_options.rs` | Created | Restore option determination logic extracted from `restore.sh::menu_restore` rules |
 | `src-tauri/src/services/sha1.rs` | Created | Pure Rust SHA-1 implementation for IPSW verification |
-| `src-tauri/src/commands/restore.rs` | Created | Restore option, aria2c download, SHA-1 verification, command preview, futurerestore, and idevicerestore commands |
-| `src/lib/api/restore.ts` | Created | Typed frontend wrapper for restore option command |
-| `src/lib/views/RestoreView.svelte` | Modified | Step-by-step restore workflow for option selection, IPSW download/verification, command preview, and restore launch |
+| `src-tauri/src/services/ipsw_prep.rs` | Created | powdersn0w output-path derivation and arg-list builder (with unit tests) |
+| `src-tauri/src/commands/restore.rs` | Created | Restore option, aria2c download, SHA-1 verification, `prepare_ipsw` (powdersn0w pipeline), command preview, futurerestore, and idevicerestore commands |
+| `src/lib/api/restore.ts` | Created | Typed frontend wrappers including `prepareIpsw` |
+| `src/lib/views/RestoreView.svelte` | Modified | Step-by-step restore workflow for option selection, IPSW download/verification, powdersn0w preparation step, command preview, and restore launch. Tethered option auto-routes to futurerestore + pwnDFU |
 
 ---
 
 ## Remaining Tasks
 
-### Phase 3: Restore & Downgrade
+### Phase 3: Restore & Downgrade ✅
 - [x] Restore option determination logic (which restore method based on device + target iOS)
 - [x] IPSW download manager with aria2c
 - [x] IPSW verification (SHA-1 checksums)
 - [x] RestoreView wizard UI (step-by-step flow)
 - [x] futurerestore wrapper (Rust tool wrapper)
 - [x] idevicerestore wrapper (Rust tool wrapper)
-- [ ] Restore preparation pipeline (IPSW extraction, patching, signing) — still bash-only for custom/tethered/powdersn0w IPSW creation
-- [ ] powdersn0w restore flow
+- [x] powdersn0w restore flow (UI step + `prepare_ipsw` Rust command)
+- [x] Tethered restore wired to futurerestore + pwnDFU
+- [→ Phase 4] DFU IPSW iBSS/iBEC patching (shares machinery with SSH ramdisk + pwnDFU boot)
+- [→ Phase 4] Custom IPSW component patching from scratch (xpwn / libipatcher integration)
 
-### Phase 4: Jailbreak & SSH Ramdisk
-- [ ] gaster/checkm8 exploit wrapper
-- [ ] SSH ramdisk boot logic (iBSS/iBEC patching, ramdisk creation)
-- [ ] JailbreakView functional UI
-- [ ] SSHRamdiskView functional UI
-- [ ] DFU Helper visual guide component
-- [ ] kloader wrapper for tethered boot
-- [ ] pwned iBSS/iBEC logic
-- [ ] g1lbertJB integration
-- [ ] evasi0n untether integration
+### Phase 4: Jailbreak & SSH Ramdisk ✅
+- [x] gaster/checkm8 exploit wrapper (`commands/jailbreak.rs`, supports `pwn` and `reset`)
+- [x] DFU Helper visual guide component (Home + Power vs. Side + Volume Down, guided countdown)
+- [x] JailbreakView functional UI (device summary, DFU helper, gaster controls, eligibility warnings)
+- [x] IPSW component extraction (`commands/firmware.rs::extract_ipsw_component`, zip-based)
+- [x] iBoot32Patcher / iBoot64Patcher wrapper (`commands/firmware.rs::patch_iboot` with boot-args, RSA bypass, debug)
+- [x] kloader wrapper (`commands/jailbreak.rs::run_kloader`)
+- [x] IMG3 / IMG4 (re)packing wrappers (`commands/firmware.rs::repack_img3`, `pack_img4`)
+- [x] Kernel patcher wrapper (`commands/firmware.rs::patch_kernel`, 32/64-bit)
+- [x] Ramdisk DMG modification (`commands/firmware.rs::modify_ramdisk`, hfsplus add/remove/resize)
+- [x] SSHRamdiskView functional UI (step-driven build pipeline + kloader boot)
+- [x] g1lbertJB wrapper (`commands/jailbreak.rs::run_g1lbertjb`, wired into JailbreakView)
+- [x] evasi0n wrapper (`commands/jailbreak.rs::run_evasi0n`, wired into JailbreakView)
+- [→ future] One-click ramdisk orchestration with BuildManifest.plist auto-discovery (UI currently exposes each step manually; user drives the pipeline)
 
-### Phase 5: SHSH Blob Management
-- [ ] tsschecker wrapper
-- [ ] Onboard blob dumping (via SSH ramdisk)
-- [ ] SHSHView functional UI
-- [ ] Cydia server blob fetching
-- [ ] Blob storage and organization
+### Phase 5: SHSH Blob Management ✅
+- [x] tsschecker wrapper (`commands/shsh.rs::save_shsh_blob`, generator + APNonce + manifest support)
+- [x] Onboard blob dumping conversion (`commands/shsh.rs::dump_onboard_blob`, img4tool wrapper)
+- [x] SHSHView functional UI (4-tab layout: tsschecker / Cydia / Onboard / Library)
+- [x] Cydia server blob fetching (`commands/shsh.rs::fetch_cydia_blobs`, batched per-build attempts)
+- [x] Blob storage and organization (`services/shsh_store.rs` with filename parsing + `list_saved_blobs`)
+- [→ Phase 4/SSH ramdisk] On-device raw dump capture from `/dev/rdisk1` (UI exposes the conversion step; raw capture flows through the SSH ramdisk view)
 
 ### Phase 6: App & Data Management
 - [ ] IPA install via ideviceinstaller
