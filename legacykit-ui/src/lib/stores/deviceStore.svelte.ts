@@ -1,3 +1,5 @@
+export type DeviceMode = 'Normal' | 'Recovery' | 'DFU' | 'kDFU' | 'pwnDFU';
+
 export interface DeviceInfo {
     connected: boolean;
     name: string | null;
@@ -7,7 +9,7 @@ export interface DeviceInfo {
     model: string | null;
     product_type: string | null;
     ios_version: string | null;
-    mode: 'Normal' | 'Recovery' | 'DFU' | 'kDFU' | 'pwnDFU';
+    mode: DeviceMode;
 }
 
 class DeviceStore {

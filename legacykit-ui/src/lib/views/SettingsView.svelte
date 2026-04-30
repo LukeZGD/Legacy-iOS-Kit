@@ -14,6 +14,11 @@
     settingsStore.autoDetectDevice = !settingsStore.autoDetectDevice;
   }
 
+  function handleTerminalHeightChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    settingsStore.setTerminalHeight(Number(target.value));
+  }
+
   function handlePollIntervalChange(event: Event) {
     const target = event.target as HTMLInputElement;
     settingsStore.setPollInterval(Number(target.value));
@@ -60,6 +65,24 @@
         />
         <span class="toggle-slider"></span>
       </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <label for="terminal-height">Terminal Height</label>
+        <span class="setting-hint">Adjust the terminal panel size</span>
+      </div>
+      <div class="range-control">
+        <input
+          id="terminal-height"
+          type="range"
+          min="100"
+          max="600"
+          step="20"
+          value={settingsStore.terminalHeight}
+          oninput={handleTerminalHeightChange}
+        />
+        <span>{settingsStore.terminalHeight}px</span>
+      </div>
     </div>
   </div>
 
@@ -184,6 +207,23 @@
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  }
+
+  .range-control {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-width: 180px;
+  }
+  .range-control input[type="range"] {
+    flex: 1;
+    accent-color: var(--color-accent);
+  }
+  .range-control span {
+    width: 44px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
   }
 
   /* macOS-style toggle switch */

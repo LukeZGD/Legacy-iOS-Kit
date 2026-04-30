@@ -4,6 +4,7 @@
   import ActionPanel from '../actions/ActionPanel.svelte';
   import Terminal from '../common/Terminal.svelte';
   import { navigationStore } from '$lib/stores/navigationStore.svelte';
+  import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
   import HomeView from '$lib/views/HomeView.svelte';
   import RestoreView from '$lib/views/RestoreView.svelte';
@@ -44,10 +45,11 @@
       </div>
     </div>
     
-    <!-- Terminal section at the bottom -->
-    <div class="h-64 shrink-0">
-      <Terminal />
-    </div>
+    {#if settingsStore.terminalVisible}
+      <div class="shrink-0" style={`height: ${settingsStore.terminalHeight}px`}>
+        <Terminal />
+      </div>
+    {/if}
   </div>
   
   <StatusBar />

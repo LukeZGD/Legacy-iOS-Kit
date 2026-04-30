@@ -11,20 +11,57 @@
   
   import './app.css';
 
-  let pollInterval: ReturnType<typeof setInterval>;
+  let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+  $effect(() => {
+    const autoDetectDevice = settingsStore.autoDetectDevice;
+    const pollIntervalMs = settingsStore.pollIntervalMs;
+
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+
+    if (autoDetectDevice) {
+      detectDevice();
+      pollInterval = setInterval(detectDevice, pollIntervalMs);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+  });
+
+  $effect(() => {
+    const theme = settingsStore.theme;
+    const root = document.documentElement;
+    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function applyTheme() {
+      if (theme === 'system') {
+        root.removeAttribute('data-theme');
+      } else {
+        root.dataset.theme = theme;
+      }
+      root.classList.toggle('dark', theme === 'dark' || (theme === 'system' && darkQuery.matches));
+    }
+
+    applyTheme();
+    darkQuery.addEventListener('change', applyTheme);
+
+    return () => darkQuery.removeEventListener('change', applyTheme);
+  });
 
   onMount(() => {
-    detectDevice();
-
-    pollInterval = setInterval(detectDevice, settingsStore.pollIntervalMs);
-
     const unlistenLog = listen('log_event', (event: any) => {
       const { text, type } = event.payload as { text: string; type: 'stdout' | 'stderr' | 'info' };
       logStore.append(text, type);
     });
 
     return () => {
-      clearInterval(pollInterval);
       unlistenLog.then(fn => fn());
     };
   });

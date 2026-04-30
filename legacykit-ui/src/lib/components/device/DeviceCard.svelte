@@ -2,14 +2,11 @@
   import DeviceStatus from './DeviceStatus.svelte';
   import { deviceStore } from '../../stores/deviceStore.svelte';
 
-  // State mapped from store
   let isConnected = $derived(deviceStore.state.connected);
   let deviceName = $derived(deviceStore.state.name || 'Unknown Device');
-  let deviceType = $derived(deviceStore.state.udid || 'No UDID');
-  
-  // These could be added to DeviceInfo model later
-  let iosVersion = 'Unknown';
-  let deviceMode = 'Normal';
+  let deviceIdentifier = $derived(deviceStore.state.product_type || deviceStore.state.model || deviceStore.state.udid || 'Unknown Device');
+  let iosVersion = $derived(deviceStore.state.ios_version || 'Unknown');
+  let deviceMode = $derived(deviceStore.state.mode);
 </script>
 
 <div class="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 mb-6 shadow-sm transition-all duration-200 {isConnected ? 'ring-1 ring-[var(--color-accent)] ring-opacity-30' : ''}">
@@ -18,7 +15,7 @@
     <div class="flex-1 min-w-0">
       {#if isConnected}
         <h3 class="m-0 text-[14px] font-semibold text-[var(--color-text-primary)] truncate">{deviceName}</h3>
-        <span class="text-[11px] text-[var(--color-text-secondary)] truncate block">{deviceType}</span>
+        <span class="text-[11px] text-[var(--color-text-secondary)] truncate block">{deviceIdentifier}</span>
       {:else}
         <h3 class="m-0 text-[14px] font-semibold text-[var(--color-text-primary)]">No Device</h3>
         <span class="text-[11px] text-[var(--color-text-secondary)]">Connect USB to begin</span>

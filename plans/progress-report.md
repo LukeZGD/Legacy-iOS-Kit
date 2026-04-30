@@ -1,7 +1,7 @@
 # LegacyKit UI Rebuild — Progress Report
 
 **Date:** 2026-04-30  
-**Status:** Phase 1 Complete, Phase 2 Complete
+**Status:** Phase 1 Complete, Phase 2 Complete, Phase 3 Mostly Complete
 
 ---
 
@@ -55,18 +55,37 @@
 | `src/lib/components/layout/ContentArea.svelte` | Modified | Renders correct view component based on `navigationStore.currentView` |
 | `src/App.svelte` | Modified | Uses `deviceStore.updateFromBackend()` with `detect_device` results; polls with `settingsStore.pollIntervalMs` |
 
+### Follow-up Fixes
+
+| Area | Description |
+|------|-------------|
+| Frontend config | Added `$lib` alias support for Vite and `svelte-check` |
+| Device UI | `DeviceCard` now reads product type, iOS version, and mode from `deviceStore` |
+| Settings | Theme, auto-detect polling, terminal visibility, terminal height, and poll interval now affect app behavior |
+
+### Phase 3: Restore & Downgrade (Started)
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src-tauri/src/models/restore.rs` | Created | Typed restore option models |
+| `src-tauri/src/services/restore_options.rs` | Created | Restore option determination logic extracted from `restore.sh::menu_restore` rules |
+| `src-tauri/src/services/sha1.rs` | Created | Pure Rust SHA-1 implementation for IPSW verification |
+| `src-tauri/src/commands/restore.rs` | Created | Restore option, aria2c download, SHA-1 verification, command preview, futurerestore, and idevicerestore commands |
+| `src/lib/api/restore.ts` | Created | Typed frontend wrapper for restore option command |
+| `src/lib/views/RestoreView.svelte` | Modified | Step-by-step restore workflow for option selection, IPSW download/verification, command preview, and restore launch |
+
 ---
 
 ## Remaining Tasks
 
 ### Phase 3: Restore & Downgrade
-- [ ] Restore option determination logic (which restore method based on device + target iOS)
-- [ ] IPSW download manager with aria2c
-- [ ] IPSW verification (SHA-1 checksums)
-- [ ] RestoreView wizard UI (step-by-step flow)
-- [ ] futurerestore wrapper (Rust tool wrapper)
-- [ ] idevicerestore wrapper (Rust tool wrapper)
-- [ ] Restore preparation pipeline (IPSW extraction, patching, signing)
+- [x] Restore option determination logic (which restore method based on device + target iOS)
+- [x] IPSW download manager with aria2c
+- [x] IPSW verification (SHA-1 checksums)
+- [x] RestoreView wizard UI (step-by-step flow)
+- [x] futurerestore wrapper (Rust tool wrapper)
+- [x] idevicerestore wrapper (Rust tool wrapper)
+- [ ] Restore preparation pipeline (IPSW extraction, patching, signing) — still bash-only for custom/tethered/powdersn0w IPSW creation
 - [ ] powdersn0w restore flow
 
 ### Phase 4: Jailbreak & SSH Ramdisk
@@ -125,5 +144,5 @@
 ---
 
 ## Build Status
-- **Frontend (Vite/Svelte):** ✅ Compiles cleanly
-- **Backend (Rust/Tauri):** ✅ Compiles cleanly (`cargo check` passes)
+- **Frontend (Vite/Svelte):** ✅ Compiles cleanly (`npm run check`, `npm run build` pass)
+- **Backend (Rust/Tauri):** ✅ Compiles cleanly (`cargo check`, `cargo test` pass)
