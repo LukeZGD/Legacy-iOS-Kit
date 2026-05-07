@@ -5108,7 +5108,10 @@ ipsw_prepare_multipatch() {
         case $device_type in
             iPhone5,[12] ) hw="iphone5";;
             iPhone5,[34] ) hw="iphone5b";;
-            iPad3,[456] )  hw="ipad3b";;
+            iPad2,[123]  ) hw="ipad2";;
+            iPad2,[567]  ) hw="ipad2b";;
+            iPad3,[123]  ) hw="ipad3";;
+            iPad3,[456]  ) hw="ipad3b";;
         esac
         case $device_base_build in
             "11A"* | "11B"* ) base_build="11B554a";;
@@ -7002,7 +7005,7 @@ device_ramdisk() {
     if [[ $1 != "justboot" ]]; then
         log "Patch RestoreRamdisk"
         "$dir/xpwntool" RestoreRamdisk.dec Ramdisk.raw
-        "$dir/hfsplus" Ramdisk.raw grow 30000000
+        "$dir/hfsplus" Ramdisk.raw grow 32000000
         "$dir/hfsplus" Ramdisk.raw untar ../resources/sshrd/sbplist.tar
     fi
 
