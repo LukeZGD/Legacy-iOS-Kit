@@ -1525,7 +1525,7 @@ device_get_info() {
     esac
 
     case $device_type in
-        iPhone[345],* | iPad1,1 | iPad2,4 | iPad3,[456] | iPod[35],1 ) device_canpowder=1;; # powdersn0w device support
+        iPhone[345],* | iPad1,1 | iPad2,4 | iPad3,* | iPod[35],1 ) device_canpowder=1;; # powdersn0w device support
     esac
 
     device_fw_dir="../saved/firmware/$device_type"
@@ -3796,15 +3796,19 @@ ipsw_prepare_bundle() {
         case $device_type in
             iPhone5,[12] ) hw="iphone5";;
             iPhone5,[34] ) hw="iphone5b";;
+            iPad2,[123]  ) hw="ipad2";;
+            iPad2,[567]  ) hw="ipad2b";;
+            iPad3,[123]  ) hw="ipad3";;
             iPad3,[456]  ) hw="ipad3b";;
         esac
         case $device_base_build in
             11[AB]* ) base_build="11B554a";;
-            9*      ) base_build="9B206";;
+            9B*     ) base_build="9B206";;
+            9A*     ) base_build="9A405";;
         esac
         echo "<key>RamdiskExploit</key><dict>" >> $NewPlist
         echo "<key>exploit</key><string>src/target/$hw/$base_build/exploit</string>" >> $NewPlist
-        echo "<key>inject</key><string>src/target/$hw/$base_build/partition</string></dict>" >> $NewPlist
+        echo "<key>inject</key><string>partition</string></dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
         echo "<key>FilesystemPackage</key><dict><key>bootstrap</key><string>freeze.tar</string>" >> $NewPlist
         case $vers in
@@ -4880,6 +4884,36 @@ ipsw_prepare_sundanceinh2a() {
     mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
+ipsw_prepare_partition_script() {
+    local file="partition"
+    log "Preparing partition script"
+    if [[ $ipsw_powder_ramdiskH == 1 ]]; then
+        log "Using ramdiskH partition script"
+        cp ../resources/firmware/src/target/iphone5/partition .
+        return
+    fi
+
+    cp ../resources/firmware/src/partition .
+    if [[ $device_base_vers == "5."* ]]; then
+        local new_bs=64
+        local new_value=$((new_bs*1024))
+        new_bs="${new_bs}k"
+        log "Changing exploit size to $new_bs for iOS 5"
+        sed -i.bak \
+            's|^Exploit_LastSector=.*|Exploit_LastSector="$(('"$new_value"'/$LogicalSector))"|' \
+            "$file" && rm -f "${file}.bak"
+        sed -i.bak \
+            's|^dd of=\$exploitDisk if=/exploit bs=.* count=1$|dd of=\$exploitDisk if=/exploit bs='"$new_bs"' count=1|' \
+            "$file" && rm -f "${file}.bak"
+    fi
+    if [[ $device_base_vers == "5."* || $device_type == "iPhone3,1" ]]; then
+        log "Removing nvram boot-ramdisk"
+        sed -i.bak \
+            '/^nvram boot-ramdisk/d' \
+            "$file" && rm -f "${file}.bak"
+    fi
+}
+
 ipsw_prepare_multipatch() {
     local vers
     local build
@@ -5118,11 +5152,11 @@ ipsw_prepare_multipatch() {
             "9"* ) base_build="9B206";;
         esac
         local exploit="src/target/$hw/$base_build/exploit"
-        local partition="src/target/$hw/$base_build/partition"
+        ipsw_prepare_partition_script
         log "Adding exploit and partition stuff"
         "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
-        "$dir/hfsplus" RestoreRamdisk.dec add $partition sbin/reboot
+        "$dir/hfsplus" RestoreRamdisk.dec add partition sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec add $exploit exploit
@@ -5143,7 +5177,6 @@ ipsw_prepare_multipatch() {
     "$dir/xpwntool" RestoreRamdisk.dec $ramdisk_name -t RestoreRamdisk.orig
     log "Add Restore Ramdisk to IPSW"
     zip -r0 temp.ipsw $ramdisk_name
-
 
     # 3.2.x ipad/4.2.x cdma fs workaround
     # removed back in fcdc9ec, added back for now
@@ -5311,8 +5344,7 @@ ipsw_prepare_ios4powder() {
     ipsw_prepare_bundle base
     ipsw_prepare_logos_convert
     cp -R ../resources/firmware/src .
-    rm src/target/$device_model/$device_base_build/partition
-    mv src/target/$device_model/reboot4 src/target/$device_model/$device_base_build/partition
+    mv src/target/$device_model/reboot4 partition
     rm src/bin.tar
     mv src/bin4.tar src/bin.tar
     ipsw_prepare_config false true
@@ -5447,6 +5479,7 @@ ipsw_prepare_powder() {
     fi
     if [[ $device_type == "iPhone5"* && $ipsw_powder_5c70 != 1 ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of ramdiskI (jump ibot to ibob)
+        ipsw_powder_ramdiskH=1
         if [[ $device_target_vers == "9"* ]]; then
             ExtraArr[0]+="9"
         fi
@@ -5476,6 +5509,7 @@ ipsw_prepare_powder() {
     if [[ $device_actrec == 1 ]]; then
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
+    ipsw_prepare_partition_script
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs ${JBFiles[@]}
@@ -7423,29 +7457,17 @@ device_ramdisk() {
 device_ramdisk_setnvram() {
     log "Sending commands for setting NVRAM variables..."
     $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
-    local nvram="nvram boot-ramdisk="
     if [[ $rec == 2 ]]; then
         case $device_type in
-            iPhone3,2 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/0/disk.dmg";;
-            iPhone3,3 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/disk.dmg";;
-            iPad2,4   ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/disk.dmg";;
-            iPhone4,1 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg";;
-            iPhone5,* )
-                local selection=("iOS 7.1.x" "iOS 7.0.x")
-                input "Select this device's base version:"
-                select_option "${selection[@]}"
-                case $? in
-                    1 ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
-                    * ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/disk.dmg";;
-                esac
-            ;;
-            iPod5,1 | iPad3,[456] ) $ssh -p $ssh_port root@127.0.0.1 "$nvram/a/b/c/d/e/f/g/h/i/j/k/l/m/disk.dmg";;
-            iPad1,1 | iPod3,1 )
-                device_ramdisk_iosvers
-                if [[ $device_vers == "3"* ]]; then
-                    device_ramdisk_ios3exploit
+            iPad1,1 | iPhone3,1 | iPod3,1 )
+                if [[ $device_type != "iPhone3,1" ]]; then
+                    device_ramdisk_iosvers
+                    if [[ $device_vers == "3"* ]]; then
+                        device_ramdisk_ios3exploit
+                    fi
                 fi
             ;;
+            * ) $ssh -p $ssh_port root@127.0.0.1 "nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/0/1/2/3/4/5/6/7/8/9/A/B/C/disk.dmg";;
         esac
     elif [[ $device_type == "iPad1,1" ]]; then
         device_ramdisk_iosvers
@@ -8857,8 +8879,7 @@ menu_restore() {
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
             local text2="7.1.x"
             case $device_type in
-                iPhone5,[1234] | iPod5,1 ) text2="7.x";;
-                iPad3,[456] ) text2="7.0.x";;
+                iPad3,[456] | iPhone5,[1234] | iPod5,1 ) text2="7.x";;
             esac
             menu_items+=("Other (powdersn0w $text2 blobs)")
         fi
@@ -9235,11 +9256,11 @@ menu_ipsw() {
                 local hi
                 case $device_type in
                     iPhone3,1 ) lo=4.0; hi=7.1.1;;
-                    iPhone3,2 ) lo=6.0; hi=7.1.1;; # lol
+                    iPhone3,2 ) lo=6.0; hi=7.1.1;;
                     iPhone3,3 ) lo=4.2.6; hi=7.1.1;;
                     iPhone4,1 | iPad2,[123] ) lo=5.0; hi=9.3.5;;
-                    iPad2* | iPad3,[123]    ) lo=5.1; hi=9.3.5;;
-                    iPhone5,[12] | iPad3,*  ) lo=6.0; hi=9.3.5;;
+                    iPad2,* | iPad3,[123]   ) lo=5.1; hi=9.3.5;;
+                    iPhone5,[12] | iPad3,* | iPod5,1 ) lo=6.0; hi=9.3.5;;
                     iPhone5,[34] ) lo=7.0; hi=9.3.5;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
                     iPod3,1 ) lo=3.1.1; hi=5.1;;
@@ -9970,13 +9991,9 @@ menu_ipsw_browse() {
             local check_vers="7.1"
             local base_vers="7.1.x"
             case $device_type in
-                iPhone5,* | iPod5,1 )
+                iPad3,[456] | iPhone5,* | iPod5,1 )
                     check_vers="7"
                     base_vers="7.x"
-                ;;
-                iPad3,[456] )
-                    check_vers="7.0"
-                    base_vers="7.0.x"
                 ;;
                 iPhone3,* )
                     check_vers="7.1.2"

@@ -98,7 +98,7 @@
     - iPhone 4 GSM - iOS 4.0 to 7.1.1
     - iPhone 4 GSM Rev A - iOS 6.0 to 7.1.1
     - iPhone 4 CDMA - iOS 4.2.6 to 7.1.1
-    - iPhone 4S, 5, 5C, iPad 2 Rev A, iPad 4, iPod touch 5 - iOS 5.0 to 9.3.5
+    - iPhone 4S/5/5C, iPad 2 Rev A, iPad 3/4, iPod touch 5 - iOS 5.x/6.x to 9.3.5
     - iPad 1 - iOS 3.2 to 5.1
     - iPod touch 3 - iOS 3.1.1 to 5.1
     - Using powdersn0w requires iOS 7.1.x blobs for your device
@@ -143,7 +143,11 @@
     - [iPhone 5C 7.0.x exploit ramdisk is from m1zole](https://github.com/m1zole/untitled_pub)
     - [Other iPhone 5/5C ramdisks are from Ralph0045's iloader repo](https://github.com/Ralph0045/iloader)
     - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
-    - [iPhone3,2, iPad 4, and touch 5 7.0.x exploit ramdisks are from Pingzi610](https://github.com/Pingzi610/iloader)
+    - [The following exploit ramdisks are from Pingzi610](https://github.com/Pingzi610/iloader)
+        - iPhone3,2 7.1.2
+        - iPad 3 7.1.x
+        - iPad 4 7.0.x and 7.1.x
+        - iPod touch 5 7.0.x
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX; LukeZGD fork
 - [iPwnder32](https://github.com/dora2ios/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite) - dora2ios; LukeZGD fork
