@@ -2162,7 +2162,6 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
             local tool
-            local use_limera1n
 
             if [[ $device_skip_ibss == 1 ]]; then
                 warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
@@ -2242,7 +2241,7 @@ device_enter_mode() {
             if [[ $device_proc == 4 ]]; then
                 tool="primepwn"
                 if [[ $platform == "macos" && $device_type != "iPod2,1" ]]; then
-                    use_limera1n="--use-limera1n"
+                    tool="ipwnder_lite"
                 fi
             elif [[ $device_proc == 6 ]]; then
                 tool="litera1n"
@@ -2289,7 +2288,7 @@ device_enter_mode() {
                 log "gaster reset"
                 $gaster reset
             elif [[ $tool == "primepwn" ]]; then
-                $primepwn $use_limera1n
+                $primepwn
                 tool_pwned=$?
             fi
             sleep 1
@@ -4787,7 +4786,7 @@ download_sundancerepo() {
 
     log "Preparing SundanceInH2A"
 
-    # take care of older sundance folders/repos
+    # handle older sundance folders/repos
     [[ -d ${sundance}_macos ]] && mv ${sundance}_macos/ ${sundance}/
     [[ -d ${sundance}_linux ]] && rm -rf ${sundance}_linux/
 
@@ -4892,25 +4891,21 @@ ipsw_prepare_partition_script() {
         cp ../resources/firmware/src/target/iphone5/partition .
         return
     fi
-
     cp ../resources/firmware/src/partition .
+
     if [[ $device_base_vers == "5."* ]]; then
         local new_bs=64
         local new_value=$((new_bs*1024))
         new_bs="${new_bs}k"
         log "Changing exploit size to $new_bs for iOS 5"
-        sed -i.bak \
-            's|^Exploit_LastSector=.*|Exploit_LastSector="$(('"$new_value"'/$LogicalSector))"|' \
-            "$file" && rm -f "${file}.bak"
-        sed -i.bak \
-            's|^dd of=\$exploitDisk if=/exploit bs=.* count=1$|dd of=\$exploitDisk if=/exploit bs='"$new_bs"' count=1|' \
-            "$file" && rm -f "${file}.bak"
+        sed -i.bak 's|^Exploit_LastSector=.*|Exploit_LastSector="$(('"$new_value"'/$LogicalSector))"|' "$file"
+        sed -i.bak 's|^dd of=\$exploitDisk if=/exploit bs=.* count=1$|dd of=\$exploitDisk if=/exploit bs='"$new_bs"' count=1|' "$file"
     fi
+
     if [[ $device_base_vers == "5."* || $device_type == "iPhone3,1" ]]; then
         log "Removing nvram boot-ramdisk"
-        sed -i.bak \
-            '/^nvram boot-ramdisk/d' \
-            "$file" && rm -f "${file}.bak"
+        sed -i.bak '/^nvram boot-ramdisk/d' "$file"
+        rm "$file.bak"
     fi
 }
 
@@ -10547,8 +10542,8 @@ device_update_datetime() {
 }
 
 device_pair() {
-    if [[ $device_vers_maj == 7 ]]; then
-        warn "Pressing \"Trust\" for devices on iOS 7 can have connection issues (disconnect-reconnect)."
+    if [[ $device_vers_maj == 7 && $platform == "linux" ]]; then
+        warn "Pressing \"Trust\" for devices on iOS 7 can have connection issues on Linux (disconnect-reconnect)."
         print "* You may select \"Don't Trust\" on the prompt as a workaround, but that can limit some functionality."
     fi
     log "Attempting idevicepair"
