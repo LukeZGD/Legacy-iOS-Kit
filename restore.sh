@@ -2282,7 +2282,7 @@ device_enter_mode() {
             elif [[ $tool == "ipwnder_lite" ]]; then
                 mkdir -p image3 ../saved/image3
                 cp ../saved/image3/* image3/ 2>/dev/null
-                "$dir/ipwnder" -p
+                "$dir/ipwnder" -pv
                 tool_pwned=$?
                 cp image3/* ../saved/image3/ 2>/dev/null
                 log "gaster reset"
