@@ -1641,20 +1641,20 @@ device_get_info() {
             device_latest_build="16H88"
         ;;
         iPad5,* | iPhone[89],* | iPod9,1 )
-            device_latest_vers="15.8.7"
-            device_latest_build="19H411"
+            device_latest_vers="15.8.8"
+            device_latest_build="19H422"
         ;;
         iPad6,* | iPhone10,* )
-            device_latest_vers="16.7.15"
-            device_latest_build="20H380"
+            device_latest_vers="16.7.16"
+            device_latest_build="20H392"
         ;;
         iPad7,[123456] )
-            device_latest_vers="17.7.10"
-            device_latest_build="21H450"
+            device_latest_vers="17.7.11"
+            device_latest_build="21H461"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.8"
-            device_latest_build="22H352"
+            device_latest_vers="18.7.9"
+            device_latest_build="22H355"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
