@@ -1524,10 +1524,6 @@ device_get_info() {
         iPod9,1 ) device_model="n112";;
     esac
 
-    case $device_type in
-        iPhone[345],* | iPad1,1 | iPad2,4 | iPad3,* | iPod[35],1 ) device_canpowder=1;; # powdersn0w device support
-    esac
-
     device_fw_dir="../saved/firmware/$device_type"
     mkdir -p $device_fw_dir 2>/dev/null
     all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
@@ -1723,6 +1719,23 @@ device_get_info() {
     if [[ $device_argmode == "none" ]]; then
         device_mode="none"
         device_vers="Unknown"
+    fi
+
+    # powdersn0w device and base version support
+    case $device_type in
+        iPhone[345],* | iPad1,1 | iPad2,[4567] | iPad3,* | iPod[35],1 ) device_canpowder=1;;
+    esac
+    check_vers="7.1"
+    case $device_type in
+        iPad3,[456] | iPhone5,* | iPod5,1 ) check_vers="7";;
+        iPad2,[567] ) check_vers="7.0";;
+    esac
+    base_vers="$check_vers.x"
+    if [[ $device_proc == 4 ]]; then
+        check_vers="$device_latest_vers"
+        base_vers="$device_latest_vers"
+        device_base_vers="$device_latest_vers"
+        device_base_build="$device_latest_build"
     fi
 }
 
@@ -8872,11 +8885,7 @@ menu_restore() {
             iPad1,1 ) menu_items+=("6.1.3" "7.1.2");;
         esac
         if [[ $device_canpowder == 1 && $device_proc != 4 ]]; then
-            local text2="7.1.x"
-            case $device_type in
-                iPad3,[456] | iPhone5,[1234] | iPod5,1 ) text2="7.x";;
-            esac
-            menu_items+=("Other (powdersn0w $text2 blobs)")
+            menu_items+=("Other (powdersn0w $base_vers blobs)")
         fi
         if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
             menu_items+=("Other (Use SHSH Blobs)")
@@ -9215,10 +9224,6 @@ menu_ipsw() {
             fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
-            if [[ $device_proc == 4 ]]; then
-                device_base_vers="$device_latest_vers"
-                device_base_build="$device_latest_build"
-            fi
         elif [[ $1 == *"Tethered"* ]]; then
             device_target_tethered=1
         elif [[ -n $device_target_vers && -e "../$newpath.ipsw" ]]; then
@@ -9263,12 +9268,7 @@ menu_ipsw() {
                 print "* Any iOS version from $lo to $hi is supported"
             fi
             echo
-            local text2="(iOS 7.1.x)"
-            case $device_type in
-                iPhone3,[13] | iPad1,1 | iPod3,1 ) text2="(iOS $device_base_vers)";;
-                iPhone5,[1234] ) text2="(iOS 7.x)";;
-                iPad3,[456] ) text2="(iOS 7.0.x)";;
-            esac
+            local text2="(iOS $base_vers)"
             if [[ -n $ipsw_base_path ]]; then
                 print "* Selected Base IPSW $text2: $ipsw_base_path.ipsw"
                 print "* Base Version: $device_base_vers-$device_base_build"
@@ -9805,16 +9805,10 @@ menu_ipsw_browse() {
     [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw $HOME/Downloads/${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
         text="Base"
-        menu_items=()
-        case $device_proc in
-            4 ) scan="${device_type}_${device_base_vers}_${device_base_build}_Restore.ipsw";;
-            6 )
-                menu_items=($(ls ../${device_type_lower}_7.*restore.ipsw $HOME/Downloads/${device_type_lower}_7.*restore.ipsw 2>/dev/null))
-                scan="${device_type}_7.*Restore.ipsw"
-            ;;
-            * ) scan="${device_type}_7.1*Restore.ipsw";;
-        esac
+        scan="${device_type_lower}_${check_vers}*restore.ipsw"
         menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
+        scan="${device_type}_${check_vers}*Restore.ipsw"
+        menu_items+=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     elif [[ $1 == "special" ]]; then
         scan="${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw"
         menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
@@ -9983,31 +9977,12 @@ menu_ipsw_browse() {
             fi
         ;;
         "base" )
-            local check_vers="7.1"
-            local base_vers="7.1.x"
-            case $device_type in
-                iPad3,[456] | iPhone5,* | iPod5,1 )
-                    check_vers="7"
-                    base_vers="7.x"
-                ;;
-                iPhone3,* )
-                    check_vers="7.1.2"
-                    base_vers="$check_vers"
-                ;;
-                iPod4,1 )
-                    check_vers="6.1.6"
-                    base_vers="$check_vers"
-                ;;
-                iPad1,1 | iPod3,1 )
-                    check_vers="5.1.1"
-                    base_vers="$check_vers"
-                ;;
-                iPad2,[123] )
-                    # fourthree
-                    check_vers="4.3"
-                    base_vers="4.3.x"
-                ;;
-            esac
+            local check_vers="$check_vers"
+            local base_vers="$base_vers"
+            if [[ $ipsw_fourthree == 1 ]]; then
+                check_vers="4.3"
+                base_vers="4.3.x"
+            fi
             if [[ $device_base_vers != "$check_vers"* ]]; then
                 log "Selected IPSW is not for iOS $base_vers."
                 if [[ $device_proc == 4 ]]; then

@@ -145,6 +145,7 @@
     - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
     - [The following exploit ramdisks are from Pingzi610](https://github.com/Pingzi610/iloader)
         - iPhone3,2 7.1.2
+        - iPad mini 1 7.0.x
         - iPad 3 7.1.x
         - iPad 4 7.0.x and 7.1.x
         - iPod touch 5 7.0.x
