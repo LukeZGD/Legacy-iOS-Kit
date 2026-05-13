@@ -64,7 +64,7 @@ clean() {
     rm -rf "$(dirname "$0")/iP"*/
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 &&
           $no_finder != 1 ]]; then
-        killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
+        killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater 2>/dev/null
     fi
 }
 
@@ -104,7 +104,7 @@ clean_usbmuxd() {
     if [[ $(command -v systemctl) ]]; then
         $sudo systemctl restart usbmuxd 2>/dev/null
     elif [[ $(command -v rc-service) ]]; then
-        $sudo rc-service usbmuxd start
+        $sudo rc-service usbmuxd start 2>/dev/null
     fi
 }
 
@@ -506,7 +506,7 @@ set_tool_paths() {
                 if [[ $(command -v systemctl) ]]; then
                     $sudo systemctl stop usbmuxd 2>/dev/null
                 elif [[ $(command -v rc-service) ]]; then
-                    $sudo rc-service usbmuxd zap
+                    $sudo rc-service usbmuxd zap 2>/dev/null
                 else
                     $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
                 fi
@@ -2275,8 +2275,8 @@ device_enter_mode() {
                 print "* Include this in your log/screenshot for pwning assistance if needed."
             fi
 
-            print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
             log "Placing device to pwnDFU mode using $tool"
+            print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
             if [[ $tool == "gaster" ]]; then
                 $gaster pwn
                 tool_pwned=$?
