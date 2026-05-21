@@ -5916,9 +5916,7 @@ restore_idevicerestore() {
     fi
     echo
     log "Restoring done! Read the message below if any error has occurred:"
-    case $device_target_vers in
-        [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
-    esac
+    print "* For device activation, go to: Main Menu -> Attempt Activation"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
@@ -6045,6 +6043,7 @@ restore_futurerestore() {
     $futurerestore2 "${ExtraArr[@]}"
     opt=$?
     log "Restoring done! Read the message below if any error has occurred:"
+    print "* For device activation, go to: Main Menu -> Attempt Activation"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
@@ -6120,9 +6119,7 @@ restore_latest() {
         print "* Your problem may have already been addressed within the wiki page."
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
-    case $device_target_vers in
-        [1234]* ) print "* For device activation, go to: Main Menu -> Attempt Activation";;
-    esac
+    print "* For device activation, go to: Main Menu -> Attempt Activation"
 }
 
 restore_prepare_pwnrec64() {
@@ -11914,6 +11911,7 @@ device_uicache() {
 
 device_backup_create() {
     device_backup="../saved/backups/${device_ecid}_${device_type}/$(date +%Y-%m-%d-%H%M)"
+    device_pair
     mkdir -p $device_backup
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
@@ -11924,6 +11922,7 @@ device_backup_create() {
 
 device_backup_restore() {
     device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
+    device_pair
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     export LD_LIBRARY_PATH="$dir/lib"
