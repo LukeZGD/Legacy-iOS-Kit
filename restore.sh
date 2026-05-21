@@ -4732,7 +4732,11 @@ ipsw_prepare_specialios7() {
         "$dir/hfsplus" rootfs.dec extract $dsc
         log "Patching dsc, this will take a while"
         xxd dyld_shared_cache_armv7 > dyld_shared_cache_armv7.hex
-        git apply $patches/dyld_shared_cache_armv7.patch
+        if [[ $(head -n1 dyld_shared_cache_armv7.hex | grep 00000000) ]]; then
+            git apply $patches/dyld_shared_cache_armv7.patch
+        else
+            git apply $patches/dyld_shared_cache_armv7-oldxxd.patch
+        fi
         xxd -r dyld_shared_cache_armv7.hex > dyld_shared_cache_armv7.patched
         log "Target RootFS: replacing dsc, this will take a while"
         "$dir/hfsplus" rootfs.dec rm $dsc
@@ -6175,7 +6179,7 @@ device_buttons() {
     elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $platform_cpu == "AMD"* ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
-        [[ $device_proc == 6 ]] && warn "Selecting pwnDFU will use checkm8 which has low success rates on Linux for A6 devices."
+        [[ $device_proc == 6 ]] && warn "Selecting pwnDFU will use checkm8 which has lower success rates on Linux for A6 devices."
         if [[ $platform_cpu == "AMD"* ]]; then
             case $device_type in
                 iPhone3,* | iPad1,1 | iPod4,1 ) :;;
