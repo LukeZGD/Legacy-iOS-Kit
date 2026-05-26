@@ -1734,8 +1734,6 @@ device_get_info() {
     if [[ $device_proc == 4 ]]; then
         check_vers="$device_latest_vers"
         base_vers="$device_latest_vers"
-        device_base_vers="$device_latest_vers"
-        device_base_build="$device_latest_build"
     fi
 }
 
@@ -9225,6 +9223,10 @@ menu_ipsw() {
             fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
+            if [[ $device_proc == 4 ]]; then
+                device_base_vers="$device_latest_vers"
+                device_base_build="$device_latest_build"
+            fi
         elif [[ $1 == *"Tethered"* ]]; then
             device_target_tethered=1
         elif [[ -n $device_target_vers && -e "../$newpath.ipsw" ]]; then
