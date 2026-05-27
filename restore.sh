@@ -8625,10 +8625,12 @@ device_sideloader() {
     echo "$latest" > ../saved/Sideloader_version
     device_pair
     log "Launching Dadoum Sideloader"
-    log "Enter Apple ID details to continue."
-    print "* Your Apple ID and password will only be sent to Apple servers."
-    local apple_id
-    local apple_pass
+    local apple_id="$APPLE_ID_USER"
+    local apple_pass="$APPLE_ID_PWD"
+    if [[ -z $apple_id || -z $apple_pass ]]; then
+        log "Enter Apple ID details to continue."
+        print "* Your Apple ID and password will only be sent to Apple servers."
+    fi
     while [[ -z $apple_id ]]; do
         read -p "$(input 'Apple ID: ')" apple_id
     done
