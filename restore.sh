@@ -10417,7 +10417,7 @@ menu_usefulutilities() {
                             3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
                     ;;
-                    iPhone[23],* | iPod4,1 )
+                    iPad1,1 | iPhone[23],* | iPod4,1 )
                         case $device_vers in
                             3.1* | [456]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
@@ -10950,7 +10950,7 @@ device_activate() {
 device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
-    if [[ $device_type == "iPhone3,"* || $device_type == "iPod4,1" ]]; then
+    if [[ $device_proc == 4 && $device_type != "iPhone2,1" ]]; then
         type="iPhone2,1"
         case $device_vers in
             4.2.1 ) build="8C148a";;
