@@ -11639,7 +11639,8 @@ device_enter_ramdisk_bruteforce() {
     print "* Time estimates: 4-digit ~5-13 min | 5-digit ~50 min-2 h | 6-digit ~8-22 h"
     print "* The bruteforce binary (ARMv7) runs entirely on-device; no SSH connection needed."
     echo
-    if ! select_yesno "Create and boot bruteforce ramdisk?" 0; then
+    select_yesno "Create and boot bruteforce ramdisk?" 0
+    if [[ $? != 1 ]]; then
         return
     fi
     if (( device_proc >= 7 )); then
