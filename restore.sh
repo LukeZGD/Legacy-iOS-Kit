@@ -2397,8 +2397,8 @@ device_send_unpacked_ibss() {
 }
 
 ipwndfu_init() {
-    local ipwndfu_comm="6f5df8d84eaca33c2373118c68a25c72a797454f"
-    local ipwndfu_sha1="04cc31dd1ed79705a51e8aba7e1e805fbf6fe1f4"
+    local ipwndfu_comm="9ac2a4971534d6c3a41b2fc222c33711736a4e0f"
+    local ipwndfu_sha1="e2a9324825f47cd723fb3e07fb07e9b7b7a6d03e"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="$sudo"
