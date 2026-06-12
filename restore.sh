@@ -2397,16 +2397,16 @@ device_send_unpacked_ibss() {
 }
 
 ipwndfu_init() {
-    local ipwndfu_comm="9ac2a4971534d6c3a41b2fc222c33711736a4e0f"
-    local ipwndfu_sha1="e2a9324825f47cd723fb3e07fb07e9b7b7a6d03e"
+    local ipwndfu_comm="f8d8c34d91cf8c005f76b005c647b889db034cc4"
+    local ipwndfu_sha1="c3370f4afa82117968ef12f6ffa5ecfa391c1148"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="$sudo"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="1536e97dfbe22115693c3609d62014be62f974b6"
-        ipwndfu_sha1="8202c12ad4e302ef1eda305d6479cfb541c8179c"
+        ipwndfu_comm="f395a331bee8e91eafbd39f3cfdecf9aaf1d7d38"
+        ipwndfu_sha1="30644c70cc4681d8207f1a03ac54f755557764b0"
     fi
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
