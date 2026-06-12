@@ -2533,7 +2533,7 @@ device_fw_key_server() {
 
     log "Waiting for local server"
     while true; do
-        if $curl -fsS http://127.0.0.1:8888 >/dev/null 2>&1; then
+        if $curl -sS http://127.0.0.1:8888 >/dev/null 2>&1; then
             break
         fi
 
