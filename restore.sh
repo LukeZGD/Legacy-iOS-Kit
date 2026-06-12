@@ -2532,7 +2532,19 @@ device_fw_key_server() {
     httpserver_pid=$!
 
     log "Waiting for local server"
-    until [[ $($curl http://127.0.0.1:8888 2>/dev/null) ]]; do
+    while true; do
+        if $curl -fsS http://127.0.0.1:8888 >/dev/null 2>&1; then
+            break
+        fi
+
+        if ! kill -0 "$httpserver_pid" 2>/dev/null; then
+            log "wikiproxy exited before becoming ready"
+            wait "$httpserver_pid"
+            local check=$?
+            log "Error code: $check"
+            return $check
+        fi
+
         sleep 1
     done
 }
