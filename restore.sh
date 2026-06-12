@@ -566,10 +566,9 @@ set_tool_paths() {
             14 ) mac_name="Sonoma";;
             15 ) mac_name="Sequoia";;
             26 ) mac_name="Tahoe";;
+            27 ) mac_name="Golden Gate";;
         esac
-        if [[ -n $mac_name ]]; then
-            platform_ver="$(sysctl -n hw.model) - $mac_name $platform_ver"
-        fi
+        platform_ver="$(sysctl -n hw.model) - $mac_name $platform_ver"
         if [[ $(xcode-select -p 1>/dev/null; echo $?) != 0 ]]; then
             local error_msg="* You need to install Xcode Command Line Tools with this command: xcode-select --install"
             error_msg+=$'\n* If the above command does not work, try this: sudo xcode-select --reset'
@@ -2510,6 +2509,34 @@ file_download() {
     fi
 }
 
+device_fw_key_server() {
+    local venv="../saved/wikiproxy_venv"
+
+    if [[ ! -d $venv || ! -s $venv/bin/python3 ]]; then
+        log "Creating venv for wikiproxy"
+        python3 -m venv $venv
+    fi
+    if [[ ! -d $venv || ! -s $venv/bin/python3 ]]; then
+        warn "Creation of venv seems to have failed. wikiproxy will not run."
+        warn "If you do not have Python 3 installed, install it since wikiproxy requires it."
+        return
+    fi
+
+    if [[ ! -s $venv/bin/wikiproxy ]]; then
+        log "Installing wikiproxy using pip..."
+        $venv/bin/pip install git+https://github.com/m1stadev/wikiproxy.git
+    fi
+
+    log "Running wikiproxy..."
+    "$(cd .. && pwd)/saved/wikiproxy_venv/bin/wikiproxy" &
+    httpserver_pid=$!
+
+    log "Waiting for local server"
+    until [[ $($curl http://127.0.0.1:8888 2>/dev/null) ]]; do
+        sleep 1
+    done
+}
+
 device_fw_key_check() {
     # check and download keys for device_target_build, then set the variable device_fw_key (or device_fw_key_base)
     local key
@@ -2533,8 +2560,9 @@ device_fw_key_check() {
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path"
-        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
-                   "http://127.0.0.1:8888/firmware/$device_type/$build"
+        device_fw_key_server
+        local try=("http://127.0.0.1:8888/firmware/$device_type/$build"
+                   "https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
             log "Getting firmware keys for $device_type-$build: $i"
@@ -2551,6 +2579,8 @@ device_fw_key_check() {
             error "Failed to download firmware keys." "$error_msg"
         fi
         mv index.html "$keys_path/"
+        log "Stopping wikiproxy server"
+        kill $httpserver_pid && wait $httpserver_pid
     fi
 
     if [[ $1 == "base" ]]; then
@@ -2754,7 +2784,8 @@ ipsw_preference_set() {
     case $device_latest_vers in
         [76543]* ) ipsw_canjailbreak=1;;
     esac
-    if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]]; then
+    if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]] ||
+       [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]]; then
         ipsw_gasgauge_patch=1
     fi
     if [[ $device_target_tethered == 1 && $ipsw_gasgauge_patch == 1 &&
@@ -4048,8 +4079,8 @@ ipsw_prepare_32bit() {
             ;;
         esac
 
-        # temporary measure for a6 ios 6
-        if [[ $device_proc == 6 ]]; then
+        # temporary measure for a5/a6 ios 6
+        if [[ $device_proc == 5 || $device_proc == 6 ]]; then
             case $device_target_vers in
                 6.1.[34] ) JBFiles=("p0sixspwn.tar");;
                 6.*      ) JBFiles=("evasi0n6-untether.tar");;
@@ -5011,7 +5042,7 @@ ipsw_prepare_multipatch() {
                 $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
             done
         else
-            awk -i inplace '
+            awk '
                 /^[[:space:]]*<key>RestoreDeviceTree<\/key>/ { mode = "rdt" }
                 /^[[:space:]]*<key>RestoreKernelCache<\/key>/ { mode = "rkc" }
                 /^[[:space:]]*<key>Path<\/key>/ && mode {
@@ -5027,7 +5058,8 @@ ipsw_prepare_multipatch() {
                     mode = ""
                 }
                 { print }
-            ' BuildManifest.plist
+            ' BuildManifest.plist > BuildManifest.tmp
+            mv BuildManifest.tmp BuildManifest.plist
         fi
         if [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_vers != "$device_latest_vers" ]]; then
             ipsw_bbreplace exist
@@ -6389,7 +6421,7 @@ restore_prepare() {
                 restore_latest
             elif [[ $ipsw_jailbreak == 1 || -e "$ipsw_custom.ipsw" ]]; then
                 restore_idevicerestore
-            elif [[ $target_vers_maj == 10 ]]; then
+            elif [[ $target_vers_maj == 10 && $device_target_tethered == 1 ]]; then
                 restore_kuroutadori
             else
                 restore_futurerestore --use-pwndfu
@@ -7267,8 +7299,8 @@ device_ramdisk() {
                 ;;
             esac
 
-            # temporary measure for a6 ios 6
-            if [[ $device_proc == 6 ]]; then
+            # temporary measure for a5/a6 ios 6
+            if [[ $device_proc == 5 || $device_proc == 6 ]]; then
                 case $vers in
                     6.1.[34] ) untether="p0sixspwn.tar";;
                     6.*      ) untether="evasi0n6-untether.tar";;
@@ -9883,7 +9915,7 @@ menu_ipsw_browse() {
         pause
         return
     elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_tethered != 1 &&
-            $device_target_other != 1 && $device_target_powder != 1 ]]; then
+            $device_target_other != 1 && $device_target_powder != 1 && $1 != "justboot" ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
         print "* The only exception is for restoring with 32-bit iOS 10 blobs."
@@ -11246,7 +11278,7 @@ menu_justboot() {
                 vers="$device_rd_build"
             ;;
             "Select IPSW" )
-                menu_ipsw_browse
+                menu_ipsw_browse "justboot"
                 ipsw_justboot_path="$ipsw_path"
                 vers="$device_target_build"
                 device_rd_build="$vers"
@@ -11413,12 +11445,6 @@ device_justboot() {
     fi
     if [[ $main_argmode == "device_justboot" ]]; then
         cat "$device_rd_build" > "../saved/$device_type/justboot_${device_ecid}"
-    fi
-    if [[ $device_rd_build == "14"* ]]; then
-        device_enter_mode DFU
-        kuroutadori_init
-        kuroutadori_litera1n -T
-        return
     fi
     device_ramdisk justboot
 }
