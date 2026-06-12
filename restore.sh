@@ -2524,7 +2524,7 @@ device_fw_key_server() {
 
     if [[ ! -s $venv/bin/wikiproxy ]]; then
         log "Installing wikiproxy using pip..."
-        $venv/bin/pip install git+https://github.com/m1stadev/wikiproxy.git
+        $venv/bin/pip install git+https://github.com/LukeZGD/wikiproxy.git
     fi
 
     log "Running wikiproxy..."
