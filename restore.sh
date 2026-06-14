@@ -2568,14 +2568,17 @@ device_fw_key_check() {
     if [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "$build") != 1 ]]; then
         rm -f "$keys_path/index.html"
     fi
+    if (( device_proc < 7 )) && [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "RestoreRamdisk") != 1 ]]; then
+        rm -f "$keys_path/index.html"
+    fi
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path"
-        device_fw_key_server
-        local try=("http://127.0.0.1:8888/firmware/$device_type/$build"
-                   "https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
+        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
+                   "http://127.0.0.1:8888/firmware/$device_type/$build"
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
+            [[ $i == *"127.0.0.1:8888"* ]] && device_fw_key_server
             log "Getting firmware keys for $device_type-$build: $i"
             download_from_url "$i" index.html
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
@@ -2591,8 +2594,9 @@ device_fw_key_check() {
         fi
         mv index.html "$keys_path/"
         log "Stopping wikiproxy server"
-        kill $httpserver_pid && wait $httpserver_pid
+        [[ -n $httpserver_pid ]] && kill $httpserver_pid && wait $httpserver_pid
     fi
+    cp -R $device_fw_dir $device_fw_dir/$device_type # workaround for some futurerestore/libipatcher issue
 
     if [[ $1 == "base" ]]; then
         device_fw_key_base="$(cat $keys_path/index.html)"
