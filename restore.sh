@@ -2596,6 +2596,7 @@ device_fw_key_check() {
         log "Stopping wikiproxy server"
         [[ -n $httpserver_pid ]] && kill $httpserver_pid && wait $httpserver_pid
     fi
+    rm -rf $device_fw_dir/$device_type
     cp -R $device_fw_dir $device_fw_dir/$device_type # workaround for some futurerestore/libipatcher issue
 
     if [[ $1 == "base" ]]; then
