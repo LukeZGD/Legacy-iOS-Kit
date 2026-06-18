@@ -2596,8 +2596,10 @@ device_fw_key_check() {
         log "Stopping wikiproxy server"
         [[ -n $httpserver_pid ]] && kill $httpserver_pid && wait $httpserver_pid
     fi
-    rm -rf $device_fw_dir/$device_type
-    cp -R $device_fw_dir $device_fw_dir/$device_type # workaround for some futurerestore/libipatcher issue
+    # workaround for some futurerestore/libipatcher issue/feature
+    mkdir -p "$device_fw_dir/${device_model}ap/$build/" "$device_fw_dir/$device_type/$build/"
+    cp -R "$keys_path"/* "$device_fw_dir/${device_model}ap/$build/"
+    cp -R "$keys_path"/* "$device_fw_dir/$device_type/$build/"
 
     if [[ $1 == "base" ]]; then
         device_fw_key_base="$(cat $keys_path/index.html)"
@@ -5989,13 +5991,16 @@ restore_futurerestore() {
     if [[ $1 == "--use-pwndfu" ]]; then
         device_fw_key_check
         pushd ../saved >/dev/null
+        rm -rf "wikiproxy"
+        cp -R "firmware" "wikiproxy"
+        export LIP_PROXY_URL="http://127.0.0.1:$port"
         log "Starting local server for firmware keys"
         "$dir/darkhttpd" . --port $port &
         httpserver_pid=$!
         log "httpserver PID: $httpserver_pid"
         popd >/dev/null
         log "Waiting for local server"
-        until [[ $($curl http://127.0.0.1:$port 2>/dev/null) ]]; do
+        until [[ $($curl $LIP_PROXY_URL 2>/dev/null) ]]; do
             sleep 1
         done
     fi
