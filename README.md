@@ -136,7 +136,7 @@
     - [iPad 1 exploit ramdisk is from Ralph0045](https://github.com/Ralph0045/iBoot-5-Stuff)
     - [The following exploit ramdisks are from Pingzi610](https://github.com/Pingzi610/iloader)
         - iPhone3,2 7.1.2
-        - iPad mini 1 7.0.x
+        - iPad mini 1 7.0.x and 7.1.x
         - iPad 3 7.1.x
         - iPad 4 7.0.x and 7.1.x
         - iPod touch 5 7.0.x
@@ -158,7 +158,7 @@
 - [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only, optional)
 - [anisette-server](https://github.com/Dadoum/Provision) from Provision - Dadoum (used for sideloading on Linux)
 - [AltServer-Linux](https://github.com/NyaMisty/AltServer-Linux) - NyaMisty (used for sideloading on Linux)
-- [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on Linux and macOS)
+- [Plumesign](https://github.com/claration/Impactor) - claration (used for sideloading on Linux and macOS)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
 - [darkhttpd](https://github.com/emikulic/darkhttpd)
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)

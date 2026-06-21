@@ -8539,7 +8539,7 @@ menu_ipa() {
             print "* Your Apple ID and password will only be sent to Apple servers."
             print "* Make sure that your iOS device is connected to the Internet."
             if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
-                print "* There are 2 options for sideloading, \"using Sideloader\" is recommended."
+                print "* There are 2 options for sideloading, \"using Plumesign\" is recommended."
             fi
             print "* If you have AppSync installed, or are installing an app with a valid"
             print "  signature, go to App Management -> Install IPA (ideviceinstaller) or (appinst) instead."
@@ -8554,11 +8554,9 @@ menu_ipa() {
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
             if [[ $1 == "Sideload"* ]]; then
-                if [[ $platform == "linux" ]]; then
-                    menu_items+=("Install IPA using Sideloader")
-                    if (( device_vers_maj >= 9 )); then
-                        menu_items+=("Install IPA using AltServer")
-                    fi
+                menu_items+=("Install IPA using Plumesign")
+                if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
+                    menu_items+=("Install IPA using AltServer")
                 fi
             else
                 menu_items+=("Install IPA")
@@ -8569,7 +8567,7 @@ menu_ipa() {
             print "* Select IPA file to install"
         fi
         if [[ $1 == "Sideload"* ]]; then
-            menu_items+=("List and Revoke Certificate")
+            menu_items+=("Manage Plumesign Accounts")
         fi
         menu_items+=("Go Back")
         echo
@@ -8591,111 +8589,123 @@ menu_ipa() {
                 device_altserver
                 pause
             ;;
-            "Install IPA using Sideloader" )
-                device_sideloader
-                log "Checking for any existing certificates..."
-                local temp=$(mktemp)
-                $sideloader cert list | tee /dev/tty > "$temp"
-                local check=${PIPESTATUS[0]}
-                local revoke=$(grep -m1 "serial number" "$temp" | sed -E 's/.*number `//' | cut -c -32 | tr -dc '[:alnum:]')
-                if [[ $check != 0 ]]; then
-                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
+            "Install IPA using Plumesign" )
+                local config_file="$HOME/.config/PlumeImpactor/accounts.json"
+                local selected_account="$($jq -r '.selected_account' "$config_file")"
+                if [[ -z $selected_account ]]; then
+                    warn "No selected account. Cannot continue. Please add and select the account to use in Manage Plumesign Accounts."
                     pause
                     continue
                 fi
-                if [[ -n $revoke ]]; then
-                    log "Revoking existing certificate: $revoke"
-                    $sideloader cert revoke $revoke
+                log "Using the selected account: $selected_account"
+
+                device_pair
+                device_udid=$($ideviceinfo -s -k UniqueDeviceID)
+                [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
+                if [[ -z $device_udid ]]; then
+                    warn "Unable to get device UDID. Cannot continue."
+                    pause
+                    continue
                 fi
-                log "Installing IPA using Sideloader..."
-                $sideloader install "$ipa_path"
-                local ret=$?
-                local ipa_base="$(basename "$ipa_path")"
-                local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision" 2>/dev/null)"
-                if [[ -s "$ipa_check" && $platform == "linux" && $ret != 0 ]]; then
-                    log "Attempting Linux workaround..."
-                    pushd "/tmp/$ipa_base"
-                    zip -r0 Payload.ipa Payload
-                    popd
-                    device_pair
-                    $ideviceinstaller install "/tmp/$ipa_base/Payload.ipa"
-                fi
-                print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
-                print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
+                log "Registering device..."
+                device_plumesign account register-device --udid $device_udid --name $device_type
+
+                log "Extracting IPA..."
+                mkdir -p temp_ipa
+                file_extract "$ipa_path" temp_ipa
+
+                log "Signing using Plumesign..."
+                device_plumesign sign -p temp_ipa/Payload/*.app --apple-id --udid $device_udid
+
+                log "Creating signed IPA..."
+                pushd temp_ipa >/dev/null
+                zip -r0 ../temp.ipa *
+                popd >/dev/null
+                rm -rf temp_ipa
+
+                device_pair
+                log "Installing IPA using ideviceinstaller..."
+                $ideviceinstaller install temp.ipa
+                rm -f temp.ipa
                 print "* If you see an error regarding verification, make sure that your iOS device is connected to the Internet."
                 pause
             ;;
-            "List and Revoke Certificate" )
-                device_sideloader
-                log "Checking for any existing certificates..."
-                $sideloader cert list
-                if [[ $? != 0 ]]; then
-                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
-                    pause
-                    continue
-                fi
-                print "* Take note of the certificate serial number that you want to revoke."
-                local revoke
-                revoke=
-                while [[ -z $revoke ]]; do
-                    read -p "$(input 'Certificate Serial Number: ')" revoke
-                done
-                $sideloader cert revoke $revoke
-                print "* If you see no error, the certificate should be revoked successfully."
-                pause
-            ;;
+            "Manage Plumesign Accounts" ) menu_plumesign_accounts;;
             "Go Back" ) back=1;;
         esac
     done
 }
 
-device_sideloader() {
-    local arch="$platform_arch"
-    sideloader="sideloader-cli-"
-    if [[ $platform == "macos" && $arch == "arm64" ]]; then
-        arch="arm64-apple-macos"
-    elif [[ $platform == "macos" ]]; then
-        arch="x86_64-apple-darwin"
-    elif [[ $arch == "arm64" ]]; then
-        arch="aarch64-linux-gnu"
-    else
-        arch="x86_64-linux-gnu"
-    fi
-    sideloader+="$arch"
-    log "Checking for latest Sideloader"
-    download_from_url "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest" latest
-    local latest="$(cat latest | $jq -r ".tag_name")"
-    local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
-    log "Latest version: $latest, current version: $current"
-    if [[ $current != "$latest" ]]; then
-        rm -f ../saved/$sideloader
-    fi
-    if [[ ! -e ../saved/$sideloader ]]; then
-        file_download https://github.com/LukeZGD/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
-        file_extract_from_archive $sideloader.zip $sideloader
-        mv $sideloader ../saved
-    fi
-    echo "$latest" > ../saved/Sideloader_version
-    device_pair
-    log "Launching Dadoum Sideloader"
-    local apple_id="$APPLE_ID_USER"
-    local apple_pass="$APPLE_ID_PWD"
-    if [[ -z $apple_id || -z $apple_pass ]]; then
-        log "Enter Apple ID details to continue."
-        print "* Your Apple ID and password will only be sent to Apple servers."
-    fi
-    while [[ -z $apple_id ]]; do
-        read -p "$(input 'Apple ID: ')" apple_id
+menu_plumesign_accounts() {
+    local config_file="$HOME/.config/PlumeImpactor/accounts.json"
+    local accounts
+    local selected_account
+    local menu_items
+    local selected
+    local back
+
+    while [[ -z "$mode" && -z "$back" ]]; do
+        accounts=($($jq -r '.accounts | keys[]' "$config_file"))
+        selected_account="$($jq -r '.selected_account' "$config_file")"
+        menu_items=("Select Account" "Add Account" "Remove Account" "Go Back")
+        menu_print_info
+        print "* Selected Account: $selected_account"
+        echo
+        print " > Main Menu > Sideload IPA > Manage Plumesign Accounts"
+        input "Select an option:"
+        select_option "${menu_items[@]}"
+        selected="${menu_items[$?]}"
+        case $selected in
+            "Select Account" )
+                menu_items=()
+                for a in "${accounts[@]}"; do
+                    menu_items+=("$a")
+                done
+                menu_items+=("Go Back")
+                print "* Select account to use:"
+                select_option "${menu_items[@]}"
+                selected="${menu_items[$?]}"
+                case $selected in
+                    "Go Back" ) continue;;
+                    * ) device_plumesign account switch "$selected";;
+                esac
+            ;;
+            "Add Account" )
+                log "Enter Apple ID details to continue."
+                print "* Your Apple ID and password will only be sent to Apple servers."
+                while [[ -z $apple_id ]]; do
+                    read -p "$(input 'Apple ID: ')" apple_id
+                done
+                print "* Your password input will not be visible, but it is still being entered."
+                while [[ -z $apple_pass ]]; do
+                    read -s -p "$(input 'Password: ')" apple_pass
+                done
+                echo
+                log "Adding account using Plumesign..."
+                device_plumesign account login -u "$apple_id" -p "$apple_pass"
+                pause
+            ;;
+            "Remove Account" )
+                menu_items=()
+                for a in "${accounts[@]}"; do
+                    menu_items+=("$a")
+                done
+                menu_items+=("Go Back")
+                print "* Select account to remove:"
+                select_option "${menu_items[@]}"
+                selected="${menu_items[$?]}"
+                case $selected in
+                    "Go Back" ) continue;;
+                    * )
+                        device_plumesign account switch "$selected"
+                        device_plumesign account logout
+                        pause
+                    ;;
+                esac
+            ;;
+            "Go Back" ) back=1;;
+        esac
     done
-    export APPLE_ID_USER="$apple_id"
-    print "* Your password input may not be visible, but it is still being entered."
-    while [[ -z $apple_pass ]]; do
-        read -s -p "$(input 'Password: ')" apple_pass
-    done
-    echo
-    export APPLE_ID_PWD="$apple_pass"
-    chmod +x ../saved/$sideloader
-    sideloader="../saved/$sideloader"
 }
 
 menu_zenity_check() {
@@ -11623,22 +11633,52 @@ device_altserver() {
     export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
     altserver="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
     device_pair
-    log "Enter Apple ID details to continue."
-    print "* Your Apple ID and password will only be sent to Apple servers."
-    local apple_id
-    local apple_pass
+    local apple_id="$APPLE_ID_USER"
+    local apple_pass="$APPLE_ID_PWD"
+    if [[ -z $apple_id || -z $apple_pass ]]; then
+        log "Enter Apple ID details to continue."
+        print "* Your Apple ID and password will only be sent to Apple servers."
+    fi
     while [[ -z $apple_id ]]; do
         read -p "$(input 'Apple ID: ')" apple_id
     done
+    export APPLE_ID_USER="$apple_id"
     print "* Your password input may not be visible, but it is still being entered."
     while [[ -z $apple_pass ]]; do
         read -s -p "$(input 'Password: ')" apple_pass
     done
+    export APPLE_ID_PWD="$apple_pass"
     echo
     log "Running AltServer-Linux with given Apple ID details..."
     pushd ../saved >/dev/null
     $altserver -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
     popd >/dev/null
+}
+
+device_plumesign() {
+    local plumesign="plumesign-linux-$(uname -m)"
+    [[ $platform == "macos" ]] && plumesign="plumesign-macos-universal"
+
+    if [[ $plumesign_check_once != 1 ]]; then
+        log "Checking for latest plumesign"
+        download_from_url "https://api.github.com/repos/claration/Impactor/releases/latest" latest
+        local latest="$(cat latest | $jq -r ".tag_name")"
+        local current="$(cat ../saved/${plumesign}_version 2>/dev/null || echo "none")"
+        log "Latest version: $latest, current version: $current"
+        if [[ $current != "$latest" ]]; then
+            rm -f ../saved/$plumesign
+        fi
+        if [[ ! -e ../saved/$plumesign ]]; then
+            file_download https://github.com/claration/Impactor/releases/download/$latest/$plumesign $plumesign
+            mv $plumesign ../saved
+        fi
+        echo "$latest" > ../saved/${plumesign}_version
+        plumesign_check_once=1
+    fi
+
+    log "Running plumesign $1 $2"
+    chmod +x ../saved/$plumesign
+    ../saved/$plumesign "$@"
 }
 
 device_dumpapp() {
