@@ -8592,7 +8592,7 @@ menu_ipa() {
             "Install IPA using Plumesign" )
                 local config_file="$HOME/.config/PlumeImpactor/accounts.json"
                 local selected_account="$($jq -r '.selected_account' "$config_file")"
-                if [[ -z $selected_account ]]; then
+                if [[ -z $selected_account || $selected_account == "null" ]]; then
                     warn "No selected account. Cannot continue. Please add and select the account to use in Manage Plumesign Accounts."
                     pause
                     continue
@@ -8647,6 +8647,7 @@ menu_plumesign_accounts() {
     while [[ -z "$mode" && -z "$back" ]]; do
         accounts=($($jq -r '.accounts | keys[]' "$config_file"))
         selected_account="$($jq -r '.selected_account' "$config_file")"
+        [[ -z $selected_account ]] && selected_account="null"
         menu_items=("Select Account" "Add Account" "Remove Account" "Go Back")
         menu_print_info
         print "* Selected Account: $selected_account"
@@ -8671,6 +8672,8 @@ menu_plumesign_accounts() {
                 esac
             ;;
             "Add Account" )
+                local apple_id=
+                local apple_pass=
                 log "Enter Apple ID details to continue."
                 print "* Your Apple ID and password will only be sent to Apple servers."
                 while [[ -z $apple_id ]]; do
