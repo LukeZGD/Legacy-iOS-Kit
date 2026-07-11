@@ -12259,7 +12259,7 @@ main() {
         local timeout="-w3"
         [[ $platform == "macos" ]] && timeout="-t3"
         for i in "${try[@]}"; do
-            ping -c1 $timeout $i | sed -n '1,2p'
+            sudo ping -c1 $timeout $i | sed -n '1,2p'
             check=${PIPESTATUS[0]}
             if [[ $check == 0 ]]; then
                 break
