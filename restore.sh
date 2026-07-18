@@ -2800,7 +2800,11 @@ patch_ibec() {
     log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $device_proc == 4 || -n $device_rd_build || $device_type == "iPad3,1" ]]; then
+    if [[ $mode == "device_justboot_sundanceinh2a" ]]; then
+        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --debug --ticket -b "pio-error=0 -v amfi=0xff launchctl_enforce_codesign=0"
+        "$dir/img3maker" -f $name.patched -o ibec -t ibec
+        return
+    elif [[ $device_proc == 4 || -n $device_rd_build || $device_type == "iPad3,1" ]]; then
         "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     else
         $bspatch $name.dec $name.patched "../resources/patch/odysseus/$download_targetfile.patch"
@@ -4711,9 +4715,13 @@ ipsw_prepare_specialios7() {
     "$dir/xpwntool" iBSS.patched $ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu -t iBSS.orig
 
     if [[ $device_type == "iPad1,1" ]]; then
-        log "Patch iBEC"
+        log "Patch restore iBEC"
         $bspatch iBEC.dec iBEC.patched $patches/iBEC.k48ap.RELEASE.patch
         "$dir/xpwntool" iBEC.patched $ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu -t iBEC.orig
+        local bootargs="pio-error=0 -v amfi=0xff launchctl_enforce_codesign=0"
+        log "Patch tether boot iBEC"
+        "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug --ticket -b "$bootargs"
+        "$dir/img3maker" -f iBEC.patched -o $saves/pwnediBEC.k48.dfu -t ibec
     else # iPod4,1
         log "Patch restore iBEC"
         "$dir/iBoot32Patcher" iBEC.dec iBEC.patched --rsa --debug --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1"
@@ -4920,9 +4928,7 @@ ipsw_prepare_specialios7() {
     zip -r0 $ipsw_custom.ipsw *
     popd >/dev/null
 
-    if [[ $device_type == "iPod4,1" ]]; then
-        echo "device_target_build=$device_target_build" > $saves/$device_ecid
-    fi
+    echo "device_target_build=$device_target_build" > $saves/$device_ecid
 }
 
 download_sundancerepo() {
@@ -11455,9 +11461,11 @@ menu_justboot() {
             menu_items+=("Boot History (All Devices)")
         fi
         menu_items+=("Custom Bootargs")
-        if [[ $device_type == "iPod4,1" ]]; then
-            menu_items+=("(*) iOS 7.1.2")
-        fi
+        case $device_type in
+            iPod4,1 ) menu_items+=("(*) iOS 7.1.2");;
+            iPad1,1 ) menu_items+=("(*) iOS 6.x" "(*) iOS 7.1.2");;
+            iPod3,1 ) menu_items+=("(*) iOS 6.x");;
+        esac
         if [[ -n $vers ]]; then
             menu_items+=("(*) Just Boot")
         fi
@@ -11525,14 +11533,19 @@ menu_justboot() {
             "(*) Just Boot" )
                 echo "$vers" > $recent
                 mode="device_justboot"
-                if [[ $device_type == "iPod4,1" && $vers == "11"* ]]; then
-                    mode="device_justboot_specialios7"
-                fi
+                case $device_type in
+                    iPod4,1 ) [[ $vers == "11"* ]] && mode="device_justboot_specialios7";;
+                    iPad1,1 | iPod3,1 )
+                        [[ $vers == "11"* ]] && mode="device_justboot_specialios7"
+                        [[ $vers == "10"* ]] && mode="device_justboot_sundanceinh2a"
+                    ;;
+                esac
             ;;
             "(*) iOS 7.1.2" )
                 echo "11D257" > $recent
                 mode="device_justboot_specialios7"
             ;;
+            "(*) iOS 6.x" ) mode="device_justboot_sundanceinh2a";;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Go Back" ) back=1;;
         esac
@@ -11675,11 +11688,19 @@ device_justboot() {
 device_justboot_specialios7() {
     local patches="../resources/patch/touch4-ios7"
     local saves="../saved/touch4-ios7"
+    local ipad1ios7="../saved/ipad1-ios7/repo"
     if [[ -d "../saved/$device_type/touch4-ios7" ]]; then
         mv "../saved/$device_type/touch4-ios7" $saves
     fi
     if [[ ! -s $saves/$device_ecid ]]; then
         error "Cannot find device file for $device_ecid in saved. Need to restore/create an IPSW for iOS 7.1.2 first."
+    fi
+
+    local ibec="$saves/pwnediBEC.dfu"
+    local dt="$patches/DeviceTree.n81ap.img3"
+    if [[ $device_type == "iPad1,1" ]]; then
+        ibec="$saves/pwnediBEC.k48.dfu"
+        dt="$ipad1ios7/artifacts/DeviceTree.k48ap.img3"
     fi
 
     source $saves/$device_ecid
@@ -11693,13 +11714,57 @@ device_justboot_specialios7() {
     $irecovery -f pwnediBSS.dfu
     sleep 1
     log "Sending iBEC..."
-    $irecovery -f $saves/pwnediBEC.dfu
+    $irecovery -f $ibec
     device_find_mode Recovery
     log "devicetree"
-    $irecovery -f $patches/DeviceTree.n81ap.img3
+    $irecovery -f $dt
     $irecovery -c devicetree
     log "kernelcache"
     $irecovery -f $saves/$device_target_build/kernelcache
+    $irecovery -c bootx
+    log "Device should now boot."
+}
+
+device_justboot_sundanceinh2a() {
+    local kc="../saved/$device_type/ramdisk_9B206/kernelcache.release.$device_model"
+    # iPod3,1 5.1.1
+    local kc_iv="5d618983129f3b121ad032dc0a170ea9"
+    local kc_key="835138e000a3d9425cc1d0d57cacd55ea6a7e46a42fac59dd55f98cb80240fe3"
+    if [[ $device_type == "iPad1,1" ]]; then
+        # iPad1,1 5.1.1
+        kc_iv="140984858e5c7fe245a43596f5370a0e"
+        kc_key="fc6733108c9bd4b2179257102f81998089437c2c58cbdb8752fd40a442bd9434"
+    fi
+
+    download_sundancerepo
+    device_enter_mode pwnDFU
+
+    device_rd_build=
+    patch_ibss
+    patch_ibec
+    log "Preparing devicetree"
+    "$dir/img3maker" -f $sundance/artifacts/DeviceTree.${device_model}ap.bin -o devicetree -t dtre
+    log "Preparing kernelcache"
+    if [[ -s "$kc" ]]; then
+        cp "$kc" .
+    else
+        mkdir -p "$(dirname "$kc")"
+        ipsw_get_url 9B206
+        "$dir/pzb" -g kernelcache.release.$device_model -o kernelcache.release.$device_model "$ipsw_url"
+        cp kernelcache.release.$device_model "$kc"
+    fi
+    "$dir/xpwntool" $sundance/artifacts/kernelcache.${device_model}ap.bin kernelcache -t kernelcache.release.k48 -iv $kc_iv -k $kc_key
+
+    log "Sending iBSS..."
+    $irecovery -f pwnediBSS.dfu
+    sleep 1
+    log "Sending iBEC..."
+    $irecovery -f ibec
+    log "devicetree"
+    $irecovery -f devicetree
+    $irecovery -c devicetree
+    log "kernelcache"
+    $irecovery -f kernelcache
     $irecovery -c bootx
     log "Device should now boot."
 }
