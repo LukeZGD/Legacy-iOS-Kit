@@ -3955,7 +3955,7 @@ ipsw_prepare_bundle() {
         esac
         # dummy "ios" file
         printf "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist
-        [[ $ipsw_jailbreak == 1 && $ipsw_not_aquila7 != 1 ]] && printf "%s" "${vers:0:1}" >> "$NewPlist"
+        [[ $ipsw_jailbreak == 1 ]] && printf "%s" "${vers:0:1}" >> "$NewPlist"
         echo "</string></dict>" >> $NewPlist
     elif [[ $ipsw_prepare_usepowder == 1 ]]; then
         echo "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
@@ -4121,11 +4121,8 @@ ipsw_prepare_32bit() {
             return
         ;;
     esac
-    # temporary measure for a5x/a6x ios 7
-    if [[ $ipsw_jailbreak == 1 && $device_type == "iPad3,"* && $device_target_vers == "7."* ]]; then
-        ipsw_not_aquila7=1
     # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
-    elif [[ $ipsw_jailbreak == 1 && $device_proc == 5 ]]; then
+    if [[ $ipsw_jailbreak == 1 && $device_proc == 5 ]]; then
         case $device_target_vers in
             8.[012]* )
                 ipsw_everuntether=1
@@ -4142,7 +4139,7 @@ ipsw_prepare_32bit() {
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
             ipsw_prepare_rebootsh
-        elif [[ $device_target_vers == "7."* && $ipsw_not_aquila7 != 1 ]]; then
+        elif [[ $device_target_vers == "7."* ]]; then
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar .
@@ -4181,25 +4178,6 @@ ipsw_prepare_32bit() {
             ;;
         esac
 
-        # temporary measure for a5x/a6x ios 7
-        if [[ $ipsw_not_aquila7 == 1 ]]; then
-            case $device_target_vers in
-                7.1* ) JBFiles=("panguaxe.tar");;
-                7.0* ) JBFiles=("evasi0n7-untether.tar");;
-            esac
-        fi
-        # temporary measure for a5/a6 ios 6
-        if [[ $device_proc == 5 || $device_proc == 6 ]]; then
-            case $device_target_vers in
-                6.1.[34] ) JBFiles=("p0sixspwn.tar");;
-                6.*      ) JBFiles=("evasi0n6-untether.tar");;
-            esac
-        fi
-        # temporary measure for a5 ios 5
-        if [[ $device_proc == 5 && $device_target_vers == "5."* ]]; then
-            JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar")
-        fi
-
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
         fi
@@ -4219,11 +4197,6 @@ ipsw_prepare_32bit() {
             gzip -d openssh.tar.gz
             gzip -d openssl.tar.gz
             JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
-        fi
-
-        # temporary measure for a5 ios 5
-        if [[ $device_proc == 5 && $device_target_vers == "5."* && $device_target_tethered == 1 ]]; then
-            JBFiles+=("$jelbrek/g1lbertJB/install.tar")
         fi
 
         case $device_target_vers in
@@ -5654,11 +5627,6 @@ ipsw_prepare_powder() {
     fi
     ipsw_prepare_usepowder=1
 
-    # temporary measure for a5x/a6x ios 7
-    if [[ $ipsw_jailbreak == 1 && $device_type == "iPad3,"* && $device_target_vers == "7."* ]]; then
-        ipsw_not_aquila7=1
-    fi
-
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
     ipsw_prepare_logos_convert
@@ -5675,18 +5643,6 @@ ipsw_prepare_powder() {
             7.* ) JBFiles=("aquila_7.tar");;
             5.* ) JBFiles=("aquila_5.tar");;
         esac
-
-        # temporary measure for a5x/a6x ios 7
-        if [[ $ipsw_not_aquila7 == 1 ]]; then
-            case $device_target_vers in
-                7.1* ) JBFiles=("panguaxe.tar");;
-                7.0* ) JBFiles=("evasi0n7-untether.tar");;
-            esac
-        fi
-        # temporary measure for a5 ios 5
-        if [[ $device_proc == 5 && $device_target_vers == "5."* ]]; then
-            JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar")
-        fi
 
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
@@ -7510,26 +7466,6 @@ device_ramdisk() {
                 ;;
             esac
 
-            # temporary measure for a5x/a6x ios 7
-            if [[ $device_type == "iPad3,"* && $vers == "7."* ]]; then
-                ipsw_not_aquila7=1
-                case $vers in
-                    7.1* ) untether="panguaxe.tar";;
-                    7.0* ) untether="evasi0n7-untether.tar";;
-                esac
-            fi
-            # temporary measure for a5/a6 ios 6
-            if [[ $device_proc == 5 || $device_proc == 6 ]]; then
-                case $vers in
-                    6.1.[34] ) untether="p0sixspwn.tar";;
-                    6.*      ) untether="evasi0n6-untether.tar";;
-                esac
-            fi
-            # temporary measure for a5 ios 5
-            if [[ $device_proc == 5 && $vers == "5."* ]]; then
-                untether="g1lbertJB/${device_type}_${build}.tar"
-            fi
-
             # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
             if [[ $device_proc == 5 ]]; then
                 case $vers in
@@ -7567,11 +7503,6 @@ device_ramdisk() {
                 case $vers in
                     4.2.[8761] | 4.[10]* | 3.* ) untether="${device_type}_${build}.tar";; # remove folder name after sending tar
                 esac
-
-                # temporary measure for a5 ios 5
-                if [[ $device_proc == 5 && $vers == "5."* ]]; then
-                    untether="${device_type}_${build}.tar"
-                fi
 
                 # 3.1.3–4.1 untether must be extracted before data partition mount
                 case $vers in
@@ -7661,7 +7592,7 @@ device_ramdisk() {
             esac
 
             # final setup for ios 8.x daibutsu, and/or reboot
-            if [[ $vers == "8."* && $ipsw_everuntether != 1 ]] || [[ $vers == "7."* && $ipsw_not_aquila7 != 1 ]]; then
+            if [[ $vers == "8."* && $ipsw_everuntether != 1 ]] || [[ $vers == "7."* ]]; then
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
