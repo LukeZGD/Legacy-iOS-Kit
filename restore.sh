@@ -5147,10 +5147,12 @@ ipsw_prepare_partition_script() {
 }
 
 ipsw_prepare_reboot4() {
-    # prepare reboot4 binary: copy over the exploit ramdisk to it
-    cp src/reboot4 partition
-    dd if=/dev/zero of=partition bs=1 seek=$((0x815C)) count=$((512*1024)) conv=notrunc status=none
-    dd if=$device_powder_exploit of=partition bs=1 seek=$((0x815C)) conv=notrunc status=none
+    # prepare reboot4 binary: https://gist.github.com/LukeZGD/2d4a2416775f88c8c9fd20e2e12179b7
+    local reboot4="src/reboot4_nbr" # no boot-ramdisk
+    case $device_type in
+        iPad2,[123] | iPod4,1 ) reboot4="src/reboot4" # with boot-ramdisk
+    esac
+    cp $reboot4 partition
 }
 
 ipsw_prepare_multipatch() {
@@ -7691,7 +7693,10 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
+            $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
+            if (( device_proc < 7 )); then
+                $ssh -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
+            fi
             log "Done. Your device should reboot now"
             return
         ;;
