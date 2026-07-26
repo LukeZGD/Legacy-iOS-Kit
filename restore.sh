@@ -929,11 +929,11 @@ device_entry() {
 
 device_entry_s5l8900() {
     device_argmode="entry"
-    log "Found an S5L8900 device in $device_mode mode."
+    log "Found a device in $device_mode mode."
     print "* Device Type Option"
     print "* Select your device in the options below. Make sure to select correctly."
-    local selection=("iPhone 2G" "iPod touch 1")
-    [[ $device_protocol != 1 ]] && selection+=("iPhone 3G")
+    local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
+    [[ -n $device_protocol ]] && selection+=("iPod touch 2")
     input "Select your option:"
     select_option "${selection[@]}"
     local opt2="${selection[$?]}"
@@ -941,6 +941,7 @@ device_entry_s5l8900() {
         "iPhone 2G"    ) device_type="iPhone1,1";;
         "iPhone 3G"    ) device_type="iPhone1,2";;
         "iPod touch 1" ) device_type="iPod1,1";;
+        "iPod touch 2" ) device_type="iPod2,1";;
     esac
     device_model=
 }
@@ -1292,7 +1293,7 @@ device_get_info() {
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
-            if [[ $device_mode != "DFU" && -z $device_argmode && $device_model == "m68ap" ]]; then
+            if [[ $device_mode != "DFU" && -z $device_type && $device_model == "m68ap" ]]; then
                 device_entry_s5l8900
             fi
             if [[ $device_mode == "Recovery" ]]; then
@@ -1322,7 +1323,7 @@ device_get_info() {
         "Normal" )
             if [[ -n $device_argmode ]]; then
                 device_entry
-            else
+            elif [[ -z $device_type ]]; then
                 device_type=$($ideviceinfo -s -k ProductType)
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
             fi
@@ -1346,7 +1347,7 @@ device_get_info() {
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_get_paired_info
                 device_protocol=$($ideviceinfo -s -k ProtocolVersion)
-                if [[ $device_protocol == 1 ]]; then
+                if [[ $device_protocol == 1 && -z $device_type ]]; then
                     device_entry_s5l8900
                 fi
             fi
@@ -1736,9 +1737,9 @@ device_get_info() {
     case $device_type in
         iPhone[345],* | iPad1,1 | iPad[23],* | iPod[35],1 ) device_can_powder=1;;
     esac
-    check_vers="7.1"
+    check_vers="7"
     case $device_type in
-        iPad2,[123567] | iPad3,[456] | iPhone5,* | iPod5,1 ) check_vers="7";;
+        iPad2,4 | iPad3,[123] | iPhone4,1 ) check_vers="7.1";;
     esac
     base_vers="$check_vers.x"
     if [[ $device_proc == 4 ]]; then
@@ -3090,7 +3091,7 @@ shsh_save() {
             fi
             mv BuildManifest.plist $buildmanifest
         fi
-    elif [[ $device_base_drav6 == 1 && $device_proc == 5 ]]; then
+    elif [[ $device_target_drav6 == 1 && $device_proc == 5 ]]; then
         buildmanifest="../resources/manifest/BuildManifest_${device_type}_${version}.plist"
     fi
     shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-*_${apnonce}*.shsh*
@@ -4459,10 +4460,6 @@ patch_iboot() {
         # ibec
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
-    # elif [[ $device_base_drav6 == 1 ]]; then
-    #     # ibox
-    #     echo "0000010: 786F" | xxd -r - iBoot
-    #     echo "0000020: 786F" | xxd -r - iBoot
     elif [[ $device_type != "iPhone2,1" ]]; then
         # ibob
         echo "0000010: 626F" | xxd -r - iBoot
@@ -4794,7 +4791,7 @@ ipsw_prepare_specialios7() {
         "$dir/img3maker" -f iBEC.patched -o $saves/pwnediBEC.dfu -t ibec
         log "Patch iBoot"
         "$dir/iBoot32Patcher" iBoot.dec iBoot.patched --rsa --debug --boot-partition --boot-ramdisk -b "$bootargs"
-        "$dir/img3maker" -f iBoot.patched -o $all_flash2/iBoot2.img3 -t ibob # ibox
+        "$dir/img3maker" -f iBoot.patched -o $all_flash2/iBoot2.img3 -t ibob
         echo "iBoot2.img3" >> $all_flash2/manifest
     fi
 
@@ -5139,7 +5136,7 @@ ipsw_prepare_partition_script() {
     fi
 
     if [[ $device_base_vers == "5."* || $device_type == "iPhone3,1" ]] ||
-       [[ $device_base_drav6 == 1 && $device_type == "iPhone4,1" ]]; then
+       [[ $device_target_drav6 == 1 && $device_type == "iPhone4,1" ]]; then
         log "Removing nvram boot-ramdisk"
         sed -i.bak '/^nvram boot-ramdisk/d' "$file"
         rm "$file.bak"
@@ -6792,7 +6789,7 @@ ipsw_prepare() {
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_powder == 1 ]]; then
-                [[ $device_base_drav6 == 1 ]] && shsh_save version $device_base_vers
+                [[ $device_target_drav6 == 1 ]] && shsh_save version $device_base_vers
                 case $device_target_vers in
                     4.3* ) ipsw_prepare_ios4powder;;
                     * ) ipsw_prepare_powder;;
@@ -8257,10 +8254,9 @@ shsh_convert_onboard() {
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc < 7 )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
-        # remove ibob/ibox for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62/78
+        # remove ibob for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62
         local blob=$(xxd -p dump.raw | tr -d '\n')
         local bobi="626f6269"
-        local xobi="786f6269"
         local blli="626c6c69"
         local search=
         local desc=
@@ -8268,9 +8264,6 @@ shsh_convert_onboard() {
         if [[ $blob == *"$bobi"* ]]; then
             search=$bobi
             desc="ibob"
-        elif [[ $blob == *"$xobi"* ]]; then
-            search=$xobi
-            desc="ibox"
         fi
 
         if [[ -n $search ]]; then
@@ -9526,7 +9519,7 @@ menu_ipsw() {
             fi
         elif [[ $1 == *"DRA v6"* ]]; then
             device_target_powder=1
-            device_base_drav6=1
+            device_target_drav6=1
             case $device_type in
                 iPhone2,1 | iPod4,1 )
                     device_base_vers="$device_latest_vers"
@@ -9581,9 +9574,6 @@ menu_ipsw() {
                     iPod4,1 ) lo=4.1; hi=6.1.5;;
                 esac
                 print "* Any iOS version from $lo to $hi is supported"
-            fi
-            if [[ $device_proc == 5 && $device_base_drav6 == 1 ]]; then
-                warn "DRA v6 support for iPad 2 is experimental and may not work on all devices and target versions."
             fi
             echo
             local text2="(iOS $base_vers)"
@@ -9847,7 +9837,7 @@ menu_ipsw() {
                 device_target_powder=
                 device_target_tethered=
                 device_bootargs=
-                device_base_drav6=
+                device_target_drav6=
             ;;
         esac
     done
@@ -9970,9 +9960,6 @@ ipsw_print_warnings() {
             8*  ) [[ $device_type == "iPhone3,"* || $device_proc == 5 ]] && warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
             7[CDE]* ) warn "Not all devices support iOS 3 versions. It may not restore/boot properly";;
         esac
-        if [[ $device_proc == 5 && $device_target_vers == "4."* ]]; then
-            warn "You may need checkm8-a5 to manually enable the exploit after the restore to iOS 4.3.x."
-        fi
         return
     fi
     case $device_type in
@@ -10068,7 +10055,7 @@ ipsw_custom_set() {
         ipsw_custom+="P"
         if [[ $device_base_vers == "7.0"* ]]; then
             ipsw_custom+="0"
-        elif [[ $device_base_drav6 == 1 ]]; then
+        elif [[ $device_target_drav6 == 1 ]]; then
             ipsw_custom+="6"
         fi
     fi
@@ -10123,7 +10110,7 @@ menu_ipsw_browse() {
     if [[ $ipsw_fourthree == 1 ]]; then
         check_vers="4.3"
         base_vers="4.3.x"
-    elif [[ $device_base_drav6 == 1 ]]; then
+    elif [[ $device_target_drav6 == 1 ]]; then
         check_vers="$device_base_vers"
         base_vers="$device_base_vers"
     fi
