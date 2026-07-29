@@ -5099,14 +5099,16 @@ ipsw_prepare_sundanceinh2a() {
 ipsw_prepare_powder_exploit() {
     local hw="$device_model"
     local base_build="11D257"
-    case $device_type in
-        iPhone5,[12] ) hw="iphone5";;
-        iPhone5,[34] ) hw="iphone5b";;
-        iPad2,[123]  ) hw="ipad2";;
-        iPad2,[567]  ) hw="ipad2b";;
-        iPad3,[123]  ) hw="ipad3";;
-        iPad3,[456]  ) hw="ipad3b";;
-    esac
+    if [[ $device_target_drav6 != 1 ]]; then
+        case $device_type in
+            iPhone5,[12] ) hw="iphone5";;
+            iPhone5,[34] ) hw="iphone5b";;
+            iPad2,[123]  ) hw="ipad2";;
+            iPad2,[567]  ) hw="ipad2b";;
+            iPad3,[123]  ) hw="ipad3";;
+            iPad3,[456]  ) hw="ipad3b";;
+        esac
+    fi
     case $device_base_build in
         11[AB]* ) base_build="11B554a";;
         10*     ) base_build="$device_base_build";;
@@ -5121,7 +5123,7 @@ ipsw_prepare_partition_script() {
     log "Preparing partition script"
     if [[ $ipsw_powder_ramdiskH == 1 ]]; then
         log "Using ramdiskH partition script"
-        cp ../resources/firmware/src/target/iphone5/partition .
+        cp ../resources/firmware/src/partition_iphone5 partition
         return
     fi
     cp ../resources/firmware/src/partition .
@@ -5346,13 +5348,8 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
-    if [[ $device_target_vers == "3."* ]]; then
-        log "3.x options.plist"
-        cp ../resources/firmware/src/target/${device_model}/options.plist $options_plist
-    else
-        log "Extract options.plist from $device_target_vers IPSW"
-        "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
-    fi
+    log "Extract options.plist from $device_target_vers IPSW"
+    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
 
     log "Modify options.plist"
     cat $options_plist | sed '$d' | sed '$d' > options2.plist # remove </dict> and </plist>
