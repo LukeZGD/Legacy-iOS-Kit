@@ -123,7 +123,7 @@
 - **macOS** 10.11 and newer
     - macOS 12.6 and newer recommended
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
-- [**Fedora**](https://getfedora.org/) 40 and newer, [Atomic Desktop](https://fedoraproject.org/atomic-desktops/) (Silverblue, Kinoite, [Bazzite](https://bazzite.gg/), etc.) also supported
+- [**Fedora**](https://fedoraproject.org/) 40 and newer, [Atomic Desktop](https://fedoraproject.org/atomic-desktops/) (Silverblue, Kinoite, [Bazzite](https://bazzite.gg/), etc.) also supported
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [CachyOS](https://cachyos.org) and [SteamOS](https://store.steampowered.com/steamos/)
 - Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
@@ -167,7 +167,7 @@
 - [darkhttpd](https://github.com/emikulic/darkhttpd)
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macos arm64)
+    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macOS arm64)
     - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices (mostly not used though)
     - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
 - [iBoot32Patcher](https://github.com/Merculous/iBoot32Patcher/) - Merculous fork
