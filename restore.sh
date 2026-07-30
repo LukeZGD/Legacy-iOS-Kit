@@ -7971,7 +7971,8 @@ menu_ramdisk() {
                     log "Downloading files for latest TrollStore"
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
-                    mv TrollStore.tar PersistenceHelper_Embedded ../saved
+                    cp PersistenceHelper_Embedded ../saved/
+                    cp TrollStore.tar ../saved/
                     echo "$latest" > ../saved/TrollStore_version
                 fi
                 tar -xf TrollStore.tar
