@@ -8306,9 +8306,10 @@ shsh_save_cydia() {
         ((i++))
     done
     for build in ${builds[@]}; do
-        if [[ $build == "10"* && $build != "10B329" && $build != "10B350" ]]; then
-            continue
-        fi
+        case $build in
+            10B329 | 10B350 ) :;;
+            1[0234]* ) continue;; # skip ios 6.0-6.1.2 and 8.0+
+        esac
         printf "\n%s " "$build"
         $tsschecker -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
