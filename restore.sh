@@ -5151,6 +5151,7 @@ ipsw_prepare_reboot4() {
     case $device_type in
         iPad2,[123] | iPod4,1 ) reboot4="src/reboot4" # with boot-ramdisk
     esac
+    log "Preparing reboot4 binary: $reboot4"
     cp $reboot4 partition
 }
 
@@ -5366,21 +5367,20 @@ ipsw_prepare_multipatch() {
 
     if [[ $device_target_vers == "3"* ]]; then
         :
-    elif [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
-        log "Adding exploit and partition stuff"
-        ipsw_prepare_powder_exploit
-        cp -R ../resources/firmware/src .
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
-        ipsw_prepare_reboot4
-        "$dir/hfsplus" RestoreRamdisk.dec add partition sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
     elif [[ $device_target_powder == 1 ]]; then
+        local bin_tar="bin.tar"
         log "Adding exploit and partition stuff"
+        rm -rf src
+        cp -R ../resources/firmware/src .
         ipsw_prepare_powder_exploit
-        ipsw_prepare_partition_script
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
+        if [[ $target_vers_maj == 4 ]]; then
+            ipsw_prepare_reboot4
+            bin_tar="bin4.tar"
+        else
+            ipsw_prepare_partition_script
+        fi
+        log "bin_tar: $bin_tar"
+        "$dir/hfsplus" RestoreRamdisk.dec untar src/$bin_tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add partition sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
