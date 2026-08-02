@@ -9165,7 +9165,7 @@ menu_restore() {
             ;;
         esac
         if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
-            menu_items+=("Latest iOS ($device_latest_vers)")
+            menu_items+=("Latest iOS ($device_latest_vers)" "Signed iOS (IPSW must be signed)")
         fi
         case $device_type in
             iPod4,1 ) menu_items+=("7.1.2");;
@@ -9665,6 +9665,17 @@ menu_ipsw() {
             fi
             echo
 
+		elif [[ $1 == "Signed iOS"* ]]; then
+			if [[ -n $ipsw_path ]]; then
+                print "* Selected Target IPSW: $ipsw_path.ipsw"
+                print "* Target Version: $device_target_vers-$device_target_build"
+                ipsw_print_warnings
+                can_start=1
+            else
+                print "* Select Target IPSW to continue"
+            fi
+            echo
+		
         elif [[ $1 == "Other"* || $1 == "Set Nonce Only" ]]; then
             # menu for other (shsh) restores
             if [[ -n $ipsw_path ]]; then
