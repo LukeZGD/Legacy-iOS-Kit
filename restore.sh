@@ -6657,7 +6657,7 @@ restore_prepare() {
         [89] | 10 )
             if [[ $restore_usepwndfu64 == 1 ]]; then
                 restore_pwned64
-            elif [[ $device_target_vers == "$device_latest_vers" ]]; then
+            elif [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]]; then
                 restore_latest
             else
                 restore_notpwned64
@@ -9665,17 +9665,18 @@ menu_ipsw() {
             fi
             echo
 
-		elif [[ $1 == "Signed iOS"* ]]; then
-			if [[ -n $ipsw_path ]]; then
+        elif [[ $1 == "Signed iOS"* ]]; then
+            if [[ -n $ipsw_path ]]; then
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 print "* Target Version: $device_target_vers-$device_target_build"
                 ipsw_print_warnings
                 can_start=1
+                device_target_signed=1
             else
                 print "* Select Target IPSW to continue"
             fi
             echo
-		
+
         elif [[ $1 == "Other"* || $1 == "Set Nonce Only" ]]; then
             # menu for other (shsh) restores
             if [[ -n $ipsw_path ]]; then
@@ -9848,6 +9849,7 @@ menu_ipsw() {
                 device_target_tethered=
                 device_bootargs=
                 device_target_drav6=
+                device_target_signed=
             ;;
         esac
     done
