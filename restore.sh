@@ -633,13 +633,21 @@ set_tool_paths() {
     primepwn+="$dir/primepwn"
     sshfs="$(command -v sshfs)"
 
-    cp ../resources/ssh_config . 2>/dev/null
-    if [[ $(ssh -V 2>&1 | grep -c SSH_8.8) == 1 || $(ssh -V 2>&1 | grep -c SSH_8.9) == 1 ||
-          $(ssh -V 2>&1 | grep -c SSH_9.) == 1 || $(ssh -V 2>&1 | grep -c SSH_1) == 1 ]]; then
-        echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
-    elif [[ $(ssh -V 2>&1 | grep -c SSH_6) == 1 ]]; then
-        cat ../resources/ssh_config | sed "s,Add,#Add,g" | sed "s,HostKeyA,#HostKeyA,g" > ssh_config
+    local ssh_v="$($ssh2 -V 2>&1)"
+    local re='OpenSSH_([0-9]+)\.([0-9]+)'
+    cp ../resources/ssh_config ssh_config
+    if [[ "$ssh_v" =~ $re ]]; then
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        # OpenSSH 8.5 or newer
+        if (( major > 8 || (major == 8 && minor >= 5) )); then
+            echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ssh_config
+        # OpenSSH 7.1 or older
+        elif (( major < 7 || (major == 7 && minor <= 1) )); then
+            sed -e 's,Add,#Add,g' -e 's,HostKeyA,#HostKeyA,g' ../resources/ssh_config > ssh_config
+        fi
     fi
+
     scp2+=" -F ./ssh_config"
     ssh2+=" -F ./ssh_config"
 }
@@ -921,11 +929,11 @@ device_entry() {
 
 device_entry_s5l8900() {
     device_argmode="entry"
-    log "Found an S5L8900 device in $device_mode mode."
+    log "Found a device in $device_mode mode."
     print "* Device Type Option"
     print "* Select your device in the options below. Make sure to select correctly."
-    local selection=("iPhone 2G" "iPod touch 1")
-    [[ $device_protocol != 1 ]] && selection+=("iPhone 3G")
+    local selection=("iPhone 2G" "iPhone 3G" "iPod touch 1")
+    [[ -n $device_protocol ]] && selection+=("iPod touch 2")
     input "Select your option:"
     select_option "${selection[@]}"
     local opt2="${selection[$?]}"
@@ -933,6 +941,7 @@ device_entry_s5l8900() {
         "iPhone 2G"    ) device_type="iPhone1,1";;
         "iPhone 3G"    ) device_type="iPhone1,2";;
         "iPod touch 1" ) device_type="iPod1,1";;
+        "iPod touch 2" ) device_type="iPod2,1";;
     esac
     device_model=
 }
@@ -1284,7 +1293,7 @@ device_get_info() {
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
-            if [[ $device_mode != "DFU" && -z $device_argmode && $device_model == "m68ap" ]]; then
+            if [[ $device_mode != "DFU" && -z $device_type && $device_model == "m68ap" ]]; then
                 device_entry_s5l8900
             fi
             if [[ $device_mode == "Recovery" ]]; then
@@ -1314,7 +1323,7 @@ device_get_info() {
         "Normal" )
             if [[ -n $device_argmode ]]; then
                 device_entry
-            else
+            elif [[ -z $device_type ]]; then
                 device_type=$($ideviceinfo -s -k ProductType)
                 [[ -z $device_type ]] && device_type=$($ideviceinfo -k ProductType)
             fi
@@ -1338,7 +1347,7 @@ device_get_info() {
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_get_paired_info
                 device_protocol=$($ideviceinfo -s -k ProtocolVersion)
-                if [[ $device_protocol == 1 ]]; then
+                if [[ $device_protocol == 1 && -z $device_type ]]; then
                     device_entry_s5l8900
                 fi
             fi
@@ -1702,18 +1711,19 @@ device_get_info() {
     # activation issue stuff
     case $device_type in
         iPhone4,1 | iPhone5,2 | iPad2,7 | iPad3,[26] ) device_9900candidate=1;;
-        iPhone3,[12] | iPad2,2 | iPad3,3 ) device_activationissue=1;;
+        iPhone[123],[12] | iPad1,1 | iPad2,2 | iPad3,3 ) device_activationissue=1;;
     esac
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
-    if [[ $device_proc == 5 || $device_proc == 6 ]] && [[ -z $device_disable_actrec ]] &&
+    if [[ $device_disable_actrec == 1 ]]; then
+        :
+    elif [[ $device_proc == 5 || $device_proc == 6 ]] &&
        [[ $device_9900candidate == 1 && $device_mode == "Normal" && $device_unactivated != 1 ]]; then
         device_actrec=1
         device_auto_actrec=1
     elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]] && (( device_proc <= 6 )); then
         device_actrec=1
         device_auto_actrec=2
-    elif [[ -z $device_disable_actrec && $device_activationissue == 1 &&
-            $device_mode == "Normal" && $device_unactivated != 1 ]]; then
+    elif [[ $device_activationissue == 1 && $device_mode == "Normal" && $device_unactivated != 1 ]]; then
         device_actrec=1
         device_auto_actrec=3
     fi
@@ -1725,11 +1735,11 @@ device_get_info() {
 
     # powdersn0w device and base version support
     case $device_type in
-        iPhone[345],* | iPad1,1 | iPad2,[4567] | iPad3,* | iPod[35],1 ) device_can_powder=1;;
+        iPhone[345],* | iPad1,1 | iPad[23],* | iPod[35],1 ) device_can_powder=1;;
     esac
-    check_vers="7.1"
+    check_vers="7"
     case $device_type in
-        iPad2,[567] | iPad3,[456] | iPhone5,* | iPod5,1 ) check_vers="7";;
+        iPad2,4 | iPad3,[123] | iPhone4,1 ) check_vers="7.1";;
     esac
     base_vers="$check_vers.x"
     if [[ $device_proc == 4 ]]; then
@@ -1739,7 +1749,7 @@ device_get_info() {
 
     # dra v6 support
     case $device_type in
-        iPhone4,1 | iPod4,1 ) device_can_drav6=1;;
+        iPad2,1 | iPhone4,1 | iPod4,1 ) device_can_drav6=1;;
     esac
 }
 
@@ -2532,6 +2542,12 @@ device_fw_key_server() {
     local wikiproxy="wikiproxy-go_$platform-$(uname -m)"
     local wikiproxy_ipw="wikiproxy-go-ipw_$platform-$(uname -m)"
     local port=8889
+    local current="$(cat ../saved/$wikiproxy-version 2>/dev/null)"
+    local latest="44af916"
+
+    if [[ $current != "$latest" ]]; then
+        rm ../saved/$wikiproxy ../saved/$wikiproxy_ipw
+    fi
 
     if [[ ! -s ../saved/$wikiproxy || ! -s ../saved/$wikiproxy_ipw ]]; then
         file_download https://github.com/LukeZGD/wikiproxy-go/releases/download/latest/$wikiproxy.zip $wikiproxy.zip
@@ -2541,6 +2557,7 @@ device_fw_key_server() {
         fi
         mv main ../saved/$wikiproxy
         mv main-ipw ../saved/$wikiproxy_ipw
+        echo "$latest" > ../saved/$wikiproxy-version
     fi
 
     if [[ $1 == "ipw" ]]; then
@@ -2601,7 +2618,8 @@ device_fw_key_check() {
         mkdir -p "$keys_path"
         local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
                    "http://127.0.0.1:8889/firmware/$device_type/$build"
-                   "http://127.0.0.1:8890/firmware/$device_type/$build")
+                   "http://127.0.0.1:8890/firmware/$device_type/$build"
+                   "http://127.0.0.1:8888/firmware/$device_type/$build")
         for i in "${try[@]}"; do
             [[ $i == *"127.0.0.1:8889"* ]] && device_fw_key_server
             [[ $i == *"127.0.0.1:8890"* ]] && device_fw_key_server ipw
@@ -2932,10 +2950,7 @@ ipsw_preference_set() {
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
         print "* This option is enabled by default (Y). Select this option if unsure."
-        if [[ $device_type == "iPad2"* && $device_target_vers == "4.3"* && $device_target_tethered != 1 ]]; then
-            warn "This will be a semi-tethered jailbreak. checkm8-a5 is required to boot to a jailbroken state."
-            print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
-        elif [[ $device_type == "iPhone3,3" ]]; then
+        if [[ $device_type == "iPhone3,3" ]]; then
             case $device_target_vers in
                 4.2.9 | 4.2.10 )
                     warn "This will be a semi-tethered jailbreak."
@@ -3076,7 +3091,7 @@ shsh_save() {
             fi
             mv BuildManifest.plist $buildmanifest
         fi
-    elif [[ $device_base_drav6 == 1 && $device_proc == 5 ]]; then
+    elif [[ $device_target_drav6 == 1 && $device_proc == 5 ]]; then
         buildmanifest="../resources/manifest/BuildManifest_${device_type}_${version}.plist"
     fi
     shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-*_${apnonce}*.shsh*
@@ -3121,6 +3136,9 @@ ipsw_download() {
     if [[ -n $2 && -n $3 ]]; then
         version="$2"
         build_id="$3"
+    elif [[ $2 == "base" ]]; then
+        version="$device_base_vers"
+        build_id="$device_base_build"
     elif [[ $2 == "latest" ]]; then
         version="$device_latest_vers"
         build_id="$device_latest_build"
@@ -3306,7 +3324,7 @@ ipsw_prepare_openssh_plist() {
 ipsw_prepare_rebootsh() {
     log "Generating reboot.sh"
     echo '#!/bin/bash' | tee reboot.sh
-    echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2" | tee -a reboot.sh
+    echo "mount_hfs /dev/disk0s1s1 /mnt1; mount_hfs /dev/disk0s1s2 /mnt2; nvram -c" | tee -a reboot.sh
     if [[ $1 == "aquila" ]]; then
         echo "mv /mnt1/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist_ /mnt1/Library/LaunchDaemons/com.apple.mDNSResponder.plist" | tee -a reboot.sh
         echo "mv /mnt1/Library/LaunchDaemons/com.apple.sandboxd.plist /mnt1/System/Library/LaunchDaemons/" | tee -a reboot.sh
@@ -3583,16 +3601,31 @@ ipsw_prepare_keys() {
     local comp="$1"
     local getcomp="$1"
     case $comp in
-        "RestoreLogo" ) getcomp="AppleLogo";;
-        *"KernelCache" ) getcomp="Kernelcache";;
+        "RestoreLogo"       ) getcomp="AppleLogo";;
+        *"KernelCache"      ) getcomp="Kernelcache";;
         "RestoreDeviceTree" ) getcomp="DeviceTree";;
     esac
+
+    local getcomp_bm="$comp"
+    case $comp in
+        "RestoreRamdisk" ) getcomp_bm="RestoreRamDisk";;
+    esac
+
     local fw_key="$device_fw_key"
     if [[ $2 == "base" ]]; then
         fw_key="$device_fw_key_base"
     fi
-    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+
+    local name
+    local name_bm=
+    [[ -s BuildManifest.plist ]] && name_bm=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$getcomp_bm:Info:Path" BuildManifest.plist | tr -d '"')
+    if [[ -n $name_bm ]]; then
+        name=$(basename $name_bm)
+    else
+        name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+    fi
     [[ $name == *".dmg" ]] && name="${name%%.dmg*}.dmg"
+
     local iv=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
     local key=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
     if [[ -z $name && $device_proc != 1 ]]; then
@@ -3657,19 +3690,36 @@ ipsw_prepare_paths() {
     local comp="$1"
     local getcomp="$1"
     case $comp in
-        "BatteryPlugin" ) getcomp="GlyphPlugin";;
+        "BatteryPlugin"             ) getcomp="GlyphPlugin";;
         "NewAppleLogo" | "APTicket" ) getcomp="AppleLogo";;
-        "NewRecoveryMode" ) getcomp="RecoveryMode";;
-        "NewiBoot" ) getcomp="iBoot";;
+        "NewRecoveryMode"           ) getcomp="RecoveryMode";;
+        "NewiBoot"                  ) getcomp="iBoot";;
     esac
+
+    local getcomp_bm="$getcomp"
+    case $getcomp in
+        "GlyphPlugin"    ) getcomp_bm="BatteryPlugin";;
+        "RestoreRamdisk" ) getcomp_bm="RestoreRamDisk";;
+    esac
+
     local fw_key="$device_fw_key"
     if [[ $2 == "base" ]]; then
         fw_key="$device_fw_key_base"
     fi
-    local name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+
+    local name
+    local name_bm
+    [[ $getcomp != "manifest" && -s BuildManifest.plist ]] && name_bm=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$getcomp_bm:Info:Path" BuildManifest.plist | tr -d '"')
+    if [[ -n $name_bm ]]; then
+        name=$(basename $name_bm)
+    else
+        name=$(echo $fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
+    fi
+    [[ $name == *".dmg" ]] && name="${name%%.dmg*}.dmg"
     if [[ -z $name && $getcomp != "manifest" ]]; then
         error "Issue with firmware keys: Failed getting $getcomp. Check The Apple Wiki or your wikiproxy"
     fi
+
     local str="<key>$comp</key><dict><key>File</key><string>$all_flash/"
     local str2
     local logostuff
@@ -3831,13 +3881,18 @@ ipsw_prepare_bundle() {
     mkdir -p $FirmwareBundle
 
     log "Generating firmware bundle for $device_type-$vers ($build) $1..."
+
+    [[ $device_proc != 1 ]] && file_extract_from_archive "$ipsw_p.ipsw" BuildManifest.plist
     file_extract_from_archive "$ipsw_p.ipsw" $all_flash/manifest
     mv manifest $FirmwareBundle/
-    local ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
+
+    local ramdisk_name
+    [[ -s BuildManifest.plist ]] && ramdisk_name="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')"
+    [[ -z $ramdisk_name ]] && ramdisk_name=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
     ramdisk_name="${ramdisk_name%%.dmg*}.dmg"
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
-    if [[ -z $ramdisk_name ]]; then
+    if [[ -z $RamdiskIV ]]; then
         error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
     fi
     file_extract_from_archive "$ipsw_p.ipsw" $ramdisk_name
@@ -3867,10 +3922,12 @@ ipsw_prepare_bundle() {
         RootSize=$(cat options.$device_model.plist | grep -i SystemPartitionSize -A 1 | grep -oPm1 "(?<=<integer>)[^<]+")
     fi
     RootSize=$((RootSize+30))
-    local rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
+    local rootfs_name
+    [[ -s BuildManifest.plist ]] && rootfs_name="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
+    [[ -z $rootfs_name ]] && rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
     rootfs_name="${rootfs_name%%.dmg*}.dmg"
     local rootfs_key="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .key')"
-    if [[ -z $rootfs_name ]]; then
+    if [[ -z $rootfs_key ]]; then
         error "Issue with firmware keys: Failed getting RootFS. Check The Apple Wiki or your wikiproxy"
     fi
     echo '<plist><dict>' > $NewPlist
@@ -3902,7 +3959,7 @@ ipsw_prepare_bundle() {
         esac
         # dummy "ios" file
         printf "</dict><key>RamdiskPackage</key><dict><key>package</key><string>src/bin.tar</string><key>ios</key><string>ios" >> $NewPlist
-        [[ $ipsw_jailbreak == 1 ]] && printf "%s" "${vers:0:1}" >> "$NewPlist"
+        [[ $ipsw_jailbreak == 1 && $ipsw_not_aquila7 != 1 ]] && printf "%s" "${vers:0:1}" >> "$NewPlist"
         echo "</string></dict>" >> $NewPlist
     elif [[ $ipsw_prepare_usepowder == 1 ]]; then
         echo "<key>FilesystemPackage</key><dict/><key>RamdiskPackage</key><dict/>" >> $NewPlist
@@ -3937,12 +3994,13 @@ ipsw_prepare_bundle() {
     elif [[ $1 == "target" && $vers == "4"* ]]; then
         echo "<key>Firmware</key><dict>" >> $NewPlist
         ipsw_prepare_keys iBSS $1
+        ipsw_prepare_keys RestoreDeviceTree $1
+        ipsw_prepare_keys RestoreKernelCache $1
         ipsw_prepare_keys RestoreRamdisk $1
         echo "</dict>" >> $NewPlist
     elif [[ $ipsw_isbeta_needspatch == 1 ]]; then
         echo "<key>FirmwarePatches</key><dict>" >> $NewPlist
         ipsw_prepare_keys RestoreDeviceTree $1
-        ipsw_prepare_keys RestoreLogo $1
         ipsw_prepare_keys RestoreKernelCache $1
         ipsw_prepare_keys RestoreRamdisk $1
         echo "</dict>" >> $NewPlist
@@ -3966,11 +4024,10 @@ ipsw_prepare_bundle() {
             :
         else
             ipsw_prepare_keys RestoreDeviceTree $1
-            ipsw_prepare_keys RestoreLogo $1
         fi
         if [[ $1 == "target" ]]; then
             case $vers in
-                [457]* ) ipsw_prepare_keys RestoreKernelCache $1;;
+                [57]* ) ipsw_prepare_keys RestoreKernelCache $1;;
                 * ) ipsw_prepare_keys KernelCache $1;;
             esac
         elif [[ $device_proc == 1 && $device_target_vers == "4.2.1" ]]; then
@@ -4068,8 +4125,11 @@ ipsw_prepare_32bit() {
             return
         ;;
     esac
+    # temporary measure for a5x/a6x ios 7
+    if [[ $ipsw_jailbreak == 1 && $device_type == "iPad3,"* && $device_target_vers == "7."* ]]; then
+        ipsw_not_aquila7=1
     # use everuntether+jsc_untether instead of everuntether+dsc haxx for a5(x) 8.0-8.2
-    if [[ $device_proc == 5 && $ipsw_jailbreak == 1 ]]; then
+    elif [[ $ipsw_jailbreak == 1 && $device_proc == 5 ]]; then
         case $device_target_vers in
             8.[012]* )
                 ipsw_everuntether=1
@@ -4086,7 +4146,7 @@ ipsw_prepare_32bit() {
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar $jelbrek/daibutsu/untether.tar .
             ipsw_prepare_rebootsh
-        elif [[ $device_target_vers == "7."* ]]; then
+        elif [[ $device_target_vers == "7."* && $ipsw_not_aquila7 != 1 ]]; then
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar .
@@ -4125,6 +4185,13 @@ ipsw_prepare_32bit() {
             ;;
         esac
 
+        # temporary measure for a5x/a6x ios 7
+        if [[ $ipsw_not_aquila7 == 1 ]]; then
+            case $device_target_vers in
+                7.1* ) JBFiles=("panguaxe.tar");;
+                7.0* ) JBFiles=("evasi0n7-untether.tar");;
+            esac
+        fi
         # temporary measure for a5/a6 ios 6
         if [[ $device_proc == 5 || $device_proc == 6 ]]; then
             case $device_target_vers in
@@ -4385,15 +4452,14 @@ patch_iboot() {
     mv $iboot_name iBoot.orig
     "$dir/xpwntool" iBoot.orig iBoot.dec -iv $iboot_iv -k $iboot_key
     "$dir/iBoot32Patcher" iBoot.dec iBoot.pwned $rsa "$@"
+    if [[ ! -s iBoot.pwned ]]; then
+        error "Failed to patch iBoot."
+    fi
     "$dir/xpwntool" iBoot.pwned iBoot -t iBoot.orig
     if [[ $device_type == "iPad1,1" || $device_type == "iPhone5,"* ]]; then
         # ibec
         echo "0000010: 6365" | xxd -r - iBoot
         echo "0000020: 6365" | xxd -r - iBoot
-    # elif [[ $device_base_drav6 == 1 ]]; then
-    #     # ibox
-    #     echo "0000010: 786F" | xxd -r - iBoot
-    #     echo "0000020: 786F" | xxd -r - iBoot
     elif [[ $device_type != "iPhone2,1" ]]; then
         # ibob
         echo "0000010: 626F" | xxd -r - iBoot
@@ -4725,7 +4791,7 @@ ipsw_prepare_specialios7() {
         "$dir/img3maker" -f iBEC.patched -o $saves/pwnediBEC.dfu -t ibec
         log "Patch iBoot"
         "$dir/iBoot32Patcher" iBoot.dec iBoot.patched --rsa --debug --boot-partition --boot-ramdisk -b "$bootargs"
-        "$dir/img3maker" -f iBoot.patched -o $all_flash2/iBoot2.img3 -t ibob # ibox
+        "$dir/img3maker" -f iBoot.patched -o $all_flash2/iBoot2.img3 -t ibob
         echo "iBoot2.img3" >> $all_flash2/manifest
     fi
 
@@ -4828,7 +4894,7 @@ ipsw_prepare_specialios7() {
         mv kernelcache.release.$device_model_special kc
         "$dir/xpwntool" kc kc.new -iv $kc_iv -k $kc_key -decrypt
         cp kc.new $saves/$device_target_build/kernelcache
-        cp kc.new $ipsw_custom/kernelcache.release.$device_model # wont be used, but needed for restore
+        cp kc.new $ipsw_custom/kernelcache.release.$device_model
         log "Target devicetree"
         cp $patches/DeviceTree.n81ap.img3 $all_flash2/
     fi
@@ -5033,14 +5099,16 @@ ipsw_prepare_sundanceinh2a() {
 ipsw_prepare_powder_exploit() {
     local hw="$device_model"
     local base_build="11D257"
-    case $device_type in
-        iPhone5,[12] ) hw="iphone5";;
-        iPhone5,[34] ) hw="iphone5b";;
-        iPad2,[123]  ) hw="ipad2";;
-        iPad2,[567]  ) hw="ipad2b";;
-        iPad3,[123]  ) hw="ipad3";;
-        iPad3,[456]  ) hw="ipad3b";;
-    esac
+    if [[ $device_target_drav6 != 1 ]]; then
+        case $device_type in
+            iPhone5,[12] ) hw="iphone5";;
+            iPhone5,[34] ) hw="iphone5b";;
+            iPad2,[123]  ) hw="ipad2";;
+            iPad2,[567]  ) hw="ipad2b";;
+            iPad3,[123]  ) hw="ipad3";;
+            iPad3,[456]  ) hw="ipad3b";;
+        esac
+    fi
     case $device_base_build in
         11[AB]* ) base_build="11B554a";;
         10*     ) base_build="$device_base_build";;
@@ -5055,7 +5123,7 @@ ipsw_prepare_partition_script() {
     log "Preparing partition script"
     if [[ $ipsw_powder_ramdiskH == 1 ]]; then
         log "Using ramdiskH partition script"
-        cp ../resources/firmware/src/target/iphone5/partition .
+        cp ../resources/firmware/src/partition_iphone5 partition
         return
     fi
     cp ../resources/firmware/src/partition .
@@ -5070,7 +5138,7 @@ ipsw_prepare_partition_script() {
     fi
 
     if [[ $device_base_vers == "5."* || $device_type == "iPhone3,1" ]] ||
-       [[ $device_base_drav6 == 1 && $device_type == "iPhone4,1" ]]; then
+       [[ $device_target_drav6 == 1 && $device_type == "iPhone4,1" ]]; then
         log "Removing nvram boot-ramdisk"
         sed -i.bak '/^nvram boot-ramdisk/d' "$file"
         rm "$file.bak"
@@ -5078,10 +5146,13 @@ ipsw_prepare_partition_script() {
 }
 
 ipsw_prepare_reboot4() {
-    # prepare reboot4 binary: copy over the exploit ramdisk to it
-    cp src/target/reboot4 partition
-    dd if=/dev/zero of=partition bs=1 seek=$((0x815C)) count=$((512*1024)) conv=notrunc status=none
-    dd if=$device_powder_exploit of=partition bs=1 seek=$((0x815C)) conv=notrunc status=none
+    # prepare reboot4 binary: https://gist.github.com/LukeZGD/2d4a2416775f88c8c9fd20e2e12179b7
+    local reboot4="src/reboot4_nbr" # no boot-ramdisk
+    case $device_type in
+        iPad2,[123] | iPod4,1 ) reboot4="src/reboot4" # with boot-ramdisk
+    esac
+    log "Preparing reboot4 binary: $reboot4"
+    cp $reboot4 partition
 }
 
 ipsw_prepare_multipatch() {
@@ -5129,10 +5200,12 @@ ipsw_prepare_multipatch() {
     if [[ $ipsw_gasgauge_patch == 1 ]]; then
         vers="6.1.3"
         build="10B329"
-        if [[ $device_type == "iPhone5,3" || $device_type == "iPhone5,4" ]]; then
-            vers="7.1.2"
-            build="11D257"
-        fi
+        case $device_type in
+            iPhone5,[34] | iPad3,[456] )
+                vers="7.1.2"
+                build="11D257"
+            ;;
+        esac
     fi
 
     saved_path="../saved/$device_type/$build"
@@ -5276,13 +5349,8 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
-    if [[ $device_target_vers == "3."* ]]; then
-        log "3.x options.plist"
-        cp ../resources/firmware/src/target/${device_model}/options.plist $options_plist
-    else
-        log "Extract options.plist from $device_target_vers IPSW"
-        "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
-    fi
+    log "Extract options.plist from $device_target_vers IPSW"
+    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
 
     log "Modify options.plist"
     cat $options_plist | sed '$d' | sed '$d' > options2.plist # remove </dict> and </plist>
@@ -5299,21 +5367,20 @@ ipsw_prepare_multipatch() {
 
     if [[ $device_target_vers == "3"* ]]; then
         :
-    elif [[ $device_target_powder == 1 && $device_target_vers == "4"* ]]; then
-        log "Adding exploit and partition stuff"
-        ipsw_prepare_powder_exploit
-        cp -R ../resources/firmware/src .
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin4.tar
-        "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
-        ipsw_prepare_reboot4
-        "$dir/hfsplus" RestoreRamdisk.dec add partition sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
-        "$dir/hfsplus" RestoreRamdisk.dec chown 0:0 sbin/reboot
     elif [[ $device_target_powder == 1 ]]; then
+        local bin_tar="bin.tar"
         log "Adding exploit and partition stuff"
+        rm -rf src
+        cp -R ../resources/firmware/src .
         ipsw_prepare_powder_exploit
-        ipsw_prepare_partition_script
-        "$dir/hfsplus" RestoreRamdisk.dec untar src/bin.tar
+        if [[ $target_vers_maj == 4 ]]; then
+            ipsw_prepare_reboot4
+            bin_tar="bin4.tar"
+        else
+            ipsw_prepare_partition_script
+        fi
+        log "bin_tar: $bin_tar"
+        "$dir/hfsplus" RestoreRamdisk.dec untar src/$bin_tar
         "$dir/hfsplus" RestoreRamdisk.dec mv sbin/reboot sbin/reboot_
         "$dir/hfsplus" RestoreRamdisk.dec add partition sbin/reboot
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 sbin/reboot
@@ -5586,6 +5653,11 @@ ipsw_prepare_powder() {
     fi
     ipsw_prepare_usepowder=1
 
+    # temporary measure for a5x/a6x ios 7
+    if [[ $ipsw_jailbreak == 1 && $device_type == "iPad3,"* && $device_target_vers == "7."* ]]; then
+        ipsw_not_aquila7=1
+    fi
+
     ipsw_prepare_bundle target
     ipsw_prepare_bundle base
     ipsw_prepare_logos_convert
@@ -5603,6 +5675,13 @@ ipsw_prepare_powder() {
             5.* ) JBFiles=("aquila_5.tar");;
         esac
 
+        # temporary measure for a5x/a6x ios 7
+        if [[ $ipsw_not_aquila7 == 1 ]]; then
+            case $device_target_vers in
+                7.1* ) JBFiles=("panguaxe.tar");;
+                7.0* ) JBFiles=("evasi0n7-untether.tar");;
+            esac
+        fi
         # temporary measure for a5 ios 5
         if [[ $device_proc == 5 && $device_target_vers == "5."* ]]; then
             JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar")
@@ -6444,8 +6523,6 @@ restore_deviceprepare() {
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
                 return
-            elif [[ $device_base_drav6 == 1 ]]; then
-                shsh_save version $device_base_vers
             elif [[ $device_target_other != 1 && $device_target_powder != 1 ]]; then
                 shsh_save
             fi
@@ -6709,7 +6786,11 @@ ipsw_prepare() {
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_powder == 1 ]]; then
-                ipsw_prepare_powder
+                [[ $device_target_drav6 == 1 ]] && shsh_save version $device_base_vers
+                case $device_target_vers in
+                    4.3* ) ipsw_prepare_ios4powder;;
+                    * ) ipsw_prepare_powder;;
+                esac
             elif [[ $device_target_vers != "$device_latest_vers" || $ipsw_gasgauge_patch == 1 ]]; then
                 ipsw_prepare_32bit
             fi
@@ -7427,6 +7508,14 @@ device_ramdisk() {
                 ;;
             esac
 
+            # temporary measure for a5x/a6x ios 7
+            if [[ $device_type == "iPad3,"* && $vers == "7."* ]]; then
+                ipsw_not_aquila7=1
+                case $vers in
+                    7.1* ) untether="panguaxe.tar";;
+                    7.0* ) untether="evasi0n7-untether.tar";;
+                esac
+            fi
             # temporary measure for a5/a6 ios 6
             if [[ $device_proc == 5 || $device_proc == 6 ]]; then
                 case $vers in
@@ -7570,7 +7659,7 @@ device_ramdisk() {
             esac
 
             # final setup for ios 8.x daibutsu, and/or reboot
-            if [[ $vers == "8."* && $ipsw_everuntether != 1 ]] || [[ $vers == "7."* ]]; then
+            if [[ $vers == "8."* && $ipsw_everuntether != 1 ]] || [[ $vers == "7."* && $ipsw_not_aquila7 != 1 ]]; then
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
@@ -7598,7 +7687,10 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "nvram -c; reboot_bak"
+            $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
+            if (( device_proc < 7 )); then
+                $ssh -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
+            fi
             log "Done. Your device should reboot now"
             return
         ;;
@@ -7876,7 +7968,8 @@ menu_ramdisk() {
                     log "Downloading files for latest TrollStore"
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/PersistenceHelper_Embedded PersistenceHelper_Embedded
                     file_download https://github.com/opa334/TrollStore/releases/download/$latest/TrollStore.tar TrollStore.tar
-                    mv TrollStore.tar PersistenceHelper_Embedded ../saved
+                    cp PersistenceHelper_Embedded ../saved/
+                    cp TrollStore.tar ../saved/
                     echo "$latest" > ../saved/TrollStore_version
                 fi
                 tar -xf TrollStore.tar
@@ -8159,10 +8252,9 @@ shsh_convert_onboard() {
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc < 7 )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
-        # remove ibob/ibox for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62/78
+        # remove ibob for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62
         local blob=$(xxd -p dump.raw | tr -d '\n')
         local bobi="626f6269"
-        local xobi="786f6269"
         local blli="626c6c69"
         local search=
         local desc=
@@ -8170,9 +8262,6 @@ shsh_convert_onboard() {
         if [[ $blob == *"$bobi"* ]]; then
             search=$bobi
             desc="ibob"
-        elif [[ $blob == *"$xobi"* ]]; then
-            search=$xobi
-            desc="ibox"
         fi
 
         if [[ -n $search ]]; then
@@ -8215,9 +8304,10 @@ shsh_save_cydia() {
         ((i++))
     done
     for build in ${builds[@]}; do
-        if [[ $build == "10"* && $build != "10B329" && $build != "10B350" ]]; then
-            continue
-        fi
+        case $build in
+            10B329 | 10B350 ) :;;
+            1[0234]* ) continue;; # skip ios 6.0-6.1.2 and 8.0+
+        esac
         printf "\n%s " "$build"
         $tsschecker -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
@@ -8485,7 +8575,7 @@ menu_datamanage() {
     print "* For more info about Data Management options, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Data-Management"
     if [[ -z $sshfs ]]; then
         warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
-        [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs"
+        [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs. See the wiki page linked above for more details"
     else
         menu_items+=("Mount Device" "Mount Device (Raw File System)" "Cydia App Install")
     fi
@@ -9341,11 +9431,6 @@ menu_ipsw() {
                     [76543].* ) ipsw_canhacktivate=1;;
                 esac
             ;;
-            *"powdersn0w"* )
-                case $device_latest_vers in
-                    [76543].* ) ipsw_canhacktivate=1;;
-                esac
-            ;;
             [6543]* )
                 device_target_vers="$1"
                 if [[ $device_target_vers != "3.0"* ]]; then
@@ -9433,7 +9518,7 @@ menu_ipsw() {
             fi
         elif [[ $1 == *"DRA v6"* ]]; then
             device_target_powder=1
-            device_base_drav6=1
+            device_target_drav6=1
             case $device_type in
                 iPhone2,1 | iPod4,1 )
                     device_base_vers="$device_latest_vers"
@@ -9473,16 +9558,16 @@ menu_ipsw() {
                 esac
             else
                 print "* Select Target IPSW to continue"
-                local lo
-                local hi
+                local lo=6.0
+                local hi=9.3.5
                 case $device_type in
                     iPhone3,1 ) lo=4.0; hi=7.1.1;;
                     iPhone3,2 ) lo=6.0; hi=7.1.1;;
                     iPhone3,3 ) lo=4.2.6; hi=7.1.1;;
-                    iPhone4,1 | iPad2,[123] ) lo=5.0; hi=9.3.5;;
-                    iPad2,* | iPad3,[123]   ) lo=5.1; hi=9.3.5;;
-                    iPhone5,[12] | iPad3,* | iPod5,1 ) lo=6.0; hi=9.3.5;;
-                    iPhone5,[34] ) lo=7.0; hi=9.3.5;;
+                    iPhone4,1 ) lo=5.0;;
+                    iPad2,[123] ) lo=4.3.4;;
+                    iPad2,4 | iPad3,[123] ) lo=5.1;;
+                    iPhone5,[34] ) lo=7.0;;
                     iPad1,1 ) lo=3.2; hi=5.1;;
                     iPod3,1 ) lo=3.1.1; hi=5.1;;
                     iPod4,1 ) lo=4.1; hi=6.1.5;;
@@ -9739,7 +9824,7 @@ menu_ipsw() {
             "Select Target SHSH" ) menu_shsh_browse "$1";;
             "Select Base SHSH" ) menu_shsh_browse "base";;
             "Download Target IPSW" ) ipsw_download "../$newpath";;
-            "Download Base IPSW" ) ipsw_download "../$ipsw_latest_path" latest;;
+            "Download Base IPSW" ) ipsw_download "../${device_type}_${device_base_vers}_${device_base_build}_Restore" base;;
             "Select Apple Logo" ) menu_logo_browse "boot";;
             "Select Recovery Logo" ) menu_logo_browse "recovery";;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
@@ -9762,7 +9847,7 @@ menu_ipsw() {
                 device_target_powder=
                 device_target_tethered=
                 device_bootargs=
-                device_base_drav6=
+                device_target_drav6=
             ;;
         esac
     done
@@ -9882,7 +9967,7 @@ ipsw_print_warnings() {
     if [[ $1 == "powder" ]]; then
         case $device_target_build in
             8[ABC]* ) warn "iOS 4.2.1 and lower are hit or miss. It may not restore/boot properly";;
-            8*  ) [[ $device_type == "iPhone3,"* ]] && warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
+            8*  ) [[ $device_type == "iPhone3,"* || $device_proc == 5 ]] && warn "Not all devices support iOS 4 versions. It may not restore/boot properly";;
             7[CDE]* ) warn "Not all devices support iOS 3 versions. It may not restore/boot properly";;
         esac
         return
@@ -9980,7 +10065,7 @@ ipsw_custom_set() {
         ipsw_custom+="P"
         if [[ $device_base_vers == "7.0"* ]]; then
             ipsw_custom+="0"
-        elif [[ $device_base_drav6 == 1 ]]; then
+        elif [[ $device_target_drav6 == 1 ]]; then
             ipsw_custom+="6"
         fi
     fi
@@ -10035,7 +10120,7 @@ menu_ipsw_browse() {
     if [[ $ipsw_fourthree == 1 ]]; then
         check_vers="4.3"
         base_vers="4.3.x"
-    elif [[ $device_base_drav6 == 1 ]]; then
+    elif [[ $device_target_drav6 == 1 ]]; then
         check_vers="$device_base_vers"
         base_vers="$device_base_vers"
     fi
@@ -10397,7 +10482,7 @@ menu_flags() {
             fi
         fi
         case $device_type in
-            iPhone3,[13] | iPad1,1 | iPod3,1 ) menu_items+=("Enable skip-first flag");;
+            iPhone3,[13] | iPad1,1 | iPod[34],1 ) menu_items+=("Enable skip-first flag");;
         esac
         menu_items+=("Enable no-finder flag" "Go Back")
         menu_print_info
@@ -10439,6 +10524,7 @@ menu_flags() {
                 select_yesno "Do you want to disable the activation-records flag?" 0
                 if [[ $? != 0 ]]; then
                     device_actrec=
+                    device_auto_actrec=
                     device_disable_actrec=1
                     back=1
                 fi
@@ -10649,7 +10735,7 @@ menu_usefulutilities() {
                     ;;
                     iPad1,1 | iPhone[23],* | iPod4,1 )
                         case $device_vers in
-                            3.1* | [456]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                            [34567].* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
                         esac
                     ;;
                 esac
@@ -10677,8 +10763,8 @@ menu_usefulutilities() {
                 print "* If this is not what you want, you might be looking for the \"Restore/Downgrade\" option instead."
                 print "* From there, enable both \"Jailbreak Option\" and \"Hacktivate Option.\""
                 echo
-                print "* Hacktivate Device: This will patch lockdownd on your device."
-                print "* Hacktivation is for iOS versions 3.1 to 6.1.6."
+                print "* Hacktivate Device: This will patch lockdownd/skip activation on your device."
+                print "* Hacktivation is for iOS versions 3.0 to 7.1.2."
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
@@ -10968,6 +11054,7 @@ device_dump() {
     local dump="../saved/$device_type/$arg-$device_ecid.tar"
     local dmps
     local dmp2
+    local new
     case $arg in
         "baseband" ) dmps="/usr/local/standalone";;
         "activation" )
@@ -10978,6 +11065,7 @@ device_dump() {
                 * )
                     dmps="/private/var/containers/Data/System/*/Library/activation_records"
                     dmp2+="/activation_records"
+                    new=1
                 ;;
             esac
         ;;
@@ -11017,7 +11105,10 @@ device_dump() {
             log "Creating $arg.tar"
             $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
             #$ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
-            $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp; tar -cvf $arg.tar $dmp2"
+            if [[ $new == 1 ]]; then
+                $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cp /private/var/containers/Data/System/*/Library/internal/data_ark.plist /tmp/private/var/root/Library/Lockdown"
+            fi
+            device_dumpactivation
             log "Copying $arg.tar"
             $scp -P $ssh_port ${ssh_user}@127.0.0.1:/tmp/$arg.tar .
             mv $arg.tar $arg-$device_ecid.tar
@@ -11046,10 +11137,45 @@ device_dump() {
         fi
     fi
     if [[ ! -e $dump ]]; then
-        error "Failed to dump $arg from device. Please run the script again" \
-              "* Make sure to have OpenSSH installed."
+        error "Failed to dump $arg from device. Make sure to have OpenSSH installed." \
+              "* If your device is not activated, you can also use --disable-actrec flag to skip this."
     fi
     log "Dumping $arg done: $dump"
+}
+
+device_dumpactivation() {
+    local tmp="/tmp"
+    local var="/var"
+    if [[ $1 == "sshrd" ]]; then
+        tmp="/mnt2/tmp"
+        var="/mnt2"
+    fi
+
+    local actrec_files=(
+        "mobile/Media/iTunes_Control/iTunes/IC-Info.sidv"
+        "mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv"
+        "wireless/Library/Preferences/com.apple.commcenter.plist"
+    )
+
+    $ssh -p "$ssh_port" "${ssh_user}@127.0.0.1" "
+    mkdir -p $tmp/private/var
+    cd $tmp/private/var
+    mkdir -p \
+        mobile/Media/iTunes_Control/iTunes \
+        mobile/Library/FairPlay/iTunes_Control/iTunes \
+        mobile/Library/Preferences \
+        wireless/Library/Preferences
+
+    cd $tmp
+    for f in ${actrec_files[*]}; do
+        cp \"$var/\$f\" \"private/var/\$f\"
+    done
+
+    chown -R 501:501 private/var/mobile
+    chown -R 25:25 private/var/wireless
+
+    tar -cvf \"activation.tar\" private
+    "
 }
 
 device_dumpbb() {
@@ -11132,18 +11258,23 @@ device_dumprd() {
     esac
 
     dmp2="root/Library/Lockdown"
+    local new
     case $vers in
         [34567]* ) dmps="$dmp2";;
         8* | 9.[012]* ) dmps="mobile/Library/mad";;
         * )
             dmps="containers/Data/System/*/Library/activation_records"
             dmp2+="/activation_records"
+            new=1
         ;;
     esac
     log "Creating activation.tar"
     $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/private/var/$dmp2; cp -R /mnt2/$dmps/* $tmp/private/var/$dmp2"
     #$ssh -p $ssh_port root@127.0.0.1 "cd $tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
-    $ssh -p $ssh_port root@127.0.0.1 "cd $tmp; tar -cvf $tmp/activation.tar private/var/$dmp2"
+    if [[ $new == 1 ]]; then
+        $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cp /mnt2/containers/Data/System/*/Library/internal/data_ark.plist $tmp/private/var/root/Library/Lockdown"
+    fi
+    device_dumpactivation sshrd
     log "Copying activation.tar"
     print "* Reminder to backup dump tars if needed"
     $scp -P $ssh_port root@127.0.0.1:$tmp/activation.tar .
@@ -11180,6 +11311,7 @@ device_activate() {
 device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
+    local dap=
     if [[ $device_proc == 4 && $device_type != "iPhone2,1" ]]; then
         type="iPhone2,1"
         case $device_vers in
@@ -11187,13 +11319,20 @@ device_hacktivate() {
             5.1.1 ) build="9B206";;
             6.1   ) build="10B141";;
         esac
-        log "Checking ideviceactivation status..."
-        $ideviceactivation activate
     fi
     local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
+    if [[ $device_type == "iPhone3,3" && $device_vers == "4.2"* ]] ||
+       [[ $device_type == "iPhone2,1" && $device_vers == "3.0"* ]] ||
+       [[ $device_proc == 1 && $device_vers == "3."* && $device_vers != "3.1.3" ]] ||
+       [[ $device_vers_maj == 7 ]]; then
+       dap=1
+    elif [[ ! -s $patch ]]; then
+        error "Detected that there is no lockdownd patch for this device/version combination. Cannot continue."
+    fi
     device_iproxy
+    device_ssh_message
     device_sshpass
-    if [[ $device_type == "iPhone3,3" && $device_vers == "4.2"* ]]; then
+    if [[ $dap == 1 ]]; then
         echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
         log "Copying data_ark.plist to device"
         $scp -P $ssh_port data_ark.plist root@127.0.0.1:/var/root/Library/Lockdown/data_ark.plist
@@ -11210,8 +11349,14 @@ device_hacktivate() {
     fi
     log "Getting lockdownd"
     $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd .
+    if [[ ! -s lockdownd ]]; then
+        error "Getting lockdownd failed. Cannot continue."
+    fi
     log "Patching lockdownd"
     $bspatch lockdownd lockdownd.patched "$patch"
+    if [[ ! -s lockdownd.patched ]]; then
+        error "Patching lockdownd failed. Cannot continue."
+    fi
     log "Renaming original lockdownd"
     $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /usr/libexec/lockdownd.orig ]] && mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
     log "Copying patched lockdownd to device"
@@ -11222,11 +11367,35 @@ device_hacktivate() {
 
 device_reverthacktivate() {
     device_iproxy
-    print "* The default root password is: alpine"
+    device_ssh_message
     device_sshpass
-    log "Reverting lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "[[ -e /usr/libexec/lockdownd.orig ]] && rm /usr/libexec/lockdownd && mv /usr/libexec/lockdownd.orig /usr/libexec/lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
+    if (( device_vers_maj <= 6 )); then
+        log "Getting lockdownd.orig"
+        $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd.orig .
+        if [[ -s lockdownd.orig ]]; then
+            mv lockdownd.orig lockdownd
+        else
+            warn "Getting lockdownd.orig failed. Will need to grab lockdownd from IPSW for $device_type-$device_vers."
+            ipsw_path="../${device_type}_${device_vers}_${device_build}_Restore"
+            if [[ ! -s "$ipsw_path.ipsw" ]]; then
+                ipsw_download "$ipsw_path" $device_vers $device_build
+            fi
+            device_target_build="$device_build"
+            device_fw_key_check
+            local name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
+            local key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RootFS") | .key')
+            file_extract_from_archive "$ipsw_path.ipsw" $name
+            "$dir/dmg" extract $name rootfs.dec -k $key
+            "$dir/hfsplus" rootfs.dec extract usr/libexec/lockdownd
+            rm $name rootfs.dec
+        fi
+        if [[ ! -s lockdownd ]]; then
+            error "Getting lockdownd failed. Cannot continue."
+        fi
+        log "Copying lockdownd to device"
+        $scp -P $ssh_port lockdownd root@127.0.0.1:/usr/libexec/lockdownd
+    fi
+    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; rm -f /usr/libexec/lockdownd.orig /var/root/Library/Lockdown/data_ark.plist; reboot"
     log "Done. Your device should reboot now"
 }
 
@@ -11319,7 +11488,7 @@ device_dfuipsw() {
     ipsw_path="../$ipsw_latest_path"
     if [[ -s "$ipsw_path.ipsw" && ! -e "$ipsw_dfuipsw.ipsw" ]]; then
         ipsw_verify "$ipsw_path" "$device_target_build"
-    elif [[ ! -e "$ipsw_path.ipsw" ]]; then
+    elif [[ ! -s "$ipsw_path.ipsw" ]]; then
         ipsw_download "$ipsw_path"
     fi
     if [[ -s "$ipsw_dfuipsw.ipsw" ]]; then
@@ -11501,12 +11670,12 @@ menu_justboot() {
                 echo "$vers" > $recent
                 mode="device_justboot"
                 if [[ $device_type == "iPod4,1" && $vers == "11"* ]]; then
-                    mode="device_justboot_touch4ios7"
+                    mode="device_justboot_specialios7"
                 fi
             ;;
             "(*) iOS 7.1.2" )
                 echo "11D257" > $recent
-                mode="device_justboot_touch4ios7"
+                mode="device_justboot_specialios7"
             ;;
             "Custom Bootargs" ) read -p "$(input 'Enter custom bootargs: ')" device_bootargs;;
             "Go Back" ) back=1;;
@@ -11647,14 +11816,14 @@ device_justboot() {
     device_ramdisk justboot
 }
 
-device_justboot_touch4ios7() {
+device_justboot_specialios7() {
     local patches="../resources/patch/touch4-ios7"
     local saves="../saved/touch4-ios7"
     if [[ -d "../saved/$device_type/touch4-ios7" ]]; then
         mv "../saved/$device_type/touch4-ios7" $saves
     fi
     if [[ ! -s $saves/$device_ecid ]]; then
-        error "Cannot find device file for $device_ecid in saved. Need to restore to iOS 7.1.2 first."
+        error "Cannot find device file for $device_ecid in saved. Need to restore/create an IPSW for iOS 7.1.2 first."
     fi
 
     source $saves/$device_ecid
@@ -12469,7 +12638,7 @@ if [[ $main_argmode == "device_justboot" && -z $device_rd_build ]]; then
     print "* Example usage: ./restore.sh --just-boot --build-id=12H321"
     error "Just Boot (--just-boot) requires specifying build ID (--build-id=<id>)"
 elif [[ $main_argmode == "device_justboot" && $device_type == "iPod4,1" && $device_rd_build == "11D257" ]]; then
-    main_argmode="device_justboot_touch4ios7"
+    main_argmode="device_justboot_specialios7"
 fi
 
 trap "clean" EXIT

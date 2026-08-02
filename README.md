@@ -139,6 +139,7 @@
     - [The following exploit ramdisks are from Pingzi610](https://github.com/Pingzi610/iloader)
         - iPhone3,2 7.1.2
         - iPad mini 1 7.0.x and 7.1.x
+        - iPad 2 7.0.x and 7.1.x
         - iPad 3 7.1.x
         - iPad 4 7.0.x and 7.1.x
         - iPod touch 5 7.0.x
