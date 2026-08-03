@@ -2619,10 +2619,21 @@ device_fw_key_check() {
                    "http://127.0.0.1:8890/firmware/$device_type/$build"
                    "http://127.0.0.1:8888/firmware/$device_type/$build")
         for i in "${try[@]}"; do
-            [[ $i == *"127.0.0.1:8889"* ]] && device_fw_key_server
-            [[ $i == *"127.0.0.1:8890"* ]] && device_fw_key_server ipw
-            log "Getting firmware keys for $device_type-$build: $i"
-            download_from_url "$i" index.html
+            local url="$i"
+            # if legacy-ios-kit-keys will be used, check latest version
+            if [[ $url == *"Legacy-iOS-Kit-Keys"* ]]; then
+                log "Getting latest Legacy-iOS-Kit-Keys url"
+                download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit-Keys/branches" branches
+                local latest="$(cat branches | $jq -r .[].commit.sha)"
+                url="https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/$latest/$device_type/$build/index.html"
+            fi
+
+            # if wikiproxy applewiki/iphonewiki will be used, initialize it
+            [[ $url == *"127.0.0.1:8889"* ]] && device_fw_key_server
+            [[ $url == *"127.0.0.1:8890"* ]] && device_fw_key_server ipw
+
+            log "Getting firmware keys for $device_type-$build: $url"
+            download_from_url "$url" index.html
             if [[ $(cat index.html | grep -c "$build") == 1 ]]; then
                 break
             fi
@@ -9163,7 +9174,10 @@ menu_restore() {
             ;;
         esac
         if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
-            menu_items+=("Latest iOS ($device_latest_vers)" "Signed iOS (IPSW must be signed)")
+            menu_items+=("Latest iOS ($device_latest_vers)")
+        fi
+        if (( device_proc >= 7 )) && [[ $platform == "linux" ]]; then
+            menu_items+=("Signed iOS (IPSW must be signed)")
         fi
         case $device_type in
             iPod4,1 ) menu_items+=("7.1.2");;
