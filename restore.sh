@@ -2760,8 +2760,7 @@ download_comp() {
     if [[ -e "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
         cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
     else
-        log "Downloading ${comp}..."
-        "$dir/pzb" -g "Firmware/dfu/$download_targetfile.dfu" -o ${comp} "$ipsw_url"
+        download_with_pzb "$ipsw_url" "Firmware/dfu/$download_targetfile.dfu" "${comp}"
         cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
     fi
 }
@@ -3093,8 +3092,7 @@ shsh_save() {
                 file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
             else
                 ipsw_get_url $build_id
-                log "Downloading BuildManifest for $version..."
-                "$dir/pzb" -g BuildManifest.plist -o BuildManifest.plist "$ipsw_url"
+                download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
             fi
             mv BuildManifest.plist $buildmanifest
         fi
@@ -3527,7 +3525,7 @@ ipsw_prepare_fourthree() {
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            download_with_pzb "$url" "${path}$name" "$name"
             cp $name $saved_path/
         fi
         "$dir/xpwntool" $name $getcomp.dec -iv $iv -k $key -decrypt
@@ -4527,7 +4525,7 @@ ipsw_prepare_ios4multipart() {
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            download_with_pzb "$url" "${path}$name" "$name"
             cp $name $saved_path/
         fi
         case $getcomp in
@@ -4558,7 +4556,7 @@ ipsw_prepare_ios4multipart() {
     elif [[ -e $saved_path/BuildManifest.plist ]]; then
         cp $saved_path/BuildManifest.plist .
     else
-        "$dir/pzb" -g "${path}BuildManifest.plist" -o "BuildManifest.plist" "$url"
+        download_with_pzb "$url" BuildManifest.plist BuildManifest.plist
         cp BuildManifest.plist $saved_path/
     fi
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
@@ -5292,7 +5290,7 @@ ipsw_prepare_multipatch() {
         elif [[ -e $saved_path/$name ]]; then
             cp $saved_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$url"
+            download_with_pzb "$url" "${path}$name" "$name"
             cp $name $saved_path/
         fi
         case $getcomp in
@@ -5842,7 +5840,7 @@ ipsw_prepare_patchcomp() {
                 cp $saved_path/$name41.$ext $name.$ext
             else
                 ipsw_get_url 8B117
-                "$dir/pzb" -g $name41.$ext -o $name.$ext "$ipsw_url"
+                download_with_pzb "$ipsw_url" "$name41.$ext" "$name.$ext"
                 cp $name.$ext $saved_path/$name41.$ext
             fi
         else
@@ -5862,7 +5860,7 @@ ipsw_prepare_patchcomp() {
             cp $saved_path/$name.$ext $name.$ext
         else
             ipsw_get_url 8B117
-            "$dir/pzb" -g ${path}$name.$ext -o $name.$ext "$ipsw_url"
+            download_with_pzb "$ipsw_url" "${path}$name.$ext" "$name.$ext"
             cp $name.$ext $saved_path/$name.$ext
         fi
         mkdir -p Downgrade
@@ -6061,8 +6059,7 @@ restore_download_bbsep() {
         if [[ $device_proc == 7 && $device_target_vers == "10"* ]]; then
             cp ../resources/manifest/BuildManifest_${device_type}_10.3.3.plist $build_id.plist
         else
-            log "Downloading $build_id BuildManifest"
-            "$dir/pzb" -g BuildManifest.plist -o $build_id.plist "$ipsw_url"
+            download_with_pzb "$ipsw_url" BuildManifest.plist $build_id.plist
         fi
         mv $build_id.plist ../saved/$device_type
     fi
@@ -6083,8 +6080,7 @@ restore_download_bbsep() {
             fi
         fi
         if [[ ! -e $restore_baseband_check ]]; then
-            log "Downloading $build_id Baseband"
-            "$dir/pzb" -g Firmware/$restore_baseband -o $restore_baseband "$ipsw_url"
+            download_with_pzb "$ipsw_url" Firmware/$restore_baseband $restore_baseband
             if [[ $baseband_sha1 != "$($sha1sum $restore_baseband | awk '{print $1}')" ]]; then
                 error "Downloading/verifying baseband failed. Please run the script again"
             fi
@@ -6103,8 +6099,7 @@ restore_download_bbsep() {
     if (( device_proc >= 7 )); then
         restore_sep="sep-firmware.$device_model.RELEASE"
         if [[ ! -e ../saved/$device_type/$restore_sep-$build_id.im4p ]]; then
-            log "Downloading $build_id SEP"
-            "$dir/pzb" -g Firmware/all_flash/$restore_sep.im4p -o $restore_sep.im4p "$ipsw_url"
+            download_with_pzb "$ipsw_url" Firmware/all_flash/$restore_sep.im4p $restore_sep.im4p
             mv $restore_sep.im4p ../saved/$device_type/$restore_sep-$build_id.im4p
         fi
         restore_sep="$restore_sep-$build_id.im4p"
@@ -7059,7 +7054,7 @@ device_ramdisk64() {
         if [[ -e $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
+            download_with_pzb "$ipsw_url" "${path}$name" "$name"
             cp $name $ramdisk_path/
         fi
         mv $name $getcomp.orig
@@ -7269,7 +7264,7 @@ device_ramdisk() {
         elif [[ -s $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
-            "$dir/pzb" -g "${path}$name" -o "$name" "$ipsw_url"
+            download_with_pzb "$ipsw_url" "${path}$name" "$name"
         fi
         if [[ ! -s $name ]]; then
             error "Failed to get $name. Please run the script again."
@@ -12471,7 +12466,7 @@ main() {
         if [[ $check != 0 ]]; then
             local error_msg=
             if [[ -n $debian_ver ]]; then
-                error_msg="* On Debian, try running this to fix the ping command: sudo setcap 'cap_net_admin,cap_net_raw+ep' \$(command -v ping)"
+                error_msg="* On Debian, try running this to fix the ping command: sudo /usr/sbin/setcap 'cap_net_admin,cap_net_raw+ep' \$(command -v ping)"
             fi
             error "Please check your Internet connection before proceeding." "$error_msg"
         fi
