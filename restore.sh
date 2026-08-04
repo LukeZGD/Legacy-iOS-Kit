@@ -2608,9 +2608,7 @@ device_fw_key_check() {
     if [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "$build") != 1 ]]; then
         rm -f "$keys_path/index.html"
     fi
-    if (( device_proc < 7 )) && [[ $(cat "$keys_path/index.html" 2>/dev/null | grep -c "RestoreRamdisk") != 1 ]]; then
-        rm -f "$keys_path/index.html"
-    fi
+    grep -Eq '20(2[6-9]|[3-9][0-9])-' "$keys_path/index.html" 2>/dev/null || rm -f "$keys_path/index.html"
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path"
@@ -3901,9 +3899,6 @@ ipsw_prepare_bundle() {
     ramdisk_name="${ramdisk_name%%.dmg*}.dmg"
     local RamdiskIV=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
     local RamdiskKey=$(echo "$key" | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
-    if [[ -z $RamdiskIV ]]; then
-        error "Issue with firmware keys: Failed getting RestoreRamdisk. Check The Apple Wiki or your wikiproxy"
-    fi
     file_extract_from_archive "$ipsw_p.ipsw" $ramdisk_name
     "$dir/xpwntool" $ramdisk_name Ramdisk.raw -iv $RamdiskIV -k $RamdiskKey
     "$dir/hfsplus" Ramdisk.raw extract usr/local/share/restore/options.$device_model.plist
