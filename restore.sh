@@ -367,11 +367,11 @@ set_tool_paths() {
         # version check
         if [[ -n $UBUNTU_CODENAME ]]; then
             case $UBUNTU_CODENAME in
-                "jammy" | "kinetic"   ) ubuntu_ver=22;;
-                "lunar" | "mantic"    ) ubuntu_ver=23;;
-                "noble" | "oracular"  ) ubuntu_ver=24;;
-                "plucky" | "questing" ) ubuntu_ver=25;;
-                "resolute" ) ubuntu_ver=26;;
+                "jammy" | "kinetic"     ) ubuntu_ver=22;;
+                "lunar" | "mantic"      ) ubuntu_ver=23;;
+                "noble" | "oracular"    ) ubuntu_ver=24;;
+                "plucky" | "questing"   ) ubuntu_ver=25;;
+                "resolute" | "stonking" ) ubuntu_ver=26;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
@@ -2412,16 +2412,16 @@ device_send_unpacked_ibss() {
 }
 
 ipwndfu_init() {
-    local ipwndfu_comm="3c0e66b97f307f0e97e641c1b9c064dcb9f40cd2"
-    local ipwndfu_sha1="9e8b5947fcfa2bec097d60fd74b17583993517c8"
+    local ipwndfu_comm="58effb3826e0b668073317b81aa36074f1a6af74"
+    local ipwndfu_sha1="8ebf65d3ab5928aff4557124873922d5f51f986a"
     ipwndfu="ipwndfu_python3"
     if [[ $device_sudoloop == 1 ]]; then
         psudo="$sudo"
     fi
     if [[ $platform == "macos" ]] && (( mac_majver <= 11 )); then
         ipwndfu="ipwndfu"
-        ipwndfu_comm="5466b3dfb5d7a4842ecb97fcc3a5263704eb59b3"
-        ipwndfu_sha1="e8c4203a100017a00522fd9c4f9ec566167962b6"
+        ipwndfu_comm="8c83fbb56845228cdf41cd5dc2f442e8cc7d71b8"
+        ipwndfu_sha1="f6602dc798ace85709411d7a3c97d07e88f0a3b1"
     fi
     if [[ ! -s ../saved/$ipwndfu/ipwndfu || $(cat ../saved/$ipwndfu/sha1check) != "$ipwndfu_sha1" ]]; then
         rm -rf ../saved/$ipwndfu
