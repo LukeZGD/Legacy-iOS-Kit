@@ -5351,8 +5351,13 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
-    log "Extract options.plist from $device_target_vers IPSW"
-    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
+    if [[ $device_target_vers == "3.1"* && $device_type == "iPod3,1" ]]; then
+        log "3.x options.plist"
+        cp ../resources/firmware/src/target/n18/options.plist $options_plist
+    else
+        log "Extract options.plist from $device_target_vers IPSW"
+        "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
+    fi
 
     log "Modify options.plist"
     cat $options_plist | sed '$d' | sed '$d' > options2.plist # remove </dict> and </plist>
