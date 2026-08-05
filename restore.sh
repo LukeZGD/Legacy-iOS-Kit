@@ -2126,7 +2126,12 @@ device_enter_mode() {
             fi
             if [[ $check == 0 ]]; then
                 log "Running kloader"
-                $ssh -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
+                if [[ $opt == "kloader" ]]; then
+                    $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders"
+                    print "* Unplug and replug your device now (or press home/power button)"
+                else
+                    $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
+                fi
             else
                 warn "Failed to connect to device via USB SSH."
                 if [[ $device_vers_maj == 10 ]]; then
@@ -2150,7 +2155,7 @@ device_enter_mode() {
                     error "Failed to connect to device via SSH, cannot continue."
                 fi
                 log "Running kloader"
-                $ssh root@$ip "bash /tmp/kloaders" &
+                $ssh -t root@$ip "bash /tmp/kloaders" &
             fi
 
             local attempt=1
@@ -2171,14 +2176,15 @@ device_enter_mode() {
                 fi
                 if [[ $opt == "kloader_axi0mX" ]]; then
                     print "* Keep the device plugged in"
-                    $ssh $port root@$ip "bash /tmp/kloaders" &
+                    $ssh -t $port root@$ip "bash /tmp/kloaders" &
                 else
-                    print "* Unplug and replug your device now"
+                    print "* Unplug and replug your device now (or press home/power button)"
                 fi
                 ((attempt++))
             done
             if (( attempt > 5 )); then
-                error "Failed to find device in kDFU mode. Please run the script again"
+                error "Failed to find device in kDFU mode. Please run the script again" \
+                      "You may also need to force restart the device before retrying."
             fi
             kill $iproxy_pid
         ;;
@@ -2612,19 +2618,19 @@ device_fw_key_check() {
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path"
-        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
+        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/af6bf5934dc61ed557a967a3f42ab7fb8ed8c45e/$device_type/$build/index.html"
                    "http://127.0.0.1:8889/firmware/$device_type/$build"
                    "http://127.0.0.1:8890/firmware/$device_type/$build"
                    "http://127.0.0.1:8888/firmware/$device_type/$build")
         for i in "${try[@]}"; do
             local url="$i"
             # if legacy-ios-kit-keys will be used, check latest version
-            if [[ $url == *"Legacy-iOS-Kit-Keys"* ]]; then
-                log "Getting latest Legacy-iOS-Kit-Keys url"
-                download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit-Keys/branches" branches
-                local latest="$(cat branches | $jq -r .[].commit.sha)"
-                url="https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/$latest/$device_type/$build/index.html"
-            fi
+            # if [[ $url == *"Legacy-iOS-Kit-Keys"* ]]; then
+            #     log "Getting latest Legacy-iOS-Kit-Keys url"
+            #     download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit-Keys/branches" branches
+            #     local latest="$(cat branches | $jq -r .[].commit.sha)"
+            #     url="https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/$latest/$device_type/$build/index.html"
+            # fi
 
             # if wikiproxy applewiki/iphonewiki will be used, initialize it
             [[ $url == *"127.0.0.1:8889"* ]] && device_fw_key_server
@@ -5353,7 +5359,7 @@ ipsw_prepare_multipatch() {
 
     if [[ $device_target_vers == "3.1"* && $device_type == "iPod3,1" ]]; then
         log "3.x options.plist"
-        cp ../resources/firmware/src/target/n18/options.plist $options_plist
+        cp ../resources/firmware/src/options.n18.plist $options_plist
     else
         log "Extract options.plist from $device_target_vers IPSW"
         "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
@@ -7473,7 +7479,7 @@ device_ramdisk() {
                     4.[10]* | 3.[21]* ) $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/private/var/db; echo '' > /mnt1/private/var/db/.launchd_use_gmalloc";;
                 esac
                 log "Mounting data partition"
-                $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+                $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
                 warn "Your device seems to be already jailbroken. Cannot continue jailbreaking."
                 if [[ $ipsw_openssh == 1 ]]; then
                     log "Will try installing OpenSSH anyway..."
@@ -7585,7 +7591,7 @@ device_ramdisk() {
             fi
 
             log "Mounting data partition"
-            $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+            $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
 
             # do stuff
             case $vers in
@@ -7693,7 +7699,7 @@ device_ramdisk() {
             log "Sending commands for clearing NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
             if (( device_proc < 7 )); then
-                $ssh -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
+                $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
             fi
             log "Done. Your device should reboot now"
             return
@@ -7800,7 +7806,7 @@ device_ramdisk_iosvers() {
     device_datetime_cmd nopause
     if (( device_proc < 7 )); then
         log "Mounting root filesystem"
-        $ssh -p $ssh_port root@127.0.0.1 "mount.sh root"
+        $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root"
         sleep 1
     fi
     log "Getting iOS version"
@@ -8115,7 +8121,7 @@ menu_ramdisk() {
                 fi
                 if (( device_proc < 7 )); then
                     device_ramdisk_iosvers
-                    $ssh -p $ssh_port root@127.0.0.1 "mount.sh pv"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
                 fi
                 cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
                 gzip -d openssh.tar.gz
@@ -11250,7 +11256,7 @@ device_dumprd() {
         return
     fi
     log "Mounting filesystems"
-    $ssh -p $ssh_port root@127.0.0.1 "mount.sh"
+    $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh"
     sleep 1
 
     case $device_type in
