@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
-device_rd_build="" # You can change the version of SSH Ramdisk and Pwned iBSS/iBEC here. (default is 10B329 for most devices)
 device_bootargs_default="pio-error=0 debug=0x2014e serial=3"
 device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
@@ -11556,6 +11555,27 @@ device_dfuipsw() {
     print "* You may now restore the device. Run the script again and select Restore/Downgrade"
 }
 
+validate_build() {
+    local raw_build="$1"
+    [[ -z "$raw_build" ]] && return 1
+
+    local last_char="${raw_build: -1}"
+
+    local formatted_build
+    formatted_build=$(printf '%s' "$raw_build" | tr '[:lower:]' '[:upper:]')
+    if [[ "$last_char" =~ ^[a-z]$ ]]; then
+        formatted_build="${formatted_build%?}${last_char}"
+    fi
+
+    # Match pattern: digits + uppercase letters + digits + optional lowercase letter
+    if [[ "$formatted_build" =~ ^[0-9]+[A-Z]+[0-9]+[a-z]?$ ]]; then
+        echo "$formatted_build"
+        return 0
+    fi
+
+    return 1
+}
+
 device_enter_build() {
     while true; do
         device_rd_build=
@@ -11564,15 +11584,11 @@ device_enter_build() {
         if [[ -z $device_rd_build ]]; then
             return
         fi
-        local last_char=$(echo "$device_rd_build" | rev | cut -c1)
-        device_rd_build=$(echo "$device_rd_build" | tr '[:lower:]' '[:upper:]') # to uppercase
-        # If last char was a lowercase letter, make it lowercase again
-        if echo "$last_char" | grep -Eq '^[a-z]$'; then
-            device_rd_build=$(echo "$device_rd_build" | rev | cut -c2- | rev)
-            device_rd_build=${device_rd_build}${last_char}
+
+        if formatted_result=$(validate_build "$device_rd_build"); then
+            device_rd_build="$formatted_result"
+            break
         fi
-        # Match pattern: digits + uppercase letters + digits + optional lowercase letter
-        echo "$device_rd_build" | grep -Eq '^[0-9]+[A-Z]+[0-9]+[a-z]?$' && break
 
         log "Build version input is not valid. Please try again"
     done
@@ -11822,6 +11838,10 @@ menu_justboot_history() {
 }
 
 device_justboot() {
+    formatted_result=$(validate_build "$device_rd_build")
+    if [[ $? != 0 ]]; then
+        error "Build version input is not valid. Please try again"
+    fi
     if [[ -z $device_bootargs ]]; then
         device_bootargs="pio-error=0 -v"
     fi
@@ -11875,16 +11895,22 @@ device_enter_ramdisk() {
         if [[ $? != 1 ]]; then
             device_ramdisk_ios8=1
         fi
-    elif (( device_proc >= 5 && device_vers_maj >= 9 )); then
-        log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
-        device_rd_build="13A452"
-    elif (( device_proc >= 5 )) && [[ $device_mode == "Normal" ]]; then
-        :
-    elif (( device_proc >= 5 )) && [[ -z $device_rd_build ]]; then
-        print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
-        print "* Do not use iOS 9+ ramdisks if your device is on iOS 8 or lower, and vice versa."
-        print "* If not sure, just leave it blank and press Enter/Return. This will select the default version."
-        device_enter_build
+    elif (( device_proc >= 5 )); then
+        if (( device_vers_maj >= 9 )); then
+            log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
+            device_rd_build="13A452"
+        elif [[ $device_mode == "Normal" ]]; then
+            :
+        elif [[ $device_type == "iPad2,"* && $device_rd_build == "8"* ]]; then
+            device_rd_build=
+        elif [[ -z $device_rd_build ]]; then
+            print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
+            print "* Do not use iOS 9+ ramdisks if your device is on iOS 8 or lower, and vice versa."
+            print "* If not sure, just leave it blank and press Enter/Return. This will select the default version."
+            device_enter_build
+        fi
+    else # a4 and older do not support setting sshrd version
+        device_rd_build=
     fi
 
     if [[ $1 == "menu" ]]; then
