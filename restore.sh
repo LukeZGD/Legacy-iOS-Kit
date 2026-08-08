@@ -1812,9 +1812,9 @@ device_find_mode() {
     done
 
     if [[ $device_in != 1 ]]; then
-        if [[ $timeout != 1 && $timeout != 20 ]]; then
-            error "Failed to find device in $mode mode (Timed out). Please run the script again."
-        fi
+        case $timeout in
+            [12] ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
+        esac
         return 1
     elif [[ $mode == "WTF" && $wtfreal != 1 ]]; then
         device_s5l8900xall
@@ -1884,82 +1884,27 @@ device_find_all() {
     esac
 }
 
-device_dfuhelper2() {
-    local top="SIDE"
-    if [[ $device_type == "iPad"* ]]; then
-        top="TOP"
-    fi
-    echo
-    print "* Press the VOL UP button now."
-    sleep 1
-    print "* Press the VOL DOWN button now."
-    sleep 1
-    print "* Press and hold the $top button."
-    for i in {10..1}; do
-        echo -n "$i "
-        sleep 1
-    done
-    echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
-    for i in {5..1}; do
-        echo -n "$i "
-        sleep 1
-    done
-    echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
-    for i in {8..1}; do
-        echo -n "$i "
-        device_find_all $1
-        opt=$?
-        if [[ $opt == 1 ]]; then
-            echo -e "\n$(log 'Found device in DFU mode.')"
-            device_mode="DFU"
-            return
-        fi
-        sleep 1
-    done
-    echo
-    device_find_mode DFU
-}
-
-device_dfuhelper3() {
-    local sec=10
-    if [[ $device_mode == "Recovery" ]]; then
-        sec=8
-    fi
-    echo -e "\n$(print "* Hold TOP and HOME buttons.")"
-    while (( sec > 0 )); do
-        echo -n "$sec "
-        sleep 1
-        sec=$((sec-1))
-    done
-    echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-    for i in {13..1}; do
-        echo -n "$i "
-        sleep 1
-    done
-    echo
-    if [[ $1 == "WTFreal" ]]; then
-        device_find_mode WTFreal
-    else
-        device_find_mode DFU
-    fi
-}
-
 device_dfuhelper() {
-    local opt
-    local rec=" recovery mode"
+    local opt sec top home mode_to_find rec found_dfu use_legacy
+    rec=" recovery mode"
+
     if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
-        rec=
+        rec=""
     fi
+
     if [[ $device_mode == "DFU" && $1 == "DFUreal" ]]; then
         log "Device is already in DFU mode"
         return
     fi
+
     if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" && $device_proc != 1 ]]; then
         log "Device is already in DFU mode"
         return
     fi
+
     print "* DFU Mode Helper - Get ready to enter DFU mode."
     print "* If you already know how to enter DFU mode, you may do so right now before continuing."
+
     select_yesno "Select Y to continue, N to exit$rec" 1
     if [[ $? != 1 ]]; then
         if [[ -z $1 && $device_mode == "Recovery" ]]; then
@@ -1968,61 +1913,149 @@ device_dfuhelper() {
         fi
         exit
     fi
-    print "* Get ready..."
-    device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
-    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
-        log "Found device in DFU mode."
-        return
-    elif [[ -n $device_mode ]]; then
-        for i in {3..1}; do
-            echo -n "$i "
-            sleep 1
-        done
-    fi
-    case $device_type in
-        iPhone1,* | iPod1,1  ) device_dfuhelper3 $2; return;;
-        iPad1,1 | iPad1[12]* ) :;;
-        iPhone1* | iPad[81]* ) device_dfuhelper2; return;;
-    esac
-    local top="TOP"
-    local home="HOME"
-    case $device_type in
-        iPhone[79],* | iPhone8,[12] ) top="SIDE";;
-    esac
-    if [[ $device_type == "iPhone9,"* || $device_type == "iPod9,1" ]]; then
-        home="VOL DOWN"
-    fi
-    local sec=10
-    if [[ $device_mode == "Recovery" ]]; then
-        sec=8
-    fi
-    echo -e "\n$(print "* Hold $top and $home buttons.")"
-    while (( sec > 0 )); do
-        echo -n "$sec "
-        device_find_all $1
-        opt=$?
-        if [[ $opt == 1 ]]; then
-            echo -e "\n$(log 'Found device in DFU mode.')"
-            device_mode="DFU"
+
+    while true; do
+        print "* Get ready..."
+        device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
+        if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
+            log "Found device in DFU mode."
+            return
+        elif [[ -n $device_mode ]]; then
+            for i in {3..1}; do
+                echo -n "$i "
+                sleep 1
+            done
+        fi
+
+        found_dfu=0
+        use_legacy=0
+        mode_to_find="DFU"
+
+        case $device_type in
+            iPhone1,* | iPod1,1 )
+                [[ $2 == "WTFreal" ]] && mode_to_find="WTFreal"
+                sec=10
+                [[ $device_mode == "Recovery" ]] && sec=8
+                echo -e "\n$(print "* Hold TOP and HOME buttons.")"
+                while (( sec > 0 )); do
+                    echo -n "$sec "
+                    sleep 1
+                    sec=$((sec-1))
+                done
+                echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
+                for i in {13..1}; do
+                    echo -n "$i "
+                    sleep 1
+                done
+                echo
+            ;;
+
+            iPad1,1 | iPad1[12]* )
+                use_legacy=1
+            ;;
+
+            iPhone1* | iPad[81]* )
+                top="SIDE"
+                [[ $device_type == "iPad"* ]] && top="TOP"
+                echo
+                print "* Press the VOL UP button now."
+                sleep 1
+                print "* Press the VOL DOWN button now."
+                sleep 1
+                print "* Press and hold the $top button."
+                for i in {10..1}; do
+                    echo -n "$i "
+                    sleep 1
+                done
+                echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
+                for i in {5..1}; do
+                    echo -n "$i "
+                    sleep 1
+                done
+                echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
+                for i in {8..1}; do
+                    echo -n "$i "
+                    device_find_all "$1"
+                    if [[ $? == 1 ]]; then
+                        echo -e "\n$(log 'Found device in DFU mode.')"
+                        device_mode="DFU"
+                        found_dfu=1
+                        break
+                    fi
+                    sleep 1
+                done
+                echo
+            ;;
+
+            * )
+                use_legacy=1
+            ;;
+        esac
+
+        if [[ $use_legacy == 1 ]]; then
+            top="TOP"
+            home="HOME"
+            case $device_type in
+                iPhone[79],* | iPhone8,[12] ) top="SIDE";;
+            esac
+            if [[ $device_type == "iPhone9,"* || $device_type == "iPod9,1" ]]; then
+                home="VOL DOWN"
+            fi
+
+            sec=10
+            [[ $device_mode == "Recovery" ]] && sec=8
+            echo -e "\n$(print "* Hold $top and $home buttons.")"
+            while (( sec > 0 )); do
+                echo -n "$sec "
+                device_find_all "$1"
+                if [[ $? == 1 ]]; then
+                    echo -e "\n$(log 'Found device in DFU mode.')"
+                    device_mode="DFU"
+                    found_dfu=1
+                    break
+                fi
+                sleep 1
+                sec=$((sec-1))
+            done
+
+            if [[ $found_dfu == 0 ]]; then
+                echo -e "\n$(print "* Release $top button and keep holding $home button.")"
+                for i in {8..1}; do
+                    echo -n "$i "
+                    device_find_all "$1"
+                    if [[ $? == 1 ]]; then
+                        echo -e "\n$(log 'Found device in DFU mode.')"
+                        device_mode="DFU"
+                        found_dfu=1
+                        break
+                    fi
+                    sleep 1
+                done
+                echo
+            fi
+        fi
+
+        # Exit early if device was detected in countdown loops
+        if [[ $found_dfu == 1 ]]; then
             return
         fi
-        sleep 1
-        sec=$((sec-1))
-    done
-    echo -e "\n$(print "* Release $top button and keep holding $home button.")"
-    for i in {8..1}; do
-        echo -n "$i "
-        device_find_all $1
-        opt=$?
-        if [[ $opt == 1 ]]; then
-            echo -e "\n$(log 'Found device in DFU mode.')"
-            device_mode="DFU"
+
+        # Check final DFU mode status
+        device_find_mode "$mode_to_find" 2
+        if [[ $? == 0 ]]; then
             return
         fi
-        sleep 1
+
+        # DFU check failed
+        select_yesno "Failed to detect DFU mode. Would you like to retry?" 1
+        if [[ $? != 1 ]]; then
+            if [[ -z $1 && $device_mode == "Recovery" ]]; then
+                log "Attempting to exit Recovery mode."
+                $irecovery -n
+            fi
+            exit
+        fi
     done
-    echo
-    device_find_mode DFU
 }
 
 device_enter_mode() {
