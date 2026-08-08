@@ -11559,10 +11559,12 @@ validate_build() {
     local raw_build="$1"
     [[ -z "$raw_build" ]] && return 1
 
-    local last_char="${raw_build: -1}"
+    # Extract last character and force it to lowercase
+    local last_char=$(printf '%s' "${raw_build: -1}" | tr '[:upper:]' '[:lower:]')
+    # Convert entire string to uppercase
+    local formatted_build=$(printf '%s' "$raw_build" | tr '[:lower:]' '[:upper:]')
 
-    local formatted_build
-    formatted_build=$(printf '%s' "$raw_build" | tr '[:lower:]' '[:upper:]')
+    # If last char was a letter, append it
     if [[ "$last_char" =~ ^[a-z]$ ]]; then
         formatted_build="${formatted_build%?}${last_char}"
     fi
