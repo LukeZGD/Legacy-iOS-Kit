@@ -1885,8 +1885,9 @@ device_find_all() {
 }
 
 device_dfuhelper() {
-    local opt sec top home mode_to_find rec found_dfu use_legacy
+    local opt sec top home mode_to_find rec found_dfu use_legacy target_code mode_name arg1
     rec=" recovery mode"
+    arg1="$1"
 
     if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         rec=""
@@ -1914,11 +1915,42 @@ device_dfuhelper() {
         exit
     fi
 
+    # Helper function: handles countdown display, polling, and detection
+    _step() {
+        local count=$1 poll=${2:-1} i
+        for (( i=count; i>0; i-- )); do
+            echo -n "$i "
+            if [[ $poll == 1 ]]; then
+                device_find_all "$arg1"
+                if [[ $? == $target_code ]]; then
+                    echo -e "\n$(log "Found device in $mode_name mode.")"
+                    device_mode="$mode_name"
+                    found_dfu=1
+                    return 0
+                fi
+            fi
+            sleep 1
+        done
+        return 1
+    }
+
     while true; do
+        found_dfu=0
+        use_legacy=0
+        target_code=1
+        mode_name="DFU"
+        mode_to_find="DFU"
+        if [[ $device_proc == 1 ]]; then
+            target_code=2
+            mode_name="WTF"
+            mode_to_find="WTFreal"
+        fi
+
         print "* Get ready..."
         device_mode="$($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-)"
-        if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
-            log "Found device in DFU mode."
+        if [[ $device_mode == "$mode_name" && $mode != "device_dfuhelper" ]]; then
+            log "Found device in $mode_name mode."
+            unset -f _step
             return
         elif [[ -n $device_mode ]]; then
             for i in {3..1}; do
@@ -1927,26 +1959,16 @@ device_dfuhelper() {
             done
         fi
 
-        found_dfu=0
-        use_legacy=0
-        mode_to_find="DFU"
-
         case $device_type in
             iPhone1,* | iPod1,1 )
-                [[ $2 == "WTFreal" ]] && mode_to_find="WTFreal"
                 sec=10
                 [[ $device_mode == "Recovery" ]] && sec=8
+
                 echo -e "\n$(print "* Hold TOP and HOME buttons.")"
-                while (( sec > 0 )); do
-                    echo -n "$sec "
-                    sleep 1
-                    sec=$((sec-1))
-                done
+                _step $sec && break
+
                 echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-                for i in {13..1}; do
-                    echo -n "$i "
-                    sleep 1
-                done
+                _step 13
                 echo
             ;;
 
@@ -1962,28 +1984,15 @@ device_dfuhelper() {
                 sleep 1
                 print "* Press the VOL DOWN button now."
                 sleep 1
+
                 print "* Press and hold the $top button."
-                for i in {10..1}; do
-                    echo -n "$i "
-                    sleep 1
-                done
+                _step 10 && break
+
                 echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
-                for i in {5..1}; do
-                    echo -n "$i "
-                    sleep 1
-                done
+                _step 5 && break
+
                 echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
-                for i in {8..1}; do
-                    echo -n "$i "
-                    device_find_all "$1"
-                    if [[ $? == 1 ]]; then
-                        echo -e "\n$(log 'Found device in DFU mode.')"
-                        device_mode="DFU"
-                        found_dfu=1
-                        break
-                    fi
-                    sleep 1
-                done
+                _step 8
                 echo
             ;;
 
@@ -2004,55 +2013,36 @@ device_dfuhelper() {
 
             sec=10
             [[ $device_mode == "Recovery" ]] && sec=8
-            echo -e "\n$(print "* Hold $top and $home buttons.")"
-            while (( sec > 0 )); do
-                echo -n "$sec "
-                device_find_all "$1"
-                if [[ $? == 1 ]]; then
-                    echo -e "\n$(log 'Found device in DFU mode.')"
-                    device_mode="DFU"
-                    found_dfu=1
-                    break
-                fi
-                sleep 1
-                sec=$((sec-1))
-            done
 
-            if [[ $found_dfu == 0 ]]; then
-                echo -e "\n$(print "* Release $top button and keep holding $home button.")"
-                for i in {8..1}; do
-                    echo -n "$i "
-                    device_find_all "$1"
-                    if [[ $? == 1 ]]; then
-                        echo -e "\n$(log 'Found device in DFU mode.')"
-                        device_mode="DFU"
-                        found_dfu=1
-                        break
-                    fi
-                    sleep 1
-                done
-                echo
-            fi
+            echo -e "\n$(print "* Hold $top and $home buttons.")"
+            _step $sec && break
+
+            echo -e "\n$(print "* Release $top button and keep holding $home button.")"
+            _step 8
+            echo
         fi
 
-        # Exit early if device was detected in countdown loops
+        # Early return if device was found during countdown
         if [[ $found_dfu == 1 ]]; then
+            unset -f _step
             return
         fi
 
-        # Check final DFU mode status
+        # Final mode verification check
         device_find_mode "$mode_to_find" 2
         if [[ $? == 0 ]]; then
+            unset -f _step
             return
         fi
 
-        # DFU check failed
+        # DFU check failed - prompt retry
         select_yesno "Failed to detect DFU mode. Would you like to retry?" 1
         if [[ $? != 1 ]]; then
             if [[ -z $1 && $device_mode == "Recovery" ]]; then
                 log "Attempting to exit Recovery mode."
                 $irecovery -n
             fi
+            unset -f _step
             exit
         fi
     done
