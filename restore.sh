@@ -7454,7 +7454,10 @@ device_ramdisk() {
 
             if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
                 case $vers in
-                    4.[10]* | 3.[21]* ) $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/private/var/db; echo '' > /mnt1/private/var/db/.launchd_use_gmalloc";;
+                    4.[10]* | 3.[21]* )
+                        log "Applying launchd_use_gmalloc fix"
+                        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/private/var/db; echo '' > /mnt1/private/var/db/.launchd_use_gmalloc"
+                    ;;
                 esac
                 log "Mounting data partition"
                 $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
