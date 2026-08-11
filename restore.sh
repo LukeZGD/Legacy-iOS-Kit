@@ -1292,7 +1292,7 @@ device_get_info() {
                 device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
-            if [[ $device_mode != "DFU" && -z $device_type && $device_model == "m68ap" ]]; then
+            if [[ $device_mode != "DFU" && $device_argmode != "entry" && $device_model == "m68ap" ]]; then
                 device_entry_s5l8900
             fi
             if [[ $device_mode == "Recovery" ]]; then
@@ -12604,8 +12604,8 @@ for i in "$@"; do
         "--no-device"       ) device_argmode="none";;
 
         # entry parameters
-        "--device="*        ) device_type="${i#*=}";;
-        "--ecid="*          ) device_ecid="${i#*=}";;
+        "--device="*        ) device_argmode="entry"; device_type="${i#*=}";;
+        "--ecid="*          ) device_argmode="entry"; device_ecid="${i#*=}";;
 
         # main_argmode setters
         "--dfuhelper"       ) main_argmode="device_dfuhelper";;
