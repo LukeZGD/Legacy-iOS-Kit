@@ -752,12 +752,13 @@ version_update_check() {
         /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
+    download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/branches" branches
     download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" latest
-    github_api=$(cat latest 2>/dev/null)
-    version_latest=$(echo "$github_api" | $jq -r '.name')
+    version_latest=$(cat latest | $jq -r '.name')
     version_latest=${version_latest#Latest-}
-    git_hash_latest=$(echo "$github_api" | $jq -r '.target_commitish')
+    git_hash_latest=$(cat branches | $jq -r --arg branch "$(git rev-parse --abbrev-ref HEAD)" '.[] | select(.name == $branch) | .commit.sha')
     git_hash_latest=${git_hash_latest:0:7}
+    git_hash_latest+=" $(git rev-parse --abbrev-ref HEAD)"
     popd >/dev/null
 }
 
@@ -820,6 +821,7 @@ version_get() {
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
         [[ -n $(git status --porcelain --untracked-files=no) ]] && git_hash+="-dirty"
+        git_hash+=" $(git rev-parse --abbrev-ref HEAD)"
 
         export TZ=UTC
         local ts=$(git log -1 --format=%ct)
@@ -864,6 +866,8 @@ version_check() {
     fi
     pushd .. >/dev/null
     version_update_check
+    log "git_hash:        $git_hash"
+    log "git_hash_latest: $git_hash_latest"
     if [[ -z $version_latest ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
     elif [[ $git_hash_latest != "$git_hash" ]]; then
