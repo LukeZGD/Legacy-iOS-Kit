@@ -6104,7 +6104,7 @@ restore_download_bbsep() {
 }
 
 restore_idevicerestore() {
-    local ExtraArgs="-ew"
+    local ExtraArgs="-ewy"
     local idevicerestore2="$idevicerestore"
 
     mkdir -p shsh
@@ -6112,7 +6112,6 @@ restore_idevicerestore() {
     if [[ $device_use_bb == 0 || $device_type == "$device_disable_bbupdate" ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
     fi
-    ipsw_extract custom
     case $1 in
         first   ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
         special ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
@@ -6127,7 +6126,8 @@ restore_idevicerestore() {
             sleep 1
         fi
         log "Sending iBEC..."
-        $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
+        file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
+        $irecovery -f "iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
@@ -6290,44 +6290,35 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
-    local noextract
-    local newidr
 
     # remove erase arg if update
     [[ $1 == "update" ]] && ExtraArgs=
-
-    # use newer idr for newer ios
-    local major=$(echo "$device_latest_vers" | cut -d. -f1)
-    if (( major >= 12 )); then
-        newidr=1
-    fi
-    if [[ $newidr == 1 ]]; then
-        idevicerestore2+="2"
-        ExtraArgs+=" -y"
-        noextract=1
-    fi
+    ExtraArgs+=" -y"
 
     if [[ $1 == "custom" ]]; then
         ExtraArgs+=" -c"
         ipsw_path="$ipsw_custom"
-        ipsw_extract custom
     else
         device_enter_mode Recovery
-        [[ $noextract != 1 ]] && ipsw_extract
     fi
-    if [[ $device_type == "iPhone1,2" && $device_target_vers == "4"* ]]; then
-        if [[ $1 == "custom" ]]; then
+    if [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
+        log "Sending iBSS..."
+        file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+        $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
+        device_find_mode Recovery
+    elif [[ $device_proc == 1 && $1 == "custom" ]]; then
+        if [[ $device_mode == "WTF" ]]; then
             log "Sending s5l8900xall..."
-            $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+            file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+            $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
             device_find_mode DFUreal
+        fi
+        if [[ $device_target_vers == "4"* ]]; then
             log "Sending iBSS..."
-            $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+            file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+            $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
             device_find_mode Recovery
         fi
-    elif [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
-        log "Sending iBSS..."
-        $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
-        device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=" -d"
