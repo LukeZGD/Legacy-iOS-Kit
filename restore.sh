@@ -1587,7 +1587,7 @@ device_get_info() {
         else
             log "S5L8900 detected in $device_mode mode. WTF mode is required."
             print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
-            warn "Continuing may cause unexpected issues. Alternatively, restore to 3.1.3 or latest without jailbreak."
+            warn "It is recommended to re-enter WTF mode as continuing in DFU may cause unexpected issues."
             pause
         fi
     fi
@@ -2063,12 +2063,10 @@ device_enter_mode() {
                 device_dfuhelper norec WTFreal
                 return
             fi
-            log "Found an S5L8900 device in $device_mode mode. Your device needs to be in WTF mode to continue."
-            print "* Force restart your device and place it in normal or recovery mode, then re-enter WTF mode."
-            print "* You can enter WTF mode by doing the DFU mode procedure."
-            echo
-            device_dfuhelper norec WTFreal
-            device_find_mode WTFreal 100
+            log "S5L8900 detected in $device_mode mode. WTF mode is required."
+            print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
+            warn "It is recommended to re-enter WTF mode as continuing in DFU may cause unexpected issues."
+            pause
         ;;
 
         "Recovery" )
