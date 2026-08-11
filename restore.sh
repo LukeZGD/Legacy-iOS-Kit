@@ -1941,7 +1941,7 @@ device_dfuhelper() {
         mode_name="DFU"
         mode_to_find="DFU"
         if [[ $device_proc == 1 ]]; then
-            target_code=2
+            target_code=3
             mode_name="WTF"
             mode_to_find="WTFreal"
         fi
@@ -6727,7 +6727,7 @@ ipsw_prepare() {
         1 )
             if [[ $ipsw_jailbreak == 1 ]]; then
                 ipsw_prepare_s5l8900
-            elif [[ $device_target_vers == "$device_latest_vers" && ! -s "../$ipsw_latest_path.ipsw" ]]; then
+            elif [[ $device_target_vers == "$device_latest_vers" && ! -s "$ipsw_path.ipsw" ]]; then
                 ipsw_path="../$ipsw_latest_path"
                 ipsw_download "$ipsw_path"
             fi
