@@ -7922,7 +7922,7 @@ menu_ramdisk() {
                 local latest="$(cat latest | $jq -r ".tag_name")"
                 local current="$(cat ../saved/TrollStore_version 2>/dev/null || echo "none")"
                 log "Latest version: $latest, current version: $current"
-                if [[ $current != "$latest" ]]; then
+                if [[ $current != "$latest" && $latest != "null" ]]; then
                     rm -f ../saved/TrollStore.tar ../saved/PersistenceHelper_Embedded
                 fi
                 if [[ -s ../saved/TrollStore.tar && -s ../saved/PersistenceHelper_Embedded ]]; then
@@ -11945,7 +11945,7 @@ device_altserver() {
     local latest="$(cat latest | $jq -r ".tag_name")"
     local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
     log "Latest version: $latest, current version: $current"
-    if [[ $current != "$latest" ]]; then
+    if [[ $current != "$latest" && $latest != "null" ]]; then
         rm -f $anisette
     fi
     if [[ ! -e $anisette ]]; then
@@ -11999,7 +11999,7 @@ device_plumesign() {
         local latest="$(cat latest | $jq -r ".tag_name")"
         local current="$(cat ../saved/${plumesign}_version 2>/dev/null || echo "none")"
         log "Latest version: $latest, current version: $current"
-        if [[ $current != "$latest" ]]; then
+        if [[ $current != "$latest" && $latest != "null" ]]; then
             rm -f ../saved/$plumesign
         fi
         if [[ ! -e ../saved/$plumesign ]]; then
