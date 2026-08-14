@@ -1838,6 +1838,7 @@ device_sshpass() {
         echo
     fi
     if [[ -z $pass ]]; then
+        log "User did not enter a password. Setting to default: alpine"
         pass="alpine"
     fi
     export SSHPASS="$pass"
@@ -8813,13 +8814,11 @@ menu_plumesign_accounts() {
                 local apple_pass=
                 log "Enter Apple ID details to continue."
                 print "* Your Apple ID and password will only be sent to Apple servers."
-                while [[ -z $apple_id ]]; do
-                    read -p "$(input 'Apple ID: ')" apple_id
-                done
+                read -p "$(input 'Apple ID: ')" apple_id
+                [[ -z $apple_id ]] && continue
                 print "* Your password input will not be visible, but it is still being entered."
-                while [[ -z $apple_pass ]]; do
-                    read -s -p "$(input 'Password: ')" apple_pass
-                done
+                read -s -p "$(input 'Password: ')" apple_pass
+                [[ -z $apple_id ]] && continue
                 echo
                 log "Adding account using Plumesign..."
                 device_plumesign account login -u "$apple_id" -p "$apple_pass"
@@ -11865,7 +11864,7 @@ device_appinst() {
         log "Transferring: $app"
         $scp -P $ssh_port "$i" root@127.0.0.1:/tmp
         log "Installing: $app"
-        $ssh -p $ssh_port root@127.0.0.1 "appinst '/tmp/$app'; rm '/tmp/$app'"
+        $ssh -t -p $ssh_port root@127.0.0.1 "appinst '/tmp/$app'; rm '/tmp/$app'"
     done
     kill $iproxy_pid
 }
