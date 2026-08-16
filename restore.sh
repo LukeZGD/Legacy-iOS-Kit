@@ -8862,7 +8862,7 @@ menu_plumesign_accounts() {
                 [[ -z $apple_id ]] && continue
                 print "* Your password input will not be visible, but it is still being entered."
                 read -s -p "$(input 'Password: ')" apple_pass
-                [[ -z $apple_id ]] && continue
+                [[ -z $apple_pass ]] && continue
                 echo
                 log "Adding account using Plumesign..."
                 device_plumesign account login -u "$apple_id" -p "$apple_pass"
