@@ -1813,9 +1813,9 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         case $timeout in
-            [12] ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
+            [12] ) return 1;;
+            * ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
         esac
-        return 1
     elif [[ $mode == "WTF" && $wtfreal != 1 ]]; then
         device_s5l8900xall
     fi
@@ -6356,15 +6356,15 @@ restore_prepare_pwnrec64() {
 
     device_enter_mode pwnDFU
     sleep 1
-    while (( attempt <= 5 )); do
-        log "Entering pwned recovery mode... (Attempt $attempt of 5)"
+    while (( attempt <= 3 )); do
+        log "Entering pwned recovery mode... (Attempt $attempt of 3)"
         log "Sending iBSS..."
         $irecovery -f $iBSS.im4p
         sleep 1
         log "Sending iBEC..."
         $irecovery -f $iBEC.im4p
         sleep 3
-        device_find_mode Recovery 1
+        device_find_mode Recovery 2
         if [[ $? == 0 ]]; then
             break
         fi
