@@ -913,12 +913,14 @@ device_entry() {
 
     if [[ $main_argmode == "device_justboot"* || $main_argmode == "device_enter_ramdisk"* ]]; then
         :
+    elif [[ $device_argmode == "none" && -n $device_ecid ]]; then
+        :
     elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" && $device_mode != "Normal" ]]; then
         until [[ -n $device_ecid_entry ]] && [ "$device_ecid_entry" -eq "$device_ecid_entry" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid_entry
         done
     fi
-    if [[ $device_argmode == "none" ]]; then
+    if [[ $device_argmode == "none" && -z $device_ecid ]]; then
         device_ecid="$device_ecid_entry"
     fi
     if [[ -n $device_ecid_entry && $main_argmode == "device_justboot"* ]]; then
@@ -9550,7 +9552,7 @@ menu_ipsw() {
                 else
                     warn "Selected Base IPSW failed validation, proceed with caution"
                 fi
-                if [[ $device_proc != 4 ]]; then
+                if [[ $device_proc != 4 && $device_target_drav6 != 1 ]]; then
                     menu_items+=("Select Base SHSH")
                 fi
                 echo
@@ -9558,7 +9560,7 @@ menu_ipsw() {
                 print "* Select Base IPSW $text2 to continue"
                 echo
             fi
-            if [[ $device_proc == 4 || $device_can_drav6 == 1 ]]; then
+            if [[ $device_proc == 4 || $device_target_drav6 == 1 ]]; then
                 shsh_path=1
             else
                 if [[ -n $shsh_path ]]; then
@@ -12601,8 +12603,8 @@ for i in "$@"; do
         "--no-device"       ) device_argmode="none";;
 
         # entry parameters
-        "--device="*        ) device_argmode="entry"; device_type="${i#*=}";;
-        "--ecid="*          ) device_argmode="entry"; device_ecid="${i#*=}";;
+        "--device="*        ) [[ -z $device_argmode ]] && device_argmode="entry"; device_type="${i#*=}";;
+        "--ecid="*          ) [[ -z $device_argmode ]] && device_argmode="entry"; device_ecid="${i#*=}";;
 
         # main_argmode setters
         "--dfuhelper"       ) main_argmode="device_dfuhelper";;
