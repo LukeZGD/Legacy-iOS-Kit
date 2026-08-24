@@ -2113,11 +2113,9 @@ device_enter_mode() {
 
             echo "chmod +x /tmp/kloader*" > kloaders
             opt="kloader_axi0mX"
-            if [[ $device_vers_maj == 5 ]]; then
-                case $device_type in
-                    iPad2,4 | iPad3,* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
-                esac
-                log "Using $opt for $device_type iOS $device_vers_maj"
+            if [[ $device_vers_maj == 5 && $device_proc == 5 ]]; then
+                opt="kloader5"
+                log "Using kloader5 for A5(X) iOS 5"
             fi
             echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
             sendfiles+=("../resources/kloader/$opt" "kloaders" "pwnediBSS")
@@ -2175,7 +2173,7 @@ device_enter_mode() {
                     error "Failed to connect to device via SSH, cannot continue."
                 fi
                 log "Running kloader"
-                $ssh -t root@$ip "bash /tmp/kloaders" &
+                $ssh -t root@$ip "bash /tmp/kloaders"
             fi
 
             local attempt=1
@@ -5567,15 +5565,17 @@ ipsw_prepare_battery_images() {
     local battery_base_name
     local battery_target_name
     for battery_comp in BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 BatteryCharging BatteryPlugin; do
-        battery_base_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$battery_comp:Info:Path" bm_base.plist | tr -d '"')
+        battery_base_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$battery_comp:Info:Path" bm_base.plist 2>/dev/null | tr -d '"')
         battery_target_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$battery_comp:Info:Path" bm_target.plist 2>/dev/null | tr -d '"')
         battery_base_name=$(basename "$battery_base_name")
         battery_target_name=$(basename "$battery_target_name")
+
+        # notably BatteryCharging/GlyphCharging not present on iOS 7+
         if [[ -z $battery_base_name ]]; then
-            warn "Unable to find base $battery_comp. Leaving existing image unchanged"
+            log "Unable to find base $battery_comp. Leaving existing image unchanged"
             continue
         fi
-        if [[ -z $battery_target_name ]]; then # notably BatteryCharging/GlyphCharging not present on iOS 7+
+        if [[ -z $battery_target_name ]]; then
             log "Unable to find target $battery_comp. Adding to manifest"
             echo "$battery_base_name" >> manifest
             mv manifest "$all_flash"/
