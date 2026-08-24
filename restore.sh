@@ -5559,21 +5559,31 @@ ipsw_prepare_ios4patches() {
 ipsw_prepare_battery_images() {
     [[ $device_target_powder != 1 ]] && return
 
-    device_fw_key_check base
-    device_fw_key_check target
-    log "Restoring complete original/base iOS battery images"
+    log "Restoring base iOS battery images"
+    file_extract_from_archive temp.ipsw "$all_flash/manifest"
+    file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
+    mv BuildManifest.plist bm_base.plist
+    file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
+    mv BuildManifest.plist bm_target.plist
     mkdir -p "$all_flash"
     local battery_comp
     local battery_base_name
     local battery_target_name
-    for battery_comp in BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 GlyphCharging GlyphPlugin; do
-        battery_base_name=$(echo "$device_fw_key_base" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
-        battery_target_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
+    for battery_comp in BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 BatteryCharging BatteryPlugin; do
+        battery_base_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$battery_comp:Info:Path" bm_base.plist | tr -d '"')
+        battery_target_name=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$battery_comp:Info:Path" bm_target.plist 2>/dev/null | tr -d '"')
+        battery_base_name=$(basename "$battery_base_name")
+        battery_target_name=$(basename "$battery_target_name")
         if [[ -z $battery_base_name ]]; then
             warn "Unable to find base $battery_comp. Leaving existing image unchanged"
             continue
         fi
-        [[ -z $battery_target_name ]] && battery_target_name="$battery_base_name"
+        if [[ -z $battery_target_name ]]; then # notably BatteryCharging/GlyphCharging not present on iOS 7+
+            log "Unable to find target $battery_comp. Adding to manifest"
+            echo "$battery_base_name" >> manifest
+            mv manifest "$all_flash"/
+            battery_target_name="$battery_base_name"
+        fi
 
         rm -f "$battery_base_name" "$battery_target_name"
         file_extract_from_archive "$ipsw_base_path.ipsw" "$all_flash/$battery_base_name"
@@ -5582,11 +5592,7 @@ ipsw_prepare_battery_images() {
             continue
         fi
 
-        # add original image under both names
-        cp "$battery_base_name" "$all_flash/$battery_base_name"
-        if [[ $battery_target_name != "$battery_base_name" ]]; then
-            cp "$battery_base_name" "$all_flash/$battery_target_name"
-        fi
+        cp "$battery_base_name" "$all_flash/$battery_target_name"
         rm -f "$battery_base_name"
     done
     zip -r0 temp.ipsw "$all_flash"/*
