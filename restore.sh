@@ -5556,6 +5556,42 @@ ipsw_prepare_ios4patches() {
     done
 }
 
+ipsw_prepare_battery_images() {
+    [[ $device_target_powder != 1 ]] && return
+
+    device_fw_key_check base
+    device_fw_key_check target
+    log "Restoring complete original/base iOS battery images"
+    mkdir -p "$all_flash"
+    local battery_comp
+    local battery_base_name
+    local battery_target_name
+    for battery_comp in BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 GlyphCharging GlyphPlugin; do
+        battery_base_name=$(echo "$device_fw_key_base" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
+        battery_target_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
+        if [[ -z $battery_base_name ]]; then
+            warn "Unable to find base $battery_comp. Leaving existing image unchanged"
+            continue
+        fi
+        [[ -z $battery_target_name ]] && battery_target_name="$battery_base_name"
+
+        rm -f "$battery_base_name" "$battery_target_name"
+        file_extract_from_archive "$ipsw_base_path.ipsw" "$all_flash/$battery_base_name"
+        if [[ ! -s $battery_base_name ]]; then
+            warn "Failed to extract base $battery_comp ($battery_base_name). Leaving existing image unchanged"
+            continue
+        fi
+
+        # add original image under both names
+        cp "$battery_base_name" "$all_flash/$battery_base_name"
+        if [[ $battery_target_name != "$battery_base_name" ]]; then
+            cp "$battery_base_name" "$all_flash/$battery_target_name"
+        fi
+        rm -f "$battery_base_name"
+    done
+    zip -r0 temp.ipsw "$all_flash"/*
+}
+
 ipsw_prepare_ios4powder() {
     local ExtraArgs="-apticket $shsh_path"
     local JBFiles=()
@@ -5631,6 +5667,7 @@ ipsw_prepare_ios4powder() {
               "* You may try selecting N for memory option"
     fi
 
+    ipsw_prepare_battery_images
     ipsw_prepare_ios4patches
     if [[ -n $ipsw_customlogo ]]; then
         ipsw_prepare_logos_add
@@ -5769,41 +5806,7 @@ ipsw_prepare_powder() {
             ;;
         esac
     fi
-    # battery fix drav6
-    if [[ $device_target_drav6 == 1 ]]; then
-        log "dra v6: restoring complete original/base iOS battery graphics set"
-        device_fw_key_check base
-        device_fw_key_check target
-        mkdir -p "$all_flash"
-        local battery_comp
-        local battery_base_name
-        local battery_target_name
-        for battery_comp in BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 GlyphCharging GlyphPlugin; do
-            battery_base_name=$(echo "$device_fw_key_base" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
-            battery_target_name=$(echo "$device_fw_key" | $jq -j '.keys[] | select(.image == "'"$battery_comp"'") | .filename')
-            if [[ -z $battery_base_name ]]; then
-                warn "dra v6: unable to find base $battery_comp; leaving existing image unchanged"
-                continue
-            fi
-            [[ -z $battery_target_name ]] && battery_target_name="$battery_base_name"
-
-            rm -f "$battery_base_name" "$battery_target_name"
-            file_extract_from_archive "$ipsw_base_path.ipsw" "$all_flash/$battery_base_name"
-            if [[ ! -s $battery_base_name ]]; then
-                warn "dra v6: failed to extract base $battery_comp ($battery_base_name); leaving existing image unchanged"
-                continue
-            fi
-
-            # add original image under both names
-            cp "$battery_base_name" "$all_flash/$battery_base_name"
-            if [[ $battery_target_name != "$battery_base_name" ]]; then
-                cp "$battery_base_name" "$all_flash/$battery_target_name"
-            fi
-            rm -f "$battery_base_name"
-        done
-        zip -r0 temp.ipsw "$all_flash"/*
-    fi
-
+    ipsw_prepare_battery_images
     ipsw_prepare_logos_add
     ipsw_bbreplace
 
