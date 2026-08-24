@@ -2112,9 +2112,8 @@ device_enter_mode() {
             fi
 
             echo "chmod +x /tmp/kloader*" > kloaders
-            opt="kloader"
-            if (( device_vers_maj <= 5 )); then
-                opt="kloader_axi0mX"
+            opt="kloader_axi0mX"
+            if [[ $device_vers_maj == 5 ]]; then
                 case $device_type in
                     iPad2,4 | iPad3,* ) opt="kloader5";; # needed for ipad 3 ios 5, unsure for ipad2,4
                 esac
@@ -2149,11 +2148,9 @@ device_enter_mode() {
             fi
             if [[ $check == 0 ]]; then
                 log "Running kloader"
-                if [[ $opt == "kloader" ]]; then
-                    $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders"
+                $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders"
+                if [[ $opt == "kloader5" ]]; then
                     print "* Unplug and replug your device now (or press home/power button)"
-                else
-                    $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders" &
                 fi
             else
                 warn "Failed to connect to device via USB SSH."
@@ -2199,7 +2196,7 @@ device_enter_mode() {
                 fi
                 if [[ $opt == "kloader_axi0mX" ]]; then
                     print "* Keep the device plugged in"
-                    $ssh -t $port root@$ip "bash /tmp/kloaders" &
+                    $ssh -t $port root@$ip "bash /tmp/kloaders"
                 else
                     print "* Unplug and replug your device now (or press home/power button)"
                 fi
