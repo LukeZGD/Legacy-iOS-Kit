@@ -1653,8 +1653,8 @@ device_get_info() {
             device_latest_build="21H461"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.9"
-            device_latest_build="22H355"
+            device_latest_vers="18.7.10"
+            device_latest_build="22H374"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
@@ -2105,21 +2105,29 @@ device_enter_mode() {
         "kDFU" )
             local sendfiles=()
             local ip="127.0.0.1"
+            local attempt=1
+            local attempts=5
+            local device_in
+            local port
+            local check
 
             if [[ $device_mode != "Normal" ]]; then
                 device_enter_mode pwnDFU
                 return
             fi
 
+            patch_ibss
             echo "chmod +x /tmp/kloader*" > kloaders
             opt="kloader_axi0mX"
-            if [[ $device_vers_maj == 5 && $device_proc == 5 ]]; then
-                opt="kloader5"
-                log "Using kloader5 for A5(X) iOS 5"
+            if (( device_vers_maj <= 5 )); then
+                warn "Expect lower success rates entering kDFU mode on iOS 5 and lower."
+                attempts=10
+                if [[ $device_type == "iPad3,"* ]]; then
+                    opt="kloader5"
+                fi
             fi
             echo "/tmp/$opt /tmp/pwnediBSS" >> kloaders
             sendfiles+=("../resources/kloader/$opt" "kloaders" "pwnediBSS")
-            patch_ibss
 
             device_iproxy
             if [[ $device_jailbrokenselected != 1 ]]; then
@@ -2176,14 +2184,11 @@ device_enter_mode() {
                 $ssh -t root@$ip "bash /tmp/kloaders"
             fi
 
-            local attempt=1
-            local device_in
-            local port
             if [[ $ip == "127.0.0.1" ]]; then
                 port="-p $ssh_port"
             fi
-            while (( attempt <= 5 )); do
-                log "Finding device in kDFU mode... (Attempt $attempt of 5)"
+            while (( attempt <= attempts )); do
+                log "Finding device in kDFU mode... (Attempt $attempt of $attempts)"
                 if [[ $($irecovery -q 2>/dev/null | grep -w "MODE" | cut -c 7-) == "DFU" ]]; then
                     device_in=1
                 fi
@@ -2192,11 +2197,11 @@ device_enter_mode() {
                     device_mode="DFU"
                     break
                 fi
-                if [[ $opt == "kloader_axi0mX" ]]; then
+                if [[ $opt == "kloader5" ]]; then
+                    print "* Unplug and replug your device now (or press home/power button)"
+                else
                     print "* Keep the device plugged in"
                     $ssh -t $port root@$ip "bash /tmp/kloaders"
-                else
-                    print "* Unplug and replug your device now (or press home/power button)"
                 fi
                 ((attempt++))
             done
@@ -5578,7 +5583,6 @@ ipsw_prepare_battery_images() {
         if [[ -z $battery_target_name ]]; then
             log "Unable to find target $battery_comp. Adding to manifest"
             echo "$battery_base_name" >> manifest
-            mv manifest "$all_flash"/
             battery_target_name="$battery_base_name"
         fi
 
@@ -5592,6 +5596,7 @@ ipsw_prepare_battery_images() {
         cp "$battery_base_name" "$all_flash/$battery_target_name"
         rm -f "$battery_base_name"
     done
+    mv manifest "$all_flash"/
     zip -r0 temp.ipsw "$all_flash"/*
 }
 
@@ -10721,7 +10726,7 @@ menu_usefulutilities() {
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
         if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
-            if [[ $device_mode == "Normal" && $device_type != "iPod2,1" ]]; then
+            if [[ $device_mode == "Normal" && $device_type != "iPod2,1" ]] && (( device_vers_maj >= 4 )); then
                 menu_items+=("Enter kDFU Mode")
             fi
             case $device_proc in
