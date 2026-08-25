@@ -1710,7 +1710,7 @@ device_get_info() {
     # activation issue stuff
     case $device_type in
         iPhone4,1 | iPhone5,2 | iPad2,7 | iPad3,[26] ) device_9900candidate=1;;
-        iPhone[123],[12] | iPad1,1 | iPad2,2 | iPad3,3 ) device_activationissue=1;;
+        iPhone[123],[12] | iPad1,1 | iPad2,2 ) device_activationissue=1;;
     esac
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
     if [[ $device_disable_actrec == 1 ]]; then
@@ -10742,19 +10742,26 @@ menu_usefulutilities() {
             if [[ $device_type != "iPod2,1" && $device_mode == "Normal" ]]; then
                 menu_items+=("Just Boot")
             fi
-            if [[ $device_mode == "Normal" ]]; then
+            if [[ $device_mode == "Normal" ]] && (( device_vers_maj <= 7 )); then
+                local canhacktivate=
                 case $device_type in
                     iPhone1,* )
                         case $device_vers in
-                            3.1.3 | 4.[12]* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                            3.1.3 | 4.[12]* ) canhacktivate=1;;
                         esac
                     ;;
                     iPad1,1 | iPhone[23],* | iPod4,1 )
                         case $device_vers in
-                            [34567].* ) menu_items+=("Hacktivate Device" "Revert Hacktivation");;
+                            [34567].* ) canhacktivate=1;;
                         esac
                     ;;
                 esac
+                if [[ $device_imei == "9900"* || $device_activationissue == 1 ]]; then
+                    canhacktivate=1
+                fi
+                if [[ $canhacktivate == 1 ]]; then
+                    menu_items+=("Hacktivate Device" "Revert Hacktivation")
+                fi
             fi
         fi
         if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
