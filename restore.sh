@@ -782,7 +782,7 @@ version_update() {
     if [[ $? != 0 ]]; then
         git clone "https://github.com/LukeZGD/Legacy-iOS-Kit"
         if [[ $? != 0 ]]; then
-            local error_msg=$'\n* If you have not installed/updated git, please install git from your package manager.'
+            local error_msg=$'* If you have not installed/updated git, please install git from your package manager.'
             if [[ $platform == "macos" ]]; then
                 error_msg+=$'\n* On macOS, you may just need to install Xcode Command Line Tools with this command: xcode-select --install'
                 error_msg+=$'\n* If the above command does not work, try this: sudo xcode-select --reset'
@@ -2207,7 +2207,7 @@ device_enter_mode() {
             done
             if (( attempt > 5 )); then
                 error "Failed to find device in kDFU mode. Please run the script again" \
-                      "You may also need to force restart the device before retrying."
+                      "* You may also need to force restart the device before retrying."
             fi
             kill $iproxy_pid
         ;;
@@ -2274,7 +2274,7 @@ device_enter_mode() {
                     log "Found device in pwned DFU mode."
                     print "* Pwned: $device_pwnd"
                 else
-                    local error_msg=$'\n* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
+                    local error_msg=$'* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
                         error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
                         error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
@@ -2376,7 +2376,7 @@ device_enter_mode() {
 }
 
 device_pwnerror() {
-    local error_msg=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
+    local error_msg=$'* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
         [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates on AMD desktop CPUs if you have one.'
         [[ $device_proc == 6 || $device_proc == 7 ]] && error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
@@ -5464,7 +5464,7 @@ ipsw_prepare_multipatch() {
             sha1L=$($sha1sum temp2.ipsw | awk '{print $1}')
             if [[ $sha1L != "$sha1E" ]]; then
                 error "Verifying IPSW failed. The IPSW may be corrupted or incomplete. Please run the script again" \
-                "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
+                      "* SHA1sum mismatch. Expected $sha1E, got $sha1L"
             fi
             mv temp2.ipsw "$ipsw_name.ipsw"
         fi
