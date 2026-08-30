@@ -2118,10 +2118,11 @@ device_enter_mode() {
 
             patch_ibss
             echo "chmod +x /tmp/kloader*" > kloaders
-            opt="kloader_axi0mX"
+            opt="kloader"
             if (( device_vers_maj <= 5 )); then
                 warn "Expect lower success rates entering kDFU mode on iOS 5 and lower."
                 attempts=10
+                opt="kloader_axi0mX"
                 if [[ $device_type == "iPad3,"* ]]; then
                     opt="kloader5"
                 fi
@@ -2155,7 +2156,7 @@ device_enter_mode() {
             if [[ $check == 0 ]]; then
                 log "Running kloader"
                 $ssh -t -p $ssh_port root@127.0.0.1 "bash /tmp/kloaders"
-                if [[ $opt == "kloader5" ]]; then
+                if [[ $opt != "kloader_axi0mX" ]]; then
                     print "* Unplug and replug your device now (or press home/power button)"
                 fi
             else
@@ -2197,7 +2198,7 @@ device_enter_mode() {
                     device_mode="DFU"
                     break
                 fi
-                if [[ $opt == "kloader5" ]]; then
+                if [[ $opt != "kloader_axi0mX" ]]; then
                     print "* Unplug and replug your device now (or press home/power button)"
                 else
                     print "* Keep the device plugged in"
