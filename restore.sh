@@ -11336,7 +11336,7 @@ device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
     local dap=
-    if [[ $device_proc == 4 && $device_type != "iPhone2,1" ]]; then
+    if [[ $device_proc == 4 && $device_type != "iPhone2,1" && $device_vers != "3.2"* ]]; then
         type="iPhone2,1"
         case $device_vers in
             4.2.1 ) build="8C148a";;
