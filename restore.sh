@@ -3037,7 +3037,7 @@ ipsw_preference_set() {
 
     if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
         ipsw_canmemory=
-    elif [[ -n $device_type_special ]]; then
+    elif [[ -n $device_type_special && $target_vers_maj == 7 ]]; then
         ipsw_canmemory=
     elif [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
         ipsw_canmemory=
@@ -5060,6 +5060,10 @@ ipsw_prepare_sundanceinh2a() {
 
     python3_init
     download_sundancerepo
+    if [[ $ipsw_memory != 1 ]]; then
+        sed 's/tempfile\.TemporaryDirectory()/tempfile.TemporaryDirectory(dir=".")/g' $sundance/Sundancer > Sundancer
+        mv Sundancer $sundance/
+    fi
 
     log "Copying freeze.tar to Cydia.tar"
     cp $jelbrek/freeze.tar.gz .
@@ -5072,11 +5076,13 @@ ipsw_prepare_sundanceinh2a() {
     log "Preparing custom IPSW..."
     pushd $sundance >/dev/null
     rm -rf "$ipsw_custom2"
+    chmod +x Sundancer
+    rm -rf tmp*/
     ./Sundancer $jb "$ipsw_base_path2.ipsw" "$ipsw_path2.ipsw" "$ipsw_custom2"
     rm "$ipsw_path2.ipsw" "$ipsw_base_path2.ipsw"
     if [[ ! -d "$ipsw_custom2" ]]; then
         error "Custom IPSW creation seems to have failed. Please run the script again" \
-              "* If you do not have Python 3 installed, install it since SundanceInH2A requires it."
+              "* If you do not have Python 3 installed, install it since SundanceInH2A requires it. You may also try selecting N for memory option"
     fi
     pushd "$ipsw_custom2" >/dev/null
     zip -r0 ../../$ipsw_custom.ipsw *
