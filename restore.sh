@@ -3035,7 +3035,7 @@ ipsw_preference_set() {
         ;;
     esac
 
-    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+    if [[ $device_proc == 1 && $target_vers_maj != 4 ]]; then
         ipsw_canmemory=
     elif [[ -n $device_type_special && $target_vers_maj == 7 ]]; then
         ipsw_canmemory=
@@ -5075,9 +5075,8 @@ ipsw_prepare_sundanceinh2a() {
     cp "$ipsw_base_path.ipsw" "$sundance/$ipsw_base_path2.ipsw"
     log "Preparing custom IPSW..."
     pushd $sundance >/dev/null
-    rm -rf "$ipsw_custom2"
+    rm -rf "$ipsw_custom2" tmp*/
     chmod +x Sundancer
-    rm -rf tmp*/
     ./Sundancer $jb "$ipsw_base_path2.ipsw" "$ipsw_path2.ipsw" "$ipsw_custom2"
     rm "$ipsw_path2.ipsw" "$ipsw_base_path2.ipsw"
     if [[ ! -d "$ipsw_custom2" ]]; then
@@ -5946,9 +5945,15 @@ ipsw_prepare_s5l8900() {
     elif [[ $device_type == "iPod1,1" ]]; then
         ipsw_url+="iPod1.1_3.1.3_7E18_CustomJ.ipsw"
         sha1E="39d0e16536c281c3f98db91923e3d53b6fad6c6c"
+    elif [[ $device_type == "iPhone1,2" && $ipsw_hacktivate == 1 ]]; then
+        ipsw_url+="iPhone1.2_3.1.3_7E18_CustomHJ.ipsw"
+        sha1E="1d86035878e48e181836d6f10c78cdd52d641027"
+    elif [[ $device_type == "iPhone1,2" ]]; then
+        ipsw_url+="iPhone1.2_3.1.3_7E18_CustomJ.ipsw"
+        sha1E="512813ede1370da1375aa7608c92e4e797adae77"
     fi
 
-    if [[ $device_type == "iPhone1,2" && -e "$ipsw_custom.ipsw" ]]; then
+    if [[ $target_vers_maj == 4 && -e "$ipsw_custom.ipsw" ]]; then
         log "Checking RestoreRamdisk hash of custom IPSW"
         file_extract_from_archive "$ipsw_custom.ipsw" $rname
         sha1L="$($sha1sum $rname | awk '{print $1}')"
@@ -5977,7 +5982,7 @@ ipsw_prepare_s5l8900() {
         rm "$ipsw_custom.ipsw"
     fi
 
-    if [[ $device_type != "iPhone1,2" ]]; then
+    if [[ $target_vers_maj != 4 ]]; then
         log "Downloading IPSW: $ipsw_url"
         download_from_url "$ipsw_url" temp.ipsw
         log "Getting SHA1 hash for IPSW..."
@@ -6367,7 +6372,7 @@ restore_latest() {
         device_enter_mode Recovery
         [[ $noextract != 1 ]] && ipsw_extract
     fi
-    if [[ $device_type == "iPhone1,2" && $device_target_vers == "4"* ]]; then
+    if [[ $device_type == "iPhone1,2" && $target_vers_maj == 4 ]]; then
         if [[ $1 == "custom" ]]; then
             log "Sending s5l8900xall..."
             $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
@@ -9751,7 +9756,7 @@ menu_ipsw() {
                 print "* Selected Target IPSW: $ipsw_path.ipsw"
                 ipsw_print_warnings
                 can_start=1
-            elif [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+            elif [[ $device_proc == 1 && $target_vers_maj != 4 ]]; then
                 can_start=1
             else
                 print "* Select $1 IPSW to continue"
@@ -10072,12 +10077,12 @@ ipsw_custom_set() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         ipsw_custom+="J"
     fi
-    if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+    if [[ $device_proc == 1 && $target_vers_maj != 4 ]]; then
         ipsw_custom2="$ipsw_custom"
     fi
     if [[ -n $ipsw_customlogo || -n $ipsw_customrecovery ]]; then
         ipsw_custom+="L"
-        if [[ $device_proc == 1 && $device_type != "iPhone1,2" ]]; then
+        if [[ $device_proc == 1 && $target_vers_maj != 4 ]]; then
             ipsw_customlogo2=1
         fi
     fi
