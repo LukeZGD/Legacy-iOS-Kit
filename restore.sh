@@ -2986,14 +2986,6 @@ ipsw_preference_set() {
         print "* When this option is enabled, your device will be jailbroken on restore."
         print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
         print "* This option is enabled by default (Y). Select this option if unsure."
-        if [[ $device_type == "iPhone3,3" ]]; then
-            case $device_target_vers in
-                4.2.9 | 4.2.10 )
-                    warn "This will be a semi-tethered jailbreak."
-                    print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
-                ;;
-            esac
-        fi
         select_yesno "Enable this option?" 1
         if [[ $? != 1 ]]; then
             ipsw_jailbreak=
@@ -3431,6 +3423,7 @@ ipsw_prepare_jailbreak() {
             5.*  ) JBFiles=("aquila_5.tar");;
             4.3* ) JBFiles=("aquila_4.tar");;
             4.[10]* | 3.2* ) JBFiles=("greenpois0n/${device_type}_${device_target_build}.tar");;
+            4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar");;
         esac
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
@@ -3473,6 +3466,9 @@ ipsw_prepare_jailbreak() {
             [43]* ) :;;
             * ) JBFiles+=("$jelbrek/LukeZGD.tar");;
         esac
+        if [[ $device_type == "iPhone3,3" && $target_vers_maj == 4 ]]; then
+            JBFiles+=("$jelbrek/bspqmishim.tar")
+        fi
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
     fi
@@ -5428,7 +5424,7 @@ ipsw_prepare_multipatch() {
     # 3.2.x ipad/4.2.x cdma fs workaround
     # removed back in fcdc9ec, added back for now
     case $device_target_vers in
-    4.2.10 | 4.2.9 | 4.2.[876] | 3.2* | 3.1.3 )
+    4.2.[876] | 3.2* | 3.1.3 )
         local ipsw_name="../${device_type}_${device_target_vers}_${device_target_build}_FS"
         local type="iPad1.1"
         [[ $device_type == "iPhone3,3" ]] && type="iPhone3.3"
@@ -5436,13 +5432,6 @@ ipsw_prepare_multipatch() {
         local build="$device_target_build"
         local vers="$device_target_vers"
         local rootfs_name_fs="$rootfs_name"
-        case $device_target_vers in
-        4.2.10 | 4.2.9 )
-            build="8E401"
-            vers="4.2.8"
-            device_fw_key_check temp $build
-            rootfs_name_fs=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "RootFS") | .filename')
-        esac
         local ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/${type}_${vers}_${build}_FS2.ipsw"
         local sha1E="f4660666ce9d7bd9312d761c850fa3a1615899e9" # 3.2.2
         local sha1L="none"
@@ -7543,12 +7532,7 @@ device_ramdisk() {
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
                     untether="greenpois0n/${device_type}_${build}.tar"
                 ;;
-                4.2* )
-                    case $device_type in
-                        # untether=1 means no untether package, but the var still needs to be set
-                        iPhone3,3 ) untether=1;;
-                    esac
-                ;;
+                4.2.9 | 4.2.10 ) untether="aquila_4_cdma.tar";;
                 3.* ) [[ $device_type == "iPhone2,1" ]] && untether=1;;
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
@@ -10938,15 +10922,7 @@ device_jailbreak_confirm() {
     fi
     log "Checking if your device and version is supported..."
     log "Please read the message below:"
-    if [[ $device_type == "iPhone3,3" ]]; then
-        case $device_vers in
-            4.2.9 | 4.2.10 )
-                warn "For this version, it will be a semi-tethered jailbreak."
-                print "* To boot jailbroken later, go to: Main Menu -> Just Boot"
-                pause
-            ;;
-        esac
-    elif [[ $device_proc == 1 ]]; then
+    if [[ $device_proc == 1 ]]; then
         warn "If you jailbreak with this option (ramdisk method), you will not be able to Bootlace or other similar tools."
         print "* If you want to use the mentioned tools, go to \"Restore/Downgrade\" instead, and enable the jailbreak option."
     elif [[ $device_proc == 5 ]]; then
@@ -11371,6 +11347,12 @@ device_hacktivate() {
         echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
         log "Copying data_ark.plist to device"
         $scp -P $ssh_port data_ark.plist root@127.0.0.1:/var/root/Library/Lockdown/data_ark.plist
+        if [[ $device_type == "iPhone3,3" && $device_vers_maj == 4 ]]; then
+            log "Transferring BSPQMIShim"
+            $scp -P $ssh_port ../resources/jailbreak/bspqmishim.deb root@127.0.0.1:/tmp/bspqmishim.deb
+            log "Installing BSPQMIShim"
+            $ssh -t -p $ssh_port root@127.0.0.1 "dpkg -i /tmp/bspqmishim.deb"
+        fi
         $ssh -p $ssh_port root@127.0.0.1 "reboot"
         log "Done. Your device should reboot now"
         return
