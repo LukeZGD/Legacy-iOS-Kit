@@ -4204,6 +4204,7 @@ ipsw_prepare_32bit() {
             6.*  ) JBFiles=("aquila_6.tar");;
             5.*  ) JBFiles=("aquila_5.tar");;
             4.3* ) JBFiles=("aquila_4.tar");;
+            4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar");;
             4.2.[8761] )
                 ExtraArgs+=" -punchd"
                 JBFiles=("greenpois0n/${device_type}_${device_target_build}.tar")
@@ -5606,7 +5607,10 @@ ipsw_prepare_ios4powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate.tar" "freeze.tar")
+        case $device_target_vers in
+            4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar" "fstab_old.tar" "cydiasubstrate.tar" "freeze.tar");;
+        *)JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate.tar" "freeze.tar");;
+        esac
         for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
