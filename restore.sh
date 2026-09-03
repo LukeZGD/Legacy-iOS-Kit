@@ -3423,7 +3423,6 @@ ipsw_prepare_jailbreak() {
             5.*  ) JBFiles=("aquila_5.tar");;
             4.3* ) JBFiles=("aquila_4.tar");;
             4.[10]* | 3.2* ) JBFiles=("greenpois0n/${device_type}_${device_target_build}.tar");;
-            4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar");;
         esac
         if [[ -n ${JBFiles[0]} ]]; then
             JBFiles[0]=$jelbrek/${JBFiles[0]}
@@ -4204,6 +4203,7 @@ ipsw_prepare_32bit() {
             6.*  ) JBFiles=("aquila_6.tar");;
             5.*  ) JBFiles=("aquila_5.tar");;
             4.3* ) JBFiles=("aquila_4.tar");;
+            4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar");;
             4.2.[8761] )
                 ExtraArgs+=" -punchd"
                 JBFiles=("greenpois0n/${device_type}_${device_target_build}.tar")
