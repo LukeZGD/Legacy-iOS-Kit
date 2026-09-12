@@ -8781,9 +8781,6 @@ menu_ipa() {
             print "* Selected IPA: $ipa_path"
             if [[ $1 == "Sideload"* ]]; then
                 menu_items+=("Install IPA using Plumesign")
-                if [[ $platform == "linux" ]] && (( device_vers_maj >= 9 )); then
-                    menu_items+=("Install IPA using AltServer")
-                fi
             else
                 menu_items+=("Install IPA")
             fi
@@ -8809,10 +8806,6 @@ menu_ipa() {
                 else
                     device_appinst
                 fi
-                pause
-            ;;
-            "Install IPA using AltServer" )
-                device_altserver
                 pause
             ;;
             "Install IPA using Plumesign" )
@@ -11968,73 +11961,6 @@ device_appinst() {
         $ssh -t -p $ssh_port root@127.0.0.1 "appinst '/tmp/$app'; rm '/tmp/$app'"
     done
     kill $iproxy_pid
-}
-
-device_altserver() {
-    local altserver="../saved/AltServer-$platform"
-    local sha1="4bca48e9cda0517cc965250a797f97d5e8cc2de6"
-    local anisette="../saved/anisette-server-$platform"
-    local arch="$platform_arch"
-    if [[ $arch == "arm64" ]]; then
-        arch="aarch64"
-        sha1="535926e5a14dc8f59f3f99197ca4122c7af8dfaf"
-    fi
-    altserver+="_$arch"
-    anisette+="_$arch"
-    if [[ $($sha1sum $altserver 2>/dev/null | awk '{print $1}') != "$sha1" ]]; then
-        rm -f $altserver
-    fi
-    if [[ ! -e $altserver ]]; then
-        file_download https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-$arch AltServer-$arch
-        mv AltServer-$arch $altserver
-    fi
-    log "Checking for latest anisette-server"
-    download_from_url "https://api.github.com/repos/LukeZGD/Provision/releases/latest" latest
-    local latest="$(cat latest | $jq -r ".tag_name")"
-    local current="$(cat ../saved/anisette-server_version 2>/dev/null || echo "none")"
-    log "Latest version: $latest, current version: $current"
-    if [[ $current != "$latest" && $latest != "null" ]]; then
-        rm -f $anisette
-    fi
-    if [[ ! -e $anisette ]]; then
-        file_download https://github.com/LukeZGD/Provision/releases/download/$latest/anisette-server-$arch anisette-server-$arch
-        mv anisette-server-$arch $anisette
-        echo "$latest" > ../saved/anisette-server_version
-    fi
-    chmod +x $altserver $anisette
-    log "Running Anisette"
-    $anisette &
-    anisette_pid=$!
-    log "Anisette PID: $anisette_pid"
-    local ready=0
-    log "Waiting for Anisette"
-    while [[ $ready != 1 ]]; do
-        [[ $($curl 127.0.0.1:6969 2>/dev/null) ]] && ready=1
-        sleep 1
-    done
-    export ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969
-    altserver="env ALTSERVER_ANISETTE_SERVER=$ALTSERVER_ANISETTE_SERVER $altserver"
-    device_pair
-    local apple_id="$APPLE_ID_USER"
-    local apple_pass="$APPLE_ID_PWD"
-    if [[ -z $apple_id || -z $apple_pass ]]; then
-        log "Enter Apple ID details to continue."
-        print "* Your Apple ID and password will only be sent to Apple servers."
-    fi
-    while [[ -z $apple_id ]]; do
-        read -p "$(input 'Apple ID: ')" apple_id
-    done
-    export APPLE_ID_USER="$apple_id"
-    print "* Your password input may not be visible, but it is still being entered."
-    while [[ -z $apple_pass ]]; do
-        read -s -p "$(input 'Password: ')" apple_pass
-    done
-    export APPLE_ID_PWD="$apple_pass"
-    echo
-    log "Running AltServer-Linux with given Apple ID details..."
-    pushd ../saved >/dev/null
-    $altserver -u $device_udid -a "$apple_id" -p "$apple_pass" "$ipa_path"
-    popd >/dev/null
 }
 
 device_plumesign() {
