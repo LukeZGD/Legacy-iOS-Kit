@@ -752,11 +752,19 @@ version_update_check() {
         /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
-    download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" latest
-    github_api=$(cat latest 2>/dev/null)
-    version_latest=$(echo "$github_api" | $jq -r '.name')
-    version_latest=${version_latest#Latest-}
-    git_hash_latest=$(echo "$github_api" | $jq -r '.target_commitish')
+    branch_current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+    if [[ $branch_current == "main" || -z $branch_current ]]; then
+        download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" latest
+        github_api=$(cat latest 2>/dev/null)
+        version_latest=$(echo "$github_api" | $jq -r '.name')
+        version_latest=${version_latest#Latest-}
+        git_hash_latest=$(echo "$github_api" | $jq -r '.target_commitish')
+    else
+        local response=$($curl -sS -D - "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/commits?sha=$branch_current&per_page=1&page=1")
+        git_hash_latest=$(printf '%s\n' "$response" | sed '1,/^\r\{0,1\}$/d' | $jq -r '.[0].sha')
+        commits_latest=$(printf '%s\n' "$response" | sed -n 's/.*[Ll]ink:.*page=\([0-9][0-9]*\)>; rel="last".*/\1/p')
+        commits_current="$(git rev-list --count HEAD)"
+    fi
     git_hash_latest=${git_hash_latest:0:7}
     popd >/dev/null
 }
@@ -820,6 +828,7 @@ version_get() {
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
         [[ -n $(git status --porcelain --untracked-files=no) ]] && git_hash+="-dirty"
+        git_hash+=" $(git rev-parse --abbrev-ref HEAD)"
 
         export TZ=UTC
         local ts=$(git log -1 --format=%ct)
@@ -864,14 +873,24 @@ version_check() {
     fi
     pushd .. >/dev/null
     version_update_check
-    if [[ -z $version_latest ]]; then
+    if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
-    elif [[ $git_hash_latest != "$git_hash" ]]; then
-        if [[ -z $version_current ]]; then
-            print "* Latest version:  $version_latest ($git_hash_latest)"
+    elif [[ $git_hash_latest != "${git_hash:0:7}" ]]; then
+        if [[ -z $branch_current ]]; then
+            print "* Latest version: $version_latest ($git_hash_latest)"
             print "* Please download/pull the latest version before proceeding."
             version_update
-        elif (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
+        elif [[ $branch_current != "main" ]]; then
+            if (( commits_current >= commits_latest )); then
+                warn "Current branch is newer/different than remote: $commits_latest commits ($git_hash_latest)"
+            else
+                print "* A newer version of Legacy iOS Kit is available."
+                print "* Current branch: $commits_current commits ($git_hash)"
+                print "* Latest branch:  $commits_latest commits ($git_hash_latest)"
+                print "* Please pull the latest version before proceeding."
+                version_update
+            fi
+        elif (( $(echo "$version_current" | cut -c 2- | sed -e 's/\.//g') >= $(echo "$version_latest" | cut -c 2- | sed -e 's/\.//g') )); then
             warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
         else
             print "* A newer version of Legacy iOS Kit is available."
