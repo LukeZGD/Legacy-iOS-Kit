@@ -3439,7 +3439,7 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             6.*  ) JBFiles=("aquila_6.tar");;
-            5.*  ) JBFiles=("aquila_5.tar");;
+            5.*  ) JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar");; # temporary measure for ios 5
             4.3* ) JBFiles=("aquila_4.tar");;
             4.[10]* | 3.2* ) JBFiles=("greenpois0n/${device_type}_${device_target_build}.tar");;
         esac
@@ -4220,7 +4220,7 @@ ipsw_prepare_32bit() {
             9.3.[56] ) :;;
             9.*  ) JBFiles=("everuntether.tar");;
             6.*  ) JBFiles=("aquila_6.tar");;
-            5.*  ) JBFiles=("aquila_5.tar");;
+            5.*  ) JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar");; # temporary measure for ios 5
             4.3* ) JBFiles=("aquila_4.tar");;
             4.2.9 | 4.2.10 ) JBFiles=("aquila_4_cdma.tar");;
             4.2.[8761] )
@@ -4248,6 +4248,11 @@ ipsw_prepare_32bit() {
             gzip -d openssh.tar.gz
             gzip -d openssl.tar.gz
             JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
+        fi
+
+        # temporary measure for ios 5
+        if [[ $device_target_vers == "5."* && $device_target_tethered == 1 ]]; then
+            JBFiles+=("$jelbrek/g1lbertJB/install.tar")
         fi
 
         case $device_target_vers in
@@ -5735,7 +5740,7 @@ ipsw_prepare_powder() {
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             7.* ) JBFiles=("aquila_7.tar");;
-            5.* ) JBFiles=("aquila_5.tar");;
+            5.* ) JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar");; # temporary measure for ios 5
         esac
 
         if [[ -n ${JBFiles[0]} ]]; then
@@ -7546,7 +7551,7 @@ device_ramdisk() {
                 8.*  ) untether="daibutsu/untether.tar";;
                 7.*  ) untether="aquila_7.tar";;
                 6.*  ) untether="aquila_6.tar";;
-                5.*  ) untether="aquila_5.tar";;
+                5.*  ) untether="g1lbertJB/${device_type}_${build}.tar";; # temporary measure for ios 5
                 4.3* ) untether="aquila_4.tar";;
                 4.2.[8761] | 4.[10]* | 3.2* | 3.1.3 )
                     untether="greenpois0n/${device_type}_${build}.tar"
@@ -7598,6 +7603,11 @@ device_ramdisk() {
                 case $vers in
                     4.2.[8761] | 4.[10]* | 3.* ) untether="${device_type}_${build}.tar";; # remove folder name after sending tar
                 esac
+
+                # temporary measure for ios 5
+                if [[ $vers == "5."* ]]; then
+                    untether="${device_type}_${build}.tar"
+                fi
 
                 # 3.1.3–4.1 untether must be extracted before data partition mount
                 case $vers in
