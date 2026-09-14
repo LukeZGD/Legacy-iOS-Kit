@@ -417,7 +417,6 @@ set_tool_paths() {
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
-        PlistBuddy2="${PlistBuddy}2"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
@@ -540,7 +539,6 @@ set_tool_paths() {
 
         platform_arch="$(uname -m)"
         [[ $(sysctl -in hw.optional.arm64) == 1 ]] && platform_arch="arm64"
-        [[ $platform_arch == "arm64" ]] && dir+="/arm64"
 
         # macos checks
         if [[ $mac_majver == 10 ]]; then
@@ -581,10 +579,10 @@ set_tool_paths() {
         cocoadialog="$(command -v cocoadialog)"
         gaster+="../bin/macos/gaster"
         PlistBuddy="/usr/libexec/PlistBuddy"
-        PlistBuddy2="$PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
         zenity="$dir/zenity"
+        [[ $mac_minver == 11 ]] && zenity="$dir/x86_64/zenity"
         scp2="/usr/bin/scp"
         ssh2="/usr/bin/ssh"
 
@@ -875,6 +873,8 @@ version_check() {
     version_update_check
     if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
+    elif [[ $git_hash == *"dirty" ]]; then
+        warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     elif [[ $git_hash_latest != "${git_hash:0:7}" ]]; then
         if [[ -z $branch_current ]]; then
             print "* Latest version: $version_latest ($git_hash_latest)"
@@ -2351,7 +2351,7 @@ device_enter_mode() {
                 kuroutadori_litera1n -p
                 tool_pwned=$?
             elif [[ $tool == "ipwnder32" ]]; then
-                "$dir/ipwnder32" -p --noibss
+                "$dir/x86_64/ipwnder32" -p --noibss
                 tool_pwned=$?
             elif [[ $tool == "ipwnder_lite" ]]; then
                 mkdir -p image3 ../saved/image3
@@ -6174,7 +6174,7 @@ restore_download_bbsep() {
 }
 
 restore_idevicerestore() {
-    local ExtraArgs="-ew"
+    local ExtraArgs="-ewy"
     local idevicerestore2="$idevicerestore"
 
     mkdir -p shsh
@@ -6182,7 +6182,6 @@ restore_idevicerestore() {
     if [[ $device_use_bb == 0 || $device_type == "$device_disable_bbupdate" ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
     fi
-    ipsw_extract custom
     case $1 in
         first   ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
         special ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
@@ -6197,7 +6196,8 @@ restore_idevicerestore() {
             sleep 1
         fi
         log "Sending iBEC..."
-        $irecovery -f "$ipsw_custom/Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
+        file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
+        $irecovery -f "iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
@@ -6262,6 +6262,7 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
+        [[ $platform == "macos" ]] && futurerestore2="$dir/x86_64/futurerestore_old"
     elif [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
             $restore_usepwndfu64 != 1 && $platform == "linux" && $platform_arch == "arm64" ]]; then
         futurerestore2+="_new" # no futurerestore nightly build for linux arm64
@@ -6360,44 +6361,35 @@ restore_futurerestore() {
 restore_latest() {
     local idevicerestore2="$idevicerestore"
     local ExtraArgs="-e"
-    local noextract
-    local newidr
 
     # remove erase arg if update
     [[ $1 == "update" ]] && ExtraArgs=
-
-    # use newer idr for newer ios
-    local major=$(echo "$device_latest_vers" | cut -d. -f1)
-    if (( major >= 12 )); then
-        newidr=1
-    fi
-    if [[ $newidr == 1 ]]; then
-        idevicerestore2+="2"
-        ExtraArgs+=" -y"
-        noextract=1
-    fi
+    ExtraArgs+=" -y"
 
     if [[ $1 == "custom" ]]; then
         ExtraArgs+=" -c"
         ipsw_path="$ipsw_custom"
-        ipsw_extract custom
     else
         device_enter_mode Recovery
-        [[ $noextract != 1 ]] && ipsw_extract
     fi
-    if [[ $device_type == "iPhone1,2" && $target_vers_maj == 4 ]]; then
-        if [[ $1 == "custom" ]]; then
+    if [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
+        log "Sending iBSS..."
+        file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+        $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
+        device_find_mode Recovery
+    elif [[ $device_proc == 1 && $1 == "custom" ]]; then
+        if [[ $device_mode == "WTF" ]]; then
             log "Sending s5l8900xall..."
-            $irecovery -f "$ipsw_custom/Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+            file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
+            $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
             device_find_mode DFUreal
+        fi
+        if [[ $target_vers_maj == 4 ]]; then
             log "Sending iBSS..."
-            $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+            file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
+            $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
             device_find_mode Recovery
         fi
-    elif [[ $device_proc == 1 && $device_target_vers == "3.1.3" && $mode == "customipsw" ]]; then
-        log "Sending iBSS..."
-        $irecovery -f "$ipsw_custom/Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
-        device_find_mode Recovery
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+=" -d"
@@ -6934,8 +6926,8 @@ ipsw_prepare_ipx() {
     log "Extracting BuildManifest.plist from IPSW"
     file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
     log "Get paths"
-    local kernelcache=$($PlistBuddy2 -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
-    local restoreramdisk=$($PlistBuddy2 -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
+    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
+    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
     log "KernelCache: $kernelcache"
     log "RestoreRamDisk: $restoreramdisk"
 
@@ -9193,10 +9185,8 @@ menu_restore() {
                 fi
             ;;
         esac
-        if (( device_proc < 7 )) || [[ $platform == "linux" ]]; then
-            menu_items+=("Latest iOS ($device_latest_vers)")
-        fi
-        if (( device_proc >= 7 )) && [[ $platform == "linux" ]]; then
+        menu_items+=("Latest iOS ($device_latest_vers)")
+        if (( device_proc >= 7 )); then
             menu_items+=("Signed iOS (IPSW must be signed)")
         fi
         case $device_type in
@@ -9242,10 +9232,6 @@ menu_restore() {
             iPad2,4      ) print "* iPad2,4 does not support 6.1.3 downgrades, you need blobs for 6.1.3 or 7.1.x"; echo;;
             iPhone5,[34] ) print "* iPhone 5C does not support 8.4.1 downgrades, you need blobs for 8.4.1 or 7.x"; echo;;
         esac
-        if [[ $platform == "macos" ]] && (( device_proc >= 7 )); then
-            print "* Note: Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
-            echo
-        fi
         input "Select an option:"
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
