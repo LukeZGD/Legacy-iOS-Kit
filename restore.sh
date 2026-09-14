@@ -873,8 +873,6 @@ version_check() {
     version_update_check
     if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
-    elif [[ $git_hash == *"dirty" ]]; then
-        warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     elif [[ $git_hash_latest != "${git_hash:0:7}" ]]; then
         if [[ -z $branch_current ]]; then
             print "* Latest version: $version_latest ($git_hash_latest)"
