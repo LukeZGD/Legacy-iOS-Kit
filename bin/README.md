@@ -35,6 +35,7 @@ These binaries use the same source on Linux and macOS.
 | jq                   | [jqlang](https://jqlang.org)                                             |
 | kerneldiff           | [Gist](https://gist.github.com/LukeZGD/8c719b613ca28d6883552437bdd500de) |
 | KPlooshFinder        | [KPlooshFinder](https://github.com/LukeZGD/KPlooshFinder)                |
+| plistutil            | [idevicerestore](https://github.com/LukeZGD/idevicerestore)              |
 | powdersn0w           | [powdersn0w_pub](https://github.com/LukeZGD/powdersn0w_pub)              |
 | primepwn             | [primepwn](https://github.com/LukeZGD/primepwn)                          |
 | pzb                  | [partialzipbrowser](https://github.com/tihmstar/partialzipbrowser)       |
