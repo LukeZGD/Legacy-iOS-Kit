@@ -12407,7 +12407,8 @@ device_trollrestore() {
     fi
     $venv/bin/pip install -r "$reqs_txt"
     if (( python_minver <= 13 )); then
-        $venv/bin/pip install --no-deps pymobiledevice3\<=4.13.27
+        $venv/bin/pip install --no-deps qh3\<1.0.0
+        $venv/bin/pip install --no-deps pymobiledevice3\<=4.2.0
     fi
 
     log "Running TrollRestore..."

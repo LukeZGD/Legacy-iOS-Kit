@@ -11,15 +11,15 @@ arrow
 asn1
 coloredlogs
 construct>=2.9.29
-cryptography>=41.0.1
+cryptography>=41.0.1,<49
 daemonize
 developer-disk-image>=0.0.2
 gpxpy<1.6.0
 hexdump
 hyperframe
 ifaddr
-inquirer3>=0.6.0
-ipsw-parser>=1.3.4
+inquirer3>=0.1.0
+ipsw-parser==1.2.2
 IPython
 nest-asyncio>=1.5.5
 opack
@@ -28,13 +28,11 @@ parameter-decorators
 Pillow
 prompt-toolkit
 psutil
-pycrashreport>=1.2.4
+pycrashreport>=1.2.2
 pygnuutils>=0.0.7
 pykdebugparser>=1.2.4
-python-pcapng>=2.1.1
-pytun-pmd3>=2.0.9
+pytun-pmd3>=2.0.5
 pyusb>=1.2.1
-qh3>=1.0.0,<2
 remotezip
 srptools
 sslpsk-pmd3>=1.0.3
@@ -43,5 +41,7 @@ tqdm
 uvicorn>=0.15.0
 wsproto
 xonsh
-zeroconf>=0.132.2
+zeroconf
 
+pygments
+pyimg4==0.8
