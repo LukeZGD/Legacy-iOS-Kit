@@ -6285,7 +6285,7 @@ restore_futurerestore() {
             ExtraArr+=("--rdsk" "rdsk.im4p" "--rkrn" "kcache.im4p")
         fi
         log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
-        print "* Builds from here: https://github.com/LukeeGD/futurerestore"
+        print "* Builds from here: https://github.com/LukeZGD/futurerestore"
         if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
             warn "futurerestore nightly is not supported on Linux $platform_arch, cannot continue. x86_64 only."
             return
@@ -6293,10 +6293,10 @@ restore_futurerestore() {
         log "Checking for futurerestore updates..."
         #download_from_url "https://api.github.com/repos/futurerestore/futurerestore/commits" commits
         #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
-        local fr_latest="45d0267ee24854d8bb9f5dbef29c3226af0d48db"
+        local fr_latest="9638fdcbadaa9ba35ac9542bb7244497a9b4e1bc"
         local fr_branch="main"
         if (( target_vers_maj >= 16 )) || [[ $restore_usedev == 1 || $device_type == "iPhone10,"* ]]; then
-            fr_latest="c473a1748559b4673e0c43fa73cfa4421857be12"
+            fr_latest="30a6c3b403835b4f8db567deeb06329139b951eb"
             fr_branch="dev"
         fi
         local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
@@ -6306,7 +6306,7 @@ restore_futurerestore() {
             rm -f ${futurerestore2}-${fr_branch}*
         fi
         if [[ ! -e ${futurerestore2}-${fr_branch} ]]; then
-            local url="https://github.com/LukeeGD/futurerestore/releases/download/latest/"
+            local url="https://github.com/LukeZGD/futurerestore/releases/download/latest/"
             local file="futurerestore-"
             case $platform in
                 "macos" ) file+="macOS-RELEASE-${fr_branch}.zip";;
