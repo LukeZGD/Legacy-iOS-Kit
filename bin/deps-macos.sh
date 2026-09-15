@@ -17,7 +17,7 @@ cp iPwnder32 ../output/ipwnder32
 cd ..
 
 curl -L -o jq.arm64 https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-macos-arm64
-curl -L -o jq.x86_64 https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-macos-amd64
+curl -L -o jq.x86_64 https://github.com/jqlang/jq/releases/download/jq-1.6/jq-osx-amd64
 lipo -create -output output/jq jq.x86_64 jq.arm64
 
 curl -LO https://gist.github.com/LukeZGD/8c719b613ca28d6883552437bdd500de/raw/e8f8ffa505265af2fac6a555670cacd24680ca8e/kerneldiff.c

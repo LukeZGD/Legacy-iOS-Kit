@@ -758,7 +758,7 @@ version_update_check() {
         git_hash_latest=$(echo "$github_api" | $jq -r '.target_commitish')
     else
         local response=$($curl -sS -D - "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/commits?sha=$branch_current&per_page=1&page=1")
-        git_hash_latest=$(printf '%s\n' "$response" | sed '1,/^\r\{0,1\}$/d' | $jq -r '.[0].sha')
+        git_hash_latest=$(printf '%s\n' "$response" | awk 'BEGIN { found = 0 } found { print; next } /^(\r)?$/ { found = 1 }' | $jq -r '.[0].sha')
         commits_latest=$(printf '%s\n' "$response" | sed -n 's/.*[Ll]ink:.*page=\([0-9][0-9]*\)>; rel="last".*/\1/p')
         commits_current="$(git rev-list --count HEAD)"
     fi
