@@ -151,11 +151,10 @@
 - [a6meowing](https://github.com/kok3shidoll/a6meowing) - dora/kok3shidoll; [LukeZGD fork](https://github.com/LukeZGD/a6meowing) with changes from [retr0id](https://github.com/DavidBuchanan314/a6meowing) for Linux support
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
-- [libimobiledevice](https://github.com/LukeeGD/libimobiledevice) - libimobiledevice
-- [libirecovery](https://github.com/LukeeGD/libirecovery) - libimobiledevice
-- [libideviceactivation](https://github.com/LukeeGD/libideviceactivation) - libimobiledevice
-- [ideviceinstaller](https://github.com/LukeeGD/ideviceinstaller) - libimobiledevice
-- [ifuse](https://github.com/LukeeGD/ifuse) - libimobiledevice
+- [libimobiledevice](https://github.com/LukeZGD/libimobiledevice) - libimobiledevice
+- [libirecovery](https://github.com/LukeZGD/libirecovery) - libimobiledevice
+- [libideviceactivation](https://github.com/LukeZGD/libideviceactivation) - libimobiledevice
+- [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
 - [static-cross-openssh](https://github.com/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
 - [Motrix](https://github.com/agalwood/Motrix) - aria2c binaries
 - [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only, optional)
@@ -164,8 +163,8 @@
 - [darkhttpd](https://github.com/emikulic/darkhttpd)
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)
 - [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (not used in macOS arm64)
-    - [LukeeGD fork](https://github.com/LukeeGD/futurerestore) used for restoring A7 devices (mostly not used though)
+    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (old branch)
+    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring A7 devices (master branch)
     - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
 - [iBoot32Patcher](https://github.com/Merculous/iBoot32Patcher/) - Merculous fork with fixes from Pingzi610
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork
