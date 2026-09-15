@@ -45,7 +45,7 @@ exit_message() {
     echo
     print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
     if [[ -n $version_current && -n $git_hash ]]; then
-        print "* Legacy iOS Kit $version_current ($git_hash)"
+        print "* Legacy iOS Kit $version_current ($git_hash $branch_current)"
     else
         print "* Legacy iOS Kit"
     fi
@@ -752,7 +752,6 @@ version_update_check() {
         /usr/bin/xattr -cr ../bin/macos
     fi
     log "Checking for updates..."
-    branch_current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
     if [[ $branch_current == "main" || -z $branch_current ]]; then
         download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest" latest
         github_api=$(cat latest 2>/dev/null)
@@ -828,7 +827,6 @@ version_get() {
         fi
         git_hash=$(git rev-parse HEAD | cut -c -7)
         [[ -n $(git status --porcelain --untracked-files=no) ]] && git_hash+="-dirty"
-        git_hash+=" $(git rev-parse --abbrev-ref HEAD)"
 
         export TZ=UTC
         local ts=$(git log -1 --format=%ct)
@@ -848,6 +846,8 @@ version_get() {
         version_current="v$yy.$mm.$(printf "%02d" "$count")"
         unset TZ
 
+        branch_current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+
     elif [[ -e ./resources/git_hash ]]; then
         version_current="$(cat ./resources/version)"
         git_hash="$(cat ./resources/git_hash)"
@@ -861,7 +861,7 @@ version_get() {
         fi
     fi
     if [[ -n $version_current ]]; then
-        print "* Version: $version_current ($git_hash)"
+        print "* Version: $version_current ($git_hash $branch_current)"
     fi
     popd >/dev/null
 }
@@ -875,18 +875,18 @@ version_check() {
     version_update_check
     if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
-    elif [[ $git_hash_latest != "${git_hash:0:7}" ]]; then
+    elif [[ $git_hash_latest != "$git_hash" ]]; then
         if [[ -z $branch_current ]]; then
             print "* Latest version: $version_latest ($git_hash_latest)"
             print "* Please download/pull the latest version before proceeding."
             version_update
         elif [[ $branch_current != "main" ]]; then
             if (( commits_current >= commits_latest )); then
-                warn "Current branch is newer/different than remote: $commits_latest commits ($git_hash_latest)"
+                warn "Current branch is newer/different than remote: $commits_latest ($git_hash_latest)"
             else
                 print "* A newer version of Legacy iOS Kit is available."
-                print "* Current branch: $commits_current commits ($git_hash)"
-                print "* Latest branch:  $commits_latest commits ($git_hash_latest)"
+                print "* Current branch: $commits_current ($git_hash)"
+                print "* Latest branch:  $commits_latest ($git_hash_latest)"
                 print "* Please pull the latest version before proceeding."
                 version_update
             fi
@@ -8365,8 +8365,10 @@ menu_print_info() {
     print " *** Legacy iOS Kit ***"
     print " - Script by LukeZGD -"
     echo
-    if [[ -n $version_current ]]; then
-        print "* Version: $version_current ($git_hash)"
+    if [[ -n $commits_current ]]; then
+        print "* Version: $version_current-$commits_current ($git_hash $branch_current)"
+    elif [[ -n $version_current ]]; then
+        print "* Version: $version_current ($git_hash $branch_current)"
     fi
     if [[ $no_internet_check == 1 ]]; then
         warn "No internet check flag detected, check is disabled and no support will be provided."
@@ -8377,7 +8379,9 @@ menu_print_info() {
     if [[ $EUID == 0 && $run_as_root == 1 ]]; then
         warn "Script is running as root. This is not supported, proceed with caution."
     fi
-    if [[ $git_hash_latest != "$git_hash" ]]; then
+    if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
+        warn "Failed to check for updates. GitHub may be down or blocked by your network."
+    elif [[ $git_hash_latest != "$git_hash" ]]; then
         warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
