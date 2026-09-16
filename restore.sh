@@ -44,7 +44,9 @@ pause() {
 exit_message() {
     echo
     print "* Save the terminal output now if needed. (macOS: Cmd+S, Linux: Ctrl+Shift+S)"
-    if [[ -n $version_current && -n $git_hash ]]; then
+    if [[ -n $commits_current ]]; then
+        print "* Legacy iOS Kit $version_current-$commits_current ($git_hash $branch_current)"
+    elif [[ -n $version_current ]]; then
         print "* Legacy iOS Kit $version_current ($git_hash $branch_current)"
     else
         print "* Legacy iOS Kit"
@@ -760,7 +762,6 @@ version_update_check() {
         local response=$($curl -sS -D - "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/commits?sha=$branch_current&per_page=1&page=1")
         git_hash_latest=$(printf '%s\n' "$response" | awk 'BEGIN { found = 0 } found { print; next } /^(\r)?$/ { found = 1 }' | $jq -r '.[0].sha')
         commits_latest=$(printf '%s\n' "$response" | sed -n 's/.*[Ll]ink:.*page=\([0-9][0-9]*\)>; rel="last".*/\1/p')
-        commits_current="$(git rev-list --count HEAD)"
     fi
     git_hash_latest=${git_hash_latest:0:7}
     popd >/dev/null
@@ -845,6 +846,9 @@ version_get() {
         unset TZ
 
         branch_current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+        if [[ -n $branch_current && $branch_current != "main" ]]; then
+            commits_current="$(git rev-list --count HEAD)"
+        fi
 
     elif [[ -e ./resources/git_hash ]]; then
         version_current="$(cat ./resources/version)"
@@ -858,7 +862,9 @@ version_get() {
             print "* Please download Legacy iOS Kit using git clone or from GitHub releases: https://github.com/LukeZGD/Legacy-iOS-Kit/releases"
         fi
     fi
-    if [[ -n $version_current ]]; then
+    if [[ -n $commits_current ]]; then
+        print "* Version: $version_current-$commits_current ($git_hash $branch_current)"
+    elif [[ -n $version_current ]]; then
         print "* Version: $version_current ($git_hash $branch_current)"
     fi
     popd >/dev/null
