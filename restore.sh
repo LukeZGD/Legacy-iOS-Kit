@@ -6178,7 +6178,7 @@ restore_download_bbsep() {
 }
 
 restore_idevicerestore() {
-    local ExtraArgs="-ewy"
+    local ExtraArgs="-ewy --cache-path ."
     local idevicerestore2="$idevicerestore"
 
     mkdir -p shsh
@@ -6368,7 +6368,7 @@ restore_latest() {
 
     # remove erase arg if update
     [[ $1 == "update" ]] && ExtraArgs=
-    ExtraArgs+=" -y"
+    ExtraArgs+=" -y --cache-path ."
 
     if [[ $1 == "custom" ]]; then
         ExtraArgs+=" -c"
