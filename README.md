@@ -109,9 +109,10 @@
 - [Restoring the iPod touch 4th gen to iOS 7 tethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
 - Jailbreaking for 32-bit devices and versions support:
     - iPhone 2G and touch 1 - 3.1.3 only
-    - iPhone 3G and touch 2 - 4.2.1, 4.1, and 3.1.3
-    - iPhone 3GS - All versions are supported (all release versions from 3.0 to 6.1.6)
-    - Other devices - All versions from 3.1.3 to 9.3.4 are supported, with some exceptions
+    - iPhone 3G and touch 2 - 3.1.3 to 4.2.1
+    - iPod touch 2 - 3.1.1 to 4.2.1
+    - iPhone 3GS - All release versions from 3.0 to 6.1.6 are supported
+    - Other devices - All release versions from 3.1.3 to 9.3.4 are supported, with some exceptions
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
 
 
@@ -122,14 +123,14 @@
 - **macOS** 10.11 and newer
     - macOS 12.6 and newer recommended
 - [**Ubuntu**](https://ubuntu.com/) 22.04 and newer, and Ubuntu-based distros like [Linux Mint](https://www.linuxmint.com/)
-- [**Fedora**](https://fedoraproject.org/) 40 and newer, [Atomic Desktop](https://fedoraproject.org/atomic-desktops/) (Silverblue, Kinoite, [Bazzite](https://bazzite.gg/), etc.) also supported
+- [**Fedora**](https://fedoraproject.org/) 36 and newer, [Atomic Desktop](https://fedoraproject.org/atomic-desktops/) (Silverblue, Kinoite, [Bazzite](https://bazzite.gg/), etc.) also supported
 - [**Debian**](https://www.debian.org/) 12 Bookworm and newer, Sid, and Debian-based distros
 - [**Arch Linux**](https://www.archlinux.org/) and Arch-based distros like [CachyOS](https://cachyos.org) and [SteamOS](https://store.steampowered.com/steamos/)
 - Less tested distros: [**openSUSE Tumbleweed**](https://get.opensuse.org/tumbleweed/), [**Gentoo**](https://www.gentoo.org/), [**Void Linux**](https://voidlinux.org/)
 
 ## Tools and other stuff used
 - curl
-- bspatch
+- [bspatch](https://github.com/LukeZGD/bsdiff)
 - [powdersn0w_pub](https://github.com/dora2-iOS/powdersn0w_pub) - dora2ios; [LukeZGD fork](https://github.com/LukeZGD/powdersn0w_pub)
     - [Most of the exploit ramdisks used are from kok3shidoll's repo](https://github.com/kok3shidoll/untitled)
     - [iPhone 5C 7.0.x exploit ramdisk is from m1zole](https://github.com/m1zole/untitled_pub)
@@ -150,41 +151,34 @@
 - [primepwn](https://github.com/LukeZGD/primepwn)
 - [a6meowing](https://github.com/kok3shidoll/a6meowing) - dora/kok3shidoll; [LukeZGD fork](https://github.com/LukeZGD/a6meowing) with changes from [retr0id](https://github.com/DavidBuchanan314/a6meowing) for Linux support
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
-- [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity
 - [libimobiledevice](https://github.com/LukeZGD/libimobiledevice) - libimobiledevice
 - [libirecovery](https://github.com/LukeZGD/libirecovery) - libimobiledevice
-- [libideviceactivation](https://github.com/LukeZGD/libideviceactivation) - libimobiledevice
+- [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
 - [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
-- [static-cross-openssh](https://github.com/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
+- [static-cross-openssh](https://codeberg.org/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
 - [Motrix](https://github.com/agalwood/Motrix) - aria2c binaries
-- [usbmuxd2](https://github.com/LukeZGD/usbmuxd2) - tihmstar; LukeZGD fork (used on Linux only, optional)
 - [Plumesign](https://github.com/claration/Impactor) - claration (used for sideloading)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
-- [darkhttpd](https://github.com/emikulic/darkhttpd)
+- [darkhttpd](https://github.com/LukeZGD/darkhttpd)
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)
-- [futurerestore](https://github.com/tihmstar/futurerestore) - tihmstar
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring 32-bit devices (old branch)
-    - [LukeZGD fork](https://github.com/LukeZGD/futurerestore) used for restoring A7 devices (master branch)
-    - [futurerestore nightly](https://github.com/futurerestore/futurerestore/) used for restoring A8/A9/A10/A11 devices
-- [iBoot32Patcher](https://github.com/Merculous/iBoot32Patcher/) - Merculous fork with fixes from Pingzi610
+- [futurerestore](https://github.com/LukeZGD/futurerestore) - LukeZGD fork (multiple branches, based on [futurerestore nightly](https://github.com/futurerestore/futurerestore/))
+- [iBoot32Patcher](https://github.com/LukeZGD/iBoot32Patcher/) - Merculous fork with fixes from Pingzi610
 - [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
-- [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb) (used on A5X only)
+- [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb) (used on A5X iOS 5 only)
 - [jq](https://github.com/jqlang/jq)
 - [partialZipBrowser](https://github.com/tihmstar/partialZipBrowser)
 - [zenity](https://github.com/GNOME/zenity); [macOS build](https://github.com/ncruces/zenity)
-- 32-bit bundles from [OdysseusOTA](https://www.youtube.com/watch?v=Wo7mGdMcjxw), [OdysseusOTA2](https://www.youtube.com/watch?v=fh0tB6fp0Sc), [alitek12](https://www.mediafire.com/folder/b1z64roy512wd/FirmwareBundles), [gjest](https://www.reddit.com/r/jailbreak/comments/6yrzzj/release_firmware_bundles_for_ios_841_ipad21234567/) (modified bundles for daibutsuCFW)
-- A7 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
-- iPad 2 iOS 4.3.x bundles from [selfisht, Ralph0045](https://www.reddit.com/r/LegacyJailbreak/comments/1172ulo/release_ios_4_ipad_2_odysseus_firmware_bundles/)
+- A7 10.3.3 patches from [MatthewPierson](https://github.com/MatthewPierson/iPhone-5s-OTA-Downgrade-Patches)
 - [datautils0](https://github.com/comex/datautils0) - comex (used for iPad 2 4.3.x kernel diffs)
-- [sshpass](https://sourceforge.net/project/sshpass)
+- [sshpass](https://github.com/LukeZGD/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
 - [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
 - [Aquila](https://github.com/staturnzz/aquila)
 - [aquila_cdma](https://github.com/tuanemss/aquila_cdma)
 - [BSPQMIShim](https://github.com/tuanemss/BSPQMIShim)
-- [EverPwnage](https://github.com/LukeZGD/EverPwnage)
+- [EverPwnage](https://github.com/LukeZGD/EverPwnage) (based on [daibutsu](https://github.com/kok3shidoll/daibutsu) - dora/kok3shidoll, Clarity)
 - [Pangu](https://www.theapplewiki.com/wiki/Pangu)
 - [p0sixspwn](https://www.theapplewiki.com/wiki/p0sixspwn)
 - [evasi0n7](https://www.theapplewiki.com/wiki/Evasi0n7)
@@ -209,4 +203,4 @@
 - iPad 1 and iPod touch 3 unofficial upgrades:
     - [SundanceInH2A](https://github.com/NyanSatan/SundanceInH2A) - NyanSatan
     - [ipad-1-ios-7](https://github.com/amy-and-nicole/ipad-1-ios-7) - amy-and-nicole and pwnerblu, also uses stuff from SundanceInH2A
-- [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6(X) pwning on Linux, and iOS 10 tethered restores)
+- [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6X pwning on Linux, and iOS 10 tethered restores)

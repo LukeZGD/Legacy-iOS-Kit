@@ -398,7 +398,7 @@ set_tool_paths() {
             distro="arch"
         elif (( ubuntu_ver >= 22 )) || (( debian_ver >= 12 )) || [[ $debian_ver == "sid" ]]; then
             distro="debian"
-        elif (( fedora_ver >= 40 )); then
+        elif (( fedora_ver >= 36 )); then
             distro="fedora"
             if [[ $(command -v rpm-ostree) ]]; then
                 distro="fedora-atomic"
