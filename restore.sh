@@ -691,13 +691,13 @@ install_depends() {
             $sudo add-apt-repository -y universe
         fi
         $sudo apt update
-        $sudo apt install -m -y aria2 ca-certificates curl git libssl3 libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
+        $sudo apt install -m -y aria2 ca-certificates curl git libssl3 libssl-dev libzstd1 openssh-client patch python3 sshfs unzip usbmuxd usbutils xxd zenity zip zlib1g
         if [[ $(command -v systemctl 2>/dev/null) ]]; then
             $sudo systemctl enable --now udev systemd-udevd usbmuxd 2>/dev/null
         fi
 
     elif [[ $distro == "fedora" ]]; then
-        $sudo dnf install -y aria2 ca-certificates git libimobiledevice libzstd openssl patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
+        $sudo dnf install -y aria2 ca-certificates git libimobiledevice libzstd openssl openssl-devel patch python3 sshfs systemd udev usbmuxd vim-common zenity zip
         $sudo ln -sf /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/certs/ca-certificates.crt
 
     elif [[ $distro == "fedora-atomic" ]]; then
@@ -708,13 +708,13 @@ install_depends() {
         print "* You may need to reboot to apply changes with rpm-ostree. Perform a reboot after this before running the script again."
 
     elif [[ $distro == "opensuse" ]]; then
-        $sudo zypper -n install aria2 ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 patch python3 sshfs usbmuxd unzip vim zenity zip
+        $sudo zypper -n install aria2 ca-certificates curl git libimobiledevice-1_0-6 libzstd1 openssl-3 libopenssl-3-devel patch python3 sshfs usbmuxd unzip vim zenity zip
 
     elif [[ $distro == "gentoo" ]]; then
         $sudo emerge -av --noreplace app-arch/zstd app-misc/ca-certificates libimobiledevice net-fs/sshfs net-misc/aria2 net-misc/curl openssh python udev app-arch/unzip usbmuxd usbutils vim zenity app-arch/zip
 
     elif [[ $distro == "void" ]]; then
-        $sudo xbps-install aria2 curl git patch openssh python3 unzip xxd zenity zip
+        $sudo xbps-install aria2 curl git patch openssh openssl-devel python3 unzip xxd zenity zip
     fi
 
     if [[ $platform == "linux" ]]; then
