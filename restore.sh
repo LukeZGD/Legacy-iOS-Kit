@@ -6386,7 +6386,9 @@ restore_latest() {
             log "Sending s5l8900xall..."
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
             $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
-            device_find_mode DFUreal
+            if [[ $target_vers_maj != 1 ]]; then
+                device_find_mode DFUreal
+            fi
         fi
         if [[ $target_vers_maj == 4 ]]; then
             log "Sending iBSS..."
