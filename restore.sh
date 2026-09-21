@@ -648,6 +648,7 @@ set_tool_paths() {
     fi
 
     scp2+=" -F ./ssh_config"
+    [[ $platform == "linux" ]] && scp2+=" -S ssh"
     ssh2+=" -F ./ssh_config"
 }
 
