@@ -90,7 +90,7 @@ clean_usbmuxd() {
             $sudo -v
         fi
     fi
-    if [[ -z $device_disable_sudoloop ]]; then
+    if [[ $device_sudoloop == 1 ]]; then
         clean_sudo
     else
         clean
@@ -464,18 +464,18 @@ set_tool_paths() {
             device_disable_sudoloop=1
             device_disable_usbmuxd=1
         fi
-        if [[ -z $device_disable_sudoloop ]]; then
+        if [[ -z $device_disable_sudoloop || $live_session == 1 ]]; then
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
             trap "clean_sudo" EXIT
         fi
         sudo="/usr/bin/sudo"
         if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
-            if [[ -z $device_disable_sudoloop && -z $device_disable_usbmuxd ]]; then
+            if [[ $device_sudoloop == 1 && -z $device_disable_usbmuxd ]]; then
                 log "sudo-rs detected. Switching to sudo.ws"
             fi
             sudo+=".ws"
         fi
-        if [[ $device_sudoloop == 1 || $live_session == 1 ]]; then
+        if [[ $device_sudoloop == 1 ]]; then
             if [[ $live_session != 1 ]]; then
                 print "* Enter your user password when prompted"
                 print "* Your password input may not be visible, but it is still being entered."
