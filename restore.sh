@@ -10687,6 +10687,11 @@ menu_miscutilities() {
         if (( device_proc < 7 )); then
             menu_items+=("Create Custom IPSW")
         fi
+        if [[ $branch_current == "main" ]]; then
+            menu_items+=("Switch to test branch")
+        else
+            menu_items+=("Switch to main branch")
+        fi
         menu_items+=("(Re-)Install Dependencies" "Go Back")
         print " > Main Menu > Misc Utilities"
         input "Select an option:"
@@ -10728,6 +10733,27 @@ menu_miscutilities() {
             "SSH Ramdisk" ) mode="device_enter_ramdisk";;
             "FourThree Utility" ) menu_fourthree;;
             "Pair Device" ) device_pair;;
+            "Switch to"* )
+                local branch_switch="main"
+                if [[ $branch_current == "main" ]]; then
+                    branch_switch="test"
+                    warn "This will switch the current branch to the test branch."
+                    print "* The test branch may contain changes that are not yet available in the main branch."
+                    print "* Changes in this branch are intended for public testing and may contain unfinished features or bugs."
+                fi
+                select_yesno "Do you want to switch to the $branch_switch branch?" 0
+                if [[ $? != 0 ]]; then
+                    pushd .. >/dev/null
+                    if [[ ! -d .git ]]; then
+                        error ".git directory not found."
+                    fi
+                    git fetch origin
+                    git checkout "$branch_switch"
+                    popd >/dev/null
+                    log "Branch switch complete. Please run the script again."
+                    exit
+                fi
+            ;;
             "Go Back" ) back=1;;
         esac
     done
