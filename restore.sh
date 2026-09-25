@@ -11935,7 +11935,7 @@ device_enter_ramdisk() {
     elif [[ $device_proc == 7 ]]; then
         input "Version Select Option"
         print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
-        print "* There is also an option to use iOS 8 ramdisk. This can be used to fix devices on iOS 7 not booting after using iOS 12 ramdisk."
+        print "* There is also an option to use iOS 8 ramdisk, only to be used for fixing devices on iOS 7 not booting after using iOS 12 ramdisk."
         print "* If not sure, just press Enter/Return. This will select the default version."
         select_yesno "Select Y to use iOS 12, select N to use iOS 8" 1
         if [[ $? != 1 ]]; then
