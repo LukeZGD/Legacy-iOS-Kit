@@ -8194,6 +8194,7 @@ shsh_save_onboard64() {
     device_iproxy
     device_ssh_message
     device_sshpass
+    device_find_ssh
     local shsh="../saved/shsh/$device_ecid-$device_type-$device_vers-$device_build.shsh2"
     local shsh2
     local disk
@@ -8660,6 +8661,7 @@ menu_datamanage() {
                 device_iproxy no-logging
                 device_ssh_message
                 device_sshpass
+                device_find_ssh
                 if [[ $selected == *"Cydia"* ]]; then
                     $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p $path"
                     print "* Place the .deb files you want to install to the mount folder, then reboot the device afterwards."
@@ -11358,6 +11360,17 @@ device_activate() {
     pause
 }
 
+device_find_ssh() {
+    log "Checking for device..."
+    local found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+    if [[ $found != 1 && $mode == *"hacktivate" ]]; then
+        error "Unable to connect to device via SSH. If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
+              "* Alternatively, restore using Legacy iOS Kit with the jailbreak option enabled."
+    elif [[ $found != 1 ]]; then
+        error "Unable to connect to device via SSH. Make sure your device is jailbroken and OpenSSH is installed."
+    fi
+}
+
 device_hacktivate() {
     local type="$device_type"
     local build="$device_build"
@@ -11382,6 +11395,8 @@ device_hacktivate() {
     device_iproxy
     device_ssh_message
     device_sshpass
+    device_find_ssh
+
     if [[ $dap == 1 ]]; then
         echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
         log "Copying data_ark.plist to device"
@@ -11396,6 +11411,7 @@ device_hacktivate() {
         log "Done. Your device should reboot now"
         return
     fi
+
     log "Checking lockdownd"
     local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls /usr/libexec/lockdownd.orig 2>/dev/null")"
     if [[ -n $lock ]]; then
@@ -11425,6 +11441,7 @@ device_reverthacktivate() {
     device_iproxy
     device_ssh_message
     device_sshpass
+    device_find_ssh
     if (( device_vers_maj <= 6 )); then
         log "Getting lockdownd.orig"
         $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd.orig .
