@@ -2961,6 +2961,9 @@ ipsw_preference_set() {
          [[ $device_proc == 5 && $target_vers_maj == 4 ]]; then
         ipsw_nskip=1
     fi
+    case $device_type in
+        iPhone3,[12] ) ipsw_nskip=1;;
+    esac
 
     # make jailbreak option enabled for all of 8.x-9.x if the restore is a powdersn0w one.
     # also, exit this function if ipsw_canjailbreak is not set to 1 and/or other options will not be used.
@@ -6547,7 +6550,7 @@ restore_deviceprepare() {
                 shsh_save version $device_latest_vers
                 device_enter_mode pwnDFU
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ]]; then
+                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ]]; then
                     shsh_save version $device_latest_vers
                     device_buttons
                 fi
@@ -6654,7 +6657,7 @@ restore_prepare() {
                     log "Done. Your device should reboot now"
                 fi
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
-                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 ]]; then
+                if [[ $ipsw_jailbreak == 1 || $ipsw_gasgauge_patch == 1 || $ipsw_nskip == 1 ]]; then
                     restore_idevicerestore
                 else
                     restore_latest
@@ -6814,7 +6817,8 @@ ipsw_prepare() {
             elif [[ $device_target_tethered == 1 ]]; then
                 ipsw_prepare_tethered
             elif [[ $device_target_other == 1 || $ipsw_gasgauge_patch == 1 ]] ||
-                 [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]]; then
+                 [[ $device_target_vers == "$device_latest_vers" && $ipsw_jailbreak == 1 ]] ||
+                 [[ $ipsw_nskip == 1 ]]; then
                 case $device_type in
                     iPhone2,1 ) ipsw_prepare_jailbreak;;
                     iPod2,1 ) ipsw_prepare_custom;;
