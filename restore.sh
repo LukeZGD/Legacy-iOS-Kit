@@ -8861,18 +8861,8 @@ menu_ipa() {
                 log "Registering device..."
                 device_plumesign account register-device --udid $device_udid --name $device_type
 
-                log "Extracting IPA..."
-                mkdir -p temp_ipa
-                file_extract "$ipa_path" temp_ipa
-
                 log "Signing using Plumesign..."
-                device_plumesign sign -p temp_ipa/Payload/*.app --apple-id --udid $device_udid
-
-                log "Creating signed IPA..."
-                pushd temp_ipa >/dev/null
-                zip -r0 ../temp.ipa *
-                popd >/dev/null
-                rm -rf temp_ipa
+                device_plumesign sign -p "$ipa_path" --apple-id --udid $device_udid -o temp.ipa
 
                 device_pair
                 log "Installing IPA using ideviceinstaller..."
@@ -12021,15 +12011,16 @@ device_plumesign() {
 
     if [[ $plumesign_check_once != 1 ]]; then
         log "Checking for latest plumesign"
-        download_from_url "https://api.github.com/repos/claration/Impactor/releases/latest" latest
-        local latest="$(cat latest | $jq -r ".tag_name")"
+        #download_from_url "https://api.github.com/repos/claration/Impactor/releases/latest" latest
+        #local latest="$(cat latest | $jq -r ".tag_name")"
+        local latest="v2.6.3-1"
         local current="$(cat ../saved/${plumesign}_version 2>/dev/null || echo "none")"
         log "Latest version: $latest, current version: $current"
         if [[ $current != "$latest" && $latest != "null" ]]; then
             rm -f ../saved/$plumesign
         fi
         if [[ ! -e ../saved/$plumesign ]]; then
-            file_download https://github.com/claration/Impactor/releases/download/$latest/$plumesign $plumesign
+            file_download https://github.com/LukeZGD/impactor/releases/download/$latest/$plumesign $plumesign
             mv $plumesign ../saved
         fi
         echo "$latest" > ../saved/${plumesign}_version
