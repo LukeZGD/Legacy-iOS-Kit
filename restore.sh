@@ -96,7 +96,7 @@ clean_usbmuxd() {
         clean
     fi
     [[ $noclean == 1 ]] && return
-    $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+    $sudo killall -9 usbmuxd 2>/dev/null
     sleep 1
     if [[ $(command -v restorecon) ]]; then
         $sudo restorecon /var/run/usbmuxd
@@ -134,7 +134,6 @@ List of options:
     --pwn                     Pwn the connected device
     --sshrd                   Enter SSH ramdisk mode
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
-    --use-usbmuxd2            Use usbmuxd2 instead of usbmuxd on Linux
 
 For 32-bit devices compatible with restores/downgrades (see README):
     --activation-records      Enable dumping/stitching activation records
@@ -508,17 +507,12 @@ set_tool_paths() {
                 elif [[ $(command -v rc-service) ]]; then
                     $sudo rc-service usbmuxd zap 2>/dev/null
                 else
-                    $sudo killall -9 usbmuxd usbmuxd2 2>/dev/null
+                    $sudo killall -9 usbmuxd 2>/dev/null
                 fi
                 #$sudo killall usbmuxd 2>/dev/null
                 #sleep 1
-                if [[ $use_usbmuxd2 == 1 ]]; then
-                    log "Running usbmuxd2"
-                    $sudo -b $dir/usbmuxd2 &>../saved/usbmuxd2.log
-                else
-                    log "Running usbmuxd"
-                    $sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
-                fi
+                log "Running usbmuxd"
+                $sudo -b $dir/usbmuxd -pf &>../saved/usbmuxd.log
             else
                 warn "Detected existing tmp folder(s), there might be other Legacy iOS Kit instance(s) running"
                 warn "Not running usbmuxd"
@@ -12611,7 +12605,6 @@ for i in "$@"; do
         "--no-color"        ) no_color=1;;
         "--no-finder"       ) no_finder=1;;
         "--old-menu"        ) menu_old=1;;
-        "--use-usbmuxd2"    ) use_usbmuxd2=1;;
 
         # options for 32-bit devices
         "--activation-records") device_actrec=1;;
