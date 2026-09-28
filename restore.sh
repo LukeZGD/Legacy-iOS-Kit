@@ -12032,16 +12032,15 @@ device_plumesign() {
 
     if [[ $plumesign_check_once != 1 ]]; then
         log "Checking for latest plumesign"
-        #download_from_url "https://api.github.com/repos/claration/Impactor/releases/latest" latest
-        #local latest="$(cat latest | $jq -r ".tag_name")"
-        local latest="v2.6.3-1"
+        download_from_url "https://api.github.com/repos/claration/impactor/releases/latest" latest
+        local latest="$(cat latest | $jq -r ".tag_name")"
         local current="$(cat ../saved/${plumesign}_version 2>/dev/null || echo "none")"
         log "Latest version: $latest, current version: $current"
         if [[ $current != "$latest" && $latest != "null" ]]; then
             rm -f ../saved/$plumesign
         fi
         if [[ ! -e ../saved/$plumesign ]]; then
-            file_download https://github.com/LukeZGD/impactor/releases/download/$latest/$plumesign $plumesign
+            file_download https://github.com/claration/impactor/releases/download/$latest/$plumesign $plumesign
             mv $plumesign ../saved
         fi
         echo "$latest" > ../saved/${plumesign}_version
