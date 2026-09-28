@@ -2956,7 +2956,7 @@ ipsw_preference_set() {
         ipsw_nskip=1
     fi
     case $device_type in
-        iPhone3,[12] ) ipsw_nskip2=1;;
+        iPhone3,[12] ) ipsw_nskip=1; ipsw_nskip2=1;;
     esac
 
     # make jailbreak option enabled for all of 8.x-9.x if the restore is a powdersn0w one.
