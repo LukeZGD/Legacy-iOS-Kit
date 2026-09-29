@@ -881,7 +881,7 @@ version_check() {
             version_update
         elif [[ $branch_current != "main" ]]; then
             if (( commits_current >= commits_latest )); then
-                warn "Current branch is newer/different than remote: $commits_latest ($git_hash_latest)"
+                warn "Current version differs from remote: $commits_latest ($git_hash_latest)"
             else
                 print "* A newer version of Legacy iOS Kit is available."
                 print "* Current branch: $commits_current ($git_hash)"
@@ -890,7 +890,7 @@ version_check() {
                 version_update
             fi
         elif (( $(echo "$version_current" | cut -c 2- | sed -e 's/\.//g') >= $(echo "$version_latest" | cut -c 2- | sed -e 's/\.//g') )); then
-            warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
+            warn "Current version differs from remote: $version_latest ($git_hash_latest)"
         else
             print "* A newer version of Legacy iOS Kit is available."
             print "* Current version: $version_current ($git_hash)"
@@ -8363,7 +8363,9 @@ menu_print_info() {
     if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
     elif [[ $git_hash_latest != "$git_hash" ]]; then
-        warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
+        local latest="$version_latest"
+        [[ -n $commits_latest ]] && latest=$commits_latest
+        warn "Current version differs from remote: $latest ($git_hash_latest)"
     fi
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
