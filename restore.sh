@@ -1833,7 +1833,7 @@ device_find_mode() {
 
     if [[ $device_in != 1 ]]; then
         case $timeout in
-            [12] ) return 1;;
+            [123] ) return 1;;
             * ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
         esac
     elif [[ $mode == "WTF" && $wtfreal != 1 ]]; then
@@ -1983,13 +1983,12 @@ device_dfuhelper() {
         case $device_type in
             iPhone1,* | iPod1,1 )
                 sec=10
-                [[ $device_mode == "Recovery" ]] && sec=8
 
                 echo -e "\n$(print "* Hold TOP and HOME buttons.")"
                 _step $sec && break
 
                 echo -e "\n$(print "* Release TOP button and keep holding HOME button.")"
-                _step 13
+                _step 15
                 echo
             ;;
 
@@ -2050,7 +2049,7 @@ device_dfuhelper() {
         fi
 
         # Final mode verification check
-        device_find_mode "$mode_to_find" 2
+        device_find_mode "$mode_to_find" 3
         if [[ $? == 0 ]]; then
             unset -f _step
             return
