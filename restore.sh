@@ -772,7 +772,7 @@ version_update() {
         log "Running git reset..."
         git reset --hard
         log "Running git pull..."
-        git pull origin $(git rev-parse --abbrev-ref HEAD)
+        git pull origin "$branch_current"
         pushd "tmp$$" >/dev/null
         log "Done! Please run the script again"
         exit
@@ -10724,6 +10724,7 @@ menu_miscutilities() {
                     fi
                     git fetch origin
                     git checkout "$branch_switch"
+                    git pull origin "$branch_switch"
                     popd >/dev/null
                     log "Branch switch complete. Please run the script again."
                     exit
