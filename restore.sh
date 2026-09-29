@@ -5109,22 +5109,6 @@ ipsw_prepare_sundanceinh2a() {
     popd >/dev/null
     rm -rf "$ipsw_custom2"
     popd >/dev/null
-
-    # ibec ticket patch
-    log "Starting iBEC ticket patch"
-    mv "$ipsw_custom.ipsw" temp.ipsw
-    device_fw_key_check temp $device_base_build
-    mkdir -p Firmware/dfu
-    local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBEC") | .iv')
-    local key=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBEC") | .key')
-    local name="iBEC.${device_model}ap.RELEASE.dfu"
-    file_extract_from_archive temp.ipsw Firmware/dfu/$name
-    "$dir/xpwntool" $name ibec -iv $iv -k $key
-    "$dir/iBoot32Patcher" ibec ibec.patched --ticket
-    "$dir/img3maker" -f ibec.patched -o Firmware/dfu/$name -t ibec
-    log "Add all to custom IPSW"
-    zip -r0 temp.ipsw Firmware/dfu/*
-    mv temp.ipsw "$ipsw_custom.ipsw"
 }
 
 ipsw_prepare_powder_exploit() {
