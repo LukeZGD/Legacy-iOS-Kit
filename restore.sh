@@ -4559,6 +4559,7 @@ ipsw_prepare_ios4multipart() {
                 "$dir/xpwntool" $name $ipsw_custom_part1/Downgrade/RestoreDeviceTree -iv $iv -k $key -decrypt
             ;;
             "Kernelcache" )
+                cp $name $ipsw_custom_part1/
                 "$dir/xpwntool" $name $ipsw_custom_part1/Downgrade/RestoreKernelCache -iv $iv -k $key -decrypt
             ;;
             * )
