@@ -9557,7 +9557,7 @@ menu_ipsw() {
         echo
         if [[ $1 == *"powdersn0w"* || $1 == *"DRA v6"* ]]; then
             menu_items+=("Select Base IPSW")
-            if [[ -n $device_base_vers ]]; then
+            if [[ -n $device_base_vers && -z $ipsw_base_path ]]; then
                 menu_items+=("Download Base IPSW")
             fi
             if [[ -n $ipsw_path ]]; then
