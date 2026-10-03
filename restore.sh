@@ -10678,6 +10678,9 @@ menu_miscutilities() {
                         menu_items+=("Shutdown Device" "Restart Device" )
                     fi
                     menu_items+=("Enter Recovery Mode" "Attempt Activation")
+                    if [[ $device_unactivated != 1 && $device_activationissue != 1 && $device_imei != "9900"* ]]; then
+                        menu_items+=("Deactivate Device")
+                    fi
                 else
                     warn "Some options are currently unavailable. Pair your device to access them."
                     menu_items+=("Pair Device")
@@ -10770,6 +10773,7 @@ menu_miscutilities() {
                     exit
                 fi
             ;;
+            "Deactivate Device" ) device_deactivate;;
             "Go Back" ) back=1;;
         esac
     done
@@ -11391,9 +11395,9 @@ device_dumprd() {
 
 device_activate() {
     log "Attempting to activate device with ideviceactivation"
-    if [[ $device_type == "iPhone"* ]] && (( device_proc <= 4 )); then
-        print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
-        if (( device_vers_maj <= 6 )); then
+    if [[ $device_imei == "9900"* || $device_activationissue == 1 ]]; then
+        # print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
+        if (( device_vers_maj <= 7 )); then
             print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
         fi
     fi
@@ -11403,6 +11407,26 @@ device_activate() {
     fi
     print "* If it returns an error, just try again."
     device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
+    pause
+}
+
+
+device_deactivate() {
+    warn "This option will deactivate your device."
+    print "* Only use this option if your device has no activation issues."
+    print "* Useful for fixing push notification issues after restoring with activation records stitched to the IPSW."
+    select_yesno
+    if [[ $? != 1 ]]; then
+        return
+    fi
+    log "Attempting to deactivate device with ideviceactivation"
+    $ideviceactivation deactivate
+    device_unactivated=$($ideviceactivation state | grep -c "Unactivated")
+    if [[ -n $device_actrec || -n $device_auto_actrec ]]; then
+        device_actrec=
+        device_auto_actrec=
+        log "Activation Records stitching has also been disabled. Proceed with caution"
+    fi
     pause
 }
 
