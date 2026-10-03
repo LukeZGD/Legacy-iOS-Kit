@@ -7564,6 +7564,7 @@ device_ramdisk() {
             fi
 
             case $vers in
+                # 9.3.[56] | 10.* ) untether=1;;
                 9.3.[56] ) :;;
                 9.*  ) untether="everuntether.tar";;
                 8.*  ) untether="daibutsu/untether.tar";;
@@ -7637,6 +7638,9 @@ device_ramdisk() {
             fi
 
             log "Mounting data partition"
+            case $vers in
+                9.* | 10.* ) $ssh -t -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs -f /dev/disk0s1s2";;
+            esac
             $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
 
             # do stuff
@@ -8455,13 +8459,13 @@ menu_print_info() {
                     print "* Your device's IMEI does not start with 9900. Your device should be safe from the activation issue."
                 elif [[ $device_9900candidate == 1 && $device_mode != "Normal" ]]; then
                     warn "Your device is possibly affected by an activation issue. Please check your device's IMEI."
-                    print "* If it starts with 9900, enable Activation Records stitching in Misc Utilities"
+                    print "* If it starts with 9900, dump activation by selecting Activation Records in Misc Utilities"
                 fi
             ;;
         esac
         if [[ $device_activationissue == 1 ]]; then
             warn "Your device is an $device_type. These devices are affected by an activation issue."
-            [[ $device_auto_actrec != 2 ]] && print "* If you haven't already, dump activation by selecting Activation Records in Misc Utilities"
+            [[ -z $device_auto_actrec ]] && print "* If you haven't already, dump activation by selecting Activation Records in Misc Utilities"
         fi
         if [[ $device_auto_actrec == 1 ]]; then
             print "* Activated A${device_proc}(X) device detected. Activation Records stitching enabled."
@@ -11117,6 +11121,11 @@ device_jailbreak_confirm() {
         echo
     fi
 
+    if (( device_vers_maj >= 9 )); then
+        log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
+        device_rd_build="13G36"
+    fi
+
     mode="device_jailbreak"
 }
 
@@ -12070,25 +12079,25 @@ device_enter_ramdisk() {
         :
     elif [[ $device_proc == 7 ]]; then
         input "Version Select Option"
-        print "* The version of the SSH Ramdisk is set to iOS 12 by default. This is the recommended option."
-        print "* There is also an option to use iOS 8 ramdisk, only to be used for fixing devices on iOS 7 not booting after using iOS 12 ramdisk."
-        print "* If not sure, just press Enter/Return. This will select the default version."
-        select_yesno "Select Y to use iOS 12, select N to use iOS 8" 1
+        print "* iOS 12 SSH Ramdisk is selected by default and is recommended."
+        print "* Use the iOS 8 ramdisk only to fix iOS 7 devices that fail to boot after using the iOS 12 ramdisk."
+        print "* If unsure, press Enter/Return to use the default version."
+        select_yesno "Select Y for iOS 12, N for iOS 8" 1
         if [[ $? != 1 ]]; then
             device_ramdisk_ios8=1
         fi
     elif (( device_proc >= 5 )); then
         if (( device_vers_maj >= 9 )); then
-            log "Device is on iOS 9+, using 9.0.2 (13A452) ramdisk"
-            device_rd_build="13A452"
+            log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
+            device_rd_build="13G36"
         elif [[ $device_mode == "Normal" ]]; then
             :
         elif [[ $device_type == "iPad2,"* && $device_rd_build == "8"* ]]; then
             device_rd_build=
         elif [[ -z $device_rd_build ]]; then
-            print "* To mount /var (/mnt2) for iOS 9-10, I recommend using version 9.0.2 (13A452)."
-            print "* Do not use iOS 9+ ramdisks if your device is on iOS 8 or lower, and vice versa."
-            print "* If not sure, just leave it blank and press Enter/Return. This will select the default version."
+            print "* For mounting /var (/mnt2) on iOS 9-10, iOS 9.3.5 (13G36) is recommended."
+            print "* Do not use iOS 9+ ramdisks on iOS 8 or lower, or vice versa."
+            print "* If unsure, leave this blank and press Enter/Return to use the default version."
             device_enter_build
         fi
     else # a4 and older do not support setting sshrd version
