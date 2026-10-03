@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-03",
+  "base_commit": "33dcbfcf4d8791268292e1009e2955e3f02b4785",
+  "shell_syntax": "passed",
+  "host_integration_tests": {
+    "result": "passed",
+    "cases": 5
+  },
+  "bridge_emulation": {
+    "result": "passed",
+    "cases": 51,
+    "kaslr_slides": [
+      "0",
+      "0x04800000",
+      "0x10200000"
+    ]
+  },
+  "assembly_reproduction": "132 bytes match bridge.json",
+  "kernel_sha256": "c082f2b423e04aa60a71840c573557d9564d70542f45468de6c60fc2159ff0a8",
+  "kernel_img3_sha256": "b473817cb826a8aad426dfc3b1d9b45335921f6c699b054dee04b794aba8e434",
+  "kernel_img3_roundtrip": "byte-for-byte passed",
+  "hfs_overlay": {
+    "regular_files": 6,
+    "symlinks": 67,
+    "regular_file_readback": "all matched",
+    "wallpaper_target_existence": "all 67 found in target image",
+    "gestalt_owner": "501:501",
+    "btserver_mode": "0755",
+    "signing_entitlements": "preserved and verified"
+  },
+  "physical_v6_audio": {
+    "result": "user confirmed both wired channels and speaker clean, lock/unlock playback normal",
+    "boot_mode": "temporary 6.1.6 iBSS/iBEC; manually activated codec; modified tree"
+  },
+  "integrated_kernel_only_boot": "User reports normal sound when testing the tool-integrated version; exact boot path/log not separately captured",
+  "automatic_codec_startup": "Normal sound reported in integrated test; no manual-activation step requested for this test",
+  "full_custom_ipsw_creation": "Tool-integrated test reported by user; full build/restore log not collected",
+  "untethered_dra_boot": "Repeated cold boots not separately confirmed",
+  "bluetooth_cold_boot": "Latest user report says Bluetooth normal; separate cold-boot and sleep/wake coverage not supplied",
+  "wallpaper_gallery": "PARTIAL ONLY: default wallpaper displays; Settings directory/gallery remains abnormal",
+  "restore_menu_enablement": "passed; enabling repairs selects the donor and proceeds to full restore mode",
+  "latest_user_report": {
+    "date": "2026-10-03",
+    "context": "Tool-integrated version testing reported by device owner",
+    "bluetooth": "normal",
+    "audio": "normal",
+    "wallpaper": "Only iOS 7 default wallpaper displays; Settings directory/gallery still abnormal",
+    "evidence": "User report; no new device logs collected"
+  }
+}

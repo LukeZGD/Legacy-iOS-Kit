@@ -116,6 +116,8 @@ display_help() {
 Usage: ./restore.sh [Options]
 
 List of options:
+    --touch4-hardware-fixes[=<kext-directory>]
+                              Experimental iPod4,1 7.1.2 Bluetooth/audio/wallpaper repairs
     --debug                   Enable script debugging (set -x and debug mode)
     --device=<type>           Specify device type
     --dfuhelper               Launch to DFU Mode Helper only
@@ -4710,6 +4712,49 @@ download_with_pzb() {
     fi
 }
 
+# Build-only opt-in hardware repair for iPod4,1 / 11D257. Keep the DRA
+# bootloaders and original NOR DeviceTree; the audio bridge is kernel-only.
+ipsw_touch4_hardware_check() {
+    [[ -z $touch4_hardware_kext ]] && return
+    if [[ $device_type != "iPod4,1" || $device_target_build != "11D257" ||
+          $device_base_build != "10B500" || $ipsw_jailbreak != 1 ]]; then
+        error "touch4 hardware repairs require iPod4,1, 11D257, 10B500 base, and jailbreak."
+    fi
+    python3_init
+    if [[ ! -s "$touch4_hardware_kext/AppleCS42L59Audio" || ! -s "$touch4_hardware_kext/Info.plist" ]]; then
+        error "Missing CS42L59 donor kext. See resources/patch/touch4-ios7/hardware/README.md."
+    fi
+    warn "Experimental touch4 hardware repairs enabled. Untethered audio startup and the wallpaper gallery are not yet verified."
+}
+
+ipsw_touch4_hardware_rootfs() {
+    [[ -z $touch4_hardware_kext ]] && return
+    local helper="../resources/patch/touch4-ios7/hardware/build.py"
+    local work="touch4-hardware"
+    local base_key=$(echo "$device_fw_key_base" | $jq -j '.keys[] | select(.image == "RootFS") | .key')
+    mkdir -p "$work"
+    local signer_platform="$platform"
+    [[ $signer_platform == "macos" ]] && signer_platform="macosx"
+    local signer="../saved/ldid_${signer_platform}_$(uname -m)"
+    if [[ ! -s $signer ]]; then
+        file_download "https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/$(basename "$signer")" ldid
+        mv ldid "$signer"
+    fi
+    [[ ! -s $signer ]] && error "Cannot obtain ldid for BTServer signing."
+    chmod +x "$signer"
+    log "Extracting N81 Bluetooth firmware from the selected 6.1.6 IPSW"
+    file_extract_from_archive "$ipsw_base_path.ipsw" "$rootfs_name" || error "Cannot extract N81 donor RootFS from IPSW."
+    "$dir/dmg" extract "$rootfs_name" "$work/base.dec" -k "$base_key" || error "Cannot extract N81 donor RootFS."
+    rm "$rootfs_name"
+    "$dir/hfsplus" "$work/base.dec" extract usr/sbin/BlueTool "$work/BlueTool" || error "Cannot extract N81 BlueTool."
+    rm "$work/base.dec"
+    "$dir/hfsplus" rootfs.dec extract usr/sbin/BTServer "$work/BTServer" || error "Cannot extract target BTServer."
+    log "Preparing Bluetooth and wallpaper overlay"
+    python3 "$helper" overlay --bluetool "$work/BlueTool" --btserver "$work/BTServer" \
+        --gestalt "$patches/gestalt.n81.plist" --output "$work" --ldid "$signer" || error "touch4 rootfs repair build failed."
+    "$dir/hfsplus" rootfs.dec untar "$work/rootfs.tar" || error "Cannot apply touch4 hardware overlay."
+}
+
 ipsw_prepare_specialios7() {
     local all_flash2="$ipsw_custom/$all_flash"
     local patches="../resources/patch/touch4-ios7"
@@ -4719,6 +4764,13 @@ ipsw_prepare_specialios7() {
     local ramdisk6="../saved/ipad1-ios7/048-2516-005.dmg" # iPad2,1 6.1.3
 
     if [[ -e "$ipsw_custom.ipsw" ]]; then
+        if [[ -n $touch4_hardware_kext && ! -s $saves/$device_target_build/hardware/kernelcache ]]; then
+            error "Hardware IPSW cache is incomplete. Move the existing HardwareV1 IPSW aside and rebuild."
+        fi
+        if [[ -n $touch4_hardware_kext ]]; then
+            echo "device_target_build=$device_target_build" > "$saves/$device_ecid"
+            echo "touch4_hardware_profile=cs59-v1" >> "$saves/$device_ecid"
+        fi
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
     fi
@@ -4923,7 +4975,15 @@ ipsw_prepare_specialios7() {
         mv kernelcache.release.$device_model_special kc
         "$dir/xpwntool" kc kc.new -iv $kc_iv -k $kc_key -decrypt
         cp kc.new $saves/$device_target_build/kernelcache
-        cp kc.new $ipsw_custom/kernelcache.release.$device_model
+        if [[ -n $touch4_hardware_kext ]]; then
+            log "Building kernel-only N81 CS42L59 audio repair"
+            local audio_cache="$saves/$device_target_build/hardware"
+            python3 "$patches/hardware/build.py" kernel --input kc.new --kext "$touch4_hardware_kext" \
+                --output "$audio_cache" --xpwntool "$dir/xpwntool" || error "touch4 audio repair build failed."
+            cp "$audio_cache/kernelcache" "$ipsw_custom/kernelcache.release.$device_model"
+        else
+            cp kc.new $ipsw_custom/kernelcache.release.$device_model
+        fi
         log "Target devicetree"
         cp $patches/DeviceTree.n81ap.img3 $all_flash2/
     fi
@@ -5004,6 +5064,8 @@ ipsw_prepare_specialios7() {
         fi
     fi
 
+    ipsw_touch4_hardware_rootfs
+
     log "Target RootFS: building dmg as $rootfs_name"
     "$dir/dmg" build rootfs.dec $ipsw_custom/$rootfs_name
     if [[ $? != 0 || ! -s $ipsw_custom/$rootfs_name ]]; then
@@ -5017,6 +5079,7 @@ ipsw_prepare_specialios7() {
 
     if [[ $device_type == "iPod4,1" ]]; then
         echo "device_target_build=$device_target_build" > $saves/$device_ecid
+        [[ -n $touch4_hardware_kext ]] && echo "touch4_hardware_profile=cs59-v1" >> "$saves/$device_ecid"
     fi
 }
 
@@ -6784,6 +6847,7 @@ restore_notpwned64() {
 }
 
 ipsw_prepare() {
+    ipsw_touch4_hardware_check
     case $device_proc in
         1 )
             if [[ $ipsw_jailbreak == 1 ]]; then
@@ -9939,6 +10003,14 @@ menu_ipsw_special() {
             6.* ) print "* iOS 6 on touch 3/iPad 1 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
         esac
         menu_items=("Select Target IPSW" "Select Base IPSW" "Download Target IPSW" "Download Base IPSW")
+        if [[ $device_type == "iPod4,1" && $device_target_build == "11D257" ]]; then
+            if [[ -n $touch4_hardware_kext ]]; then
+                print "* Bluetooth / Audio / Wallpaper repairs: ENABLED (experimental)"
+            else
+                print "* Bluetooth / Audio / Wallpaper repairs: disabled"
+            fi
+            menu_items+=("Toggle Hardware Repairs")
+        fi
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
             menu_items+=("$start")
         fi
@@ -9951,6 +10023,20 @@ menu_ipsw_special() {
         case $selected in
             "(*) Create IPSW" ) mode="custom-ipsw";;
             "$start" ) mode="downgrade";;
+            "Toggle Hardware Repairs" )
+                if [[ -n $touch4_hardware_kext ]]; then
+                    touch4_hardware_kext=
+                else
+                    local donor="$(cd .. && pwd)/saved/touch4-ios7/donors/AppleCS42L59Audio.kext"
+                    if [[ -s "$donor/AppleCS42L59Audio" && -s "$donor/Info.plist" ]]; then
+                        touch4_hardware_kext="$donor"
+                        ipsw_jailbreak=1
+                    else
+                        warn "Missing local CS42L59 donor. See resources/patch/touch4-ios7/hardware/README.md."
+                        pause
+                    fi
+                fi
+            ;;
             "Select Target IPSW" ) menu_ipsw_browse "special";;
             "Select Base IPSW" ) menu_ipsw_browse "base";;
             "Download Target IPSW" ) ipsw_download "../${device_type_special}_${device_target_vers}_${device_target_build}_Restore" special;;
@@ -10046,6 +10132,9 @@ ipsw_custom_set() {
         ipsw_custom="../$1_Custom"
     fi
 
+    if [[ -n $touch4_hardware_kext && $device_type == "iPod4,1" && $device_target_build == "11D257" ]]; then
+        ipsw_custom+="-HardwareV1"
+    fi
     if [[ $device_actrec == 1 ]]; then
         ipsw_custom+="A"
     fi
@@ -11910,9 +11999,16 @@ device_justboot_specialios7() {
         error "Cannot find device file for $device_ecid in saved. Need to restore/create an IPSW for iOS 7.1.2 first."
     fi
 
+    local touch4_hardware_profile=""
     source $saves/$device_ecid
     [[ -z $device_target_build ]] && device_target_build="11D257"
     log "device_target_build=$device_target_build"
+
+    local boot_kernel="$saves/$device_target_build/kernelcache"
+    if [[ $touch4_hardware_profile == "cs59-v1" ]]; then
+        boot_kernel="$saves/$device_target_build/hardware/kernelcache"
+        [[ ! -s $boot_kernel ]] && error "Missing touch4 hardware kernelcache. Rebuild the HardwareV1 IPSW."
+    fi
 
     device_enter_mode pwnDFU
     device_rd_build=
@@ -11927,7 +12023,7 @@ device_justboot_specialios7() {
     $irecovery -f $patches/DeviceTree.n81ap.img3
     $irecovery -c devicetree
     log "kernelcache"
-    $irecovery -f $saves/$device_target_build/kernelcache
+    $irecovery -f "$boot_kernel"
     $irecovery -c bootx
     log "Device should now boot."
 }
@@ -12610,6 +12706,15 @@ for i in "$@"; do
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--ipsw-verbose"    ) ipsw_verbose=1;;
         "--jailbreak"       ) ipsw_jailbreak=1;;
+        "--touch4-hardware-fixes" )
+            touch4_hardware_kext="$(cd "$(dirname "$0")" && pwd)/saved/touch4-ios7/donors/AppleCS42L59Audio.kext"
+            ipsw_jailbreak=1
+        ;;
+        "--touch4-hardware-fixes="* )
+            touch4_hardware_kext="${i#*=}"
+            touch4_hardware_kext="$(cd "$touch4_hardware_kext" 2>/dev/null && pwd)"
+            [[ -z $touch4_hardware_kext ]] && error "Invalid CS42L59 kext directory."
+        ;;
         "--gasgauge-patch" | "--multipatch") ipsw_gasgauge_patch=1;;
         "--memory"          ) ipsw_memory=1;;
         "--pwned-recovery"  ) device_pwnrec=1;;
