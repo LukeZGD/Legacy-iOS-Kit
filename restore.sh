@@ -3005,9 +3005,8 @@ ipsw_preference_set() {
         warn "Jailbreak flag detected, jailbreak option enabled by user."
     elif [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
-        print "* When this option is enabled, your device will be jailbroken on restore."
-        print "* I recommend to enable this option to have the jailbreak and Cydia pre-installed."
-        print "* This option is enabled by default (Y). Select this option if unsure."
+        print "* Recommended setting: Enabled (Y) for jailbreak and Cydia to be pre-installed."
+        print "* Select this option if unsure."
         select_yesno "Enable this option?" 1
         if [[ $? != 1 ]]; then
             ipsw_jailbreak=
@@ -3019,15 +3018,12 @@ ipsw_preference_set() {
         echo
     fi
 
-    if (( target_vers_maj >= 7 )); then
-        ipsw_canhacktivate=
-    fi
     if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $ipsw_canhacktivate == 1 ]]; then
         input "Hacktivate Option"
-        print "* When this option is enabled, your device will be activated on restore."
-        print "* Enable this option if you have no valid SIM card to activate the phone."
-        print "* Disable this option if you have a working SIM card and want cellular data."
-        print "* This option is enabled by default (N). Select this option if unsure."
+        print "* Recommended setting: Enabled (Y)"
+        print "* Enable this option to have the device activated on restore."
+        print "* Recommended especially for devices with known activation issues."
+        print "* Select this option if unsure."
         select_yesno "Enable this option?" 1
         if [[ $? != 1 ]]; then
             log "Hacktivate option disabled by user."
@@ -3035,6 +3031,10 @@ ipsw_preference_set() {
         else
             log "Hacktivate option enabled."
             ipsw_hacktivate=1
+            if [[ -n $device_actrec ]]; then
+                log "Activation Records stitching disabled."
+                device_actrec=
+            fi
         fi
         echo
     fi
@@ -3063,10 +3063,10 @@ ipsw_preference_set() {
 
     if [[ $ipsw_canmemory == 1 && -z $ipsw_memory ]]; then
         input "Memory Option for creating custom IPSW"
-        print "* When this option is enabled, system RAM will be used for the IPSW creation process."
-        print "* I recommend to enable this option to speed up creating the custom IPSW."
-        print "* However, if your PC/Mac has less than 8 GB of RAM, disable this option."
-        print "* This option is enabled by default (Y). Select this option if unsure."
+        print "* Recommended setting: Enabled (Y)"
+        print "* Enable this option to use system RAM during IPSW creation, which can speed up the process."
+        print "* Disable this option if your PC/Mac has less than 8 GB of RAM."
+        print "* Select this option if unsure."
         select_yesno "Enable this option?" 1
         if [[ $? != 1 ]]; then
             log "Memory option disabled by user."
@@ -3515,6 +3515,14 @@ ipsw_prepare_jailbreak() {
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
+    fi
+    if [[ $ipsw_hacktivate == 1 && ! -s $FirmwareBundle/lockdownd.patch ]]; then
+        hacktivate_prepare
+        if [[ $hacktivate_dap == 1 ]]; then
+            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+        else
+            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
+        fi
     fi
 
     log "Preparing custom IPSW: $dir/ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -4028,14 +4036,14 @@ ipsw_prepare_bundle() {
             echo "<key>File</key><string>usr/local/bin/restored_external</string><key>Patch</key><string>restoredexternal.patch</string></dict>" >> $NewPlist
         fi
         echo "</dict>" >> $NewPlist
-        if [[ $ipsw_hacktivate == 1 ]]; then
-            echo "<key>FilesystemPatches</key><dict>" >> $NewPlist
-            echo "<key>Hacktivation</key><array><dict>" >> $NewPlist
-            echo "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
-            echo "<key>Patch</key><string>lockdownd.patch</string></dict></array></dict>" >> $NewPlist
-        else
-            echo "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
-        fi
+    fi
+    if [[ $ipsw_hacktivate == 1 ]] && (( target_vers_maj <= 6 )); then
+        echo "<key>FilesystemPatches</key><dict>" >> $NewPlist
+        echo "<key>Hacktivation</key><array><dict>" >> $NewPlist
+        echo "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
+        echo "<key>Patch</key><string>lockdownd.patch</string></dict></array></dict>" >> $NewPlist
+    else
+        echo "<key>FilesystemPatches</key><dict/>" >> $NewPlist # ipsw segfaults if this is missing lol
     fi
 
     if [[ $1 == "base" ]]; then
@@ -4278,6 +4286,14 @@ ipsw_prepare_32bit() {
     fi
     if [[ $device_actrec == 1 ]]; then
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
+    fi
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
+        if [[ $hacktivate_dap == 1 ]]; then
+            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+        else
+            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
+        fi
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -5635,10 +5651,11 @@ ipsw_prepare_ios4powder() {
         fi
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
+        # ExtraArgs+=" -S 30" # system partition add
     fi
 
-    ipsw_prepare_bundle target
     ipsw_prepare_bundle base
+    ipsw_prepare_bundle target
     ipsw_prepare_logos_convert
     cp -R ../resources/firmware/src .
     ipsw_prepare_reboot4
@@ -5674,6 +5691,10 @@ ipsw_prepare_ios4powder() {
     if [[ $ipsw_isbeta == 1 ]]; then
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
+    fi
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
+        cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -5719,8 +5740,8 @@ ipsw_prepare_powder() {
     fi
     ipsw_prepare_usepowder=1
 
-    ipsw_prepare_bundle target
     ipsw_prepare_bundle base
+    ipsw_prepare_bundle target
     ipsw_prepare_logos_convert
     cp -R ../resources/firmware/src .
     if [[ $ipsw_memory == 1 ]]; then
@@ -5756,6 +5777,7 @@ ipsw_prepare_powder() {
         JBFiles+=("$jelbrek/LukeZGD.tar")
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
+        # ExtraArgs+=" -S 30" # system partition add
     fi
 
     local ExtraArr=("--boot-partition" "--boot-ramdisk")
@@ -5803,6 +5825,14 @@ ipsw_prepare_powder() {
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
     ipsw_prepare_partition_script
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
+        if [[ $hacktivate_dap == 1 ]]; then
+            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+        else
+            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
+        fi
+    fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
     "$dir/powdersn0w" "$ipsw_path.ipsw" temp.ipsw -base "$ipsw_base_path.ipsw" $ExtraArgs ${JBFiles[@]}
@@ -7359,7 +7389,7 @@ device_ramdisk() {
             gzip -d ssh.tar.gz
             "$dir/hfsplus" Ramdisk.raw untar ssh.tar
             if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
-                "$dir/hfsplus" Ramdisk.raw untar ../resources/jailbreak/daibutsu/bin.tar
+                "$dir/hfsplus" Ramdisk.raw untar $jelbrek/daibutsu/bin.tar
             fi
             "$dir/hfsplus" Ramdisk.raw mv sbin/reboot sbin/reboot_bak
             "$dir/hfsplus" Ramdisk.raw mv sbin/halt sbin/halt_bak
@@ -7683,6 +7713,12 @@ device_ramdisk() {
                     device_send_rdtar nopatcyh.tar
                 ;;
             esac
+
+            # hacktivate setup
+            if [[ $ipsw_hacktivate == 1 ]]; then
+                hacktivate_prepare
+                device_hacktivate rd
+            fi
 
             # final setup for ios 8.x daibutsu, and/or reboot
             if [[ $vers == "8."* && $ipsw_everuntether != 1 ]] || [[ $vers == "7."* ]]; then
@@ -9439,15 +9475,9 @@ menu_ipsw() {
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latest_build"
-                case $device_latest_vers in
-                    [76543].* ) ipsw_canhacktivate=1;;
-                esac
             ;;
             [6543]* )
                 device_target_vers="$1"
-                if [[ $device_target_vers != "3.0"* ]]; then
-                    ipsw_canhacktivate=1
-                fi
                 if [[ $device_type == "iPhone2,1" && $1 != "4.1" ]]; then
                     ipsw_cancustomlogo=1
                 fi
@@ -9465,8 +9495,9 @@ menu_ipsw() {
         esac
         target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
         target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
-        if [[ $device_type != "iPhone"* && $device_type != "iPad1,1" ]]; then
-            ipsw_canhacktivate=
+        if [[ $device_imei == "9900"* || $device_activationissue == 1 ]] && (( target_vers_maj <= 7 )) &&
+           [[ $device_auto_actrec != 2 ]]; then
+            ipsw_canhacktivate=1
         fi
         if [[ $device_proc == 1 ]]; then
             ipsw_cancustomlogo=1
@@ -9519,9 +9550,6 @@ menu_ipsw() {
         fi
         if [[ $1 == "Other (Use SHSH Blobs)" || $1 == "Set Nonce Only" ]]; then
             device_target_other=1
-            if [[ $device_type == "iPhone2,1" ]]; then
-                ipsw_canhacktivate=1
-            fi
         elif [[ $1 == *"powdersn0w"* ]]; then
             device_target_powder=1
             if [[ $device_proc == 4 ]]; then
@@ -9845,6 +9873,7 @@ menu_ipsw() {
                 back=1
 
                 ipsw_24o=
+                ipsw_canhacktivate=
                 ipsw_cancustomlogo=
                 ipsw_cancustomlogo2=
                 ipsw_customlogo=
@@ -9950,7 +9979,10 @@ menu_ipsw_special() {
         selected="${menu_items[$?]}"
         case $selected in
             "(*) Create IPSW" ) mode="custom-ipsw";;
-            "$start" ) mode="downgrade";;
+            "$start" )
+                device_actrec=
+                mode="downgrade"
+            ;;
             "Select Target IPSW" ) menu_ipsw_browse "special";;
             "Select Base IPSW" ) menu_ipsw_browse "base";;
             "Download Target IPSW" ) ipsw_download "../${device_type_special}_${device_target_vers}_${device_target_build}_Restore" special;;
@@ -10926,14 +10958,20 @@ device_ssh() {
 }
 
 device_jailbreak_confirm() {
+    local device_vers="$device_vers"
+    local device_vers_maj="$device_vers_maj"
+    local device_vers_min="$device_vers_min"
+
     if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         device_vers=
         while [[ -z $device_vers ]]; do
             read -p "$(input 'Enter current iOS version (eg. 6.1.3): ')" device_vers
+            device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
+            device_vers_min=$(echo "$device_vers" | cut -d. -f2)
         done
-    elif [[ $device_mode == "Normal" ]]; then
+    elif [[ $device_mode == "Normal" && $device_unactivated != 1 ]]; then
         case $device_vers in
-            5* | 6.0* | 6.1 | 6.1.[12] )
+            5.* | 6.0* | 6.1 | 6.1.[12] )
                 print "* Your device on iOS $device_vers will be jailbroken using g1lbertJB."
                 print "* No data will be lost, but please back up your data just in case."
                 print "* Ignore the \"Error Code 1\" and \"Error Code 102\" errors, this is normal and part of the jailbreaking process."
@@ -10949,6 +10987,7 @@ device_jailbreak_confirm() {
             ;;
         esac
     fi
+
     log "Checking if your device and version is supported..."
     log "Please read the message below:"
     if [[ $device_proc == 1 ]]; then
@@ -10961,14 +11000,14 @@ device_jailbreak_confirm() {
         print "* Note: It would be better to jailbreak using sideload or custom IPSW methods for A6 devices on Linux."
     fi
     if [[ $device_proc == 1 && $device_vers == "4.2.1" ]] ||
-       [[ $device_type == "iPod3,1" && $device_vers == "6"* ]] ||
-       [[ $device_type == "iPod4,1" && $device_vers == "7"* ]]; then
+       [[ $device_type == "iPod3,1" && $device_vers_maj == 6 ]] ||
+       [[ $device_type == "iPod4,1" && $device_vers_maj == 7 ]]; then
         warn "Jailbreaking using the ramdisk method is not supported for the $device_type on iOS $device_vers."
         print "* You will need to go to \"Restore/Downgrade\" instead."
         pause
         return
     fi
-    if [[ $device_vers == "7"* ]]; then
+    if [[ $device_vers_maj == 7 ]]; then
         warn "Jailbreaking using the ramdisk method is disabled for iOS 7.x."
         print "* It is recommended to use Aquila instead, or dump blobs and restore with the jailbreak option enabled."
         warn "You will encounter issues when jailbreaking 7.x with ramdisk method, particularly baseband issues."
@@ -10986,14 +11025,14 @@ device_jailbreak_confirm() {
         esac
         if [[ $platform == "linux" ]]; then
             case $device_vers in
-                [689]* | 10* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
+                [689].* | 10.* ) print "* Note: If you need to sideload, you can use Legacy iOS Kit's \"Sideload IPA\" option.";;
             esac
         fi
     fi
     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking"
     case $device_vers in
         7.0* )
-            print "* For this version, Aquila on Windows/Mac can be used instead of this option."
+            print "* For this version, use Aquila on Windows/Mac to jailbreak your device."
             print "* https://ios.cfw.guide/installing-aquila/"
             print "* Sideloading EverPwnage is also an option, especially if on Linux."
             print "* https://github.com/LukeZGD/EverPwnage"
@@ -11055,6 +11094,25 @@ device_jailbreak_confirm() {
     if [[ $? != 1 ]]; then
         return
     fi
+
+    if [[ $device_imei == "9900"* || $device_activationissue == 1 ]] && (( device_vers_maj <= 7 )) &&
+       [[ $device_unactivated == 1 ]]; then
+        input "Hacktivate Option"
+        print "* Recommended setting: Enabled (Y)"
+        print "* Enable this option to have the device activated on jailbreak."
+        print "* Recommended especially for devices with known activation issues."
+        print "* Select this option if unsure."
+        select_yesno "Enable this option?" 1
+        if [[ $? != 1 ]]; then
+            log "Hacktivate option disabled by user."
+            ipsw_hacktivate=
+        else
+            log "Hacktivate option enabled."
+            ipsw_hacktivate=1
+        fi
+        echo
+    fi
+
     mode="device_jailbreak"
 }
 
@@ -11063,7 +11121,7 @@ device_jailbreak() {
 }
 
 device_jailbreak_gilbert() {
-    pushd ../resources/jailbreak/g1lbertJB >/dev/null
+    pushd $jelbrek/g1lbertJB >/dev/null
     log "Copying freeze.tar to Cydia.tar"
     cp ../freeze.tar.gz .
     gzip -d freeze.tar.gz
@@ -11359,70 +11417,121 @@ device_find_ssh() {
     fi
 }
 
-device_hacktivate() {
+hacktivate_prepare() {
     local type="$device_type"
-    local build="$device_build"
-    local dap=
-    if (( device_proc >= 4 )) && [[ $device_type != "iPhone2,1" && $device_vers != "3.2"* ]]; then
+    local vers="$device_vers"
+    if (( device_proc >= 4 )) && [[ $device_type != "iPhone2,1" && $vers != "3.2"* ]]; then
         type="iPhone2,1"
-        case $device_vers in
-            4.2.1 ) build="8C148a";;
-            5.1.1 ) build="9B206";;
-            6.1   ) build="10B141";;
-        esac
     fi
-    local patch="../resources/firmware/FirmwareBundles/Down_${type}_${device_vers}_${build}.bundle/lockdownd.patch"
-    if [[ $device_type == "iPhone3,3" && $device_vers == "4.2"* ]] ||
-       [[ $device_type == "iPhone2,1" && $device_vers == "3.0"* ]] ||
-       [[ $device_proc == 1 && $device_vers == "3."* && $device_vers != "3.1.3" ]] ||
-       [[ $device_vers_maj == 7 ]]; then
-       dap=1
-    elif [[ ! -s $patch ]]; then
+    if [[ -n $device_target_vers ]]; then
+        vers="$device_target_vers"
+    fi
+    hacktivate_patch=$(echo ../resources/firmware/FirmwareBundles/Down_"${type}_${vers}_"*.bundle/lockdownd.patch)
+    if [[ $device_type == "iPhone3,3" && $vers == "4.2"* ]] ||
+       [[ $device_type == "iPhone2,1" && $vers == "3.0"* ]] ||
+       [[ $device_proc == 1 && $vers == "3."* && $vers != "3.1.3" ]] ||
+       [[ $vers == "7."* ]]; then
+       hacktivate_dap=1
+       log "Hacktivate: data_ark.plist FactoryActivated"
+       return
+    elif [[ ! -s "$hacktivate_patch" ]]; then
         error "Detected that there is no lockdownd patch for this device/version combination. Cannot continue."
     fi
-    device_iproxy
-    device_ssh_message
-    device_sshpass
-    device_find_ssh
+    log "Hacktivate: $hacktivate_patch"
+}
 
-    if [[ $dap == 1 ]]; then
+device_hacktivate() {
+    local rd=
+    local root=
+    local bspqmishim="/tmp/bspqmishim.deb"
+
+    if [[ $1 == "rd" ]]; then
+        rd=1
+        root="/mnt1"
+        bspqmishim="/mnt1/private/var/root/Media/Cydia/AutoInstall/bspqmishim.deb"
+    else
+        hacktivate_prepare
+        device_iproxy
+        device_ssh_message
+        device_sshpass
+        device_find_ssh
+    fi
+
+    local lockdownd="$root/usr/libexec/lockdownd"
+    local lockdownd_orig="$root/usr/libexec/lockdownd.orig"
+    local data_ark="$root/private/var/root/Library/Lockdown/data_ark.plist"
+
+    if [[ $hacktivate_dap == 1 ]]; then
         echo '<plist><dict><key>com.apple.mobile.lockdown_cache-ActivationState</key><string>FactoryActivated</string></dict></plist>' > data_ark.plist
         log "Copying data_ark.plist to device"
-        $scp -P $ssh_port data_ark.plist root@127.0.0.1:/var/root/Library/Lockdown/data_ark.plist
+        $scp -P $ssh_port data_ark.plist root@127.0.0.1:"$data_ark"
+
         if [[ $device_type == "iPhone3,3" && $device_vers_maj == 4 ]]; then
             log "Transferring BSPQMIShim"
-            $scp -P $ssh_port ../resources/jailbreak/bspqmishim.deb root@127.0.0.1:/tmp/bspqmishim.deb
-            log "Installing BSPQMIShim"
-            $ssh -t -p $ssh_port root@127.0.0.1 "dpkg -i /tmp/bspqmishim.deb"
+            $scp -P $ssh_port $jelbrek/bspqmishim.deb root@127.0.0.1:"$bspqmishim"
+
+            if [[ $rd != 1 ]]; then
+                log "Installing BSPQMIShim"
+                $ssh -t -p $ssh_port root@127.0.0.1 "dpkg -i /tmp/bspqmishim.deb"
+            fi
         fi
-        $ssh -p $ssh_port root@127.0.0.1 "reboot"
-        log "Done. Your device should reboot now"
+
+        if [[ $rd != 1 ]]; then
+            $ssh -p $ssh_port root@127.0.0.1 "reboot"
+            log "Done. Your device should reboot now"
+        fi
         return
     fi
 
     log "Checking lockdownd"
-    local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls /usr/libexec/lockdownd.orig 2>/dev/null")"
+    local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls \"$lockdownd_orig\" 2>/dev/null")"
     if [[ -n $lock ]]; then
-        warn "Device is already hacktivated. Cannot continue."
-        print "* If you want to revert, you may want to select \"Revert Hacktivation\" instead."
+        if [[ $rd == 1 ]]; then
+            warn "Device is already hacktivated."
+        else
+            warn "Device is already hacktivated. Cannot continue."
+            print "* If you want to revert, you may want to select \"Revert Hacktivation\" instead."
+        fi
         return
     fi
+
     log "Getting lockdownd"
-    $scp -P $ssh_port root@127.0.0.1:/usr/libexec/lockdownd .
+    $scp -P $ssh_port root@127.0.0.1:"$lockdownd" .
+
     if [[ ! -s lockdownd ]]; then
-        error "Getting lockdownd failed. Cannot continue."
+        if [[ $rd == 1 ]]; then
+            warn "Getting lockdownd failed."
+        else
+            error "Getting lockdownd failed. Cannot continue."
+        fi
+        return
     fi
+
     log "Patching lockdownd"
-    $bspatch lockdownd lockdownd.patched "$patch"
+    $bspatch lockdownd lockdownd.patched "$hacktivate_patch"
+
     if [[ ! -s lockdownd.patched ]]; then
-        error "Patching lockdownd failed. Cannot continue."
+        if [[ $rd == 1 ]]; then
+            warn "Patching lockdownd failed."
+        else
+            error "Patching lockdownd failed. Cannot continue."
+        fi
+        return
     fi
+
     log "Renaming original lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /usr/libexec/lockdownd.orig ]] && mv /usr/libexec/lockdownd /usr/libexec/lockdownd.orig"
+    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e \"$lockdownd_orig\" ]] && mv \"$lockdownd\" \"$lockdownd_orig\""
+
     log "Copying patched lockdownd to device"
-    $scp -P $ssh_port lockdownd.patched root@127.0.0.1:/usr/libexec/lockdownd
-    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; reboot"
-    log "Done. Your device should reboot now"
+    $scp -P $ssh_port lockdownd.patched root@127.0.0.1:"$lockdownd"
+    $ssh -p $ssh_port root@127.0.0.1 "chmod +x \"$lockdownd\""
+
+    if [[ $rd == 1 ]]; then
+        log "Hacktivate done"
+    else
+        $ssh -p $ssh_port root@127.0.0.1 "reboot"
+        log "Done. Your device should reboot now"
+    fi
 }
 
 device_reverthacktivate() {

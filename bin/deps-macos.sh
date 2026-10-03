@@ -23,14 +23,6 @@ lipo -create -output output/jq jq.x86_64 jq.arm64
 curl -LO https://gist.github.com/LukeZGD/8c719b613ca28d6883552437bdd500de/raw/e8f8ffa505265af2fac6a555670cacd24680ca8e/kerneldiff.c
 cc -O kerneldiff.c -o output/kerneldiff -arch x86_64 -arch arm64
 
-curl -LO https://github.com/tihmstar/partialZipBrowser/releases/download/44/buildroot_macos-latest.zip
-unzip buildroot_macos-latest.zip
-mv buildroot_macos-latest/usr/local/bin/pzb pzb.arm64
-curl -LO https://github.com/tihmstar/partialZipBrowser/releases/download/36/buildroot_macos-latest.zip
-unzip buildroot_macos-latest.zip
-mv buildroot_macos-latest/usr/local/bin/pzb pzb.x86_64
-lipo -create -output output/pzb pzb.x86_64 pzb.arm64
-
 curl -LO https://github.com/ncruces/zenity/releases/download/v0.10.14/zenity_macos.zip
 unzip zenity_macos.zip
 mv zenity output/

@@ -37,10 +37,10 @@ rm -rf *.zip
 curl -LO https://github.com/LukeZGD/daibutsuCFW/releases/download/latest/xpwn_linux-aarch64.zip
 curl -LO https://github.com/LukeZGD/daibutsuCFW/releases/download/latest/xpwn_linux-x86_64.zip
 unzip xpwn_linux-aarch64.zip
-mv bin/xpwntool bin/hfsplus bin/ipsw bin/dmg bin/ticket linux/aarch64/
+mv bin/xpwntool bin/hfsplus bin/ipsw bin/dmg linux/aarch64/
 rm -rf bin
 unzip xpwn_linux-x86_64.zip
-mv bin/xpwntool bin/hfsplus bin/ipsw bin/dmg bin/ticket linux/x86_64/
+mv bin/xpwntool bin/hfsplus bin/ipsw bin/dmg linux/x86_64/
 rm -rf bin *.zip
 
 curl -LO https://github.com/LukeZGD/futurerestore/releases/download/latest/futurerestore_new_linux-aarch64.zip
@@ -158,9 +158,9 @@ rm -rf build *.zip
 curl -LO https://github.com/LukeZGD/powdersn0w_pub/releases/download/latest/powdersn0w_linux-aarch64.zip
 curl -LO https://github.com/LukeZGD/powdersn0w_pub/releases/download/latest/powdersn0w_linux-x86_64.zip
 unzip powdersn0w_linux-aarch64.zip
-mv bin/powdersn0w bin/validate linux/aarch64/
+mv bin/powdersn0w bin/ticket bin/validate linux/aarch64/
 unzip powdersn0w_linux-x86_64.zip
-mv bin/powdersn0w bin/validate linux/x86_64/
+mv bin/powdersn0w bin/ticket bin/validate linux/x86_64/
 rm -rf bin *.zip
 
 curl -LO https://github.com/LukeZGD/primepwn/releases/download/latest/primepwn_linux-aarch64.zip
