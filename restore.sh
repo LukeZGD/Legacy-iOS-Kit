@@ -4734,9 +4734,17 @@ ipsw_prepare_specialios7() {
     local kc="../saved/ipad1-ios7/kernelcache.release.n90" # iPhone3,1 7.1.2
     local ramdisk6="../saved/ipad1-ios7/048-2516-005.dmg" # iPad2,1 6.1.3
 
+    source "$patches/repairs.sh"
+    if [[ $device_type == "iPod4,1" ]]; then
+        touch4_ios7_resources
+    fi
+
     if [[ -e "$ipsw_custom.ipsw" ]]; then
-        log "Found existing Custom IPSW. Skipping IPSW creation."
-        return
+        if [[ $device_type != "iPod4,1" ]] || touch4_ios7_cached_ipsw "$ipsw_custom.ipsw"; then
+            log "Found existing Custom IPSW. Skipping IPSW creation."
+            return
+        fi
+        log "Rebuilding cached iPod4,1 IPSW with the current iOS 7 repairs"
     fi
 
     if [[ $device_type == "iPad1,1" ]]; then
@@ -4873,7 +4881,7 @@ ipsw_prepare_specialios7() {
         "$dir/hfsplus" ramdisk.dec chmod 755 private/etc/rc.boot
         "$dir/hfsplus" ramdisk.dec chown 0:0 private/etc/rc.boot
         "$dir/hfsplus" ramdisk.dec add $sundance/exploit/exploit-k48.dmg exploit.dmg
-    elif [[ $ipsw_jailbreak == 1 ]]; then # touch 4 only
+    elif [[ $device_type == "iPod4,1" ]]; then # Mandatory AMFI support for the repaired BTServer
         touch ios7
         "$dir/hfsplus" ramdisk.dec add ios7 ios7
     fi
@@ -4938,8 +4946,8 @@ ipsw_prepare_specialios7() {
         file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.$device_model_special
         mv kernelcache.release.$device_model_special kc
         "$dir/xpwntool" kc kc.new -iv $kc_iv -k $kc_key -decrypt
-        cp kc.new $saves/$device_target_build/kernelcache
-        cp kc.new $ipsw_custom/kernelcache.release.$device_model
+        touch4_ios7_kernel kc.new "$saves/$device_target_build/kernelcache"
+        cp "$saves/$device_target_build/kernelcache" "$ipsw_custom/kernelcache.release.$device_model"
         log "Target devicetree"
         cp $patches/DeviceTree.n81ap.img3 $all_flash2/
     fi
@@ -4993,6 +5001,11 @@ ipsw_prepare_specialios7() {
         "$dir/hfsplus" rootfs.dec add $ipad1ios7/artifacts/MP4VH2.videodecoder System/Library/VideoDecoders/MP4VH2.videodecoder
     fi
 
+    if [[ $device_type == "iPod4,1" && $ipsw_jailbreak != 1 ]]; then
+        log "Target RootFS: adding runtime support for the repaired Bluetooth service"
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7.tar || error "Cannot add iOS 7 runtime support."
+    fi
+
     if [[ $ipsw_jailbreak == 1 ]]; then
         log "Target RootFS: untar jailbreak bootstrap"
         cp $jelbrek/freeze.tar.gz .
@@ -5020,6 +5033,8 @@ ipsw_prepare_specialios7() {
         fi
     fi
 
+    [[ $device_type == "iPod4,1" ]] && touch4_ios7_rootfs
+
     log "Target RootFS: building dmg as $rootfs_name"
     "$dir/dmg" build rootfs.dec $ipsw_custom/$rootfs_name
     if [[ $? != 0 || ! -s $ipsw_custom/$rootfs_name ]]; then
@@ -5028,8 +5043,15 @@ ipsw_prepare_specialios7() {
 
     log "Creating $ipsw_custom.ipsw..."
     pushd $ipsw_custom >/dev/null
-    zip -r0 $ipsw_custom.ipsw *
+    if [[ $device_type == "iPod4,1" ]]; then
+        rm -f "$ipsw_custom.new.ipsw"
+        zip -r0 "$ipsw_custom.new.ipsw" * || error "Failed to create Custom IPSW."
+        mv "$ipsw_custom.new.ipsw" "$ipsw_custom.ipsw" || error "Cannot replace Custom IPSW."
+    else
+        zip -r0 $ipsw_custom.ipsw *
+    fi
     popd >/dev/null
+    [[ $device_type == "iPod4,1" ]] && touch4_ios7_record_ipsw "$ipsw_custom.ipsw"
 
     if [[ $device_type == "iPod4,1" ]]; then
         echo "device_target_build=$device_target_build" > $saves/$device_ecid
@@ -12055,6 +12077,10 @@ device_justboot_specialios7() {
     source $saves/$device_ecid
     [[ -z $device_target_build ]] && device_target_build="11D257"
     log "device_target_build=$device_target_build"
+
+    source "$patches/repairs.sh"
+    touch4_ios7_resources
+    touch4_ios7_kernel "$saves/$device_target_build/kernelcache" "$saves/$device_target_build/kernelcache"
 
     device_enter_mode pwnDFU
     device_rd_build=
