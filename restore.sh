@@ -5003,7 +5003,7 @@ ipsw_prepare_specialios7() {
 
     if [[ $device_type == "iPod4,1" && $ipsw_jailbreak != 1 ]]; then
         log "Target RootFS: adding runtime support for the repaired Bluetooth service"
-        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7.tar || error "Cannot add iOS 7 runtime support."
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7_old.tar || error "Cannot add iOS 7 runtime support."
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
@@ -5016,7 +5016,7 @@ ipsw_prepare_specialios7() {
         "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
 
         log "Target RootFS: untar jailbreak untether"
-        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7_old.tar
         if [[ $device_type == "iPad1,1" ]]; then
             "$dir/hfsplus" rootfs.dec rm usr/lib/libmis.dylib
             "$dir/hfsplus" rootfs.dec mv aquila usr/libexec/dirhelper

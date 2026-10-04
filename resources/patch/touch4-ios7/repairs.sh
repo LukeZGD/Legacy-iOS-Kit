@@ -64,7 +64,7 @@ touch4_ios7_rootfs() {
 touch4_ios7_cached_ipsw() {
     local image="$1"
     local kernel="../saved/touch4-ios7/11D257/kernelcache"
-    local stamp="$image.touch4-version"
+    local stamp="../saved/touch4-ios7/touch4-version"
     [[ -s $stamp ]] || return 1
     [[ $(cat "$stamp") == "$touch4_ios7_bundle_sha1 $($sha1sum "$image" | awk '{print $1}')" ]] || return 1
     # Recover the exact boot cache from this validated IPSW, even if saved/ was cleared.
@@ -77,6 +77,6 @@ touch4_ios7_cached_ipsw() {
 
 touch4_ios7_record_ipsw() {
     local image="$1"
-    printf '%s %s\n' "$touch4_ios7_bundle_sha1" "$($sha1sum "$image" | awk '{print $1}')" > "$image.touch4-version" || \
+    printf '%s %s\n' "$touch4_ios7_bundle_sha1" "$($sha1sum "$image" | awk '{print $1}')" > "../saved/touch4-ios7/touch4-version" || \
         error "Cannot record Custom IPSW repair version."
 }
