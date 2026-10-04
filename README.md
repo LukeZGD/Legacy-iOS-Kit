@@ -106,7 +106,7 @@
     - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
 - [Restoring the iPod touch 3rd gen and iPad 1 to iOS 6 (and also iOS 7 for iPad 1) untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
-- [Restoring the iPod touch 4th gen to iOS 7 tethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
+- [Restoring the iPod touch 4th gen to iOS 7 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
 - Jailbreaking for 32-bit devices and versions support:
     - iPhone 2G and touch 1 - 3.1.3 only
     - iPhone 3G and touch 2 - 3.1.3 to 4.2.1
@@ -203,4 +203,5 @@
 - iPad 1 and iPod touch 3 unofficial upgrades:
     - [SundanceInH2A](https://github.com/NyanSatan/SundanceInH2A) - NyanSatan
     - [ipad-1-ios-7](https://github.com/amy-and-nicole/ipad-1-ios-7) - amy-and-nicole and pwnerblu, also uses stuff from SundanceInH2A
+- iPod touch 4 unofficial upgrades: fixes contributions by [pwnerblu](https://github.com/pwnerblu) and [Peterdobby](https://github.com/Peterdobby/)
 - [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6X pwning on Linux, and iOS 10 tethered restores)
