@@ -11441,7 +11441,7 @@ device_deactivate() {
 
 device_find_ssh() {
     log "Checking for device..."
-    local found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+    local found=$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo 1")
     if [[ $found != 1 && $mode == *"hacktivate" ]]; then
         error "Unable to connect to device via SSH. If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
               "* Alternatively, restore using Legacy iOS Kit with the jailbreak option enabled."
