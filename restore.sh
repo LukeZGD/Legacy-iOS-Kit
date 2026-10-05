@@ -2161,7 +2161,7 @@ device_enter_mode() {
             log "Sending files to device: ${sendfiles[*]}"
             if [[ $device_vers_maj == 10 ]]; then
                 for file in "${sendfiles[@]}"; do
-                    cat $file | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
+                    cat $file | $ssh -t -p $ssh_port root@127.0.0.1 "cat > /tmp/$(basename $file)" &>scp.log &
                 done
                 sleep 3
                 cat scp.log
@@ -6941,10 +6941,10 @@ device_send_rdtar() {
     if [[ $2 == "gz" ]]; then
         cp $jelbrek/$1.gz .
         gzip -d $1.gz
-        cat $1 | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+        cat $1 | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
         return
     fi
-    cat $jelbrek/$1 | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+    cat $jelbrek/$1 | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
 }
 
 device_ramdisk64() {
@@ -7135,7 +7135,7 @@ device_ramdisk64() {
     log "Waiting for device..."
     print "* You may need to unplug and replug your device."
     while [[ $found != 1 ]]; do
-        found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+        found=$($ssh -t -p $ssh_port root@127.0.0.1 "echo 1")
         sleep 2
     done
 
@@ -7417,7 +7417,7 @@ device_ramdisk() {
     log "Waiting for device..."
     print "* You may need to unplug and replug your device."
     while [[ $found != 1 ]]; do
-        found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
+        found=$($ssh -t -p $ssh_port root@127.0.0.1 "echo 1")
         sleep 2
     done
 
@@ -7430,9 +7430,9 @@ device_ramdisk() {
             log "Sending TwistedMind2"
             $scp -P $ssh_port TwistedMind2 root@127.0.0.1:/
             log "Waiting for disks..."
-            $ssh -p $ssh_port root@127.0.0.1 'while [[ ! $(ls /dev/rdisk* 2>/dev/null) ]]; do :; done'
+            $ssh -t -p $ssh_port root@127.0.0.1 'while [[ ! $(ls /dev/rdisk* 2>/dev/null) ]]; do :; done'
             log "Sending dd command for TwistedMind2"
-            $ssh -p $ssh_port root@127.0.0.1 "dd if=/TwistedMind2 of=/dev/rdisk0 bs=8192; reboot_bak"
+            $ssh -t -p $ssh_port root@127.0.0.1 "dd if=/TwistedMind2 of=/dev/rdisk0 bs=8192; reboot_bak"
             return
         ;;
 
@@ -7451,11 +7451,11 @@ device_ramdisk() {
             build=$device_build
             log "$device_type is on iOS $vers-$build"
 
-            if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+            if [[ -n $($ssh -t -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
                 case $vers in
                     4.[10]* | 3.[21]* )
                         log "Applying launchd_use_gmalloc fix"
-                        $ssh -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/private/var/db; echo '' > /mnt1/private/var/db/.launchd_use_gmalloc"
+                        $ssh -t -p $ssh_port root@127.0.0.1 "mkdir -p /mnt1/private/var/db; echo '' > /mnt1/private/var/db/.launchd_use_gmalloc"
                     ;;
                 esac
                 log "Mounting data partition"
@@ -7468,7 +7468,7 @@ device_ramdisk() {
                     device_send_rdtar openssl.tar gz
                 fi
                 log "Rebooting"
-                $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
+                $ssh -t -p "$ssh_port" root@127.0.0.1 "reboot_bak"
                 return
             fi
 
@@ -7489,7 +7489,7 @@ device_ramdisk() {
                 '' )
                     warn "Something wrong happened. Failed to get iOS version."
                     print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
                     return
                 ;;
             esac
@@ -7507,7 +7507,7 @@ device_ramdisk() {
             # untether var must be set by now
             if [[ -z $untether ]]; then
                 warn "iOS $vers is not supported for jailbreaking with SSHRD."
-                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
                 return
             fi
             log "Nice, iOS $vers is compatible."
@@ -7541,7 +7541,7 @@ device_ramdisk() {
                 case $vers in
                     4.[10]* | 3.2* | 3.1.3 )
                         log "Extracting $untether"
-                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                        $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                     ;;
                 esac
             fi
@@ -7559,7 +7559,7 @@ device_ramdisk() {
                 6.*    ) device_send_rdtar fstab_rw.tar;;
                 4.2.[8761] )
                     log "launchd to punchd"
-                    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "[[ ! -e /mnt1/sbin/punchd ]] && mv /mnt1/sbin/launchd /mnt1/sbin/punchd"
                 ;;
             esac
             case $vers in
@@ -7578,14 +7578,14 @@ device_ramdisk() {
                 8.* ) # extract now if everuntether, later if daibutsu+dsc haxx
                     if [[ $ipsw_everuntether == 1 ]]; then
                         log "Extracting $untether"
-                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                        $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                     fi
                 ;;
                 4.[10]* | 3.* ) :;; # already extracted
                 * )
                     if [[ $untether != 1 ]]; then
                         log "Extracting $untether"
-                        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                        $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                     fi
                 ;;
             esac
@@ -7622,7 +7622,7 @@ device_ramdisk() {
             case $vers in
                 9.* | 8.[43]* ) :;;
                 * )
-                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                     device_send_rdtar nopatcyh.tar
                 ;;
             esac
@@ -7638,22 +7638,22 @@ device_ramdisk() {
                 log "Sending daibutsu/move.sh"
                 $scp -P $ssh_port $jelbrek/daibutsu/move.sh root@127.0.0.1:/mnt1
                 log "Moving files"
-                $ssh -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh $vers; rm /mnt1/move.sh"
+                $ssh -t -p $ssh_port root@127.0.0.1 "bash /mnt1/move.sh $vers; rm /mnt1/move.sh"
 
                 if [[ $vers == "7."* ]]; then
                     log "Rebooting"
-                    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
                 else
                     untether="untether.tar"
                     log "Extracting $untether"
-                    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
                     log "Running haxx_overwrite --${device_type}_${build}"
-                    $ssh -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "/usr/bin/haxx_overwrite --${device_type}_${build}"
                 fi
 
             else
                 log "Rebooting"
-                $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+                $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
             fi
 
             log "Cool, done and jailbroken (hopefully)"
@@ -7662,7 +7662,7 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
+            $ssh -t -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
             if (( device_proc < 7 )); then
                 $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
             fi
@@ -7672,7 +7672,7 @@ device_ramdisk() {
 
         "setnvram" )
             device_ramdisk_setnvram
-            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+            $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
             log "Done. Your device should reboot now"
             return
         ;;
@@ -7691,7 +7691,7 @@ device_ramdisk() {
 device_ramdisk_setnvram() {
     local boot_ramdisk="nvram boot-ramdisk=/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z/0/1/2/3/4/5/6/7/8/9/A/B/C/disk.dmg"
     log "Sending commands for setting NVRAM variables..."
-    $ssh -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
+    $ssh -t -p $ssh_port root@127.0.0.1 "nvram -c; nvram boot-partition=$rec"
     if [[ $rec == 2 ]]; then
         case $device_type in
             iPad1,1 | iPhone3,1 | iPod3,1 )
@@ -7705,19 +7705,19 @@ device_ramdisk_setnvram() {
             iPhone4,1 )
                 read -p "$(input "Select base version: Y for iOS 6.1.3 (DRA v6), N for iOS 7.1.x (Y/n) ")" opt
                 if [[ $opt == 'N' || $opt == 'n' ]]; then
-                    $ssh -p $ssh_port root@127.0.0.1 "$boot_ramdisk"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "$boot_ramdisk"
                 fi
             ;;
-            * ) $ssh -p $ssh_port root@127.0.0.1 "$boot_ramdisk";;
+            * ) $ssh -t -p $ssh_port root@127.0.0.1 "$boot_ramdisk";;
         esac
     elif [[ $device_type == "iPad1,1" ]]; then
         device_ramdisk_iosvers
-        if [[ $device_vers == "3"* && -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+        if [[ $device_vers == "3"* && -n $($ssh -t -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
             untether="${device_type}_${device_build}.tar"
             log "Sending $untether"
             $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
             log "Extracting $untether"
-            $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+            $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
         fi
     fi
     log "Done"
@@ -7725,7 +7725,7 @@ device_ramdisk_setnvram() {
 
 device_ramdisk_ios3exploit() {
     log "iOS 3.x detected, running exploit commands"
-    local fdisk_out="$($ssh -p $ssh_port root@127.0.0.1 "fdisk /dev/rdisk0")"
+    local fdisk_out="$($ssh -t -p $ssh_port root@127.0.0.1 "fdisk /dev/rdisk0")"
     echo "$fdisk_out"
     local offset="$(echo "$fdisk_out" | grep AF | head -1)"
     offset="${offset##*-}"
@@ -7735,30 +7735,30 @@ device_ramdisk_ios3exploit() {
     local partition_size=$((65536/sector_size))
     log "Got offset $offset"
     log "Got sector size $sector_size. Partition size will be $partition_size"
-    $ssh -p $ssh_port root@127.0.0.1 "echo -e 'e 3\nAF\n\n${offset}\n${partition_size}\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
+    $ssh -t -p $ssh_port root@127.0.0.1 "echo -e 'e 3\nAF\n\n${offset}\n${partition_size}\nw\ny\nq\n' | fdisk -e /dev/rdisk0"
     echo
     log "Writing exploit ramdisk"
     $scp -P $ssh_port ../resources/firmware/src/target/$device_model/9B206/exploit root@127.0.0.1:/
-    $ssh -p $ssh_port root@127.0.0.1 "dd of=/dev/rdisk0s3 if=/exploit bs=64k count=1"
+    $ssh -t -p $ssh_port root@127.0.0.1 "dd of=/dev/rdisk0s3 if=/exploit bs=64k count=1"
     if [[ $device_type == "iPad1,1" ]]; then
         $scp -P $ssh_port ../saved/iPad1,1/iBoot3_$device_ecid root@127.0.0.1:/mnt1/iBEC
     fi
-    if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+    if [[ -n $($ssh -t -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
         log "fstab"
         $scp -P $ssh_port $jelbrek/fstab_new root@127.0.0.1:/mnt1/private/etc/fstab
         untether="${device_type}_${device_build}.tar"
         log "Sending $untether"
         $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
         log "Extracting $untether"
-        $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+        $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
     fi
     log "Fixing autoboot"
-    $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1"
+    $ssh -t -p $ssh_port root@127.0.0.1 "nvram auto-boot=1"
 }
 
 device_datetime_cmd() {
     log "Running command to Update DateTime"
-    $ssh -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
+    $ssh -t -p $ssh_port root@127.0.0.1 "date -s @$(date +%s)"
     if [[ $1 != "nopause" ]]; then
         log "Done"
         pause
@@ -7871,14 +7871,14 @@ menu_ramdisk() {
             "ssh" )
                 log "Use the \"exit\" command to go back to SSH Ramdisk Menu"
                 if [[ $device_ramdisk_ios8 == 1 ]]; then
-                    $ssh -p $ssh_port root@127.0.0.1 &
+                    $ssh -t -p $ssh_port root@127.0.0.1 &
                     ssh_pid=$!
                     sleep 1
                     kill $ssh_pid
                 fi
-                $ssh -p $ssh_port root@127.0.0.1
+                $ssh -t -p $ssh_port root@127.0.0.1
             ;;
-            "reboot" ) $ssh -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
+            "reboot" ) $ssh -t -p $ssh_port root@127.0.0.1 "$reboot"; loop=1;;
             "exit" ) loop=1;;
             "dump-blobs" )
                 local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
@@ -7890,7 +7890,7 @@ menu_ramdisk() {
                     continue
                 fi
                 log "Attempting to dump blobs"
-                $ssh -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+                $ssh -t -p $ssh_port root@127.0.0.1 "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
                 if [[ ! -s dump.raw ]]; then
                     warn "Dumping rdisk1 failed, cannot continue."
                     continue
@@ -7949,11 +7949,11 @@ menu_ramdisk() {
                 fi
                 tar -xf TrollStore.tar
                 log "Installing TrollStore to Tips"
-                $ssh -p $ssh_port root@127.0.0.1 "mount_filesystems"
-                local tips="$($ssh -p $ssh_port root@127.0.0.1 "find /mnt2/containers/Bundle/Application/ -name \"Tips.app\"")"
+                $ssh -t -p $ssh_port root@127.0.0.1 "mount_filesystems"
+                local tips="$($ssh -t -p $ssh_port root@127.0.0.1 "find /mnt2/containers/Bundle/Application/ -name \"Tips.app\"")"
                 $scp -P $ssh_port PersistenceHelper_Embedded TrollStore.app/trollstorehelper ../resources/sshrd/trollstore.sh root@127.0.0.1:$tips
                 rm -r PersistenceHelper_Embedded TrollStore*
-                $ssh -p $ssh_port root@127.0.0.1 "bash $tips/trollstore.sh; rm $tips/trollstore.sh"
+                $ssh -t -p $ssh_port root@127.0.0.1 "bash $tips/trollstore.sh; rm $tips/trollstore.sh"
                 log "Done!"
             ;;
             "erase78" )
@@ -7971,17 +7971,17 @@ menu_ramdisk() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
-                $ssh -p $ssh_port root@127.0.0.1 "rm /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
-                $ssh -p $ssh_port root@127.0.0.1 "sync; cd /; /sbin/umount /mnt2; /sbin/umount /mnt1; sync; /sbin/reboot"
+                $ssh -t -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2; cp /com.apple.springboard.plist /mnt1/"
+                $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt2/mobile/Library/Preferences; mv com.apple.springboard.plist com.apple.springboard.plist.bak; ln -s /com.apple.springboard.plist ./com.apple.springboard.plist"
+                $ssh -t -p $ssh_port root@127.0.0.1 "rm /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
+                $ssh -t -p $ssh_port root@127.0.0.1 "sync; cd /; /sbin/umount /mnt2; /sbin/umount /mnt1; sync; /sbin/reboot"
                 log "Done. Your device should reboot now"
                 print "* Proceed to trigger a restore by entering wrong passwords 10 times."
                 loop=1
             ;;
             "clearnvram" )
                 log "Sending command for clearing NVRAM..."
-                $ssh -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram -c"
+                $ssh -t -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram -c"
                 log "Done"
             ;;
             "erase9" )
@@ -7992,7 +7992,7 @@ menu_ramdisk() {
                     continue
                 fi
                 log "Sending command for erasing all content and settings..."
-                $ssh -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram oblit-inprogress=5"
+                $ssh -t -p $ssh_port root@127.0.0.1 "/usr/sbin/nvram oblit-inprogress=5"
                 log "Done. Reboot to apply changes, or clear NVRAM now to cancel erase"
             ;;
             "remove4" ) device_ramdisk_setnvram;;
@@ -8007,7 +8007,7 @@ menu_ramdisk() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
+                $ssh -t -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1; /sbin/mount_hfs /dev/disk0s1s2 /mnt2"
                 device_ramdisk_iosvers
                 case $device_vers in
                     [789].* ) :;;
@@ -8018,25 +8018,25 @@ menu_ramdisk() {
                 esac
                 cp $jelbrek/freeze.tar.gz .
                 gzip -d freeze.tar.gz
-                cat freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib private"
+                cat freeze.tar | $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib private"
                 if [[ $device_vers == "9"* ]]; then
-                    cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
+                    cat $jelbrek/launchctl.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
                 fi
                 cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
                 gzip -d openssh.tar.gz
                 gzip -d openssl.tar.gz
-                cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                cat openssh.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                cat openssl.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 case $device_vers in
                     9.3.[45] ) :;;
                     9.[23]*  ) $scp -P $ssh_port $jelbrek/io.pangu93.loader.plist root@127.0.0.1:/mnt1/Library/LaunchDaemons;;
                     7.* | 8.[012]* ) # remove patcyh
-                        $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
-                        cat $jelbrek/nopatcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib/dpkg/* private/lib/dpkg"
+                        $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
+                        cat $jelbrek/nopatcyh.tar | $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib/dpkg/* private/lib/dpkg"
                     ;;
                 esac
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
-                $ssh -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
+                $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
+                $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt2; ln -s /private/lib; cd mobile/Library/Preferences; rm -f com.apple.springboard.plist; ln -s /private/com.apple.springboard.plist; /usr/sbin/chown 501:501 com.apple.springboard.plist"
                 log "Installing bootstrap done."
                 if [[ $device_proc == 7 ]]; then
                     print "* If your device is on iOS 7, proceed to Install Untether next."
@@ -8050,7 +8050,7 @@ menu_ramdisk() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1"
+                $ssh -t -p $ssh_port root@127.0.0.1 "/sbin/mount_hfs /dev/disk0s1s1 /mnt1"
                 device_ramdisk_iosvers
                 if [[ $device_vers != "7."* ]]; then
                     log "iOS version does not seem to be in the supported range. Cannot continue."
@@ -8062,7 +8062,7 @@ menu_ramdisk() {
                     "7.0"  ) untether="evasi0n7-untether-70.tar";;
                     "7.0"* ) untether="evasi0n7-untether.tar";;
                 esac
-                cat $jelbrek/$untether | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                cat $jelbrek/$untether | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 input "Stashing to free up space on system partition"
                 print "* When enabled, Cydia will move some components to the data partition on its first run."
                 print "* This frees up more space for installing tweaks."
@@ -8071,7 +8071,7 @@ menu_ramdisk() {
                 select_yesno "Enable this option?" 0
                 if [[ $? != 0 ]]; then
                     log "Stashing option enabled by user."
-                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm .cydia_no_stash"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "cd /mnt1; rm .cydia_no_stash"
                 else
                     log "Stashing disabled."
                 fi
@@ -8091,10 +8091,10 @@ menu_ramdisk() {
                 cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
                 gzip -d openssh.tar.gz
                 gzip -d openssl.tar.gz
-                cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                cat openssh.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                cat openssl.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 if (( device_proc < 7 )); then
-                    cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
+                    cat $jelbrek/sshdeb.tar | $ssh -t -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 fi
                 log "Done."
             ;;
@@ -8142,13 +8142,13 @@ shsh_save_onboard64() {
     else
         disk+="cat /dev/disk1"
     fi
-    $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "$disk" | dd of=dump.raw bs=256 count=$((0x4000))
+    $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "$disk" | dd of=dump.raw bs=256 count=$((0x4000))
     "$dir/img4tool" --convert -s $shsh dump.raw
     if [[ -s $shsh && -n $shsh2 ]]; then
         log "Grabbing Cryptex APTicket"
-        $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cat /private/preboot/cryptex1/current/apticket*" > apticket.im4m
+        $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "cat /private/preboot/cryptex1/current/apticket*" > apticket.im4m
         log "Getting Cryptex seed using x8A4"
-        local seed="$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo '$SSHPASS' | sudo -S x8A4 -x | grep 0x | cut -c 19- | cut -c -34")"
+        local seed="$($ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "echo '$SSHPASS' | sudo -S x8A4 -x | grep 0x | cut -c 19- | cut -c -34")"
         echo
         if [[ -z $seed ]]; then
             error "Failed to get Cryptex seed. Make sure x8A4 and dependencies are installed."
@@ -8457,6 +8457,9 @@ menu_main() {
                 fi
             fi
         fi
+        case $device_type in
+            iPad7,[56] ) menu_items+=("ipad6-ipados18");;
+        esac
         if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 11 )); then
             menu_items+=("Save SHSH Blobs")
         fi
@@ -8498,6 +8501,10 @@ menu_main() {
                     continue
                 fi
                 mode="device_trollrestore"
+            ;;
+            "ipad6-ipados18" )
+                source "../resources/modules/ipad6-ipados18.sh"
+                menu_ipad6_ipados18
             ;;
             "Exit" ) mode="exit";;
         esac
@@ -8599,7 +8606,7 @@ menu_datamanage() {
                 device_sshpass
                 device_find_ssh
                 if [[ $selected == *"Cydia"* ]]; then
-                    $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p $path"
+                    $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p $path"
                     print "* Place the .deb files you want to install to the mount folder, then reboot the device afterwards."
                 fi
                 mkdir -p ../mount
@@ -9879,6 +9886,7 @@ menu_ipsw_special() {
         esac
     done
 }
+
 ipsw_print_warnings() {
     if [[ $ipsw_validate == 0 ]]; then
         print "* Selected Target IPSW is validated"
@@ -10062,7 +10070,9 @@ menu_ipsw_browse() {
         scan="${device_type}_${check_vers}*Restore.ipsw"
         menu_items+=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     elif [[ $1 == "special" ]]; then
-        scan="${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw"
+        local ipsw_prefix="$device_type_special"
+        [[ $device_type_special == "iPad7,11" ]] && ipsw_prefix="iPad_10.2"
+        scan="${ipsw_prefix}_${device_target_vers}_${device_target_build}_Restore.ipsw"
         menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     fi
     case $1 in
@@ -10840,7 +10850,7 @@ device_ssh() {
     if [[ $ssh_user == "root" ]]; then
         print "* You may also use mobile as the username for SSH/SCP access."
     fi
-    $ssh -p $ssh_port ${ssh_user}@127.0.0.1
+    $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1
     kill $iproxy_pid
 }
 
@@ -11093,10 +11103,10 @@ device_dump() {
         fi
         if [[ $arg == "activation" ]]; then
             log "Creating $arg.tar"
-            $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
-            #$ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
+            $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p /tmp/$dmp2; find $dmps; cp -R $dmps/* /tmp/$dmp2"
+            #$ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "cd /tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
             if [[ $new == 1 ]]; then
-                $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cp /private/var/containers/Data/System/*/Library/internal/data_ark.plist /tmp/private/var/root/Library/Lockdown"
+                $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "cp /private/var/containers/Data/System/*/Library/internal/data_ark.plist /tmp/private/var/root/Library/Lockdown"
             fi
             device_dumpactivation
             log "Copying $arg.tar"
@@ -11119,7 +11129,7 @@ device_dump() {
     else
         device_enter_ramdisk $arg
         device_dumprd
-        $ssh -p $ssh_port root@127.0.0.1 "nvram auto-boot=1; reboot_bak"
+        $ssh -t -p $ssh_port root@127.0.0.1 "nvram auto-boot=1; reboot_bak"
         log "Done, device should reboot now"
         if [[ $mode != "baseband" && $mode != "actrec" ]]; then
             log "Put your device back in kDFU/pwnDFU mode to proceed, then run the script again."
@@ -11147,7 +11157,7 @@ device_dumpactivation() {
         "wireless/Library/Preferences/com.apple.commcenter.plist"
     )
 
-    $ssh -p "$ssh_port" "${ssh_user}@127.0.0.1" "
+    $ssh -t -p "$ssh_port" "${ssh_user}@127.0.0.1" "
     mkdir -p $tmp/private/var
     cd $tmp/private/var
     mkdir -p \
@@ -11194,7 +11204,7 @@ device_dumpbb() {
             cp $bb2-personalized.zip usr/local/standalone/firmware/Baseband/$bb2
         ;;
         * )
-            $ssh -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root2}usr/local/standalone/firmware"
+            $ssh -t -p $ssh_port root@127.0.0.1 "cd $root; tar -cvf $tmp/baseband.tar ${root2}usr/local/standalone/firmware"
             $scp -P $ssh_port root@127.0.0.1:$tmp/baseband.tar .
             if [[ ! -s baseband.tar ]]; then
                 error "Dumping baseband tar failed. Please run the script again" \
@@ -11227,7 +11237,7 @@ device_dumprd() {
     if [[ -z $vers ]]; then
         warn "Something wrong happened. Failed to get iOS version."
         print "* Please reboot the device into normal operating mode, then perform a clean \"slide to power off\", then try again."
-        $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+        $ssh -t -p $ssh_port root@127.0.0.1 "reboot_bak"
         return
     fi
     log "Mounting filesystems"
@@ -11259,10 +11269,10 @@ device_dumprd() {
         ;;
     esac
     log "Creating activation.tar"
-    $ssh -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/private/var/$dmp2; cp -R /mnt2/$dmps/* $tmp/private/var/$dmp2"
-    #$ssh -p $ssh_port root@127.0.0.1 "cd $tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
+    $ssh -t -p $ssh_port root@127.0.0.1 "mkdir -p $tmp/private/var/$dmp2; cp -R /mnt2/$dmps/* $tmp/private/var/$dmp2"
+    #$ssh -t -p $ssh_port root@127.0.0.1 "cd $tmp/$dmp2/activation_records; mv *_record.plist activation_record.plist"
     if [[ $new == 1 ]]; then
-        $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "cp /mnt2/containers/Data/System/*/Library/internal/data_ark.plist $tmp/private/var/root/Library/Lockdown"
+        $ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "cp /mnt2/containers/Data/System/*/Library/internal/data_ark.plist $tmp/private/var/root/Library/Lockdown"
     fi
     device_dumpactivation sshrd
     log "Copying activation.tar"
@@ -11278,7 +11288,7 @@ device_dumprd() {
     else
         warn "Activation record not found in tar. Will not save activation dump."
     fi
-    $ssh -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
+    $ssh -t -p $ssh_port root@127.0.0.1 "rm -f $tmp/*.tar"
 }
 
 device_activate() {
@@ -11320,7 +11330,7 @@ device_deactivate() {
 
 device_find_ssh() {
     log "Checking for device..."
-    local found=$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo 1")
+    local found=$($ssh -t -p $ssh_port ${ssh_user}@127.0.0.1 "echo 1")
     if [[ $found != 1 && $mode == *"hacktivate" ]]; then
         error "Unable to connect to device via SSH. If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
               "* Alternatively, restore using Legacy iOS Kit with the jailbreak option enabled."
@@ -11389,14 +11399,14 @@ device_hacktivate() {
         fi
 
         if [[ $rd != 1 ]]; then
-            $ssh -p $ssh_port root@127.0.0.1 "reboot"
+            $ssh -t -p $ssh_port root@127.0.0.1 "reboot"
             log "Done. Your device should reboot now"
         fi
         return
     fi
 
     log "Checking lockdownd"
-    local lock="$($ssh -p $ssh_port root@127.0.0.1 "ls \"$lockdownd_orig\" 2>/dev/null")"
+    local lock="$($ssh -t -p $ssh_port root@127.0.0.1 "ls \"$lockdownd_orig\" 2>/dev/null")"
     if [[ -n $lock ]]; then
         if [[ $rd == 1 ]]; then
             warn "Device is already hacktivated."
@@ -11432,16 +11442,16 @@ device_hacktivate() {
     fi
 
     log "Renaming original lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "[[ ! -e \"$lockdownd_orig\" ]] && mv \"$lockdownd\" \"$lockdownd_orig\""
+    $ssh -t -p $ssh_port root@127.0.0.1 "[[ ! -e \"$lockdownd_orig\" ]] && mv \"$lockdownd\" \"$lockdownd_orig\""
 
     log "Copying patched lockdownd to device"
     $scp -P $ssh_port lockdownd.patched root@127.0.0.1:"$lockdownd"
-    $ssh -p $ssh_port root@127.0.0.1 "chmod +x \"$lockdownd\""
+    $ssh -t -p $ssh_port root@127.0.0.1 "chmod +x \"$lockdownd\""
 
     if [[ $rd == 1 ]]; then
         log "Hacktivate done"
     else
-        $ssh -p $ssh_port root@127.0.0.1 "reboot"
+        $ssh -t -p $ssh_port root@127.0.0.1 "reboot"
         log "Done. Your device should reboot now"
     fi
 }
@@ -11477,7 +11487,7 @@ device_reverthacktivate() {
         log "Copying lockdownd to device"
         $scp -P $ssh_port lockdownd root@127.0.0.1:/usr/libexec/lockdownd
     fi
-    $ssh -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; rm -f /usr/libexec/lockdownd.orig /var/root/Library/Lockdown/data_ark.plist; reboot"
+    $ssh -t -p $ssh_port root@127.0.0.1 "chmod +x /usr/libexec/lockdownd; rm -f /usr/libexec/lockdownd.orig /var/root/Library/Lockdown/data_ark.plist; reboot"
     log "Done. Your device should reboot now"
 }
 
@@ -12025,7 +12035,7 @@ device_appinst() {
     device_ssh_message
     device_sshpass
     log "Checking for appinst..."
-    $ssh -p $ssh_port root@127.0.0.1 "appinst >/dev/null"
+    $ssh -t -p $ssh_port root@127.0.0.1 "appinst >/dev/null"
     if [[ $? != 6 ]]; then
         warn "appinst not detected. Please install appinst and OpenSSH first before using this option."
         kill $iproxy_pid
@@ -12107,8 +12117,8 @@ device_dumpapp() {
 
     log "Sending $selected3 to device"
     if [[ $device_vers_maj == 10 ]]; then
-        cat $dumper | $ssh -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
-        $ssh -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
+        cat $dumper | $ssh -t -p $ssh_port root@127.0.0.1 "cat > /tmp/$dumper_binary" &>scp.log &
+        $ssh -t -p $ssh_port root@127.0.0.1 "chmod +x /tmp/$dumper_binary"
         sleep 3
         cat scp.log
         check="$(cat scp.log | grep -c "Connection reset")"
@@ -12161,21 +12171,21 @@ device_dumpapp() {
             print "* If the dumping gets stuck, you can press Ctrl+C to cancel, then retry."
             case $selected3 in
                 "ipainstaller" )
-                    $ssh -p $ssh_port root@127.0.0.1 "rm -f /tmp/$selected2.ipa" # Ensure target output path is empty
-                    $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -b $selected2 -o /tmp/$selected2.ipa"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "rm -f /tmp/$selected2.ipa" # Ensure target output path is empty
+                    $ssh -t -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -b $selected2 -o /tmp/$selected2.ipa"
                     check=$?
                 ;;
 
                 "Clutch" )
                     local ipa
                     if [[ $device_vers_maj == 5 ]]; then
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
+                        $ssh -t -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary $(echo "$available_apps_json" | $jq --argjson i $app_index -r 'to_entries[$i] | .value.CFBundleDisplayName')" &>ssh.log
                         ipa="$(cat ssh.log | grep "/var/root/Documents/Cracked/"| tr -d "\t")"
                     else
-                        $ssh -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
+                        $ssh -t -p $ssh_port root@127.0.0.1 "/tmp/$dumper_binary -d $selected2" &>ssh.log
                         ipa="$(cat ssh.log | grep "/private/var/mobile/Documents/Dumped/" | cut -d ' ' -f2)"
                     fi
-                    $ssh -p $ssh_port root@127.0.0.1 "mv \"$ipa\" /tmp/$selected2.ipa"
+                    $ssh -t -p $ssh_port root@127.0.0.1 "mv \"$ipa\" /tmp/$selected2.ipa"
                     check=$?
                     cat ssh.log
                 ;;
@@ -12186,7 +12196,7 @@ device_dumpapp() {
                 # Remove characters invalid in filenames
                 ipa_name="$(printf '%s' "$ipa_name" | tr '/\\:*?"<>|' '_')"
                 $scp -P $ssh_port root@127.0.0.1:/tmp/$selected2.ipa "../saved/applications"
-                $ssh -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
+                $ssh -t -p $ssh_port root@127.0.0.1 "rm /tmp/$selected2.ipa"
                 mv "../saved/applications/$selected2.ipa" "../saved/applications/$ipa_name"
                 log "Dumped successfully: saved/applications/$ipa_name"
             else
@@ -12219,7 +12229,7 @@ device_uicache() {
         device_sshpass
     fi
     log "Running uicache"
-    $ssh -p $ssh_port mobile@127.0.0.1 "uicache"
+    $ssh -t -p $ssh_port mobile@127.0.0.1 "uicache"
 }
 
 device_backup_create() {
