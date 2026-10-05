@@ -1,7 +1,7 @@
 # iPod touch 4 iOS 7 repairs
 
 The normal iPod4,1 7.1.2/11D257 custom-IPSW flow automatically applies the
-Bluetooth, CS42L59 audio, system rotation and partial wallpaper repairs. There is no
+Bluetooth, CS42L59 audio playback/capture, system rotation and partial wallpaper repairs. There is no
 additional option, launcher or filename suffix. The original DRA v6 bootloaders and N81
 NOR DeviceTree are retained.
 
@@ -28,8 +28,20 @@ partial: the default image displays, but Settings' wallpaper gallery remains
 broken.** The refactored shell path reproduces the tested kernel, signed
 BTServer, signed backboardd and motion module exactly. A fresh full restore
 through the normal Kit flow was completed and the device owner reported no
-problems. Broader boot/audio/Bluetooth coverage is still needed.
+problems with the v2 bundle.
 
-The repaired BTServer and backboardd need the existing Aquila signature
+The v3 bundle also repairs Voice Memos and video recording by adding a signed
+dependency to VirtualAudio. Its guarded module recognizes only iPod4,1/N81AP
+and the exact supported plugin, then corrects its writable model cache from
+the unknown-product profile to the existing K93 single-microphone routing
+database and handlers. VirtualAudio's executable code and empty entitlements
+are preserved. This capture fix adds no kernel, shared-cache, bootloader or
+launch-configuration changes. Voice Memos and video recording/playback, plus
+music playback, were confirmed working by the device owner after the guarded
+repair was installed. A full reboot and fresh restore with v3, broader
+microphone routes/DSP/gains, and broader boot/audio/Bluetooth coverage are
+still untested. The system sound-effects limitation remains.
+
+The repaired BTServer, backboardd and VirtualAudio need the existing Aquila signature
 runtime, which is installed for this device even with the optional Cydia bootstrap disabled.
 That configuration is not yet hardware-tested.
