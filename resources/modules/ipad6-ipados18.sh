@@ -54,7 +54,7 @@ ipad6_ipados18_ramdisk() {
         if [[ $getcomp == "RestoreRamdisk" && -e $ramdisk_path/ramdisk1.dmg ]]; then
             cp $ramdisk_path/ramdisk1.dmg $name
         elif [[ $getcomp == "RestoreRamdisk" ]]; then
-            file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ramdisk1.dmg ramdisk1.dmg 32f93cac47fb91dbc54e85131f950f742dfc947e
+            file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ipad6-ramdisk1.dmg ramdisk1.dmg 32f93cac47fb91dbc54e85131f950f742dfc947e
             cp ramdisk1.dmg $ramdisk_path/
             mv ramdisk1.dmg $name
         elif [[ -e $ramdisk_path/$name ]]; then
@@ -71,11 +71,11 @@ ipad6_ipados18_ramdisk() {
                 "$dir/img4" -i $getcomp.orig -o $getcomp.dec -k ${iv}${key}
                 mv $getcomp.orig $getcomp.orig0
                 if [[ $ipad6_ipados18_recreate_patches == 1 && $getcomp == "iBSS" ]]; then
-                    $loc/iBoot64Patcher $getcomp.dec $getcomp.orig
-                    bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
+                    $loc/bin/iBoot64Patcher $getcomp.dec $getcomp.orig
+                    $loc/bin/bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
                 elif [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
-                    $loc/iBoot64Patcher $getcomp.dec $getcomp.orig -b 'rd=md0 debug=0x2014e -v wdt=-1' -n
-                    bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
+                    $loc/bin/iBoot64Patcher $getcomp.dec $getcomp.orig -b 'rd=md0 debug=0x2014e -v wdt=-1' -n
+                    $loc/bin/bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
                 else
                     $bspatch $getcomp.dec $getcomp.orig $patches/$getcomp.patch
                 fi
@@ -85,7 +85,7 @@ ipad6_ipados18_ramdisk() {
                 if [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
                     reco+="kc.bpatch"
                     "$dir/img4" -i $getcomp.orig -o kcache.raw
-                    "$dir/KPlooshFinder" kcache.raw work/kcache.patched
+                    "$dir/KPlooshFinder" kcache.raw kcache.patched
                     "$dir/kerneldiff" kcache.raw kcache.patched kc.bpatch
                 else
                     reco+="$patches/kc.bpatch"
@@ -93,10 +93,14 @@ ipad6_ipados18_ramdisk() {
             ;;
             "DeviceTree" )
                 reco+="rdtr"
-                if [[ $device_target_build == "$device_latest_build" ]]; then
-                    "$dir/img4" -i $getcomp.orig -o DeviceTree
-                    "$dir/devicetree-parse" DeviceTree > DeviceTree_${device_model}ap.jsonc
-                    git apply $patches/dt-${device_model}ap.patch
+                "$dir/img4" -i $getcomp.orig -o DeviceTree
+                if [[ $device_target_build == "$device_latest_build" && $ipad6_ipados18_recreate_patches == 1 ]]; then
+                    $loc/bin/devicetree-parse DeviceTree > DeviceTree_${device_model}ap.jsonc
+                    git apply $patches/dt-${device_model}ap.diff
+                    $loc/bin/devicetree-repack DeviceTree_${device_model}ap.jsonc devicetred
+                    $loc/bin/bsdiff DeviceTree devicetred $loc/dt-${device_model}ap.patch
+                elif [[ $device_target_build == "$device_latest_build" ]]; then
+                    $bspatch DeviceTree devicetred $patches/dt-${device_model}ap.patch
                 fi
             ;;
             "Trustcache" ) reco+="rtsc";;
@@ -105,9 +109,9 @@ ipad6_ipados18_ramdisk() {
                 "$dir/img4" -i $getcomp.orig -k ${iv}${key} -o LLB.bin
                 cp LLB.bin $loc/
                 if [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
-                    $loc/iBoot64Patcher LLB.bin LLB2.bin
-                    $loc/iBootpatch2 LLB2.bin LLB3.bin
-                    bsdiff LLB.bin LLB3.bin $loc/$getcomp.patch
+                    $loc/bin/iBoot64Patcher LLB.bin LLB2.bin
+                    $loc/bin/iBootpatch2 LLB2.bin LLB3.bin
+                    $loc/bin/bsdiff LLB.bin LLB3.bin $loc/$getcomp.patch
                 else
                     $bspatch LLB.bin LLB3.bin $patches/$getcomp.patch
                 fi
@@ -125,6 +129,7 @@ ipad6_ipados18_ramdisk() {
         mkdir -p $ramdisk_path/saved
         cp *.img4 iBEC.im4p iBSS.im4p $ramdisk_path/saved/
         log "Done creating SSH ramdisk files: $ramdisk_path/saved"
+        pause
         return
     fi
 
@@ -189,6 +194,7 @@ device_ipad6_ipados18_step1() {
         [[ $i == "$os" ]] && key="epccQmu0bRK1nGmd0HU3iGltnCe9XqydHAEMe1hlNO4="
         file_extract_from_archive "$ipsw_path.ipsw" $i.aea
         $loc/ipsw fw aea --key-val "base64:$key" $i.aea --output out
+        [[ ! -s out/$i ]] && error "Decryption of $i.aea failed"
         rm $i.aea
     done
     mv out/$root root.dmg
@@ -197,8 +203,6 @@ device_ipad6_ipados18_step1() {
     mv $app app.dmg
 
     ipad6_ipados18_ramdisk
-
-    set -x
 
     log "Dump onboard blobs on the iPad"
     $ssh -p $ssh_port root@127.0.0.1 "
@@ -222,7 +226,6 @@ device_ipad6_ipados18_step1() {
 
     log "Copying cryptex current to currend"
     $ssh -p $ssh_port root@127.0.0.1 "
-        set -x
         mkdir -p /mnt6/cryptex1/currend
         cp -a /mnt6/cryptex1/current/apticket.*.im4m /mnt6/cryptex1/currend
         cp -a /mnt6/cryptex1/current/*.{root_hash,trustcache} /mnt6/cryptex1/currend
@@ -246,7 +249,7 @@ device_ipad6_ipados18_step1() {
     $scp -P $ssh_port root.dmg root@127.0.0.1:/mnt8/root.dmg
 
     log "Unmounting filesystems"
-    $ssh -p $ssh_port root@127.0.0.1 "umount /mnt8; umount /mnt6"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/umount /mnt8; /sbin/umount /mnt6"
 
     log "APFS invert"
     $ssh -p $ssh_port root@127.0.0.1 "/System/Library/Filesystems/apfs.fs/apfs_invert -d /dev/disk0s1 -s ${new_volume: -1} -n root.dmg"
@@ -265,7 +268,6 @@ device_ipad6_ipados18_step1() {
 
     log "Add iPad 6 specific files"
     $ssh -p $ssh_port root@127.0.0.1 "
-        set -x
         find /mnt1 -iregex '.*j7[1-2]b.*' -type f -exec /bin/sh -c 'dirname=\"\$(echo \"{}\" | sed -E '\''s|^/mnt1(/.+)/.+$|\1|'\'')\"; filename=\"\$(echo \"{}\" | sed -E '\''s|/mnt1/.+/(.+)$|\1|'\'')\"; mkdir -p \"/mnt8/\${dirname}\"; cp -an \"{}\" \"/mnt8/\${dirname}/\${filename}\";' \;
 
         ln -s J171.Default.plist /mnt8/System/Library/EventTimingProfiles/J71b.Default.plist
@@ -279,7 +281,6 @@ device_ipad6_ipados18_step1() {
 
     log "Downgrade components"
     $ssh -p $ssh_port root@127.0.0.1 "
-        set -x
         mv /mnt8/Library/Wallpaper{,.bak}
         cp -a /mnt1/Library/Wallpaper /mnt8/Library
 
@@ -292,26 +293,24 @@ device_ipad6_ipados18_step1() {
 
     log "Patch RootFS and wrap up"
     $ssh -p $ssh_port root@127.0.0.1 "
-        set -x
         sed -i -e 's|cryptex1/current|cryptex1/currend|' /mnt8/usr/lib/dyld
         ldid -Icom.apple.dyld -S /mnt8/usr/lib/dyld
     "
 
     log "Wrap kernel in img4"
     file_extract_from_archive "$ipsw_path.ipsw" kernelcache.release.ipad7c
-    "$dir/img4" kernelcache.release.ipad7c -M IM4M -o kernelcachd
+    "$dir/img4" -i kernelcache.release.ipad7c -M IM4M -o kernelcachd
     log "Transferring kernelcachd to device"
     $scp -P $ssh_port kernelcachd root@127.0.0.1:/mnt6/$boot_manifest_hash/System/Library/Caches/com.apple.kernelcaches/kernelcachd
 
     log "Wrap patched devicetree"
-    "$dir/devicetree-repack" DeviceTree_${device_model}ap.jsonc devicetred
     "$dir/img4" -i devicetred -M IM4M -A -T dtre -o devicetred.img4
     log "Transferring devicetred.img4 to device"
     $scp -P $ssh_port devicetred.img4 root@127.0.0.1:/mnt6/$boot_manifest_hash/usr/standalone/firmware/devicetred.img4
 
     log "AVE firmware"
     file_extract_from_archive "$ipsw_path.ipsw" Firmware/ave/AppleAVE2FW_H9.im4p
-    "$dir/img4" AppleAVE2FW_H9.im4p -M IM4M -o EVA.img4
+    "$dir/img4" -i AppleAVE2FW_H9.im4p -M IM4M -o EVA.img4
     log "Transferring EVA.img4 to device"
     $scp -P $ssh_port EVA.img4 root@127.0.0.1:/mnt6/$boot_manifest_hash/usr/standalone/firmware/FUD/EVA.img4
 
