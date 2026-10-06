@@ -1,6 +1,5 @@
 ipad6_ipados18_ramdisk() {
     local loc="../saved/ipad6-ipados18"
-    local sshtar="$loc/ssh.tar"
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk" "Trustcache")
     local name
     local iv
@@ -11,16 +10,7 @@ ipad6_ipados18_ramdisk() {
     local opt
     local build_id="21H16"
 
-    if [[ $($sha1sum $sshtar.gz 2>/dev/null | awk '{print $1}') != "b4a47daa18e5a391ff704da8424010a27445d1a6" ]]; then
-        rm -f $sshtar $sshtar.gz
-    fi
-    if [[ ! -e $sshtar.gz ]]; then
-        log "Downloading ssh.tar from SSHRD_Script..."
-        file_download https://github.com/verygenericname/sshtars/raw/6c05c8a74095c63e1d130ecbf309d77efa6d17d5/ssh.tar.gz ssh.tar.gz
-        mv ssh.tar.gz $sshtar.gz
-    fi
-    cp $sshtar.gz ssh.tar.gz
-    gzip -d ssh.tar.gz
+    mkdir -p $loc
 
     local ramdisk_path="$loc/ramdisk_$build_id"
     device_target_build="$build_id"
@@ -56,7 +46,7 @@ ipad6_ipados18_ramdisk() {
         if [[ $getcomp == "RestoreRamdisk" && -e $ramdisk_path/ramdisk1.dmg ]]; then
             cp $ramdisk_path/ramdisk1.dmg $name
         elif [[ $getcomp == "RestoreRamdisk" ]]; then
-            download_file ramdisk1.dmg
+            file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ramdisk1.dmg ramdisk1.dmg 32f93cac47fb91dbc54e85131f950f742dfc947e
             cp ramdisk1.dmg $ramdisk_path/
             mv ramdisk1.dmg $name
         elif [[ -e $ramdisk_path/$name ]]; then
@@ -87,6 +77,7 @@ ipad6_ipados18_ramdisk() {
                 fi
             ;;
             "Trustcache" ) reco+="rtsc";;
+            "RestoreRamdisk" ) reco+="rdsk -A";;
         esac
         "$dir/img4" $reco
     done
@@ -103,6 +94,8 @@ ipad6_ipados18_ramdisk() {
     $irecovery -c ramdisk
     $irecovery -f DeviceTree.img4
     $irecovery -c devicetree
+    $irecovery -f Trustcache.img4
+    $irecovery -c firmware
     $irecovery -f Kernelcache.img4
     $irecovery -c bootx
     sleep 6

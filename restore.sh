@@ -9303,6 +9303,7 @@ ipsw_hwmodel_set() {
         iPad5,[34]  ) hwmodel="ipad5b";;
         iPad6,[34]  ) hwmodel="ipad6b";;
         iPad6,[78]  ) hwmodel="ipad6d";;
+        iPad7,[56]  ) hwmodel="ipad7b";;
         *           ) hwmodel="$device_model";;
     esac
     ipsw_hwmodel="$hwmodel"
@@ -11957,7 +11958,11 @@ device_justboot_specialios7() {
 }
 
 device_enter_ramdisk() {
-    if (( device_proc > 7 )); then
+    if [[ $device_type == "iPad7,5" || $device_type == "iPad7,6" ]]; then
+        source "../resources/modules/ipad6-ipados18.sh"
+        ipad6_ipados18_ramdisk
+        return
+    elif (( device_proc > 7 )); then
         :
     elif [[ $device_proc == 7 ]]; then
         input "Version Select Option"
