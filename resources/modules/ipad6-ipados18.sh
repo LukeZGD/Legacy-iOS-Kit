@@ -70,7 +70,7 @@ ipad6_ipados18_ramdisk() {
             file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ipad6-ramdisk1.dmg ramdisk1.dmg 32f93cac47fb91dbc54e85131f950f742dfc947e
             cp ramdisk1.dmg $ramdisk_path/
             mv ramdisk1.dmg $name
-        elif [[ -e $ramdisk_path/$name ]]; then
+        elif [[ -e $ramdisk_path/$name && ! ($ipad6_ipados18_recreate_patches = 1 && $getcomp == "DeviceTree") ]]; then
             cp $ramdisk_path/$name .
         else
             download_with_pzb "$ipsw_url" "${path}$name" "$name"
@@ -100,6 +100,7 @@ ipad6_ipados18_ramdisk() {
                     "$dir/img4" -i $getcomp.orig -o kcache.raw
                     "$dir/KPlooshFinder" kcache.raw kcache.patched
                     "$dir/kerneldiff" kcache.raw kcache.patched kc.bpatch
+                    cp kc.bpatch $loc/
                 else
                     reco+="$patches/kc.bpatch"
                 fi
@@ -109,7 +110,7 @@ ipad6_ipados18_ramdisk() {
                 "$dir/img4" -i $getcomp.orig -o DeviceTree
                 if [[ $device_target_build == "$device_latest_build" && $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/devicetree-parse DeviceTree > DeviceTree_${device_model}ap.jsonc
-                    git apply $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
+                    patch DeviceTree_${device_model}ap.jsonc $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
                     $loc/bin/devicetree-repack DeviceTree_${device_model}ap.jsonc devicetred
                     $loc/bin/bsdiff DeviceTree devicetred $loc/dt-${device_model}ap.patch
                 elif [[ $device_target_build == "$device_latest_build" ]]; then
@@ -123,9 +124,8 @@ ipad6_ipados18_ramdisk() {
                 cp LLB.bin $loc/
                 if [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/iBoot64Patcher LLB.bin LLB2.bin
-                    # todo: look into using ibootpatch2 fork with ssv patch: https://github.com/crystall1nedev/ipad6-ipados18/tree/ssv-patch
-                    # iBootpatch2 -RF -i LLB2.bin -o LLB3.bin
-                    $loc/bin/iBootpatch2 LLB2.bin LLB3.bin
+                    # use ibootpatch2 fork with ssv patch: https://github.com/crystall1nedev/ipad6-ipados18/tree/ssv-patch
+                    $loc/bin/iBootpatch2 -RF -i LLB2.bin -o LLB3.bin
                     $loc/bin/bsdiff LLB.bin LLB3.bin $loc/$getcomp.patch
                 else
                     $bspatch LLB.bin LLB3.bin $patches/$getcomp.patch
