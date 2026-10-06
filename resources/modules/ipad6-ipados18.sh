@@ -219,7 +219,7 @@ device_ipad6_ipados18_step1() {
     "$dir/img4" -i LLB3.bin -A -T ibss -M IM4M -o $loc/LLB.img4
 
     log "Mount preboot"
-    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs /dev/disk1s5 /mnt6"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs $preboot_volume /mnt6"
 
     local boot_manifest_hash="$($ssh -p $ssh_port root@127.0.0.1 "cat /mnt6/active")"
     log "Got boot_manifest_hash: $boot_manifest_hash"
@@ -231,19 +231,19 @@ device_ipad6_ipados18_step1() {
         cp -a /mnt6/cryptex1/current/*.{root_hash,trustcache} /mnt6/cryptex1/currend
     "
 
-    local new_volume="/dev/disk1s8"
-    [[ $device_type == "iPad7,6" ]] && new_volume="/dev/disk1s9"
-    if [[ ! $($ssh -p $ssh_port root@127.0.0.1 "ls $new_volume") ]]; then
+    local root_volume="/dev/disk1s8"
+    local preboot_volume="/dev/disk1s5"
+    if [[ $device_type == "iPad7,6" ]]; then
+        root_volume="/dev/disk1s9"
+        preboot_volume="/dev/disk1s6"
+    fi
+    if [[ ! $($ssh -p $ssh_port root@127.0.0.1 "ls $root_volume 2>/dev/null") ]]; then
         log "Create iOS 18 filesystem"
-        $ssh -p $ssh_port root@127.0.0.1 "
-            ls /dev/disk1s*
-            /sbin/newfs_apfs -A -D -o role=r -v Xystem /dev/disk0s1
-            ls /dev/disk1s*
-        "
+        $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_apfs -A -D -o role=r -v Xystem /dev/disk0s1"
     fi
 
-    log "Mounting new volume: $new_volume"
-    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs $new_volume /mnt8"
+    log "Mounting new volume: $root_volume"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs $root_volume /mnt8"
 
     log "Transferring root.dmg to device, this will take a while."
     $scp -P $ssh_port root.dmg root@127.0.0.1:/mnt8/root.dmg
@@ -252,10 +252,10 @@ device_ipad6_ipados18_step1() {
     $ssh -p $ssh_port root@127.0.0.1 "/sbin/umount /mnt8; /sbin/umount /mnt6"
 
     log "APFS invert"
-    $ssh -p $ssh_port root@127.0.0.1 "/System/Library/Filesystems/apfs.fs/apfs_invert -d /dev/disk0s1 -s ${new_volume: -1} -n root.dmg"
+    $ssh -p $ssh_port root@127.0.0.1 "/System/Library/Filesystems/apfs.fs/apfs_invert -d /dev/disk0s1 -s ${root_volume: -1} -n root.dmg"
 
     log "Mounting filesystems"
-    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs /dev/disk1s5 /mnt6; /sbin/mount_apfs $new_volume /mnt8"
+    $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs $preboot_volume /mnt6; /sbin/mount_apfs $root_volume /mnt8"
 
     log "Transferring os.dmg to device, this will take a while."
     $scp -P $ssh_port os.dmg root@127.0.0.1:/mnt6/cryptex1/currend/os.dmg
