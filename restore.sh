@@ -8886,6 +8886,12 @@ device_sideloader() {
     export APPLE_ID_PWD="$apple_pass"
     chmod +x ../saved/$sideloader
     sideloader="../saved/$sideloader"
+    if [[ $platform == "macos" ]]; then
+        mkdir -p lib
+        cp $dir/lib/* lib/
+        ln -sf libplist-2.0.12.dylib lib/libplist-2.0.4.dylib
+        export DYLD_FALLBACK_LIBRARY_PATH=./lib/:/usr/lib/
+    fi
 }
 
 menu_plumesign_accounts() {
