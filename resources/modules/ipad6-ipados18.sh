@@ -1,9 +1,21 @@
 loc="../saved/ipad6-ipados18"
 patches="../resources/patch/ipad6-ipados18"
+
+# when set to 1, it will recreate the binary patches for iBSS, iBEC, DeviceTree, and LLB
+# this will need binaries of iBoot64Patcher, bsdiff, devicetree-parse, devicetree-repack, iBootpatch2
+# to be placed in saved/ipad6-ipados18/bin
+# the patches will be saved on saved/ipad6-ipados18
+# recreating the patches must be done on macos, set below variable to 1 and i used this command
+# /restore.sh --no-finder --no-device --device=iPad7,5 --sshrd
+# repeat for iPad7,6 since devicetree patches are separate
 ipad6_ipados18_recreate_patches=
 
+# only "part 1" is automated (up to the end of "Wrapping up files" section in asdfugil guide)
+# booting into ios 17, fixing up var, and tether boot are not implemented (yet)
 ipad6_ipados18_ramdisk() {
     local loc="../saved/ipad6-ipados18"
+    # 17.7 up until Trustcache for sshrd.
+    # On LLB and DeviceTree, it will switch over to latest (17.7.11 as of this writing) for usage below
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk" "Trustcache" "LLB" "DeviceTree")
     local name
     local iv
