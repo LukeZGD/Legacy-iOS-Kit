@@ -8457,6 +8457,9 @@ menu_main() {
                 fi
             fi
         fi
+        case $device_type in
+            iPad7,[56] ) menu_items+=("ipad6-ipados18");;
+        esac
         if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 11 )); then
             menu_items+=("Save SHSH Blobs")
         fi
@@ -8498,6 +8501,10 @@ menu_main() {
                     continue
                 fi
                 mode="device_trollrestore"
+            ;;
+            "ipad6-ipados18" )
+                source "../resources/modules/ipad6-ipados18.sh"
+                menu_ipad6_ipados18
             ;;
             "Exit" ) mode="exit";;
         esac
@@ -9879,6 +9886,7 @@ menu_ipsw_special() {
         esac
     done
 }
+
 ipsw_print_warnings() {
     if [[ $ipsw_validate == 0 ]]; then
         print "* Selected Target IPSW is validated"
@@ -10062,7 +10070,9 @@ menu_ipsw_browse() {
         scan="${device_type}_${check_vers}*Restore.ipsw"
         menu_items+=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     elif [[ $1 == "special" ]]; then
-        scan="${device_type_special}_${device_target_vers}_${device_target_build}_Restore.ipsw"
+        local ipsw_prefix="$device_type_special"
+        [[ $device_type_special == "iPad7,11" ]] && ipsw_prefix="iPad_10.2"
+        scan="${ipsw_prefix}_${device_target_vers}_${device_target_build}_Restore.ipsw"
         menu_items=($(ls ../$scan $HOME/Downloads/$scan 2>/dev/null))
     fi
     case $1 in
