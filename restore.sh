@@ -12291,6 +12291,7 @@ device_trollrestore() {
     else
         sed '1s/.*/pymobiledevice3<=6.2.0/' "$trollrestore/requirements.txt" > requirements.txt
     fi
+    $venv/bin/pip install --upgrade pip
     $venv/bin/pip install -r "$reqs_txt"
     if (( python_minver <= 13 )); then
         $venv/bin/pip install --no-deps qh3\<1.0.0
