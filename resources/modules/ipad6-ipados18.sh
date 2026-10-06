@@ -110,7 +110,7 @@ ipad6_ipados18_ramdisk() {
                 "$dir/img4" -i $getcomp.orig -o DeviceTree
                 if [[ $device_target_build == "$device_latest_build" && $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/devicetree-parse DeviceTree > DeviceTree_${device_model}ap.jsonc
-                    patch DeviceTree_${device_model}ap.jsonc $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
+                    git apply $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
                     $loc/bin/devicetree-repack DeviceTree_${device_model}ap.jsonc devicetred
                     $loc/bin/bsdiff DeviceTree devicetred $loc/dt-${device_model}ap.patch
                 elif [[ $device_target_build == "$device_latest_build" ]]; then
