@@ -9841,7 +9841,7 @@ menu_ipsw_special() {
             7.* )
                 case $device_type in
                     iPad1,1 ) print "* iOS 7 on iPad 1 is based on ipad-1-ios-7 by amy-and-nicole and pwnerblu: https://github.com/amy-and-nicole/ipad-1-ios-7";;
-                    iPod4,1 ) warn "iOS 7 on touch 4 device features are now fixed thanks to contributions by pwnerblu and Peterdobby";;
+                    iPod4,1 ) print "* iOS 7 on touch 4 device features are fixed thanks to contributions by pwnerblu and Peterdobby";;
                 esac
             ;;
             6.* ) print "* iOS 6 on touch 3/iPad 1 uses SundanceInH2A by NyanSatan: https://github.com/NyanSatan/SundanceInH2A";;
