@@ -8,11 +8,11 @@ touch4_ios7_hash() {
 touch4_ios7_resources() {
     [[ $device_type != "iPod4,1" ]] && return
     [[ $device_target_build != "11D257" ]] && error "Unsupported iPod4,1 iOS 7 build."
-    local revision="0d3ba96065f624350b536d87568a2c56782ae3a7"
-    local url="https://raw.githubusercontent.com/Peterdobby/touch4-ios7-hardware/$revision/artifacts/touch4-ios7-11D257-v1.tar.gz"
-    local archive="../saved/touch4-ios7/11D257/repairs-v1.tar.gz"
-    touch4_ios7_bundle_sha1="87ad30b5774839f9bf41e99eebdcc242f9b0d52d"
-    touch4_ios7_assets="../saved/touch4-ios7/11D257/repairs-v1"
+    local revision="a946ec1844dbd899eec13433aea61ed1d983e286"
+    local url="https://raw.githubusercontent.com/Peterdobby/touch4-ios7-hardware/$revision/artifacts/touch4-ios7-11D257-v4.tar.gz"
+    local archive="../saved/touch4-ios7/11D257/repairs-v4.tar.gz"
+    touch4_ios7_bundle_sha1="86c32b2d0f668e9cad1fdc225f8716780b1f2ec5"
+    touch4_ios7_assets="../saved/touch4-ios7/11D257/repairs-v4"
     mkdir -p "$touch4_ios7_assets"
     if ! touch4_ios7_hash "$archive" "$touch4_ios7_bundle_sha1"; then
         file_download "$url" "$archive" "$touch4_ios7_bundle_sha1"
@@ -21,7 +21,9 @@ touch4_ios7_resources() {
     tar -xzf "$archive" -C "$touch4_ios7_assets" || error "Cannot extract iPod4,1 repair resources."
     touch4_ios7_hash "$touch4_ios7_assets/kernel.patch" "667ffc12db0bc6e364cdfda631163ad781af7361" && \
     touch4_ios7_hash "$touch4_ios7_assets/BTServer.patch" "dc18fd4a3dfc7d5326a145f4ff4e66bce01ba669" && \
-    touch4_ios7_hash "$touch4_ios7_assets/rootfs.tar" "09d2aa8e374257c1d701b8cf68d95258399614d4" || \
+    touch4_ios7_hash "$touch4_ios7_assets/backboardd.patch" "84eb00fbe857071ea9fe26ac79bf1a7fb555fce3" && \
+    touch4_ios7_hash "$touch4_ios7_assets/VirtualAudio.patch" "f0f018ee2e95144f5d23193f5d2a2e9800b934f6" && \
+    touch4_ios7_hash "$touch4_ios7_assets/rootfs.tar" "1a1a59790c7f369dcd1d4788769222acd5975acb" || \
         error "Cannot verify extracted iPod4,1 repair resources."
 }
 
@@ -49,16 +51,33 @@ touch4_ios7_kernel() {
 touch4_ios7_rootfs() {
     local work="touch4-ios7-rootfs"
     mkdir -p "$work"
-    log "Applying iPod4,1 Bluetooth and wallpaper resources"
+    log "Applying iPod4,1 Bluetooth, rotation, audio capture, system sound and wallpaper gallery repairs"
     "$dir/hfsplus" rootfs.dec extract usr/sbin/BTServer "$work/BTServer" || error "Cannot extract BTServer."
     touch4_ios7_hash "$work/BTServer" "2248a64e807e5c233c71843adbc0a43826d6bd46" || error "Unsupported 11D257 BTServer."
     $bspatch "$work/BTServer" "$work/BTServer.patched" "$touch4_ios7_assets/BTServer.patch" || error "Cannot patch BTServer."
     touch4_ios7_hash "$work/BTServer.patched" "9a3b693bf0368a128f624da105d17209cee63056" || error "Patched BTServer verification failed."
+    "$dir/hfsplus" rootfs.dec extract usr/libexec/backboardd "$work/backboardd" || error "Cannot extract backboardd."
+    touch4_ios7_hash "$work/backboardd" "86e4e86f587e2caa85bebaf9d5e6970b53a36a18" || error "Unsupported 11D257 backboardd."
+    $bspatch "$work/backboardd" "$work/backboardd.patched" "$touch4_ios7_assets/backboardd.patch" || error "Cannot patch backboardd."
+    touch4_ios7_hash "$work/backboardd.patched" "d4674d1f94a44692bd8c8e7bcb5010aad9593818" || error "Patched backboardd verification failed."
+    local audio="Library/Audio/Plug-Ins/HAL/VirtualAudio.plugin/VirtualAudio"
+    "$dir/hfsplus" rootfs.dec extract "$audio" "$work/VirtualAudio" || error "Cannot extract VirtualAudio."
+    touch4_ios7_hash "$work/VirtualAudio" "c8881ddf01691aa90b642ff04b5d107608bc86b8" || error "Unsupported 11D257 VirtualAudio."
+    $bspatch "$work/VirtualAudio" "$work/VirtualAudio.patched" "$touch4_ios7_assets/VirtualAudio.patch" || error "Cannot patch VirtualAudio."
+    touch4_ios7_hash "$work/VirtualAudio.patched" "e0e8173ee4302b6f00f84277c2c147a8ee7aa0aa" || error "Patched VirtualAudio verification failed."
     "$dir/hfsplus" rootfs.dec rm usr/sbin/BTServer || error "Cannot replace BTServer."
     "$dir/hfsplus" rootfs.dec add "$work/BTServer.patched" usr/sbin/BTServer || error "Cannot add patched BTServer."
     "$dir/hfsplus" rootfs.dec chmod 755 usr/sbin/BTServer || error "Cannot set BTServer permissions."
     "$dir/hfsplus" rootfs.dec chown 0:0 usr/sbin/BTServer || error "Cannot set BTServer ownership."
-    "$dir/hfsplus" rootfs.dec untar "$touch4_ios7_assets/rootfs.tar" || error "Cannot apply Bluetooth/wallpaper resources."
+    "$dir/hfsplus" rootfs.dec rm usr/libexec/backboardd || error "Cannot replace backboardd."
+    "$dir/hfsplus" rootfs.dec add "$work/backboardd.patched" usr/libexec/backboardd || error "Cannot add patched backboardd."
+    "$dir/hfsplus" rootfs.dec chmod 755 usr/libexec/backboardd || error "Cannot set backboardd permissions."
+    "$dir/hfsplus" rootfs.dec chown 0:0 usr/libexec/backboardd || error "Cannot set backboardd ownership."
+    "$dir/hfsplus" rootfs.dec rm "$audio" || error "Cannot replace VirtualAudio."
+    "$dir/hfsplus" rootfs.dec add "$work/VirtualAudio.patched" "$audio" || error "Cannot add patched VirtualAudio."
+    "$dir/hfsplus" rootfs.dec chmod 775 "$audio" || error "Cannot set VirtualAudio permissions."
+    "$dir/hfsplus" rootfs.dec chown 0:80 "$audio" || error "Cannot set VirtualAudio ownership."
+    "$dir/hfsplus" rootfs.dec untar "$touch4_ios7_assets/rootfs.tar" || error "Cannot apply Bluetooth/rotation/capture/system-sound/wallpaper resources."
 }
 
 touch4_ios7_cached_ipsw() {
