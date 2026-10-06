@@ -291,8 +291,8 @@ find /mnt1 \
     -exec /bin/sh -c '
         file="$1"
 
-        dirname="$(echo "$file" | sed -E '\''s|^/mnt1(/.+)/.+$|\1'\'')"
-        filename="$(echo "$file" | sed -E '\''s|/mnt1/.+/(.+)$|\1'\'')"
+        dirname="$(echo "$file" | sed -E "s|^/mnt1(/.+)/.+$|\1|")"
+        filename="$(echo "$file" | sed -E "s|/mnt1/.+/(.+)$|\1|")"
 
         mkdir -p "/mnt8/${dirname}"
         cp -an "$file" "/mnt8/${dirname}/${filename}"
