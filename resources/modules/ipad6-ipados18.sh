@@ -209,6 +209,7 @@ device_ipad6_ipados18_step1() {
         [[ $i == "$os" ]] && key="epccQmu0bRK1nGmd0HU3iGltnCe9XqydHAEMe1hlNO4="
         file_extract_from_archive "$ipsw_path.ipsw" $i.aea
         $loc/ipsw fw aea --key-val "base64:$key" $i.aea --output out
+        # aea decrypt -i $i.aea -o out/$1 -key-value "base64:$key"
         [[ ! -s out/$i ]] && error "Decryption of $i.aea failed"
         rm $i.aea
     done
@@ -216,6 +217,13 @@ device_ipad6_ipados18_step1() {
     mv out/$os os.dmg
     file_extract_from_archive "$ipsw_path.ipsw" $app
     mv $app app.dmg
+
+    local root_volume="/dev/disk1s8"
+    local preboot_volume="/dev/disk1s5"
+    if [[ $device_type == "iPad7,6" ]]; then
+        root_volume="/dev/disk1s9"
+        preboot_volume="/dev/disk1s6"
+    fi
 
     ipad6_ipados18_ramdisk
 
@@ -246,12 +254,6 @@ device_ipad6_ipados18_step1() {
         cp -a /mnt6/cryptex1/current/*.{root_hash,trustcache} /mnt6/cryptex1/currend
     "
 
-    local root_volume="/dev/disk1s8"
-    local preboot_volume="/dev/disk1s5"
-    if [[ $device_type == "iPad7,6" ]]; then
-        root_volume="/dev/disk1s9"
-        preboot_volume="/dev/disk1s6"
-    fi
     if [[ ! $($ssh -p $ssh_port root@127.0.0.1 "ls $root_volume 2>/dev/null") ]]; then
         log "Create iOS 18 filesystem"
         $ssh -p $ssh_port root@127.0.0.1 "/sbin/newfs_apfs -A -D -o role=r -v Xystem /dev/disk0s1"
@@ -282,17 +284,28 @@ device_ipad6_ipados18_step1() {
     $ssh -p $ssh_port root@127.0.0.1 "/sbin/mount_apfs -o ro /dev/disk1s1 /mnt1"
 
     log "Add iPad 6 specific files"
-    $ssh -p $ssh_port root@127.0.0.1 "
-        find /mnt1 -iregex '.*j7[1-2]b.*' -type f -exec /bin/sh -c 'dirname=\"\$(echo \"{}\" | sed -E '\''s|^/mnt1(/.+)/.+$|\1|'\'')\"; filename=\"\$(echo \"{}\" | sed -E '\''s|/mnt1/.+/(.+)$|\1|'\'')\"; mkdir -p \"/mnt8/\${dirname}\"; cp -an \"{}\" \"/mnt8/\${dirname}/\${filename}\";' \;
+    $ssh -p "$ssh_port" root@127.0.0.1 'sh -s' <<'EOF'
+find /mnt1 \
+    -iregex '.*j7[1-2]b.*' \
+    -type f \
+    -exec /bin/sh -c '
+        file="$1"
 
-        ln -s J171.Default.plist /mnt8/System/Library/EventTimingProfiles/J71b.Default.plist
-        ln -s J171.Touch.plist /mnt8/System/Library/EventTimingProfiles/J71b.Touch.plist
-        ln -s J171.Pencil.plist /mnt8/System/Library/EventTimingProfiles/J71b.Pencil.plist
+        dirname="$(echo "$file" | sed -E '\''s|^/mnt1(/.+)/.+$|\1'\'')"
+        filename="$(echo "$file" | sed -E '\''s|/mnt1/.+/(.+)$|\1'\'')"
 
-        ln -s J172.Default.plist /mnt8/System/Library/EventTimingProfiles/J72b.Default.plist
-        ln -s J172.Touch.plist /mnt8/System/Library/EventTimingProfiles/J72b.Touch.plist
-        ln -s J172.Pencil.plist /mnt8/System/Library/EventTimingProfiles/J72b.Pencil.plist
-    "
+        mkdir -p "/mnt8/${dirname}"
+        cp -an "$file" "/mnt8/${dirname}/${filename}"
+    ' sh {} \;
+
+ln -s J171.Default.plist /mnt8/System/Library/EventTimingProfiles/J71b.Default.plist
+ln -s J171.Touch.plist /mnt8/System/Library/EventTimingProfiles/J71b.Touch.plist
+ln -s J171.Pencil.plist /mnt8/System/Library/EventTimingProfiles/J71b.Pencil.plist
+
+ln -s J172.Default.plist /mnt8/System/Library/EventTimingProfiles/J72b.Default.plist
+ln -s J172.Touch.plist /mnt8/System/Library/EventTimingProfiles/J72b.Touch.plist
+ln -s J172.Pencil.plist /mnt8/System/Library/EventTimingProfiles/J72b.Pencil.plist
+EOF
 
     log "Downgrade components"
     $ssh -p $ssh_port root@127.0.0.1 "
