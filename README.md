@@ -158,6 +158,7 @@
 - [static-cross-openssh](https://codeberg.org/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
 - [Motrix](https://github.com/agalwood/Motrix) - aria2c binaries
 - [Plumesign](https://github.com/claration/Impactor) - claration (used for sideloading)
+- [Sideloader](https://github.com/Dadoum/Sideloader) - Dadoum (used for sideloading on OS X 10.11 only)
 - [tsschecker](https://github.com/1Conan/tsschecker) - tihmstar; 1Conan fork (v413)
 - [darkhttpd](https://github.com/LukeZGD/darkhttpd)
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)

@@ -541,8 +541,6 @@ set_tool_paths() {
             if (( mac_minver < 11 )); then
                 error "Your macOS version ($platform_ver - $platform_arch) is not supported." \
                       "* Supported macOS versions are 10.11 and newer."
-            elif [[ $mac_minver == 11 ]]; then
-                mac_cocoa=1
             fi
             case $mac_minver in
                 11 ) mac_name="El Capitan";;
@@ -8719,7 +8717,9 @@ menu_ipa() {
         echo
         if [[ -n $ipa_path ]]; then
             print "* Selected IPA: $ipa_path"
-            if [[ $1 == "Sideload"* ]]; then
+            if [[ $1 == "Sideload"* && $mac_minver == 11 ]]; then
+                menu_items+=("Install IPA using Sideloader")
+            elif [[ $1 == "Sideload"* ]]; then
                 menu_items+=("Install IPA using Plumesign")
             else
                 menu_items+=("Install IPA")
@@ -8729,7 +8729,9 @@ menu_ipa() {
         else
             print "* Select IPA file to install"
         fi
-        if [[ $1 == "Sideload"* ]]; then
+        if [[ $1 == "Sideload"* && $mac_minver == 11 ]]; then
+            menu_items+=("List and Revoke Certificate")
+        elif [[ $1 == "Sideload"* ]]; then
             menu_items+=("Manage Plumesign Accounts")
         fi
         menu_items+=("Go Back")
@@ -8780,9 +8782,110 @@ menu_ipa() {
                 pause
             ;;
             "Manage Plumesign Accounts" ) menu_plumesign_accounts;;
+            "Install IPA using Sideloader" )
+                device_sideloader
+                log "Checking for any existing certificates..."
+                local temp=$(mktemp)
+                $sideloader cert list | tee /dev/tty > "$temp"
+                local check=${PIPESTATUS[0]}
+                local revoke=$(grep -m1 "serial number" "$temp" | sed -E 's/.*number `//' | cut -c -32 | tr -dc '[:alnum:]')
+                if [[ $check != 0 ]]; then
+                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
+                    pause
+                    continue
+                fi
+                if [[ -n $revoke ]]; then
+                    log "Revoking existing certificate: $revoke"
+                    $sideloader cert revoke $revoke
+                fi
+                log "Installing IPA using Sideloader..."
+                $sideloader install "$ipa_path"
+                local ret=$?
+                local ipa_base="$(basename "$ipa_path")"
+                local ipa_check="$(ls "/tmp/$ipa_base/Payload/"*".app/embedded.mobileprovision" 2>/dev/null)"
+                # if [[ -s "$ipa_check" && $ret != 0 ]]; then
+                #     log "Attempting workaround..."
+                #     pushd "/tmp/$ipa_base"
+                #     zip -r0 Payload.ipa Payload
+                #     popd
+                #     device_pair
+                #     $ideviceinstaller install "/tmp/$ipa_base/Payload.ipa"
+                # fi
+                print "* If you see an error but the app is in the home screen, the installation is most likely successful and the error can be safely ignored."
+                print "* If you see an error regarding certificate, you may need to revoke an existing certificate in your account."
+                print "* If you see an error regarding verification, make sure that your iOS device is connected to the Internet."
+                pause
+            ;;
+            "List and Revoke Certificate" )
+                device_sideloader
+                log "Checking for any existing certificates..."
+                $sideloader cert list
+                if [[ $? != 0 ]]; then
+                    warn "Sideloader returned an error. Incorrect Apple ID credentials?"
+                    pause
+                    continue
+                fi
+                print "* Take note of the certificate serial number that you want to revoke."
+                local revoke
+                revoke=
+                while [[ -z $revoke ]]; do
+                    read -p "$(input 'Certificate Serial Number: ')" revoke
+                done
+                $sideloader cert revoke $revoke
+                print "* If you see no error, the certificate should be revoked successfully."
+            ;;
             "Go Back" ) back=1;;
         esac
     done
+}
+
+device_sideloader() {
+    local arch="$platform_arch"
+    sideloader="sideloader-cli-"
+    if [[ $platform == "macos" && $arch == "arm64" ]]; then
+        arch="arm64-apple-macos"
+    elif [[ $platform == "macos" ]]; then
+        arch="x86_64-apple-darwin"
+    elif [[ $arch == "arm64" ]]; then
+        arch="aarch64-linux-gnu"
+    else
+        arch="x86_64-linux-gnu"
+    fi
+    sideloader+="$arch"
+    log "Checking for latest Sideloader"
+    download_from_url "https://api.github.com/repos/LukeZGD/Sideloader/releases/latest" latest
+    local latest="$(cat latest | $jq -r ".tag_name")"
+    local current="$(cat ../saved/Sideloader_version 2>/dev/null || echo "none")"
+    log "Latest version: $latest, current version: $current"
+    if [[ $current != "$latest" ]]; then
+        rm -f ../saved/$sideloader
+    fi
+    if [[ ! -e ../saved/$sideloader ]]; then
+        file_download https://github.com/LukeZGD/Sideloader/releases/download/$latest/$sideloader.zip $sideloader.zip
+        file_extract_from_archive $sideloader.zip $sideloader
+        mv $sideloader ../saved
+    fi
+    echo "$latest" > ../saved/Sideloader_version
+    device_pair
+    log "Launching Dadoum Sideloader"
+    local apple_id="$APPLE_ID_USER"
+    local apple_pass="$APPLE_ID_PWD"
+    if [[ -z $apple_id || -z $apple_pass ]]; then
+        log "Enter Apple ID details to continue."
+        print "* Your Apple ID and password will only be sent to Apple servers."
+    fi
+    while [[ -z $apple_id ]]; do
+        read -p "$(input 'Apple ID: ')" apple_id
+    done
+    export APPLE_ID_USER="$apple_id"
+    print "* Your password input may not be visible, but it is still being entered."
+    while [[ -z $apple_pass ]]; do
+        read -s -p "$(input 'Password: ')" apple_pass
+    done
+    echo
+    export APPLE_ID_PWD="$apple_pass"
+    chmod +x ../saved/$sideloader
+    sideloader="../saved/$sideloader"
 }
 
 menu_plumesign_accounts() {
