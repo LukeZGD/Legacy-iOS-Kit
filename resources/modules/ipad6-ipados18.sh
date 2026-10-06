@@ -4,6 +4,7 @@ patches="../resources/patch/ipad6-ipados18"
 # when set to 1, it will recreate the binary patches for iBSS, iBEC, DeviceTree, and LLB
 # this will need binaries of iBoot64Patcher, bsdiff, devicetree-parse, devicetree-repack, iBootpatch2
 # to be placed in saved/ipad6-ipados18/bin
+# https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ipad6-bin.zip
 # the patches will be saved on saved/ipad6-ipados18
 # recreating the patches must be done on macos, set below variable to 1 and i used this command
 # /restore.sh --no-finder --no-device --device=iPad7,5 --sshrd
@@ -85,7 +86,7 @@ ipad6_ipados18_ramdisk() {
                 if [[ $ipad6_ipados18_recreate_patches == 1 && $getcomp == "iBSS" ]]; then
                     $loc/bin/iBoot64Patcher $getcomp.dec $getcomp.orig
                     $loc/bin/bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
-                elif [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
+                elif [[ $ipad6_ipados18_recreate_patches == 1 ]]; then # iBEC
                     $loc/bin/iBoot64Patcher $getcomp.dec $getcomp.orig -b 'rd=md0 debug=0x2014e -v wdt=-1' -n
                     $loc/bin/bsdiff $getcomp.dec $getcomp.orig $loc/$getcomp.patch
                 else
@@ -108,7 +109,7 @@ ipad6_ipados18_ramdisk() {
                 "$dir/img4" -i $getcomp.orig -o DeviceTree
                 if [[ $device_target_build == "$device_latest_build" && $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/devicetree-parse DeviceTree > DeviceTree_${device_model}ap.jsonc
-                    git apply $patches/dt-${device_model}ap.diff
+                    git apply $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
                     $loc/bin/devicetree-repack DeviceTree_${device_model}ap.jsonc devicetred
                     $loc/bin/bsdiff DeviceTree devicetred $loc/dt-${device_model}ap.patch
                 elif [[ $device_target_build == "$device_latest_build" ]]; then
@@ -122,6 +123,8 @@ ipad6_ipados18_ramdisk() {
                 cp LLB.bin $loc/
                 if [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/iBoot64Patcher LLB.bin LLB2.bin
+                    # todo: look into using ibootpatch2 fork with ssv patch: https://github.com/crystall1nedev/ipad6-ipados18/tree/ssv-patch
+                    # iBootpatch2 -RF -i LLB2.bin -o LLB3.bin
                     $loc/bin/iBootpatch2 LLB2.bin LLB3.bin
                     $loc/bin/bsdiff LLB.bin LLB3.bin $loc/$getcomp.patch
                 else
