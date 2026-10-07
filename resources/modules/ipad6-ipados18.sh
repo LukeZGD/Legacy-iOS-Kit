@@ -40,6 +40,7 @@ ipad6_ipados18_ramdisk() {
             device_target_build="$device_latest_build"
             device_fw_key_check
             ipsw_get_url $device_target_build
+            mkdir -p "$loc/$device_target_build"
         fi
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
@@ -70,13 +71,21 @@ ipad6_ipados18_ramdisk() {
             file_download https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/ipad6-ramdisk1.dmg ramdisk1.dmg 32f93cac47fb91dbc54e85131f950f742dfc947e
             cp ramdisk1.dmg $ramdisk_path/
             mv ramdisk1.dmg $name
-        elif [[ -e $ramdisk_path/$name && ! ($ipad6_ipados18_recreate_patches = 1 && $getcomp == "DeviceTree") ]]; then
+        elif [[ $device_target_build == "$device_latest_build" ]]; then
+            if [[ -s $loc/$device_target_build/$name ]]; then
+                cp $loc/$device_target_build/$name .
+            else
+                download_with_pzb "$ipsw_url" "${path}$name" "$name"
+                cp $name $loc/$device_target_build/$name
+            fi
+            mv $name $getcomp.latest
+        elif [[ -s $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
             download_with_pzb "$ipsw_url" "${path}$name" "$name"
             cp $name $ramdisk_path/
         fi
-        mv $name $getcomp.orig
+        mv $name $getcomp.orig 2>/dev/null
         local reco="-i $getcomp.orig -o $getcomp.img4 -M ../resources/sshrd/IM4M$device_proc -T "
         case $getcomp in
             "iBSS" | "iBEC" )
@@ -107,20 +116,21 @@ ipad6_ipados18_ramdisk() {
             ;;
             "DeviceTree" )
                 reco+="rdtr"
-                "$dir/img4" -i $getcomp.orig -o DeviceTree
                 if [[ $device_target_build == "$device_latest_build" && $ipad6_ipados18_recreate_patches == 1 ]]; then
+                    "$dir/img4" -i $getcomp.latest -o DeviceTree
                     $loc/bin/devicetree-parse DeviceTree > DeviceTree_${device_model}ap.jsonc
                     git apply $patches/dt-${device_model}ap.diff # since unified diff, git apply can be used instead of patch
                     $loc/bin/devicetree-repack DeviceTree_${device_model}ap.jsonc devicetred
                     $loc/bin/bsdiff DeviceTree devicetred $loc/dt-${device_model}ap.patch
                 elif [[ $device_target_build == "$device_latest_build" ]]; then
+                    "$dir/img4" -i $getcomp.orig -o DeviceTree
                     $bspatch DeviceTree devicetred $patches/dt-${device_model}ap.patch
                 fi
             ;;
             "Trustcache" ) reco+="rtsc";;
             "RestoreRamdisk" ) reco+="rdsk -A";;
             "LLB" )
-                "$dir/img4" -i $getcomp.orig -k ${iv}${key} -o LLB.bin
+                "$dir/img4" -i $getcomp.latest -k ${iv}${key} -o LLB.bin
                 cp LLB.bin $loc/
                 if [[ $ipad6_ipados18_recreate_patches == 1 ]]; then
                     $loc/bin/iBoot64Patcher LLB.bin LLB2.bin
