@@ -4621,7 +4621,7 @@ ipsw_prepare_specialios7() {
     local kc="../saved/ipad1-ios7/kernelcache.release.n90" # iPhone3,1 7.1.2
     local ramdisk6="../saved/ipad1-ios7/048-2516-005.dmg" # iPad2,1 6.1.3
 
-    source "$patches/repairs.sh"
+    source "../resources/modules/touch4-ios7-repairs.sh"
     if [[ $device_type == "iPod4,1" ]]; then
         touch4_ios7_resources
     fi
@@ -8313,17 +8313,17 @@ menu_print_info() {
     fi
     if [[ $no_version_check == 1 ]]; then
         warn "No version check flag detected, check is disabled and no support will be provided."
-    fi
-    if [[ $EUID == 0 && $run_as_root == 1 ]]; then
-        warn "Script is running as root. This is not supported, proceed with caution."
-    fi
-    if [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
+    elif [[ -z $git_hash_latest || $git_hash_latest == "null" ]]; then
         warn "Failed to check for updates. GitHub may be down or blocked by your network."
     elif [[ $git_hash_latest != "$git_hash" ]]; then
         local latest="$version_latest"
         [[ -n $commits_latest ]] && latest=$commits_latest
         warn "Current version differs from remote: $latest ($git_hash_latest)"
     fi
+    if [[ $EUID == 0 && $run_as_root == 1 ]]; then
+        warn "Script is running as root. This is not supported, proceed with caution."
+    fi
+
     print "* Platform: $platform ($platform_ver - $platform_arch) $live_session_str"
     if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
         if (( mac_majver == 12 && mac_minver < 6 )) || (( mac_majver < 12 )); then
