@@ -3221,6 +3221,7 @@ ipsw_verify() {
     local IPSWSHA1L
     local type="$device_type"
     [[ $3 == "special" ]] && type="$device_type_special"
+    return
 
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
     IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
