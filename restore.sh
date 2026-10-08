@@ -6194,7 +6194,12 @@ restore_futurerestore() {
     fi
     if (( device_proc < 7 )); then
         futurerestore2+="_old"
-        [[ $platform == "macos" ]] && futurerestore2="$dir/x86_64/futurerestore_old"
+        if [[ $platform == "macos" ]]; then
+            futurerestore2="$dir/x86_64/futurerestore_old"
+        elif [[ $device_sudoloop == 1 ]]; then
+            futurerestore2="$sudo LD_LIBRARY_PATH=$dir/lib $dir/futurerestore_old"
+        fi
+
     elif [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
             $restore_usepwndfu64 != 1 && $platform == "linux" && $platform_arch == "arm64" ]]; then
         futurerestore2+="_new" # no futurerestore nightly build for linux arm64
