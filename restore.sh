@@ -6590,9 +6590,10 @@ restore_prepare() {
                 if [[ $device_type == "iPhone2,1" && $device_newbr != 0 ]]; then
                     restore_latest custom first
                     local opt=$?
-                    print "* Proceed to install the alloc8 exploit for the device to boot:"
-                    print " -> Go to: Useful Utilities -> Install alloc8 Exploit"
-                    if [[ $opt != 0 ]]; then
+                    if [[ $opt == 0 ]]; then
+                        print "* Proceed to install the alloc8 exploit for the device to boot:"
+                        print " -> Go to: Useful Utilities -> Install alloc8 Exploit"
+                    else
                         warn "The restore seems to have failed. Will not continue with alloc8 install."
                         print "* Do not attempt alloc8 install manually either. It will not work without a successful restore."
                         return
