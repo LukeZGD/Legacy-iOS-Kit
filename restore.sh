@@ -12240,7 +12240,7 @@ device_backup_restore() {
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     export LD_LIBRARY_PATH="$dir/lib"
-    "$dir/idevicebackup2" restore --system --settings "$(basename $device_backup)"
+    "$dir/idevicebackup2" -i restore --system --settings "$(basename $device_backup)"
     popd
 }
 
