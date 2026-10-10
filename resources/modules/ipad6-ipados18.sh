@@ -1,3 +1,14 @@
+# notice: this module is unfinished and will remain so as i no longer have a test device.
+# only the ssh ramdisk portion is automated. fixing /var is still done manually
+# even if fixing /var and tethered boot were fully implemented, the device
+# will fail to tether boot. the llb patches follow nick's guide (iboot64patcher
+# followed by ibootpatch2 but with ssv patch now), and the devicetree patches follow
+# the same process (img4, parse, patch, repack)
+# i verified that kernelcachd, devicetred, etc are placed correctly and use the onboard im4m.
+# after manually fixing /var, attempting to boot the device gets as far as pongo
+# it eventually displays "booting" but then the device bluescreens and shuts off
+# i no longer have the motivation nor the means to investigate this further
+
 loc="../saved/ipad6-ipados18"
 patches="../resources/patch/ipad6-ipados18"
 
