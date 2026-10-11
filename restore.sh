@@ -4194,7 +4194,7 @@ ipsw_prepare_32bit() {
               "* You may try selecting N for memory option"
     fi
 
-    ipsw_prepare_fourthree
+    [[ $ipsw_fourthree == 1 ]] && ipsw_prepare_fourthree
     ipsw_bbreplace
     if [[ $target_vers_maj == 4 ]]; then
         ipsw_prepare_ios4patches
@@ -8636,19 +8636,25 @@ menu_backup_restore() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_print_info
-        local backupdir="../saved/backups/${device_ecid}_${device_type}"
-        if [[ ! -d $backupdir ]]; then
-            mkdir -p $backupdir
+        local backupdir="../saved/backups"
+        local backups=()
+
+        if [[ -d $backupdir ]]; then
+            for b in "$backupdir"/*/*; do
+                [[ -d $b ]] || continue
+                backups+=("${b#"$backupdir"/}")
+            done
         fi
-        local backups=($(ls $backupdir 2>/dev/null))
-        if [[ -z "${backups[*]}" ]]; then
+
+        if [[ ${#backups[@]} == 0 ]]; then
             print "* No backups (saved/backups)"
         else
             print "* Backups list (saved/backups):"
             for b in "${backups[@]}"; do
-                menu_items+=("$(basename $b)")
+                menu_items+=("$b")
             done
         fi
+
         menu_items+=("Go Back")
         echo
         print " > Main Menu > Data Management > Restore"
@@ -12235,12 +12241,12 @@ device_backup_create() {
 }
 
 device_backup_restore() {
-    device_backup="../saved/backups/${device_ecid}_${device_type}/$device_backup"
+    device_backup="../saved/backups/$device_backup"
     device_pair
     pushd "$(dirname $device_backup)"
     dir="../../$dir"
     export LD_LIBRARY_PATH="$dir/lib"
-    "$dir/idevicebackup2" -i restore --system --settings "$(basename $device_backup)"
+    "$dir/idevicebackup2" -i restore --system --settings -s "$(ls "$(basename $device_backup)")" "$(basename $device_backup)"
     popd
 }
 
