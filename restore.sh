@@ -2000,20 +2000,35 @@ device_dfuhelper() {
                 top="SIDE"
                 [[ $device_type == "iPad"* ]] && top="TOP"
                 echo
-                print "* Press the VOL UP button now."
-                sleep 1
-                print "* Press the VOL DOWN button now."
-                sleep 1
 
-                print "* Press and hold the $top button."
-                _step 10 && break
+                if [[ $device_mode == "Recovery" ]]; then
+                    print "* Press and hold VOL DOWN and $top buttons."
+                    for i in {4..1}; do
+                        [[ $i == 2 ]] && $irecovery -n
+                        echo -n "$i "
+                        sleep 1
+                    done
 
-                echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
-                _step 5 && break
+                    echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
+                    _step 8
+                    echo
 
-                echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
-                _step 8
-                echo
+                else
+                    print "* Press the VOL UP button now."
+                    sleep 1
+                    print "* Press the VOL DOWN button now."
+                    sleep 1
+
+                    print "* Press and hold the $top button."
+                    _step 11 && break
+
+                    echo -e "\n$(print "* Press and hold VOL DOWN and $top buttons.")"
+                    _step 5 && break
+
+                    echo -e "\n$(print "* Release $top button and keep holding VOL DOWN button.")"
+                    _step 8
+                    echo
+                fi
             ;;
 
             * )
