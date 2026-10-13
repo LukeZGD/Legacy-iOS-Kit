@@ -1680,8 +1680,8 @@ device_get_info() {
         device_latest_vers="$device_use_vers"
         device_latest_build="$device_use_build"
     fi
-    # if still not set and on linux, get from ipsw.me
-    if [[ -z $device_latest_vers && $platform == "linux" ]]; then
+    # if still not set, get from ipsw.me
+    if [[ -z $device_latest_vers ]]; then
         log "Getting latest iOS version for $device_type"
         download_from_url "https://api.ipsw.me/v4/device/$device_type?type=ipsw" tmp.json
         local latestver="$(cat tmp.json | $jq -j ".firmwares[0]")"
