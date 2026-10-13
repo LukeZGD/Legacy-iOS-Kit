@@ -1383,7 +1383,7 @@ device_get_info() {
     if [[ $device_type == "iPad2,1" ]]; then
         device_model="k93"
     fi
-    # device_model fallback/failsafe (this will be up to checkm8 devices only)
+    # device_model fallback/failsafe (this will be up to checkm8/a12/a13 devices only)
     case $device_model in
         k48  ) device_type="iPad1,1";;
         k93  ) device_type="iPad2,1";;
@@ -1428,6 +1428,26 @@ device_get_info() {
         j72b ) device_type="iPad7,6";;
         j171 ) device_type="iPad7,11";;
         j172 ) device_type="iPad7,12";;
+        j317 ) device_type="iPad8,1";;
+        j317x) device_type="iPad8,2";;
+        j318 ) device_type="iPad8,3";;
+        j318x) device_type="iPad8,4";;
+        j320 ) device_type="iPad8,5";;
+        j320x) device_type="iPad8,6";;
+        j321 ) device_type="iPad8,7";;
+        j321x) device_type="iPad8,8";;
+        j417 ) device_type="iPad8,9";;
+        j418 ) device_type="iPad8,10";;
+        j420 ) device_type="iPad8,11";;
+        j421 ) device_type="iPad8,12";;
+        j210 ) device_type="iPad11,1";;
+        j211 ) device_type="iPad11,2";;
+        j217 ) device_type="iPad11,3";;
+        j218 ) device_type="iPad11,4";;
+        j171a) device_type="iPad11,6";;
+        j172a) device_type="iPad11,7";;
+        j181 ) device_type="iPad12,1";;
+        j182 ) device_type="iPad12,2";;
         m68  ) device_type="iPhone1,1";;
         n82  ) device_type="iPhone1,2";;
         n88  ) device_type="iPhone2,1";;
@@ -1459,6 +1479,14 @@ device_get_info() {
         d201 ) device_type="iPhone10,4";;
         d211 ) device_type="iPhone10,5";;
         d221 ) device_type="iPhone10,6";;
+        d321 ) device_type="iPhone11,2";;
+        d331 ) device_type="iPhone11,4";;
+        d331p) device_type="iPhone11,6";;
+        n841 ) device_type="iPhone11,8";;
+        n104 ) device_type="iPhone12,1";;
+        d421 ) device_type="iPhone12,3";;
+        d431 ) device_type="iPhone12,5";;
+        d79  ) device_type="iPhone12,8";;
         n45  ) device_type="iPod1,1";;
         n72  ) device_type="iPod2,1";;
         n18  ) device_type="iPod3,1";;
@@ -1511,6 +1539,26 @@ device_get_info() {
         iPad7,6  ) device_model="j72b";;
         iPad7,11 ) device_model="j171";;
         iPad7,12 ) device_model="j172";;
+        iPad8,1  ) device_model="j317";;
+        iPad8,2  ) device_model="j317x";;
+        iPad8,3  ) device_model="j318";;
+        iPad8,4  ) device_model="j318x";;
+        iPad8,5  ) device_model="j320";;
+        iPad8,6  ) device_model="j320x";;
+        iPad8,7  ) device_model="j321";;
+        iPad8,8  ) device_model="j321x";;
+        iPad8,9  ) device_model="j417";;
+        iPad8,10 ) device_model="j418";;
+        iPad8,11 ) device_model="j420";;
+        iPad8,12 ) device_model="j421";;
+        iPad11,1 ) device_model="j210";;
+        iPad11,2 ) device_model="j211";;
+        iPad11,3 ) device_model="j217";;
+        iPad11,4 ) device_model="j218";;
+        iPad11,6 ) device_model="j171a";;
+        iPad11,7 ) device_model="j172a";;
+        iPad12,1 ) device_model="j181";;
+        iPad12,2 ) device_model="j182";;
         iPhone1,1) device_model="m68";;
         iPhone1,2) device_model="n82";;
         iPhone2,1) device_model="n88";;
@@ -1539,6 +1587,14 @@ device_get_info() {
         iPhone10,4) device_model="d201";;
         iPhone10,5) device_model="d211";;
         iPhone10,6) device_model="d221";;
+        iPhone11,2) device_model="d321";;
+        iPhone11,4) device_model="d331";;
+        iPhone11,6) device_model="d331p";;
+        iPhone11,8) device_model="n841";;
+        iPhone12,1) device_model="n104";;
+        iPhone12,3) device_model="d421";;
+        iPhone12,5) device_model="d431";;
+        iPhone12,8) device_model="d79";;
         iPod1,1 ) device_model="n45";;
         iPod2,1 ) device_model="n72";;
         iPod3,1 ) device_model="n18";;
@@ -1674,6 +1730,10 @@ device_get_info() {
             device_latest_vers="18.7.10"
             device_latest_build="22H374"
         ;;
+        # iPad8,[12345678] | iPad11,* )
+        #     device_latest_vers="26.7.1"
+        #     device_latest_build="23H30"
+        # ;;
     esac
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers ]]; then
