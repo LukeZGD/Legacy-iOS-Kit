@@ -4166,7 +4166,9 @@ ipsw_prepare_32bit() {
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar .
-            cp $jelbrek/aquila_7.tar untether.tar
+            local aquila_7="aquila_7"
+            [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
+            cp $jelbrek/$aquila_7.tar untether.tar
             ipsw_prepare_rebootsh aquila
         fi
     elif [[ $ipsw_nskip == 1 ]]; then
@@ -5737,7 +5739,11 @@ ipsw_prepare_powder() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            7.* ) JBFiles=("aquila_7.tar");;
+            7.* )
+                local aquila_7="aquila_7"
+                [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
+                JBFiles=("$aquila_7.tar")
+            ;;
             5.* ) JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar");; # temporary measure for ios 5
         esac
 
@@ -7558,7 +7564,11 @@ device_ramdisk() {
                 9.3.[56] ) :;;
                 9.*  ) untether="everuntether.tar";;
                 8.*  ) untether="daibutsu/untether.tar";;
-                7.*  ) untether="aquila_7.tar";;
+                7.*  )
+                    local aquila_7="aquila_7"
+                    [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
+                    untether="$aquila_7.tar"
+                ;;
                 6.*  ) untether="aquila_6.tar";;
                 5.*  ) untether="g1lbertJB/${device_type}_${build}.tar";; # temporary measure for ios 5
                 4.3* ) untether="aquila_4.tar";;
