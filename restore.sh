@@ -467,13 +467,18 @@ set_tool_paths() {
             device_sudoloop=1 # Run some tools as root for device detection if set to 1. (for Linux)
             trap "clean_sudo" EXIT
         fi
+
         sudo="/usr/bin/sudo"
-        if [[ $($sudo -V 2>&1) == "sudo-rs"* ]]; then
-            if [[ $device_sudoloop == 1 && -z $device_disable_usbmuxd ]]; then
+        local sudo_version="$("$sudo" -V 2>&1)"
+        if [[ "$sudo_version" == sudo-rs* ]]; then
+            if [[ -s "$sudo.ws" ]]; then
                 log "sudo-rs detected. Switching to sudo.ws"
+                sudo="${sudo}.ws"
+            else
+                warn "sudo-rs detected and no sudo.ws. Hopefully your sudo-rs is 0.2.12 or newer"
             fi
-            sudo+=".ws"
         fi
+
         if [[ $device_sudoloop == 1 ]]; then
             if [[ $live_session != 1 ]]; then
                 print "* Enter your user password when prompted"
@@ -2660,30 +2665,24 @@ python3_init() {
 
 device_fw_key_server() {
     local wikiproxy="wikiproxy-go_$platform-$(uname -m)"
-    local wikiproxy_ipw="wikiproxy-go-ipw_$platform-$(uname -m)"
     local port=8889
     local current="$(cat ../saved/$wikiproxy-version 2>/dev/null)"
-    local latest="44af916"
+    local latest="0995d66"
 
     if [[ $current != "$latest" ]]; then
-        rm ../saved/$wikiproxy ../saved/$wikiproxy_ipw
+        rm -rf ../saved/wikiproxy-*
     fi
 
-    if [[ ! -s ../saved/$wikiproxy || ! -s ../saved/$wikiproxy_ipw ]]; then
+    if [[ ! -s ../saved/$wikiproxy ]]; then
         file_download https://github.com/LukeZGD/wikiproxy-go/releases/download/latest/$wikiproxy.zip $wikiproxy.zip
         file_extract $wikiproxy.zip
-        if [[ ! -s main || ! -s main-ipw ]]; then
+        if [[ ! -s main ]]; then
             error "wikiproxy failed to download. Please run the script again"
         fi
         mv main ../saved/$wikiproxy
-        mv main-ipw ../saved/$wikiproxy_ipw
         echo "$latest" > ../saved/$wikiproxy-version
     fi
 
-    if [[ $1 == "ipw" ]]; then
-        wikiproxy="$wikiproxy_ipw"
-        port=8890
-    fi
     if [[ -n $httpserver_pid ]]; then
         kill $httpserver_pid
     fi
@@ -2734,23 +2733,13 @@ device_fw_key_check() {
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path"
-        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/af6bf5934dc61ed557a967a3f42ab7fb8ed8c45e/$device_type/$build/index.html"
+        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/033cbc09511de587e1ea4255e26662be543cbb51/$device_type/$build/index.html"
                    "http://127.0.0.1:8889/firmware/$device_type/$build"
-                   "http://127.0.0.1:8890/firmware/$device_type/$build"
                    "http://127.0.0.1:8888/firmware/$device_type/$build")
         for i in "${try[@]}"; do
             local url="$i"
-            # if legacy-ios-kit-keys will be used, check latest version
-            # if [[ $url == *"Legacy-iOS-Kit-Keys"* ]]; then
-            #     log "Getting latest Legacy-iOS-Kit-Keys url"
-            #     download_from_url "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit-Keys/branches" branches
-            #     local latest="$(cat branches | $jq -r .[].commit.sha)"
-            #     url="https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/$latest/$device_type/$build/index.html"
-            # fi
-
-            # if wikiproxy applewiki/iphonewiki will be used, initialize it
+            # if wikiproxy-go will be used, initialize it
             [[ $url == *"127.0.0.1:8889"* ]] && device_fw_key_server
-            [[ $url == *"127.0.0.1:8890"* ]] && device_fw_key_server ipw
 
             log "Getting firmware keys for $device_type-$build: $url"
             download_from_url "$url" index.html
@@ -4166,9 +4155,7 @@ ipsw_prepare_32bit() {
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
             cp $jelbrek/daibutsu/bin.tar .
-            local aquila_7="aquila_7"
-            [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
-            cp $jelbrek/$aquila_7.tar untether.tar
+            cp $jelbrek/aquila_7.tar untether.tar
             ipsw_prepare_rebootsh aquila
         fi
     elif [[ $ipsw_nskip == 1 ]]; then
@@ -5739,11 +5726,7 @@ ipsw_prepare_powder() {
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
-            7.* )
-                local aquila_7="aquila_7"
-                [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
-                JBFiles=("$aquila_7.tar")
-            ;;
+            7.* ) JBFiles=("aquila_7.tar");;
             5.* ) JBFiles=("g1lbertJB/${device_type}_${device_target_build}.tar");; # temporary measure for ios 5
         esac
 
@@ -7564,11 +7547,7 @@ device_ramdisk() {
                 9.3.[56] ) :;;
                 9.*  ) untether="everuntether.tar";;
                 8.*  ) untether="daibutsu/untether.tar";;
-                7.*  )
-                    local aquila_7="aquila_7"
-                    [[ $device_proc == 4 ]] && aquila_7="aquila_7_old"
-                    untether="$aquila_7.tar"
-                ;;
+                7.*  ) untether="aquila_7.tar";;
                 6.*  ) untether="aquila_6.tar";;
                 5.*  ) untether="g1lbertJB/${device_type}_${build}.tar";; # temporary measure for ios 5
                 4.3* ) untether="aquila_4.tar";;
@@ -8427,7 +8406,9 @@ menu_print_info() {
     fi
     print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
     device_manufacturing
-    if [[ $device_unactivated == 1 ]]; then
+    if [[ $device_unactivated == 1 && $device_activationissue == 1 ]] && (( device_proc <= 4 )); then
+        print "* Device is not activated. For hacktivation, go to: Useful Utilities -> Hacktivate Device"
+    elif [[ $device_unactivated == 1 ]]; then
         print "* Device is not activated, select Attempt Activation to activate."
     fi
     if [[ $device_disable_actrec == 1 ]]; then
