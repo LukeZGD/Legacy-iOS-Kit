@@ -1,0 +1,41 @@
+name: Lock Stale Issues
+
+on:
+  schedule:
+    # Run every Sunday at 02:00 UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  lock-stale-issues:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Lock issues inactive for over 3 months
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          cutoff=$(date -u -d '3 months ago' '+%Y-%m-%dT%H:%M:%SZ')
+
+          echo "Locking issues last updated before $cutoff"
+
+          gh api --paginate \
+            "repos/$GH_REPO/issues?state=all&per_page=100" \
+            --jq '.[] | select(.pull_request == null) |
+              select(.locked == false) |
+              [.number, .updated_at] | @tsv' |
+          while IFS="$(printf '\t')" read -r number updated; do
+            if [[ "$updated" < "$cutoff" ]]; then
+              echo "Locking issue #$number (last updated: $updated)"
+
+              gh api --method PUT \
+                "repos/$GH_REPO/issues/$number/lock" \
+                -f lock_reason=resolved
+            fi
+          done
