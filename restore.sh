@@ -2352,7 +2352,7 @@ device_enter_mode() {
                 print "* Pwned: $device_pwnd"
                 case $device_proc in
                     [56] ) device_send_unpacked_ibss;;
-                    [789] | 10 )
+                    [789] | 1[01] )
                         if [[ $device_proc == 7 && $device_pwnd == "checkm8" ]]; then
                             warn "Device is not pwned with ipwnder or updated gaster. Restoring/ramdisk booting will fail."
                         fi
@@ -6762,7 +6762,7 @@ restore_prepare() {
             fi
         ;;
 
-        [89] | 10 )
+        [89] | 1[01] )
             if [[ $restore_usepwndfu64 == 1 ]]; then
                 restore_pwned64
             elif [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]]; then
@@ -9260,9 +9260,9 @@ menu_restore() {
         if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_checkm8ipad != 1 ]] &&
            (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Other (Use SHSH Blobs)")
-            if (( device_proc <= device_proc_32bit )); then
-                menu_items+=("Other (Tethered)")
-            fi
+        fi
+        if (( device_proc <= device_proc_32bit )); then
+            menu_items+=("Other (Tethered)")
         fi
         if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
@@ -10209,8 +10209,8 @@ menu_ipsw_browse() {
     fi
 
     ipsw_latest_set
-    local menu_items=($(ls ../$device_type_lower*restore.ipsw $HOME/Downloads/$device_type_lower*restore.ipsw 2>/dev/null))
-    menu_items+=($(ls ../$device_type*Restore.ipsw $HOME/Downloads/$device_type*Restore.ipsw 2>/dev/null))
+    local menu_items=($(ls ../*$device_type_lower*restore.ipsw $HOME/Downloads/*$device_type_lower*restore.ipsw 2>/dev/null))
+    menu_items+=($(ls ../*$device_type*Restore.ipsw $HOME/Downloads/*$device_type*Restore.ipsw 2>/dev/null))
     [[ $ipsw_prefix != "$device_type" ]] && menu_items+=($(ls ../${ipsw_prefix}_1*Restore.ipsw $HOME/Downloads/${ipsw_prefix}_1*Restore.ipsw 2>/dev/null))
     if [[ $1 == "base" ]]; then
         text="Base"

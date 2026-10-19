@@ -8,6 +8,7 @@
 
 ## Features
 - Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit devices
+    - Newer devices only have partial support with limited functionality (e.g. sideloading and other utilities only)
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Restore supported devices to unsigned versions with SHSH blobs
@@ -27,7 +28,7 @@
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices
     - This also saves onboard Cryptex APTicket and seed for iOS 16+ (x8A4)
-- Install [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) using SSH Ramdisk for supported 64-bit devices on iOS 14/15
+- Multiple methods of installing [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) are supported
 - Clear NVRAM for 32-bit devices
 - Device activation using ideviceactivation (especially useful for iOS 4 and lower)
 - The latest baseband will be flashed for certain A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
