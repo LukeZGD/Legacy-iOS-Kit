@@ -488,9 +488,9 @@ set_tool_paths() {
             #(while true; do $sudo -v; sleep 60; done) &
             sudoloop_pid=$!
             a6meowing="$sudo "
-            futurerestore="$sudo "
+            futurerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             gaster="$sudo "
-            idevicerestore="$sudo LD_LIBRARY_PATH=$dir/lib "
+            idevicerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             irecovery="$sudo "
             irecovery2="$sudo "
             irecovery3="$sudo "
@@ -1614,6 +1614,10 @@ device_get_info() {
     all_flash="Firmware/all_flash/all_flash.${device_model}ap.production"
     device_use_bb=0
     device_latest_bb=0
+
+    device_proc_32bit=6
+    device_proc_checkm8=11
+    device_proc_unsupported=14
     # set device_proc (what processor the device has)
     case $device_type in
         iPhone1,* | iPod1,1 )
@@ -1630,14 +1634,27 @@ device_get_info() {
             device_proc=8;; # A8
         iPad6,* | iPhone8,* )
             device_proc=9;; # A9
-        iPad7,* | iPhone9,* | iPhone10,* | iPod9,1 )
-            device_proc=10;; # A10 or A11
-        iPad* | iPhone* )
-            device_proc=11;; # Newer devices
+        iPad7,* | iPhone9,* | iPod9,1 )
+            device_proc=10;; # A10
+        iPhone10,* )
+            device_proc=11;; # A11
+        iPad8,* | iPad11,* | iPhone11,* )
+            device_proc=12;; # A12
+        iPad12,* | iPhone12,* )
+            device_proc=13;; # A13
+        iPad* | iPhone* | AppleTV* | Watch* )
+            device_proc=$device_proc_unsupported;; # Newer/unsupported devices
     esac
     case $device_type in
         iPad[67],* ) device_checkm8ipad=1;;
     esac
+    if [[ $device_proc == 12 || $device_proc == 13 ]]; then
+        case $device_type in
+            iPad8,* | iPad11,[67] ) :;;
+            * ) device_usbliter8=1;;
+        esac
+    fi
+
     device_get_name
     if [[ $device_mode == "Normal" && -z $device_ecid && $main_argmode != "device_enter_ramdisk"* ]]; then
         warn "Unable to detect device type/ECID. Is your device on 2.x or lower?"
@@ -1646,12 +1663,10 @@ device_get_info() {
         pause
         [[ -z $device_vers_maj ]] && device_vers_maj=1
     fi
-    if [[ $device_type == "AppleTV"* || $device_type == "Watch"* ]]; then
-        device_proc=11
-    elif [[ -z $device_name || -z $device_proc ]]; then
+    if [[ -z $device_name || -z $device_proc ]]; then
         error "Unrecognized device $device_type. Enter the device type properly."
     fi
-    if (( device_proc > 10 )); then
+    if (( device_proc >= device_proc_unsupported )); then
         print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
@@ -1787,7 +1802,7 @@ device_get_info() {
         device_use_bb_sha1="$device_latest_bb_sha1"
     fi
     # disable baseband update if var is set to 1 (manually disabled w/ --disable-bbupdate arg)
-    if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
+    if [[ $device_disable_bbupdate == 1 && $device_use_bb != 0 ]] && (( device_proc <= device_proc_32bit )); then
         device_disable_bbupdate="$device_type"
     fi
     # activation issue stuff
@@ -1802,7 +1817,7 @@ device_get_info() {
        [[ $device_9900candidate == 1 && $device_mode == "Normal" && $device_unactivated != 1 ]]; then
         device_actrec=1
         device_auto_actrec=1
-    elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]] && (( device_proc <= 6 )); then
+    elif [[ -s ../saved/$device_type/activation-$device_ecid.tar ]] && (( device_proc <= device_proc_32bit )); then
         device_actrec=1
         device_auto_actrec=2
     elif [[ $device_activationissue == 1 && $device_mode == "Normal" && $device_unactivated != 1 ]]; then
@@ -2975,7 +2990,7 @@ ipsw_preference_set() {
         warn "multipatch is not supported on A6(X) tethered iOS 10, so it will be disabled."
         ipsw_gasgauge_patch=
     fi
-    if (( device_proc >= 7 )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
+    if (( device_proc > device_proc_32bit )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
     fi
 
@@ -3177,11 +3192,11 @@ shsh_save() {
     # sets variable shsh_path
     local version=$device_target_vers
     local build_id=$device_target_build
-    local apnonce
     local shsh_check
     local buildmanifest="../resources/manifest/BuildManifest_${device_type}_${version}.plist"
     local ExtraArgs=
-    local bbcheck
+    local bbcheck=
+    local generator cryptex_generator apnonce cryptex_apnonce
 
     case $1 in
         "apnonce" ) apnonce=$2;;
@@ -3217,14 +3232,56 @@ shsh_save() {
     rm -f *.shsh*
 
     ExtraArgs="-d $device_type -i $version -e $device_ecid -m $buildmanifest -o -s -B ${device_model}ap "
-    if [[ $bbcheck != 1 ]]; then
+    if [[ $bbcheck == 1 ]]; then
+        local bbserial=
+        if [[ $device_argmode != "none" && $device_mode == "Normal" ]]; then
+            bbserial="$($ideviceinfo -k BasebandSerialNumber)"
+        else
+            warn "Device is not normal mode. Cannot get BasebandSerialNumber."
+        fi
+        if [[ -n $bbserial ]]; then
+            ExtraArgs+="-c $bbserial "
+        else
+            warn "Unable to get BasebandSerialNumber. Will use dummy serial that does not match yours to continue"
+            ExtraArgs+="-c L4dVPzuyJ3EAAAAA "
+        fi
+
+    else
         ExtraArgs+="-b "
     fi
+
     if [[ -n $apnonce ]]; then
         ExtraArgs+="--apnonce $apnonce"
+
+    elif (( device_proc > device_proc_checkm8 )) && [[ -z $mode ]]; then
+        log "A12+ device detected. Additional arguments are required; this process is more advanced than regular blob saving."
+        print "* Please see the instructions here: https://github.com/LukeZGD/aes_nonce-go"
+
+        generator="0x1111111111111111"
+        cryptex_generator="0x11111111111111111111111111111111"
+
+        read -r -p "$(input 'Enter generator (press Enter/Return to default to all 1s): ')" generator
+        generator="${generator:-0x1111111111111111}"
+        log "Generator: $generator"
+
+        read -r -p "$(input 'Enter cryptex generator (press Enter/Return to default to all 1s): ')" cryptex_generator
+        cryptex_generator="${cryptex_generator:-0x11111111111111111111111111111111}"
+        log "Cryptex Generator: $cryptex_generator"
+
+        until [[ -n $apnonce ]]; do
+            read -r -p "$(input 'Enter entangled nonce (output from aes_nonce): ')" apnonce
+        done
+
+        until [[ -n $cryptex_apnonce ]]; do
+            read -r -p "$(input 'Enter entangled cryptex nonce (output from aes_cryptex_nonce): ')" cryptex_apnonce
+        done
+
+        ExtraArgs+="-g $generator -x $cryptex_generator -8 $apnonce -t $cryptex_apnonce"
+
     else
         ExtraArgs+="-g 0x1111111111111111"
     fi
+
     log "Running tsschecker with command: $tsschecker $ExtraArgs"
     $tsschecker $ExtraArgs
 
@@ -6153,7 +6210,7 @@ restore_download_bbsep() {
     fi
 
     # SEP
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         restore_sep="sep-firmware.$device_model.RELEASE"
         if [[ ! -e ../saved/$device_type/$restore_sep-$build_id.im4p ]]; then
             download_with_pzb "$ipsw_url" Firmware/all_flash/$restore_sep.im4p $restore_sep.im4p
@@ -6222,6 +6279,45 @@ restore_idevicerestore() {
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
 }
 
+futurerestore_update() {
+    local futurerestore2="../saved/futurerestore_$platform"
+    [[ $platform == "linux" ]] && futurerestore2+="-$platform_arch"
+    log "Checking for futurerestore updates..."
+    local fr_latest="3ec9e964462580a11a1ddb4a46bf39dc39ff2c25"
+    fr_branch="dev"
+    local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
+    log "futurerestore $fr_branch branch will be used for this restore"
+    if [[ $fr_latest != "$fr_current" ]]; then
+        log "futurerestore update detected, downloading."
+        rm -f ${futurerestore2}-${fr_branch}*
+    fi
+    if [[ ! -e ${futurerestore2}-${fr_branch} ]]; then
+        local url="https://github.com/LukeZGD/futurerestore/releases/download/latest/"
+        local file=
+        if [[ $platform == "linux" && $platform_arch == "arm64" ]]; then
+            file+="futurerestore_${fr_branch}_$platform-$(uname -m).zip"
+            url+="$file"
+            file_download "$url" "$file"
+            file_extract "$file"
+            mv bin/futurerestore ${futurerestore2}-${fr_branch}
+        else
+            file="futurerestore-"
+            case $platform in
+                "macos" ) file+="macOS-RELEASE-${fr_branch}.zip";;
+                "linux" ) file+="Linux-x86_64-RELEASE-${fr_branch}.zip";;
+            esac
+            url+="$file"
+            file_download "$url" "$file"
+            file_extract "$file"
+            tar -xJvf futurerestore*.xz
+            mv futurerestore ${futurerestore2}-${fr_branch}
+        fi
+        chmod +x ${futurerestore2}-${fr_branch}
+        [[ $platform == "macos" ]] && /usr/bin/xattr -cr ${futurerestore2}-${fr_branch}
+        echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
+    fi
+}
+
 restore_futurerestore() {
     local ExtraArr=()
     local futurerestore2="$futurerestore"
@@ -6256,82 +6352,36 @@ restore_futurerestore() {
     if [[ -n $restore_sep ]]; then
         ExtraArr+=("-s" "$restore_sep" "-m" "$restore_manifest")
     fi
-    if (( device_proc < 7 )); then
-        futurerestore2+="_old"
-        if [[ $platform == "macos" ]]; then
-            futurerestore2="$dir/x86_64/futurerestore_old"
-        elif [[ $device_sudoloop == 1 ]]; then
-            futurerestore2="$sudo LD_LIBRARY_PATH=$dir/lib $dir/futurerestore_old"
-        fi
 
-    elif [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
-            $restore_usepwndfu64 != 1 && $platform == "linux" && $platform_arch == "arm64" ]]; then
-        futurerestore2+="_new" # no futurerestore nightly build for linux arm64
+    if [[ $target_vers_maj == 10 ]] || (( device_proc <= device_proc_32bit )); then
+        export FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD=1 # required since custom-latest-ota is broken
     else
-        futurerestore2="../saved/futurerestore_$platform"
-        if [[ $target_vers_maj == 10 ]]; then
-            export FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD=1 # required since custom-latest-ota is broken
-        else
-            ExtraArr=("--latest-sep")
-            case $device_type in
-                iPhone* | iPad4,[235689] | iPad5,[24] | iPad6,[48] | iPad[67],12 | iPad7,[46] ) ExtraArr+=("--latest-baseband");;
-                * ) ExtraArr+=("--no-baseband");;
-            esac
-        fi
-        if (( target_vers_maj < 16 )) && [[ $ipsw_ipx != 1 ]]; then
-            ExtraArr+=("--no-rsep")
-        fi
-        if [[ $device_target_setnonce == 1 ]]; then
-            ExtraArr+=("--set-nonce")
-        elif [[ $ipsw_ipx == 1 ]]; then
-            ExtraArr+=("--rdsk" "rdsk.im4p" "--rkrn" "kcache.im4p")
-        fi
-        log "futurerestore nightly will be used for this restore: https://github.com/futurerestore/futurerestore"
-        print "* Builds from here: https://github.com/LukeZGD/futurerestore"
-        if [[ $platform == "linux" && $platform_arch != "x86_64" ]]; then
-            warn "futurerestore nightly is not supported on Linux $platform_arch, cannot continue. x86_64 only."
-            return
-        fi
-        log "Checking for futurerestore updates..."
-        #download_from_url "https://api.github.com/repos/futurerestore/futurerestore/commits" commits
-        #local fr_latest="$(cat commits | $jq -r '.[0].sha')"
-        local fr_latest="9638fdcbadaa9ba35ac9542bb7244497a9b4e1bc"
-        local fr_branch="main"
-        if (( target_vers_maj >= 16 )) || [[ $restore_usedev == 1 || $device_type == "iPhone10,"* ]]; then
-            fr_latest="30a6c3b403835b4f8db567deeb06329139b951eb"
-            fr_branch="dev"
-        fi
-        local fr_current="$(cat ${futurerestore2}-${fr_branch}_version 2>/dev/null)"
-        log "futurerestore $fr_branch branch will be used for this restore"
-        if [[ $fr_latest != "$fr_current" ]]; then
-            log "futurerestore nightly update detected, downloading."
-            rm -f ${futurerestore2}-${fr_branch}*
-        fi
-        if [[ ! -e ${futurerestore2}-${fr_branch} ]]; then
-            local url="https://github.com/LukeZGD/futurerestore/releases/download/latest/"
-            local file="futurerestore-"
-            case $platform in
-                "macos" ) file+="macOS-RELEASE-${fr_branch}.zip";;
-                "linux" ) file+="Linux-x86_64-RELEASE-${fr_branch}.zip";;
-            esac
-            url+="$file"
-            file_download $url $file
-            file_extract "$file"
-            tar -xJvf futurerestore*.xz
-            mv futurerestore ${futurerestore2}-${fr_branch}
-            chmod +x ${futurerestore2}-${fr_branch}
-            [[ $platform == "macos" ]] && /usr/bin/xattr -cr ${futurerestore2}-${fr_branch}
-            echo "$fr_latest" > ${futurerestore2}-${fr_branch}_version
-        fi
+        ExtraArr=("--latest-sep")
+        case $device_name in
+            iPhone* | *Cellular* | *China* ) ExtraArr+=("--latest-baseband");;
+            * ) ExtraArr+=("--no-baseband");;
+        esac
+    fi
+
+    if (( target_vers_maj < 16 )) && [[ $ipsw_ipx != 1 ]]; then
+        ExtraArr+=("--no-rsep")
+    fi
+    if [[ $device_target_setnonce == 1 ]]; then
+        ExtraArr+=("--set-nonce")
+    elif [[ $ipsw_ipx == 1 ]]; then
+        ExtraArr+=("--rdsk" "rdsk.im4p" "--rkrn" "kcache.im4p")
+    fi
+
+    if [[ $device_type == "iPhone10,"* && $device_target_other == 1 ]]; then
+        futurerestore_update
+        futurerestore2=
+        [[ $device_sudoloop == 1 ]] && futurerestore2="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
+        futurerestore2+="../saved/futurerestore_$platform"
+        [[ $platform == "linux" ]] && futurerestore2+="-$platform_arch"
         futurerestore2+="-${fr_branch}"
     fi
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     for arg in "$@"; do
-        if [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" &&
-              $restore_usepwndfu64 != 1 && $arg == "--skip-blob" &&
-              $FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD == 1 ]]; then
-            arg+="2" # --skip-blob2
-        fi
         [[ -n "$arg" ]] && ExtraArr+=("$arg")
     done
     if [[ $debug_mode == 1 ]]; then
@@ -6349,7 +6399,7 @@ restore_futurerestore() {
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
     fi
-    if [[ $opt != 0 ]] && (( device_proc < 7 )); then
+    if [[ $opt != 0 ]] && (( device_proc <= device_proc_32bit )); then
         print "* If you are getting the error: \"could not retrieve device serial number\","
         print " -> Try restoring with the jailbreak option enabled"
     fi
@@ -6440,7 +6490,7 @@ restore_prepare_pwnrec64() {
         print "* You may also try to unplug and replug your device"
         ((attempt++))
     done
-    if [[ $device_proc == 10 ]]; then
+    if (( device_proc >= 10 )); then
         log "irecovery -c go"
         $irecovery -c "go"
         sleep 3
@@ -6702,7 +6752,7 @@ restore_prepare() {
                 fi
                 restore_prepare_pwnrec64
                 shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
-                restore_futurerestore --skip-blob
+                restore_futurerestore --skip-ibec
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
             else
@@ -6773,8 +6823,9 @@ restore_pwned64() {
     rm -f /tmp/firmwares.json
     cp ../saved/firmwares.json /tmp
     local opt
-    if [[ $device_proc == 7 && $device_target_other != 1 &&
-          $device_target_vers == "10.3.3" ]] || [[ $restore_useskipblob == 1 ]]; then
+    if [[ $device_proc == 7 && $device_target_other != 1 && $device_target_vers == "10.3.3" ]]; then
+        opt="--skip-ibec"
+    elif [[ $restore_useskipblob == 1 ]]; then
         opt="--skip-blob"
     fi
     restore_futurerestore --use-pwndfu $opt
@@ -7733,7 +7784,7 @@ device_ramdisk() {
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
             $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
-            if (( device_proc < 7 )); then
+            if (( device_proc <= device_proc_32bit )); then
                 $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
             fi
             log "Done. Your device should reboot now"
@@ -7839,7 +7890,7 @@ device_ramdisk_iosvers() {
     device_vers=
     device_build=
     device_datetime_cmd nopause
-    if (( device_proc < 7 )); then
+    if (( device_proc <= device_proc_32bit )); then
         log "Mounting root filesystem"
         $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root"
         sleep 1
@@ -7868,7 +7919,7 @@ menu_ramdisk() {
     local loop
     local menu_items=("Connect to SSH")
     local reboot="reboot_bak"
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         reboot="/sbin/reboot"
     else
         menu_items+=("Dump Baseband/Activation")
@@ -7889,7 +7940,7 @@ menu_ramdisk() {
         if [[ $device_can_powder == 1 || $device_can_drav6 == 1 ]]; then
             menu_items+=("Disable/Enable Exploit")
         fi
-        if (( device_proc >= 7 )) && [[ $device_proc != 10 ]]; then
+        if (( device_proc > device_proc_32bit && device_proc < 10 )); then
             menu_items+=("Install Bootstrap (iOS 7/8/9)")
         fi
         if [[ $device_proc == 7 ]]; then
@@ -7952,7 +8003,7 @@ menu_ramdisk() {
             "exit" ) loop=1;;
             "dump-blobs" )
                 local shsh="../saved/shsh/$device_ecid-$device_type-$(date +%Y-%m-%d-%H%M).shsh2"
-                if (( device_proc < 7 )); then
+                if (( device_proc <= device_proc_32bit )); then
                     warn "This is the wrong place to dump onboard blobs for 32-bit devices."
                     print "* Reboot your device, run the script again and go to Save SHSH Blobs -> Onboard Blobs"
                     print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Saving-onboard-SHSH-blobs-of-current-iOS-version"
@@ -7978,7 +8029,7 @@ menu_ramdisk() {
                 print "* If unable to be converted, this dump is likely not usable for restoring."
             ;;
             "iosvers" )
-                if (( device_proc >= 7 )); then
+                if (( device_proc > device_proc_32bit )); then
                     print "* Unfortunately the mount command needs to be done manually for 64-bit devices."
                     print "* The mount command also changes depending on the iOS version (which is what we're trying to get here in the first place)"
                     print "* You need to mount filesystems using the appropriate command before continuing (scroll up to see the commands)"
@@ -8033,7 +8084,7 @@ menu_ramdisk() {
                 print "* This procedure will do step 6 of this tutorial: https://reddit.com/r/LegacyJailbreak/comments/13of20g/tutorial_new_restoringerasingwipingrescuing_a/"
                 print "* Note that it may also be better to do this process manually instead by following the commands in the tutorial."
                 print "* For iOS 8 devices, also remove this file if you will be doing it manually: /mnt2/mobile/Library/SpringBoard/LockoutStateJournal.plist"
-                if (( device_proc >= 7 )); then
+                if (( device_proc > device_proc_32bit )); then
                     print "* If your device is on iOS 7, make sure to boot an iOS 8 ramdisk afterwards to fix booting."
                 fi
                 print "* When the device boots back up, trigger a restore by entering wrong passwords 10 times."
@@ -8154,7 +8205,7 @@ menu_ramdisk() {
                 if [[ $? != 1 ]]; then
                     continue
                 fi
-                if (( device_proc < 7 )); then
+                if (( device_proc <= device_proc_32bit )); then
                     device_ramdisk_iosvers
                     $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
                 fi
@@ -8163,7 +8214,7 @@ menu_ramdisk() {
                 gzip -d openssl.tar.gz
                 cat openssh.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 cat openssl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
-                if (( device_proc < 7 )); then
+                if (( device_proc <= device_proc_32bit )); then
                     cat $jelbrek/sshdeb.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 fi
                 log "Done."
@@ -8173,7 +8224,7 @@ menu_ramdisk() {
 }
 
 shsh_save_onboard64() {
-    if [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
+    if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
         print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
         print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
         print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
@@ -8186,6 +8237,10 @@ shsh_save_onboard64() {
         print "    libkrw0 1.1.2, libkrw0-tfp0 1.1.2, libx8a4-1, x8A4"
         print "* You may install these from this repo: https://lukezgd.github.io/x8a4"
         print "* You may also install debs from here: https://github.com/Cryptiiiic/x8A4/releases"
+        select_yesno
+        if [[ $? != 1 ]]; then
+            return 1
+        fi
     fi
     echo
     if [[ $device_mode != "Normal" ]]; then
@@ -8250,7 +8305,7 @@ shsh_save_onboard64() {
 }
 
 shsh_save_onboard() {
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         shsh_save_onboard64
         [[ $? == 0 ]] && pause
         return
@@ -8296,7 +8351,7 @@ shsh_save_onboard() {
 
 shsh_convert_onboard() {
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
-    if (( device_proc < 7 )); then
+    if (( device_proc <= device_proc_32bit )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
         # remove ibob for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62
         local blob=$(xxd -p dump.raw | tr -d '\n')
@@ -8414,7 +8469,7 @@ menu_print_info() {
     if [[ $device_disable_actrec == 1 ]]; then
         warn "disable-actrec flag detected, activation dumping/stitching disabled. Proceed with caution"
     fi
-    if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc < 7 )); then
+    if [[ $device_type == "$device_disable_bbupdate" && $device_use_bb != 0 ]] && (( device_proc <= device_proc_32bit )); then
         if [[ $device_deadbb == 1 ]]; then
             warn "dead-bb flag detected, baseband flashing disabled. Your device will not activate after restore"
         else
@@ -8428,10 +8483,10 @@ menu_print_info() {
     if [[ -n $device_disable_bbupdate ]]; then
         print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update"
     fi
-    if [[ $ipsw_jailbreak == 1 ]] && (( device_proc < 7 )); then
+    if [[ $ipsw_jailbreak == 1 ]] && (( device_proc <= device_proc_32bit )); then
         warn "Jailbreak flag detected. Jailbreak option enabled."
     fi
-    if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+    if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
         case $device_proc in
             [56] )
                 if [[ $device_imei == "9900"* ]]; then
@@ -8468,7 +8523,7 @@ menu_print_info() {
         if [[ $ipsw_skip_first == 1 ]]; then
             warn "skip-first flag detected. Skipping first restore and flashing part 2 IPSW only for powdersn0w 4.2.x and lower"
         fi
-    elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+    elif (( device_proc > device_proc_32bit && device_proc <= device_proc_checkm8 )); then
         if [[ $restore_useskipblob == 1 ]]; then
             warn "skip-blob flag detected. futurerestore will have --skip-blob enabled."
         fi
@@ -8484,7 +8539,7 @@ menu_print_info() {
     else
         print "* iOS Version: $device_vers"
     fi
-    if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
+    if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc <= device_proc_32bit )); then
         print "* To get iOS version, go to: Misc Utilities -> Get iOS Version"
     fi
     if [[ $device_proc != 1 || $device_type == "iPhone1,2" ]]; then
@@ -8507,7 +8562,7 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-            if (( device_proc < 7 )); then
+            if (( device_proc <= device_proc_32bit )); then
                 menu_items+=("Jailbreak Device")
                 if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
                     case $device_mode in
@@ -8529,7 +8584,7 @@ menu_main() {
                 fi
             fi
         fi
-        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 11 )); then
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -8631,7 +8686,10 @@ menu_datamanage() {
         warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
         [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs. See the wiki page linked above for more details"
     else
-        menu_items+=("Mount Device" "Mount Device (Raw File System)" "Cydia App Install")
+        menu_items+=("Mount Device" "Mount Device (Raw File System)")
+        if (( device_vers_maj <= 10 )); then
+            menu_items+=("Cydia App Install")
+        fi
     fi
     if (( device_vers_maj < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
@@ -8972,13 +9030,13 @@ menu_shsh() {
             iPhone1,2 | iPhone2,1 | iPod[23],1 )
                 menu_items+=("iOS 4.1");;
         esac
-        if (( device_proc < 7 )); then
+        if (( device_proc <= device_proc_32bit )); then
             menu_items+=("Cydia Blobs")
         fi
         if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" && $device_type != "iPad1,1" ]]; then
             if [[ $device_mode != "none" ]]; then
                 menu_items+=("Onboard Blobs")
-                if (( device_proc < 7 )); then
+                if (( device_proc <= device_proc_32bit )); then
                     menu_items+=("Onboard Blobs (Raw Dump)")
                 fi
             fi
@@ -9015,7 +9073,7 @@ menu_shsh() {
         target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
         target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
         case $selected in
-            *"Baseband Check"* ) shsh_save bbcheck; pause;;
+            *"Baseband Check"* ) device_pair; shsh_save bbcheck; pause;;
             *"iOS"* ) shsh_save; pause;;
             "Onboard Blobs" ) menu_shsh_onboard;;
             "Onboard Blobs (Raw Dump)" )
@@ -9051,7 +9109,7 @@ menu_shsh_onboard() {
     local back
 
     ipsw_path=
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         shsh_save_onboard
         return
     fi
@@ -9095,7 +9153,7 @@ menu_shsh_convert() {
         menu_print_info
         if [[ -n $shsh_path ]]; then
             print "* Selected dump: $shsh_path"
-            if (( device_proc < 7 )); then
+            if (( device_proc <= device_proc_32bit )); then
                 shsh_onboard_iboot="$(cat "$shsh_path" | strings | grep iBoot | head -1)"
                 print "* Raw dump iBoot version: $shsh_onboard_iboot"
                 print "* Go here to find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
@@ -9114,7 +9172,7 @@ menu_shsh_convert() {
                 warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
             fi
             menu_items+=("(*) Convert Raw Dump")
-        elif (( device_proc < 7 )); then
+        elif (( device_proc <= device_proc_32bit )); then
             echo
             print "* Select IPSW of the raw dump's iOS version to continue"
         fi
@@ -9173,7 +9231,7 @@ menu_restore() {
             ;;
         esac
         menu_items+=("Latest iOS ($device_latest_vers)")
-        if (( device_proc >= 7 )); then
+        if (( device_proc > device_proc_32bit )); then
             menu_items+=("Signed iOS (IPSW must be signed)")
         fi
         case $device_type in
@@ -9184,18 +9242,19 @@ menu_restore() {
         if [[ $device_can_powder == 1 && $device_proc != 4 ]]; then
             menu_items+=("Other (powdersn0w $base_vers blobs)")
         fi
-        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc <= 10 )); then
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_checkm8ipad != 1 ]] &&
+           (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Other (Use SHSH Blobs)")
-            if (( device_proc < 7 )); then
+            if (( device_proc <= device_proc_32bit )); then
                 menu_items+=("Other (Tethered)")
             fi
         fi
         if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
         fi
-        if (( device_proc < 7 )); then
+        if (( device_proc <= device_proc_32bit )); then
             menu_items+=("DFU IPSW")
-        elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+        elif (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Set Nonce Only")
         fi
         menu_items+=("IPSW Downloader" "Go Back")
@@ -9342,9 +9401,14 @@ ipsw_latest_set() {
         iPad6,[78]     ) ipsw_prefix="iPadPro_12.9";;
         iPad7,[12]     ) ipsw_prefix="iPad_Pro_HFR";;
         iPad7,1[12]    ) ipsw_prefix="iPad_10.2";;
+        iPad8,[67]     ) ipsw_prefix="iPad_10.2_2020";;
+        iPad8,*        ) ipsw_prefix="iPad_A12X_A12Z";;
+        iPad11,[1234]  ) ipsw_prefix="iPad_Spring_2019";;
+        iPad12,[12]    ) ipsw_prefix="iPad_10.2_2021";;
         iPhone5,[1234] ) ipsw_prefix="iPhone_4.0_32bit";;
         iPhone10,[36]  ) ipsw_prefix="iPhone10,3,iPhone10,6";;
         iPhone11,[246] ) ipsw_prefix="iPhone11,2,iPhone11,4,iPhone11,6";;
+        iPhone12,[35]  ) ipsw_prefix="iPhone12,3,iPhone12,5";;
         iPod[79],1     ) ipsw_prefix="iPodtouch";;
         iPad4,[789] | iPad5,*    ) ipsw_prefix="iPad_64bit_TouchID";;
         iPad6,1[12] | iPad7,[56] ) ipsw_prefix="iPad_64bit_TouchID_ASTC";;
@@ -9700,13 +9764,13 @@ menu_ipsw() {
                     warn "Validation does not work for 32-bit iOS 10 blobs."
                 else
                     warn "Selected SHSH file failed validation, proceed with caution"
-                    if (( device_proc >= 7 )); then
+                    if (( device_proc > device_proc_32bit )); then
                         print "* If this is an OTA/onboard/factory blob, it may be fine to use for restoring"
                     elif (( device_proc < 5 )); then
                         warn "Validation might be a false negative for A4 and older devices."
                     fi
                 fi
-                if (( device_proc >= 7 )); then
+                if (( device_proc > device_proc_32bit )); then
                     print "* Note: For OTA/onboard/factory blobs, try enabling the skip-blob flag"
                     print "* The skip-blob flag can also help if the restore fails with validated blobs"
                 fi
@@ -10196,7 +10260,7 @@ menu_ipsw_browse() {
     log "Selected IPSW file: $newpath.ipsw"
     ipsw_version_set "$newpath" "$1"
 
-    if [[ $device_target_vers == "$device_latest_vers" && $platform == "macos" ]] && (( device_proc >= 7 )); then
+    if [[ $device_target_vers == "$device_latest_vers" && $platform == "macos" ]] && (( device_proc > device_proc_32bit )); then
         log "Restoring to latest iOS for 64-bit devices is not supported on macOS, use iTunes/Finder instead for that"
         pause
         return
@@ -10253,27 +10317,6 @@ menu_ipsw_browse() {
                 if (( device_proc >= 9 )); then
                     print "* Use turdus merula instead: https://sep.lol/"
                 fi
-                pause
-                return
-            ;;
-        esac
-    elif [[ $device_checkm8ipad == 1 ]]; then
-        case $device_target_build in
-            1[89]* )
-                ipsw_print_1415warn
-                print "* It is recommended to use turdus merula instead: https://sep.lol/"
-                pause
-            ;;
-            20[GH]* ) # 16.6-16.7.x only in 16.x
-                ipsw_print_16warn
-                print "* It is recommended to use turdus merula instead: https://sep.lol/"
-                pause
-            ;;
-            #22[GH]* ) :;; # fr doesnt actually work on ipados/ios 18 so this is commented out for now
-            * )
-                log "Selected IPSW ($device_target_vers) is not supported as target version."
-                print "* Latest SEP/BB is not compatible."
-                print "* Use turdus merula instead: https://sep.lol/"
                 pause
                 return
             ;;
@@ -10428,7 +10471,7 @@ menu_shsh_browse() {
     [[ ! -s "$newpath" ]] && return
     log "Selected SHSH file: $newpath"
     log "Validating..."
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         file_extract_from_archive "$val" BuildManifest.plist
         shsh_validate=$("$dir/img4tool" -s "$newpath" --verify BuildManifest.plist | tee /dev/tty | grep -c "APTicket is BAD!")
     elif [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
@@ -10471,7 +10514,7 @@ menu_flags() {
         case $device_type in
             iPhone[45]* | iPad2,[67] | iPad3,[56] ) menu_items+=("Enable disable-bbupdate flag");;
         esac
-        if (( device_proc >= 7 )); then
+        if (( device_proc > device_proc_32bit )); then
             menu_items+=("Enable skip-blob flag")
         else
             if [[ $device_actrec == 1 ]]; then
@@ -10644,7 +10687,7 @@ menu_miscutilities() {
                 fi
                 menu_items+=("Activation Records")
             fi
-            if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+            if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
                 if [[ $device_mode != "Normal" ]]; then
                     menu_items+=("Get iOS Version" "Activation Records")
                 fi
@@ -10653,13 +10696,13 @@ menu_miscutilities() {
                 esac
             fi
         fi
-        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_argmode == "none" ]]; then
+        if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_argmode == "none" ]]; then
             menu_items+=("SSH Ramdisk")
         fi
-        if [[ $device_proc != 1 ]] && (( device_proc < 11 )); then
+        if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Enable Flags")
         fi
-        if (( device_proc < 7 )); then
+        if (( device_proc <= device_proc_32bit )); then
             menu_items+=("Create Custom IPSW")
         fi
         if [[ $branch_current == "main" ]]; then
@@ -10746,7 +10789,7 @@ menu_usefulutilities() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
-        if [[ $device_proc != 1 ]] && (( device_proc < 7 )); then
+        if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
             if [[ $device_mode == "Normal" && $device_type != "iPod2,1" ]] && (( device_vers_maj >= 4 )); then
                 menu_items+=("Enter kDFU Mode")
             fi
@@ -10785,10 +10828,10 @@ menu_usefulutilities() {
                 fi
             fi
         fi
-        if (( device_proc >= 7 )) && (( device_proc <= 10 )); then
+        if (( device_proc > device_proc_32bit )) && (( device_proc <= 10 )); then
             menu_items+=("Enter pwnDFU Mode")
         fi
-        if (( device_proc <= 10 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
+        if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
             menu_items+=("SSH Ramdisk" "Update DateTime")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -10882,6 +10925,7 @@ device_update_datetime() {
 }
 
 device_pair() {
+    [[ $device_argmode == "none" ]] && return
     if [[ $device_vers_maj == 7 && $platform == "linux" ]]; then
         warn "Pressing \"Trust\" for devices on iOS 7 can have connection issues on Linux (disconnect-reconnect)."
         print "* You may select \"Don't Trust\" on the prompt as a workaround, but that can limit some functionality."
@@ -11104,7 +11148,7 @@ device_jailbreak_gilbert() {
 device_ssh_message() {
     log "Please read the message below:"
     print "* Follow these instructions to connect to the device."
-    if [[ $device_vers_maj == 10 ]] && (( device_proc < 7 )); then
+    if [[ $device_vers_maj == 10 ]] && (( device_proc <= device_proc_32bit )); then
         print "1. Jailbreak with socket: https://github.com/staturnzz/socket"
         print "  - And install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
     else
@@ -11151,7 +11195,7 @@ device_dump() {
             return
         fi
     fi
-    if [[ $device_mode == "Normal" ]] && (( device_proc < 7 )); then
+    if [[ $device_mode == "Normal" ]] && (( device_proc <= device_proc_32bit )); then
         device_buttons2
     elif [[ $device_mode == "none" ]]; then
         error "No existing $arg dump found while in no device mode. Cannot continue."
@@ -11677,7 +11721,7 @@ device_dfuipsw() {
             applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
         fi
         llb="LLB.$llb.RELEASE"
-        if (( device_proc >= 7 )); then
+        if (( device_proc > device_proc_32bit )); then
             llb+=".im4p"
         else
             llb+=".img3"
@@ -12072,7 +12116,7 @@ device_enter_ramdisk() {
         return
     fi
 
-    if (( device_proc >= 7 )); then
+    if (( device_proc > device_proc_32bit )); then
         device_ramdisk64 $1
     else
         device_ramdisk $1
@@ -12482,7 +12526,7 @@ main() {
             log "Activation records dumping is done"
             print "* The output tar file contains the plist file(s) dumped. Activation record plist is all you need for activation"
             print "* Note: Using the activation records only works on iOS 9.2.1 or lower. It will not work on iOS 9.3+"
-            if (( device_proc < 7 )); then
+            if (( device_proc <= device_proc_32bit )); then
                 print "* To stitch activation to IPSW, run Legacy iOS Kit with --activation-records flag:"
                 print "    > ./restore.sh --activation-records"
             fi
@@ -12495,7 +12539,7 @@ main() {
         "exitrecovery" )
             log "Attempting to exit Recovery mode."
             $irecovery -n
-            if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc < 7 )); then
+            if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] && (( device_proc <= device_proc_32bit )); then
                 print "* Note: For tethered downgrades, you need to boot your device using the Just Boot option. Exiting recovery mode will not work."
             fi
             if [[ $device_can_powder == 1 || $device_can_drav6 == 1 ]]; then
