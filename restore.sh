@@ -1334,7 +1334,9 @@ device_get_info() {
             print "* Device: $device_name (${device_type} - ${device_model}) in $device_mode mode"
             print "* iOS Version: $device_vers"
             print "* ECID: $device_ecid"
-            device_manufacturing
+            case $device_type in
+                iPhone2,1 | iPod2,1 ) device_manufacturing;;
+            esac
             if [[ $device_type == "iPod2,1" && $device_newbr != 2 ]]; then
                 device_newbr="$($irecovery -q | grep -c '240.5.1')"
             elif [[ $device_type == "iPhone2,1" ]]; then
@@ -7175,8 +7177,15 @@ device_ramdisk64() {
                 mv $getcomp.orig $getcomp.orig0
                 if [[ $device_ramdisk_ios8 == 1 ]]; then
                     $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/ios8/$name.patch
+                elif [[ $getcomp == "iBEC" ]]; then
+                    local bootargs="rd=md0 debug=0x2014e -v wdt=-1"
+                    if (( device_proc <= 8 )); then
+                        bootargs+=" nand-enable-reformat=1 -restore"
+                    fi
+                    "$dir/iBoot64Patcher" $getcomp.dec $getcomp.orig -b "$bootargs"
                 else
-                    $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
+                    "$dir/iBoot64Patcher" $getcomp.dec $getcomp.orig
+                    # $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
                 fi
             ;;
             "Kernelcache" )
@@ -7185,7 +7194,11 @@ device_ramdisk64() {
                     mv $getcomp.orig $getcomp.orig0
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key} -D
                 else
-                    reco+=" -P ../resources/sshrd/$name.bpatch"
+                    "$dir/img4" -i $getcomp.orig -o $getcomp.raw
+                    "$dir/KPlooshFinder" $getcomp.raw $getcomp.patched
+                    "$dir/kerneldiff" $getcomp.raw $getcomp.patched $name.bpatch
+                    reco+=" -P $name.bpatch"
+                    # reco+=" -P ../resources/sshrd/$name.bpatch"
                     if [[ $platform == "linux" && $build_id == "18"* ]] || [[ $device_proc == 10 ]]; then
                         reco+=" -J"
                     fi
@@ -8245,8 +8258,10 @@ shsh_save_onboard64() {
     echo
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
-        print "* Use the SSH Ramdisk option instead: Useful Utilities -> SSH Ramdisk"
-        print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+        if (( device_proc <= device_proc_checkm8 )); then
+            print "* Use the SSH Ramdisk option instead: Useful Utilities -> SSH Ramdisk"
+            print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
+        fi
         return
     fi
     log "Proceeding to dump onboard blobs on normal mode"
@@ -9445,6 +9460,7 @@ ipsw_hwmodel_set() {
         iPad5,[34]  ) hwmodel="ipad5b";;
         iPad6,[34]  ) hwmodel="ipad6b";;
         iPad6,[78]  ) hwmodel="ipad6d";;
+        iPad7,[56]  ) hwmodel="ipad7b";;
         *           ) hwmodel="$device_model";;
     esac
     ipsw_hwmodel="$hwmodel"
@@ -10696,7 +10712,7 @@ menu_miscutilities() {
                 esac
             fi
         fi
-        if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 && $device_argmode == "none" ]]; then
+        if (( device_proc <= device_proc_checkm8 )) && [[ $device_argmode == "none" ]]; then
             menu_items+=("SSH Ramdisk")
         fi
         if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_checkm8 )); then
@@ -10831,7 +10847,7 @@ menu_usefulutilities() {
         if (( device_proc > device_proc_32bit )) && (( device_proc <= 10 )); then
             menu_items+=("Enter pwnDFU Mode")
         fi
-        if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
+        if (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("SSH Ramdisk" "Update DateTime")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -12029,6 +12045,9 @@ menu_justboot_history() {
 }
 
 device_justboot() {
+    if (( device_proc > device_proc_32bit )); then
+        error "Just Boot is not supported for this device"
+    fi
     formatted_result=$(validate_build "$device_rd_build")
     if [[ $? != 0 ]]; then
         error "Build version input is not valid. Please try again"
@@ -12079,7 +12098,27 @@ device_justboot_specialios7() {
 }
 
 device_enter_ramdisk() {
-    if (( device_proc > 7 )); then
+    if (( device_proc > device_proc_checkm8 )); then
+        error "SSH Ramdisk is not supported for this device"
+    elif [[ $device_type == "iPad7,5" || $device_type == "iPad7,6" ]]; then
+        source "../resources/modules/ipad6-ipados17.sh"
+        input "Version Select Option"
+        print "* iOS 17 SSH ramdisk is selected by default. Choose this option if your device is running iOS 17."
+        print "* iOS 14.3 ramdisk is intended for devices running iOS 15 or earlier."
+        print "* Do not use the iOS 14.3 ramdisk on iOS 16 or later, as this will cause a bootloop."
+        select_yesno "Select Y for iOS 17, N for iOS 14.3" 1
+        if [[ $? == 1 ]]; then
+            ipad6_ipados17_ramdisk
+            return
+        fi
+    elif [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
+        warn "This option will boot an iOS 14.3 ramdisk. If your device is on iOS 16 or newer, do not continue."
+        print "* iOS 16 and newer will bootloop if you boot this ramdisk due to incompatibility. Proceed with caution."
+        select_yesno "Select Y to continue, N to exit" 0
+        if [[ $? != 1 ]]; then
+            return
+        fi
+    elif (( device_proc > 7 )); then
         :
     elif [[ $device_proc == 7 ]]; then
         input "Version Select Option"

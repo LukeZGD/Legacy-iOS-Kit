@@ -7,8 +7,7 @@
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
-- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit (A7/A8/A9/A10/A11) devices
-    - Devices that received iOS 16 and newer will only have limited functionality (e.g. sideloading) and some features like SSH ramdisk are not supported
+- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit devices
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
 - Restore supported devices to unsigned versions with SHSH blobs
@@ -26,7 +25,7 @@
 - Sideload IPA files for supported devices on Linux (and macOS)
 - Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
-- Save onboard SHSH blobs for jailbroken 64-bit devices (deverser)
+- Save onboard SHSH blobs for jailbroken 64-bit devices
     - This also saves onboard Cryptex APTicket and seed for iOS 16+ (x8A4)
 - Install [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) using SSH Ramdisk for supported 64-bit devices on iOS 14/15
 - Clear NVRAM for 32-bit devices
@@ -83,7 +82,8 @@
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
 - Restoring with SHSH blobs and using SSH Ramdisks are also supported on some 64-bit devices:
-    - iPhone 5S, 6, 6S, SE 2016, 7 (including Plus variants)
+    - iPhone 5S, 6, 6S, SE 2016, 7, 8, X (including Plus variants)
+    - iPad 5, 6, 7
     - iPad Air 1, 2
     - iPad mini 2, 3, 4
     - iPod touch 6, 7
