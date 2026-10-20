@@ -50,8 +50,8 @@ These binaries use the same source on Linux and macOS.
 | sshpass              | [sshpass](https://github.com/LukeZGD/sshpass)                            |
 | restoredpatcher     | [Gist](https://gist.github.com/LukeZGD/d7c529aa5ef6e665cfbba5053ea7dc5b) |
 | ticket               | [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW)                    |
-| trustcache          | [trustcache](https://github.com/CRKatri/trustcache) |
-| tsschecker           | [tsschecker](https://github.com/1Conan/tsschecker/releases/tag/444)      |
+| trustcache          | [trustcache](https://github.com/LukeZGD/trustcache) |
+| tsschecker           | [tsschecker](https://github.com/1Conan/tsschecker/releases/tag/440)      |
 | validate             | [powdersn0w_pub](https://github.com/LukeZGD/powdersn0w_pub)              |
 | xpwntool             | [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW)                    |
 

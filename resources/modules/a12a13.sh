@@ -151,40 +151,6 @@ a12a13_values_init() {
     # esac
 }
 
-ipsw_get_ramdisk_identity() {
-    local install_type="$1"
-    local build_manifest="$2"
-    local identity_class identity_variant
-
-    if [[ "$install_type" != "Erase" && "$install_type" != "Upgrade" ]]; then
-        warn "Install type must be Erase or Upgrade."
-        return 1
-    fi
-
-    local identity=0
-
-    while true; do
-        identity_class=$($PlistBuddy -c "Print BuildIdentities:${identity}:Info:DeviceClass" "$build_manifest" | tr -d '"') || break
-        identity_variant=$($PlistBuddy -c "Print BuildIdentities:${identity}:Info:Variant" "$build_manifest" | tr -d '"') || break
-
-        if [[ "$identity_class" == "${device_model}ap" ]] &&
-        [[ "$identity_variant" =~ ^(Customer|Developer)\ ${install_type}\ Install ]]; then
-            log "Found matching BuildIdentity: $identity"
-            break
-        fi
-
-        identity=$((identity + 1))
-    done
-
-    if [[ "$identity_class" != "${device_model}ap" ]] ||
-       [[ ! "$identity_variant" =~ ^(Customer|Developer)\ ${install_type}\ Install ]]; then
-        warn "No matching BuildIdentity found."
-        return 1
-    fi
-
-    target_identity=$identity
-}
-
 device_a12a13_ipsw_tethered() {
     ipsw_custom="../${ipsw_prefix}_${device_target_vers}_${device_target_build}_CustomT"
     boot_folder="../saved/${device_type}/boot_${device_target_vers}_${device_target_build}"
@@ -260,7 +226,6 @@ device_a12a13_ipsw_tethered() {
     if (( target_vers_maj >= 16 )); then
         cryptex_app="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:Cryptex1,AppOS:Info:Path" bm_target.plist | tr -d '"')"
         cryptex_os="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:Cryptex1,SystemOS:Info:Path" bm_target.plist | tr -d '"')"
-        chmod 644 tmp2/BuildManifest.plist
         log "Modify base BuildManifest with KERNEL2: $KERNEL2"
         env KERNEL2="$KERNEL2" IDENTITY="$base_identity" python3 <<'PY'
 import os
@@ -433,15 +398,14 @@ PY
 
     log "trustcache patch"
     "$dir/img4" -i tmp1/Firmware/$ramdisk_dmg_name.trustcache -o trustcache.raw
+    "$dir/trustcache" append trustcache.raw asr_patched
     if (( target_vers_maj >= 16 )); then
         "$dir/trustcache" append trustcache.raw restored_patch
-        "$dir/trustcache" append trustcache.raw asr_patched
         "$dir/trustcache" append trustcache.raw libimg4.patch
     else
         if [[ $device_type != "iPhone12,8" ]]; then
             "$dir/trustcache" append trustcache.raw restored_patch
         fi
-        "$dir/trustcache" append trustcache.raw asr_patched
         if (( target_vers_maj >= 14 )); then
             "$dir/trustcache" append trustcache.raw libimg4.patch
         fi

@@ -132,6 +132,7 @@ List of options:
     --no-device               Enable no device mode
     --old-menu                Use the old menus with number select and y/n
     --pwn                     Pwn the connected device
+    --skip-verify             Skip verification checks for IPSW selection
     --sshrd                   Enter SSH ramdisk mode
     --sshrd-menu              Re-enter SSH ramdisk menu (device must be in SSH ramdisk mode)
 
@@ -3361,6 +3362,15 @@ ipsw_verify() {
     local IPSWSHA1L
     local type="$device_type"
     [[ $3 == "special" ]] && type="$device_type_special"
+    if [[ $ipsw_skip_verify == 1 ]]; then
+        if [[ $build_id == "$device_base_build" ]]; then
+            ipsw_base_validate=0
+        else
+            ipsw_isbeta=
+            ipsw_validate=0
+        fi
+        return
+    fi
 
     log "Getting SHA1 hash for $ipsw_dl.ipsw..."
     IPSWSHA1L=$($sha1sum "${ipsw_dl//\\//}.ipsw" | awk '{print $1}')
@@ -6998,13 +7008,48 @@ restore_usepwndfu64_option() {
     fi
 }
 
+ipsw_get_ramdisk_identity() {
+    local install_type="$1"
+    local build_manifest="$2"
+    local identity_class identity_variant
+
+    if [[ "$install_type" != "Erase" && "$install_type" != "Upgrade" ]]; then
+        warn "Install type must be Erase or Upgrade."
+        return 1
+    fi
+
+    local identity=0
+
+    while true; do
+        identity_class=$($PlistBuddy -c "Print BuildIdentities:${identity}:Info:DeviceClass" "$build_manifest" | tr -d '"') || break
+        identity_variant=$($PlistBuddy -c "Print BuildIdentities:${identity}:Info:Variant" "$build_manifest" | tr -d '"') || break
+
+        if [[ "$identity_class" == "${device_model}ap" ]] &&
+        [[ "$identity_variant" =~ ^(Customer|Developer)\ ${install_type}\ Install ]]; then
+            log "Found matching BuildIdentity: $identity"
+            break
+        fi
+
+        identity=$((identity + 1))
+    done
+
+    if [[ "$identity_class" != "${device_model}ap" ]] ||
+       [[ ! "$identity_variant" =~ ^(Customer|Developer)\ ${install_type}\ Install ]]; then
+        warn "No matching BuildIdentity found."
+        return 1
+    fi
+
+    target_identity=$identity
+}
+
 ipsw_prepare_ipx() {
     restore_usepwndfu64=1
     log "Extracting BuildManifest.plist from IPSW"
     file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
+    ipsw_get_ramdisk_identity Erase BuildManifest.plist
     log "Get paths"
-    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
-    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
+    local kernelcache=$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:KernelCache:Info:Path" BuildManifest.plist | tr -d '"')
+    local restoreramdisk=$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')
     log "KernelCache: $kernelcache"
     log "RestoreRamDisk: $restoreramdisk"
 
@@ -8519,6 +8564,9 @@ menu_print_info() {
     fi
     if [[ $ipsw_jailbreak == 1 ]] && (( device_proc <= device_proc_32bit )); then
         warn "Jailbreak flag detected. Jailbreak option enabled."
+    fi
+    if [[ $ipsw_skip_verify == 1 ]]; then
+        warn "IPSW verification is disabled by the skip-verify flag."
     fi
     if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
         case $device_proc in
@@ -10583,7 +10631,7 @@ menu_flags() {
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod[34],1 ) menu_items+=("Enable skip-first flag");;
         esac
-        menu_items+=("Enable no-finder flag" "Go Back")
+        menu_items+=("Enable no-finder flag" "Enable skip-verify flag" "Go Back")
         menu_print_info
         print " > Main Menu > Misc Utilities > Enable Flags"
         input "Select an option:"
@@ -10663,6 +10711,17 @@ menu_flags() {
                 select_yesno "Do you want to enable the skip-first flag?" 0
                 if [[ $? != 0 ]]; then
                     ipsw_skip_first=1
+                    back=1
+                fi
+            ;;
+            "Enable skip-verify flag" )
+                warn "This will enable the --skip-verify flag."
+                print "* This will skip verification checks for selecting IPSWs."
+                print "* Do not enable this if you do not know what you are doing."
+                local opt
+                select_yesno "Do you want to enable the skip-verify flag?" 0
+                if [[ $? != 0 ]]; then
+                    ipsw_skip_verify=1
                     back=1
                 fi
             ;;
@@ -12639,6 +12698,7 @@ for i in "$@"; do
         "--no-color"        ) no_color=1;;
         "--no-finder"       ) no_finder=1;;
         "--old-menu"        ) menu_old=1;;
+        "--skip-verify"     ) ipsw_skip_verify=1;;
 
         # options for 32-bit devices
         "--activation-records") device_actrec=1;;

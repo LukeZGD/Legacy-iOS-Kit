@@ -103,9 +103,10 @@
     - iPad 2, 3, 4, mini 1
     - iPod touch 3, 4, 5
 - Restoring **tethered** to select iOS versions is also supported on the following 64-bit devices:
-    - iPhone XS, XR, 11 (including Pro/Max variants)
+    - iPhone XS, XR, 11, SE 2020 (including Pro/Max variants)
     - iPad mini 5
     - iPad Air 3
+    - See the ["A12/A13 Tethered" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/A12-A13-Tethered)
 - Restoring to other unsigned versions without blobs is supported on the following devices and target version range:
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
