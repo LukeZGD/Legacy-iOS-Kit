@@ -152,7 +152,6 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
     --ra1n-timeout=<value>    Set RA1N_ABORT_TIMEOUT for litera1n A6(X) (recommended: 1000000)
     --skip-first              Skip first restore and flash part 2 IPSW only for powdersn0w 4.2.x and lower
-    --skip-ibss               Assume that pwned iBSS has already been sent to the device
 
 For 64-bit checkm8 devices compatible with pwned restores:
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
@@ -184,15 +183,21 @@ zip() {
 file_extract() {
     local archive="$1"
     local dest="$2"
+    local exclude=
+    [[ $3 == "exclude" ]] && exclude="$4"
     local arr=()
+
     if [[ $platform == "macos" ]]; then
         arr+=("-xzvf" "$archive")
         [[ -n $dest ]] && arr+=("-C" "$dest")
+        [[ -n $exclude ]] && arr+=("--exclude=$exclude")
         tar "${arr[@]}"
         return
     fi
+
     arr+=("-o" "$archive")
     [[ -n $dest ]] && arr+=("-d" "$dest")
+    [[ -n $exclude ]] && arr+=("-x" "$exclude")
     unzip "${arr[@]}"
 }
 
@@ -2368,18 +2373,28 @@ device_enter_mode() {
                 return
             fi
 
-            if [[ $device_proc == 5 ]]; then
+            if [[ $device_proc == 5 || $device_usbliter8 == 1 ]]; then
+                local exploit="checkm8-a5"
+                local processor="A5(X)"
+                local hardware="an Raspberry Pi Pico or Arduino+USB Host Shield"
+                if [[ $device_usbliter8 == 1 ]]; then
+                    exploit="usbliter8"
+                    processor="A12/A13"
+                    hardware="a compatible RP2350/Pi Pico 2 board"
+                fi
                 if [[ $device_mode != "DFU" ]]; then
                     device_enter_mode DFU
-                    log "Device is now in DFU mode. Now put your device in PWNED DFU mode using checkm8-a5."
+                    log "Device is now in DFU mode. Now put your device in PWNED DFU mode using $exploit."
                 fi
                 echo
-                print "* DFU mode for A5(X) device - Make sure that your device is in PWNED DFU mode."
-                print "* You need to have an Raspberry Pi Pico or Arduino+USB Host Shield for checkm8-a5."
-                print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
-                echo
-                print "* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD."
-                echo
+                print "* DFU mode for $processor device - Make sure that your device is in PWNED DFU mode."
+                print "* You need to have $hardware for $exploit."
+                print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/$exploit"
+                if [[ $device_proc == 5 ]]; then
+                    echo
+                    print "* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD."
+                    echo
+                fi
                 log "After putting your device in PWNED DFU, plug it back in your PC/Mac before pressing Enter/Return."
                 pause
                 echo
@@ -2388,6 +2403,8 @@ device_enter_mode() {
                 if [[ -n $device_pwnd ]]; then
                     log "Found device in pwned DFU mode."
                     print "* Pwned: $device_pwnd"
+                elif [[ $device_usbliter8 == 1 ]]; then
+                    error "$processor device is NOT in PWNED DFU mode. Cannot continue."
                 else
                     local error_msg=$'* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
@@ -2398,9 +2415,9 @@ device_enter_mode() {
                     error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
                     error_msg+=$'\n* For more info about kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
                     error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-a5x-pwndfu-mode-with-arduino-and-usb-host-shield'
-                    error "32-bit A5 device is NOT in PWNED DFU mode. Already pwned iBSS mode?" "$error_msg"
+                    error "$processor device is NOT in PWNED DFU mode. Already pwned iBSS mode?" "$error_msg"
                 fi
-                device_send_unpacked_ibss
+                [[ $device_proc == 5 ]] && device_send_unpacked_ibss
                 return
             fi
 
@@ -3201,13 +3218,13 @@ shsh_save() {
     local generator cryptex_generator apnonce cryptex_apnonce
 
     case $1 in
-        "apnonce" ) apnonce=$2;;
+        "apnonce" ) apnonce="$($irecovery -q | grep "NONC" | cut -c 7-)";;
         "version" ) version=$2;;
         "bbcheck" ) bbcheck=1;;
     esac
 
-    if [[ $version == "$device_latest_vers" || $version == "4.1" ]]; then
-        if [[ $version != "4.1" ]]; then
+    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "26.6.1" ]]; then
+        if [[ $version == "$device_latest_vers" ]]; then
             build_id="$device_latest_build"
         fi
         buildmanifest="../saved/$device_type/$build_id.plist"
@@ -3294,7 +3311,7 @@ shsh_save() {
     elif [[ -z "$shsh_path" ]]; then
         error "Saving $version blobs failed. Please run the script again"
     fi
-    if [[ -z $apnonce ]]; then
+    if [[ $1 != "apnonce" ]]; then
         cp "$shsh_path" ../saved/shsh/
     fi
     log "Successfully saved $version blobs: $shsh_path"
@@ -6156,7 +6173,9 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
-    if [[ $device_proc == 8 || $device_latest_vers == "15"* || $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
+    if [[ $device_proc == 8 || $device_latest_vers == "15"* ||
+          $device_latest_vers == "16"* || $device_checkm8ipad == 1 ||
+          $device_usbliter8 == 1 ]]; then
         return
     elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
         build_id="$device_use_build"
@@ -6737,7 +6756,7 @@ restore_prepare() {
             elif [[ $target_vers_maj == 10 && $device_target_tethered == 1 ]]; then
                 restore_kuroutadori
             else
-                restore_futurerestore --use-pwndfu
+                restore_futurerestore --use-pwndfu --no-ibss
             fi
         ;;
 
@@ -6753,7 +6772,7 @@ restore_prepare() {
                     iBEC=$iBECb
                 fi
                 restore_prepare_pwnrec64
-                shsh_save apnonce $($irecovery -q | grep "NONC" | cut -c 7-)
+                shsh_save apnonce
                 restore_futurerestore --skip-ibec
             elif [[ $device_target_vers == "$device_latest_vers" ]]; then
                 restore_latest
@@ -8527,11 +8546,6 @@ menu_print_info() {
         elif [[ $device_actrec == 1 ]]; then
             warn "activation-records flag detected. Activation Records stitching enabled."
         fi
-        if [[ $device_pwnrec == 1 ]]; then
-            warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
-        elif [[ $device_skip_ibss == 1 ]]; then
-            warn "Skip iBSS flag detected. Assuming device is in pwned iBSS mode."
-        fi
         if [[ $ipsw_gasgauge_patch == 1 ]]; then
             warn "gasgauge-patch/multipatch flag detected. multipatch enabled."
         fi
@@ -8548,6 +8562,9 @@ menu_print_info() {
         if [[ $restore_usepwndfu64 == 1 ]]; then
             warn "use-pwndfu flag detected. futurerestore will have --use-pwndfu enabled."
         fi
+    fi
+    if [[ $device_pwnrec == 1 ]]; then
+        warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -8579,11 +8596,11 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if (( device_proc <= device_proc_32bit )); then
                 menu_items+=("Jailbreak Device")
-                if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
-                    case $device_mode in
-                        "Recovery" | "DFU" ) menu_items+=("Just Boot");;
-                    esac
-                fi
+            fi
+            if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || [[ $device_usbliter8 == 1 ]]; then
+                case $device_mode in
+                    "Recovery" | "DFU" ) menu_items+=("Just Boot");;
+                esac
             fi
             if [[ $device_unactivated == 1 ]]; then
                 menu_items+=("Attempt Activation")
@@ -8630,7 +8647,14 @@ menu_main() {
             "Useful Utilities" ) menu_usefulutilities;;
             "Attempt Activation" ) device_activate;;
             "Exit Recovery Mode" ) mode="exitrecovery";;
-            "Just Boot" ) menu_justboot;;
+            "Just Boot" )
+                if [[ $device_usbliter8 == 1 ]]; then
+                    source "../resources/modules/a12a13.sh"
+                    menu_justboot_a12a13
+                else
+                    menu_justboot
+                fi
+            ;;
             "Pair Device" ) device_pair;;
             "Install TrollStore" )
                 print "* This option will install TrollStore to your device using TrollRestore."
@@ -9033,6 +9057,9 @@ menu_shsh() {
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Latest iOS ($device_latest_vers)" "Latest iOS ($device_latest_vers) (Baseband Check)")
+        if [[ $device_latest_vers == 27* ]]; then
+            menu_items+=("iOS 26.6.1 RC")
+        fi
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
@@ -9067,6 +9094,10 @@ menu_shsh() {
             "Latest iOS"* )
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latset_build"
+            ;;
+            "iOS 26.6.1 RC" )
+                device_target_vers="26.6.1"
+                device_target_build="23G82"
             ;;
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
@@ -9261,7 +9292,7 @@ menu_restore() {
            (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Other (Use SHSH Blobs)")
         fi
-        if (( device_proc <= device_proc_32bit )); then
+        if (( device_proc <= device_proc_32bit )) || [[ $device_usbliter8 == 1 ]]; then
             menu_items+=("Other (Tethered)")
         fi
         if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
@@ -9299,6 +9330,14 @@ menu_restore() {
         case $selected in
             "" ) :;;
             "Go Back" ) back=1;;
+            "Other (Tethered)" )
+                if [[ $device_usbliter8 == 1 ]]; then
+                    source "../resources/modules/a12a13.sh"
+                    menu_ipsw_a12a13_tethered "$selected" "$1"
+                else
+                    menu_ipsw "$selected" "$1"
+                fi
+            ;;
             "Other (Custom IPSW)" ) restore_customipsw_confirm;;
             "DFU IPSW" ) device_dfuipsw_confirm $1;;
             "More versions" ) menu_restore_more "$1";;
@@ -9649,7 +9688,7 @@ menu_ipsw() {
                     iPod3,1 ) lo=3.1.1; hi=5.1;;
                     iPod4,1 ) lo=4.1; hi=6.1.5;;
                 esac
-                print "* Any iOS version from $lo to $hi is supported"
+                print "* Supported iOS versions: $lo to $hi"
             fi
             echo
             local text2="(iOS $base_vers)"
@@ -10081,6 +10120,7 @@ ipsw_version_set() {
 
     log "Getting version from IPSW"
     file_extract_from_archive "$newpath.ipsw" Restore.plist
+    chmod 644 Restore.plist
     if [[ $platform == "macos" ]]; then
         rm -f BuildVer Version
         plutil -extract 'ProductVersion' xml1 Restore.plist -o Version
@@ -10539,9 +10579,6 @@ menu_flags() {
                 menu_items+=("Enable activation-records flag")
             fi
             menu_items+=("Enable jailbreak flag" "Enable multipatch flag")
-            if (( device_proc >= 5 )); then
-                menu_items+=("Enable skip-ibss flag")
-            fi
         fi
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod[34],1 ) menu_items+=("Enable skip-first flag");;
@@ -10591,17 +10628,6 @@ menu_flags() {
                     back=1
                 fi
             ;;
-            "Enable skip-ibss flag" )
-                warn "This will enable the --skip-ibss flag."
-                print "* This will assume that a pwned iBSS has already been sent to the device."
-                print "* Do not enable this if you do not know what you are doing."
-                local opt
-                select_yesno "Do you want to enable the skip-ibss flag?" 0
-                if [[ $? != 0 ]]; then
-                    device_skip_ibss=1
-                    back=1
-                fi
-            ;;
             "Enable jailbreak flag" )
                 warn "This will enable the --jailbreak flag."
                 print "* This will enable the jailbreak option for the custom IPSW."
@@ -10634,7 +10660,7 @@ menu_flags() {
                 print "* This will skip first restore and flash part 2 IPSW only for powdersn0w 4.2.x and lower."
                 print "* Do not enable this if you do not know what you are doing."
                 local opt
-                select_yesno "Do you want to enable the skip-ibss flag?" 0
+                select_yesno "Do you want to enable the skip-first flag?" 0
                 if [[ $? != 0 ]]; then
                     ipsw_skip_first=1
                     back=1
@@ -10718,7 +10744,7 @@ menu_miscutilities() {
         if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Enable Flags")
         fi
-        if (( device_proc <= device_proc_32bit )); then
+        if (( device_proc <= device_proc_32bit )) || [[ $device_usbliter8 == 1 ]]; then
             menu_items+=("Create Custom IPSW")
         fi
         if [[ $branch_current == "main" ]]; then
@@ -12629,7 +12655,6 @@ for i in "$@"; do
         "--pwned-recovery"  ) device_pwnrec=1;;
         "--ra1n-timeout="*  ) device_ra1n_timeout="${i#*=}";;
         "--skip-first"      ) ipsw_skip_first=1;;
-        "--skip-ibss"       ) device_skip_ibss=1;;
 
         # options for 64-bit devices
         "--skip-blob"       ) restore_useskipblob=1;;

@@ -7,7 +7,7 @@
 - **Read the ["Troubleshooting" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting) for tips, frequent questions, and troubleshooting**
 
 ## Features
-- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit devices
+- Legacy iOS Kit supports all 32-bit iOS devices, and some 64-bit devices (A7-A13)
     - Newer devices only have partial support with limited functionality (e.g. sideloading and other utilities only)
 - Restore to signed OTA versions (iOS 8.4.1 and/or 6.1.3) on A5/A6 devices
 - Restore to iOS 10.3.3 (signed OTA version) on supported A7 devices
@@ -102,6 +102,10 @@
     - iPhone 4 (3,2 and 3,3), 4S, 5, 5C
     - iPad 2, 3, 4, mini 1
     - iPod touch 3, 4, 5
+- Restoring **tethered** to select iOS versions is also supported on the following 64-bit devices:
+    - iPhone XS, XR, 11 (including Pro/Max variants)
+    - iPad mini 5
+    - iPad Air 3
 - Restoring to other unsigned versions without blobs is supported on the following devices and target version range:
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
     - Lowest downgradable version is 2.0. Going to 1.x does not work
@@ -115,7 +119,6 @@
     - iPhone 3GS - All release versions from 3.0 to 6.1.6 are supported
     - Other devices - All release versions from 3.1.3 to 9.3.4 are supported, with some exceptions
     - For more details, go to the ["Jailbreaking" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Jailbreaking)
-
 
 ## Supported OS versions/distros
 
@@ -206,3 +209,4 @@
     - [ipad-1-ios-7](https://github.com/amy-and-nicole/ipad-1-ios-7) - amy-and-nicole and pwnerblu, also uses stuff from SundanceInH2A
 - iPod touch 4 unofficial upgrades: fixes contributions by [pwnerblu](https://github.com/pwnerblu) and [Peterdobby](https://github.com/Peterdobby/)
 - [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6X pwning on Linux, and iOS 10 tethered restores)
+- [surrealra1n](https://github.com/pwnerblu/surrealra1n) - pwnerblu and contributors (A12–A13 tethered downgrade support and related functionality are heavily based on this project)
