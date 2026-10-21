@@ -215,7 +215,7 @@ device_a12a13_ipsw_tethered() {
     log "Target identity: $target_identity"
 
     local fs_dmg_name="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:OS:Info:Path" bm_target.plist | tr -d '"')"
-    local fs_dmg_18_name="$($PlistBuddy -c "Print BuildIdentities:$base_identity:Manifest:OS:Info:Path" bm_base.plist | tr -d '"')"
+    local fs_dmg_name_18="$($PlistBuddy -c "Print BuildIdentities:$base_identity:Manifest:OS:Info:Path" bm_base.plist | tr -d '"')"
     local ramdisk_dmg_name="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:RestoreRamDisk:Info:Path" bm_target.plist | tr -d '"')"
     local ramdisk_dmg_name_18="$($PlistBuddy -c "Print BuildIdentities:$base_identity:Manifest:RestoreRamDisk:Info:Path" bm_base.plist | tr -d '"')"
 
@@ -266,8 +266,8 @@ PY
     else
         cp -v tmp1/Firmware/$IOFW tmp2/Firmware/$IOFW
         cp -v tmp1/Firmware/ave/$AVE tmp2/Firmware/ave/$AVE
-        cp -v tmp1/Firmware/$fs_dmg_name.root_hash tmp2/Firmware/$fs_dmg_18_name.root_hash
-        cp -v tmp1/Firmware/$fs_dmg_name.mtree tmp2/Firmware/$fs_dmg_18_name.mtree
+        cp -v tmp1/Firmware/$fs_dmg_name.root_hash tmp2/Firmware/$fs_dmg_name_18.root_hash
+        cp -v tmp1/Firmware/$fs_dmg_name.mtree tmp2/Firmware/$fs_dmg_name_18.mtree
     fi
     if (( target_vers_maj >= 16 )); then
         case $device_type in
@@ -285,8 +285,8 @@ PY
     fi
 
     log "Transferring rootfs, this will take a while"
-    cp -v tmp1/$fs_dmg_name tmp2/$fs_dmg_18_name # replace rootfs in the IPSW
-    cp -v tmp1/Firmware/$fs_dmg_name.trustcache tmp2/Firmware/$fs_dmg_18_name.trustcache
+    cp -v tmp1/$fs_dmg_name tmp2/$fs_dmg_name_18 # replace rootfs in the IPSW
+    cp -v tmp1/Firmware/$fs_dmg_name.trustcache tmp2/Firmware/$fs_dmg_name_18.trustcache
     cp -v tmp1/Firmware/$ramdisk_dmg_name.trustcache tmp2/Firmware/$ramdisk_dmg_name_18.trustcache
     if (( target_vers_maj >= 16 )); then
         log "Transferring cryptex stuff, this will take a while"
@@ -361,7 +361,7 @@ PY
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
             cp ../saved/$device_type/$ramdisk_download_name .
         else
-            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
+            download_with_pzb $ramdisk_url $ramdisk_download_name
             cp $ramdisk_download_name ../saved/$device_type/
         fi
         "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
@@ -383,7 +383,7 @@ PY
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
             cp ../saved/$device_type/$ramdisk_download_name .
         else
-            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
+            download_with_pzb $ramdisk_url $ramdisk_download_name
             cp $ramdisk_download_name ../saved/$device_type/
         fi
         "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
@@ -527,7 +527,7 @@ menu_ipsw_a12a13_tethered() {
         echo
 
         local lo="14.0 beta 4"
-        local hi="16.0"
+        local hi="16.0.3"
         [[ $device_proc == 13 ]] && lo="13.4"
 
         if [[ -n $ipsw_path ]]; then
@@ -544,7 +544,9 @@ menu_ipsw_a12a13_tethered() {
                     13 ) warn "Make sure the device has been restored and activated on iOS 13.x or iOS 14 beta 4 before proceeding.";;
                 esac
                 print "* This step is required for the tethered iOS 14 or 15 installation to be usable."
-            elif (( target_vers_maj >= 16 )) && [[ $device_target_vers != 16.0 ]]; then
+            elif (( target_vers_maj > 16 || target_vers_maj < 13 )) ||    # iOS 12 and 17+
+                 (( target_vers_maj == 16 && target_vers_min > 0 )) ||    # iOS 16.1+
+                 (( target_vers_maj == 13 && target_vers_min < 4 )); then # iOS 13.3.1-
                 warn "The selected IPSW version is not supported. Select a supported IPSW to continue."
                 print "* Supported iOS versions: $lo to $hi"
             fi
@@ -578,11 +580,11 @@ menu_ipsw_a12a13_tethered() {
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
             if [[ $device_proc == 13 ]]; then
                 case $device_target_vers in
-                    13.[4567]* | 1[45].* | 16.0 ) menu_items+=("$start");;
+                    13.[4567]* | 1[45].* | 16.0* ) menu_items+=("$start");;
                 esac
             else
                 case $device_target_vers in
-                    1[45].* | 16.0 ) menu_items+=("$start");;
+                    1[45].* | 16.0* ) menu_items+=("$start");;
                 esac
             fi
         fi

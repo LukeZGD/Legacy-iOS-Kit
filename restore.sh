@@ -1998,6 +1998,12 @@ device_dfuhelper() {
     rec=" recovery mode"
     arg1="$1"
 
+    case $device_type in
+        iPhone1,* | iPod1,1 ) :;;
+        iPad1,1 | iPad1[12]* ) :;;
+        iPhone1* | iPad[81]* ) device_enter_mode Recovery;;
+    esac
+
     if [[ $1 == "norec" || $mode == "device_dfuhelper" ]]; then
         rec=""
     fi
