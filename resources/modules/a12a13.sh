@@ -317,6 +317,7 @@ PY
 
     log "Starting ramdisk stuff"
     "$dir/img4" -i tmp1/$ramdisk_dmg_name -o ramdisk.raw
+    log "asr patch"
     "$dir/hfsplus" ramdisk.raw extract usr/sbin/asr asr
     "$dir/asr64_patcher" asr asr_patched
     "$dir/ldid" -e asr > ents.plist
@@ -325,6 +326,7 @@ PY
     "$dir/hfsplus" ramdisk.raw add asr_patched usr/sbin/asr
     "$dir/hfsplus" ramdisk.raw chmod 100755 usr/sbin/asr
     if (( target_vers_maj >= 14 )); then
+        log "libimg4 patch"
         "$dir/hfsplus" ramdisk.raw extract usr/lib/libimg4.dylib libimg4.dylib
         "$dir/libimg4_patcher" libimg4.dylib libimg4.patch
         "$dir/ldid" -Sents.plist libimg4.patch
@@ -359,10 +361,13 @@ PY
     log "restored patch"
     if (( target_vers_maj >= 16 )); then
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
-            cp ../saved/$device_type/$ramdisk_download_name .
+            cp -v ../saved/$device_type/$ramdisk_download_name .
         else
-            download_with_pzb $ramdisk_url $ramdisk_download_name
-            cp $ramdisk_download_name ../saved/$device_type/
+            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
+            cp -v $ramdisk_download_name ../saved/$device_type/
+        fi
+        if [[ ! -s $ramdisk_download_name ]]; then
+            error "Failed to download ramdisk for restored patch. Please run the script again"
         fi
         "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
         "$dir/hfsplus" ramdisk2.raw extract usr/local/bin/$restored restored_external
@@ -381,10 +386,13 @@ PY
 
     elif [[ $device_type == "iPhone11,"* || $device_type == "iPhone12,"* ]] && [[ $device_type != "iPhone12,8" ]]; then
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
-            cp ../saved/$device_type/$ramdisk_download_name .
+            cp -v ../saved/$device_type/$ramdisk_download_name .
         else
-            download_with_pzb $ramdisk_url $ramdisk_download_name
-            cp $ramdisk_download_name ../saved/$device_type/
+            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
+            cp -v $ramdisk_download_name ../saved/$device_type/
+        fi
+        if [[ ! -s $ramdisk_download_name ]]; then
+            error "Failed to download ramdisk for restored patch. Please run the script again"
         fi
         "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
         "$dir/hfsplus" ramdisk2.raw extract usr/local/bin/$restored restored_external
