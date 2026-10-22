@@ -9111,9 +9111,9 @@ menu_shsh() {
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Latest iOS ($device_latest_vers)" "Latest iOS ($device_latest_vers) (Baseband Check)")
-        if [[ $device_latest_vers == 27* ]]; then
-            menu_items+=("iOS 26.6.1 RC")
-        fi
+        # if [[ $device_latest_vers == 27* ]]; then
+        #     menu_items+=("iOS 26.6.1 RC")
+        # fi
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
