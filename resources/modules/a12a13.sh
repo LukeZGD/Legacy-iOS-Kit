@@ -317,22 +317,27 @@ PY
 
     log "Starting ramdisk stuff"
     "$dir/img4" -i tmp1/$ramdisk_dmg_name -o ramdisk.raw
+    mkdir -p rd
+    7z x ramdisk.raw -o./rd/
+    mv rd/*/* rd/
+    rm -rf rd/*RamDisk/ ramdisk.raw
+    sudo chmod 644 rd/usr/lib/* rd/usr/lib/system/* rd/usr/lib/swift/* rd/usr/lib/log/* rd/usr/lib/updaters/* rd/System/Library/CoreServices/*
+    chmod 755 rd/sbin/*
+
     log "asr patch"
-    "$dir/hfsplus" ramdisk.raw extract usr/sbin/asr asr
+    cp -v rd/usr/sbin/asr asr
     "$dir/asr64_patcher" asr asr_patched
     "$dir/ldid" -e asr > ents.plist
     "$dir/ldid" -Sents.plist asr_patched
-    "$dir/hfsplus" ramdisk.raw rm usr/sbin/asr
-    "$dir/hfsplus" ramdisk.raw add asr_patched usr/sbin/asr
-    "$dir/hfsplus" ramdisk.raw chmod 100755 usr/sbin/asr
+    chmod +x asr_patched
+    cp -v asr_patched rd/usr/sbin/asr
     if (( target_vers_maj >= 14 )); then
         log "libimg4 patch"
-        "$dir/hfsplus" ramdisk.raw extract usr/lib/libimg4.dylib libimg4.dylib
+        cp -v rd/usr/lib/libimg4.dylib libimg4.dylib
         "$dir/libimg4_patcher" libimg4.dylib libimg4.patch
         "$dir/ldid" -Sents.plist libimg4.patch
-        "$dir/hfsplus" ramdisk.raw rm usr/lib/libimg4.dylib
-        "$dir/hfsplus" ramdisk.raw add libimg4.patch usr/lib/libimg4.dylib
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/lib/libimg4.dylib
+        chmod +x libimg4.patch
+        cp -v libimg4.patch rd/usr/lib/libimg4.dylib
     fi
 
     local ramdisk_download_name ramdisk_url
@@ -380,9 +385,8 @@ PY
         esac
         "$dir/ldid" -e restored_external > ents.plist
         "$dir/ldid" -Sents.plist restored_patch
-        "$dir/hfsplus" ramdisk.raw rm usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw add restored_patch usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/local/bin/$restored
+        chmod +x restored_patch
+        cp -v restored_patch rd/usr/local/bin/$restored
 
     elif [[ $device_type == "iPhone11,"* || $device_type == "iPhone12,"* ]] && [[ $device_type != "iPhone12,8" ]]; then
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
@@ -399,9 +403,8 @@ PY
         "$dir/ipx_restored_patcher" restored_external restored_patch
         "$dir/ldid" -e restored_external > ents.plist
         "$dir/ldid" -Sents.plist restored_patch
-        "$dir/hfsplus" ramdisk.raw rm usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw add restored_patch usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/local/bin/$restored
+        chmod +x restored_patch
+        cp -v restored_patch rd/usr/local/bin/$restored
     fi
 
     log "trustcache patch"
@@ -421,6 +424,8 @@ PY
     "$dir/img4" -i trustcache.raw -o tmp2/Firmware/$ramdisk_dmg_name_18.trustcache -A -T rtsc
 
     log "Finalizing"
+    genisoimage -D -V "RamDisk" -no-pad -r -apple -o ramdisk.iso rd/*
+    "$dir/dmg" dmg ramdisk.iso ramdisk.raw
     "$dir/img4" -i ramdisk.raw -o tmp2/$ramdisk_dmg_name_18 -A -T rdsk
     rm -rf tmp1/
     pushd tmp2
