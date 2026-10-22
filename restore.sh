@@ -12136,7 +12136,12 @@ menu_justboot_history() {
 }
 
 device_justboot() {
-    if (( device_proc > device_proc_32bit )); then
+    if [[ $device_usbliter8 == 1 ]]; then
+        source "../resources/modules/a12a13.sh"
+        device_justboot_a12a13
+        return
+
+    elif (( device_proc > device_proc_32bit )); then
         error "Just Boot is not supported for this device"
     fi
     formatted_result=$(validate_build "$device_rd_build")

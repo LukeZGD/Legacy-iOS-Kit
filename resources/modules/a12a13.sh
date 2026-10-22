@@ -452,6 +452,14 @@ device_a12a13_restore_tethered() {
 }
 
 device_justboot_a12a13() {
+    if [[ -z $boot_folder && -n $device_rd_build ]]; then
+        local boot_matches=(../saved/$device_type/boot_*$device_rd_build)
+        if [[ ! -d ${boot_matches[0]} ]]; then
+            error "Unable to find boot folder for $device_type-$device_rd_build"
+        fi
+        device_selectedboot=$(basename ${boot_matches[0]})
+        log "Found boot folder: $device_selectedboot"
+    fi
     device_enter_mode pwnDFU
     $primepwn ../saved/$device_type/$device_selectedboot/iBSS.boot
 }
