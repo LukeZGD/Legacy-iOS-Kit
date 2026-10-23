@@ -318,11 +318,11 @@ PY
     log "Starting ramdisk stuff"
     "$dir/img4" -i tmp1/$ramdisk_dmg_name -o ramdisk.raw
     mkdir -p rd
-    7z x ramdisk.raw -o./rd/
+    7z x ramdisk.raw -o./rd/ -snld
     mv rd/*/* rd/
     rm -rf rd/*RamDisk/ ramdisk.raw
-    sudo chmod 644 rd/usr/lib/* rd/usr/lib/system/* rd/usr/lib/swift/* rd/usr/lib/log/* rd/usr/lib/updaters/* rd/System/Library/CoreServices/*
-    chmod 755 rd/sbin/*
+    # chmod 644 rd/usr/lib/* rd/usr/lib/system/* rd/usr/lib/swift/* rd/usr/lib/log/* rd/usr/lib/updaters/* rd/System/Library/CoreServices/*
+    # chmod 755 rd/sbin/*
 
     log "asr patch"
     cp -v rd/usr/sbin/asr asr
@@ -424,8 +424,15 @@ PY
     "$dir/img4" -i trustcache.raw -o tmp2/Firmware/$ramdisk_dmg_name_18.trustcache -A -T rtsc
 
     log "Finalizing"
-    genisoimage -D -V "RamDisk" -no-pad -r -apple -o ramdisk.iso rd/*
-    "$dir/dmg" dmg ramdisk.iso ramdisk.raw
+    # genisoimage -D -V "RamDisk" -no-pad -r -apple -o ramdisk.iso rd/*
+    # "$dir/dmg" dmg ramdisk.iso ramdisk.raw
+
+    pushd rd
+    tar -cf ../ramdisk.tar .
+    popd
+    cp -v ../resources/image.raw ramdisk.raw
+    "$dir/hfsplus" ramdisk.raw untar ramdisk.tar # fails here
+
     "$dir/img4" -i ramdisk.raw -o tmp2/$ramdisk_dmg_name_18 -A -T rdsk
     rm -rf tmp1/
     pushd tmp2
