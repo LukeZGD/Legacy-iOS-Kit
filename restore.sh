@@ -3295,11 +3295,19 @@ shsh_save() {
         log "Cryptex Generator: $cryptex_generator"
 
         until [[ -n $apnonce ]]; do
-            read -r -p "$(input 'Enter entangled nonce (output from aes_nonce): ')" apnonce
+            read -r -p "$(input 'Enter entangled nonce (output from aes_nonce): ')" apnonce || return
+            if [[ -z $apnonce ]]; then
+                log "No input provided. Canceling."
+                return
+            fi
         done
 
         until [[ -n $cryptex_apnonce ]]; do
-            read -r -p "$(input 'Enter entangled cryptex nonce (output from aes_cryptex_nonce): ')" cryptex_apnonce
+            read -r -p "$(input 'Enter entangled cryptex nonce (output from aes_cryptex_nonce): ')" cryptex_apnonce || return
+            if [[ -z $cryptex_apnonce ]]; then
+                log "No input provided. Canceling."
+                return
+            fi
         done
 
         ExtraArgs+="-g $generator -x $cryptex_generator -8 $apnonce -t $cryptex_apnonce"
