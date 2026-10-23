@@ -1658,7 +1658,7 @@ device_get_info() {
     esac
     if [[ $device_proc == 12 || $device_proc == 13 ]]; then
         case $device_type in
-            iPad8,* | iPad11,[67] ) :;;
+            iPad8,* | iPad11,[67] | iPad12,* ) :;;
             * ) device_usbliter8=1;;
         esac
     fi
