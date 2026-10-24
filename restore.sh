@@ -2706,6 +2706,7 @@ python3_init() {
 
 device_fw_key_server() {
     local wikiproxy="wikiproxy-go_$platform-$(uname -m)"
+    [[ $platform == "macos" ]] && wikiproxy="wikiproxy-go_macos"
     local port=8889
     local current="$(cat ../saved/$wikiproxy-version 2>/dev/null)"
     local latest="0995d66"
@@ -12306,10 +12307,11 @@ device_appinst() {
 device_plumesign() {
     local plumesign="plumesign-linux-$(uname -m)"
     [[ $platform == "macos" ]] && plumesign="plumesign-macos-universal"
+    local owner="LukeZGD" # claration
 
     if [[ $plumesign_check_once != 1 ]]; then
         log "Checking for latest plumesign"
-        download_from_url "https://api.github.com/repos/claration/impactor/releases/latest" latest
+        download_from_url "https://api.github.com/repos/$owner/impactor/releases/latest" latest
         local latest="$(cat latest | $jq -r ".tag_name")"
         local current="$(cat ../saved/${plumesign}_version 2>/dev/null || echo "none")"
         log "Latest version: $latest, current version: $current"
@@ -12317,7 +12319,7 @@ device_plumesign() {
             rm -f ../saved/$plumesign
         fi
         if [[ ! -e ../saved/$plumesign ]]; then
-            file_download https://github.com/claration/impactor/releases/download/$latest/$plumesign $plumesign
+            file_download https://github.com/$owner/impactor/releases/download/$latest/$plumesign $plumesign
             mv $plumesign ../saved
         fi
         echo "$latest" > ../saved/${plumesign}_version
