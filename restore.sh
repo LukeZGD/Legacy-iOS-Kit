@@ -7298,7 +7298,7 @@ device_ramdisk64() {
                     "$dir/kerneldiff" $getcomp.raw $getcomp.patched $name.bpatch
                     reco+=" -P $name.bpatch"
                     # reco+=" -P ../resources/sshrd/$name.bpatch"
-                    if [[ $platform == "linux" && $build_id == "18"* ]] || [[ $device_proc == 10 ]]; then
+                    if (( device_proc >= 10 )) || { [[ $platform == "linux" ]] && (( target_vers_maj >= 14 )); }; then
                         reco+=" -J"
                     fi
                 fi
@@ -7314,7 +7314,7 @@ device_ramdisk64() {
             "Trustcache" ) reco+="rtsc";;
             "RestoreRamdisk" )
                 reco+="rdsk -A"
-                local grow="150000000"
+                local grow="140000000"
                 local tool="$dir/hfsplus"
                 mv $getcomp.orig $getcomp.orig0
                 if [[ $device_ramdisk_ios8 == 1 ]]; then
