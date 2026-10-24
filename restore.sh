@@ -7151,6 +7151,8 @@ device_send_rdtar() {
 
 device_ramdisk64() {
     local sshtar="../saved/ssh64.tar"
+    local sshtar_download="https://raw.githubusercontent.com/LukeZGD/sshtars/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz"
+    local sshtar_hash="61975423c096d5f21fd9f8a48042fffd3828708b"
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache" "RestoreRamdisk")
     local name
     local iv
@@ -7159,9 +7161,20 @@ device_ramdisk64() {
     local url
     local decrypt
     local opt
+
     local build_id="16A366"
-    if (( device_proc >= 9 )) || [[ $device_type == "iPad5"* ]]; then
+    if (( device_proc >= 9 )) || [[ $device_type == "iPad5,"* ]]; then
         build_id="18C66"
+    fi
+    if [[ -n $device_rd_build ]]; then
+        build_id="$device_rd_build"
+    fi
+    if [[ $build_id == "22"* ]]; then
+        error "iOS 18 is not supported. Try booting an iOS 17 ramdisk instead?"
+    elif [[ $build_id == "21"* || $build_id == "20"* ]]; then
+        sshtar="../saved/ssh64_upstream.tar"
+        sshtar_download="https://raw.githubusercontent.com/verygenericname/sshtars/6c05c8a74095c63e1d130ecbf309d77efa6d17d5/ssh.tar.gz"
+        sshtar_hash="b4a47daa18e5a391ff704da8424010a27445d1a6"
     fi
 
     if [[ $device_ramdisk_ios8 == 1 ]]; then
@@ -7174,19 +7187,19 @@ device_ramdisk64() {
         sshtar="../saved/iram.tar"
         if [[ ! -e $sshtar ]]; then
             log "Downloading iram.tar from iarchive.app..."
-            file_download https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip iram.zip
+            file_download "https://github.com/LukeZGD/Legacy-iOS-Kit/files/14952123/iram.zip" iram.zip
             file_extract iram.zip
             mv iram.tar $sshtar
         fi
         cp $sshtar ssh.tar
     else
         comps+=("Trustcache")
-        if [[ $($sha1sum $sshtar.gz 2>/dev/null | awk '{print $1}') != "61975423c096d5f21fd9f8a48042fffd3828708b" ]]; then
+        if [[ $($sha1sum $sshtar.gz 2>/dev/null | awk '{print $1}') != "$sshtar_hash" ]]; then
             rm -f $sshtar $sshtar.gz
         fi
         if [[ ! -e $sshtar.gz ]]; then
             log "Downloading ssh.tar from SSHRD_Script..."
-            file_download https://raw.githubusercontent.com/LukeZGD/sshtars/eed9dcb6aa7562c185eb8b3b66c6035c0b026d47/ssh.tar.gz ssh.tar.gz
+            file_download "$sshtar_download" ssh.tar.gz
             mv ssh.tar.gz $sshtar.gz
         fi
         cp $sshtar.gz ssh.tar.gz
@@ -7200,11 +7213,24 @@ device_ramdisk64() {
     mkdir -p $ramdisk_path
     rm -f $ramdisk_path/*.img4 $ramdisk_path/iBEC.im4p $ramdisk_path/iBSS.im4p
 
+    if [[ -s $ramdisk_path/BuildManifest.plist ]]; then
+        cp $ramdisk_path/BuildManifest.plist .
+    else
+        download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
+        cp BuildManifest.plist $ramdisk_path/
+    fi
+    ipsw_get_ramdisk_identity Erase BuildManifest.plist
+    local ramdisk_name="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')"
+    log "Ramdisk name: $ramdisk_name"
+    device_target_vers="$($PlistBuddy -c "Print ProductVersion" BuildManifest.plist | tr -d '"')"
+    target_vers_maj=$(echo "$device_target_vers" | cut -d. -f1)
+    target_vers_min=$(echo "$device_target_vers" | cut -d. -f2)
+
     for getcomp in "${comps[@]}"; do
         name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .filename')
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$getcomp'") | .key')
-        if [[ $device_type == "iPhone8,"* && $getcomp == "iB"* ]]; then
+        if [[ $getcomp == "iB"* ]] && { [[ $device_type == "iPhone8,"* || $device_type == "iPad6,1"* ]]; }; then
             name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .filename')
             iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .iv')
             key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image | startswith ("'$getcomp'")) | select(.filename | startswith("'$getcomp'.'$device_model'.")) | .key')
@@ -7226,22 +7252,16 @@ device_ramdisk64() {
                 "iBSS" | "iBEC"  ) name="$getcomp.$hwmodel.RELEASE.im4p";;
                 "DeviceTree"     ) name="$getcomp.${device_model}ap.im4p";;
                 "Kernelcache"    ) name="kernelcache.release.$hwmodel";;
-                "Trustcache"     ) name="048-08497-242.dmg.trustcache";;
-                "RestoreRamdisk" ) name="048-08497-242.dmg";;
+                "Trustcache"     ) name="$ramdisk_name.trustcache";;
+                "RestoreRamdisk" ) name="$ramdisk_name";;
             esac
             if [[ $device_type == "iPhone8,1" || $device_type == "iPhone8,2" ]] && [[ $getcomp == "Kernelcache" ]]; then
                 name="kernelcache.release.${device_model:0:3}"
             fi
-            if [[ $build_id == "18C66" ]]; then
-                case $getcomp in
-                    "Trustcache"     ) name="038-83284-083.dmg.trustcache";;
-                    "RestoreRamdisk" ) name="038-83284-083.dmg";;
-                esac
-            fi
         fi
 
         log "$getcomp"
-        if [[ -e $ramdisk_path/$name ]]; then
+        if [[ -s $ramdisk_path/$name ]]; then
             cp $ramdisk_path/$name .
         else
             download_with_pzb "$ipsw_url" "${path}$name" "$name"
@@ -7294,16 +7314,34 @@ device_ramdisk64() {
             "Trustcache" ) reco+="rtsc";;
             "RestoreRamdisk" )
                 reco+="rdsk -A"
+                local grow="150000000"
+                local tool="$dir/hfsplus"
                 mv $getcomp.orig $getcomp.orig0
                 if [[ $device_ramdisk_ios8 == 1 ]]; then
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
-                    "$dir/hfsplus" $getcomp.orig grow 50000000
+                    grow="50000000"
                 else
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
-                    "$dir/hfsplus" $getcomp.orig grow 130000000
                 fi
-                "$dir/hfsplus" $getcomp.orig untar ssh.tar
-                "$dir/hfsplus" $getcomp.orig untar ../resources/sshrd/sbplist.tar
+                if (( target_vers_maj > 16 )) || (( target_vers_maj == 16 && target_vers_min >= 1 )); then
+                    tool="$dir/apfs-tool"
+                fi
+                local go=1
+                until [[ $go == 0 ]]; do
+                    log "Grow value: $grow"
+                    cp -v $getcomp.orig temprd
+                    $tool temprd grow $grow
+                    log "Attempting to untar"
+                    $tool temprd untar ssh.tar
+                    go=$?
+                    if [[ $go != 0 ]]; then
+                        log "Failed. Adding 10000000 to grow value"
+                        grow=$((grow + 10000000))
+                    fi
+                done
+                log "Success"
+                mv -v temprd $getcomp.orig
+                $tool $getcomp.orig untar ../resources/sshrd/sbplist.tar
             ;;
         esac
         "$dir/img4" $reco
@@ -9555,6 +9593,13 @@ ipsw_hwmodel_set() {
         iPhone8,4   ) hwmodel="iphone8b";;
         iPhone8,*   ) hwmodel="iphone8";;
         iPhone9,*   ) hwmodel="iphone9";;
+        iPhone10,[36] ) hwmodel="iphone10b";;
+        iPhone10,*  ) hwmodel="iphone10";;
+        iPhone11,8  ) hwmodel="iphone11b";;
+        iPhone11,*  ) hwmodel="iphone11";;
+        iPhone12,1  ) hwmodel="iphone12b";;
+        iPhone12,8  ) hwmodel="iphone12c";;
+        iPhone12,*  ) hwmodel="iphone12";;
         iPad4,[123] ) hwmodel="ipad4";;
         iPad4,[456] ) hwmodel="ipad4b";;
         iPad4,[789] ) hwmodel="ipad4bm";;
@@ -9562,7 +9607,13 @@ ipsw_hwmodel_set() {
         iPad5,[34]  ) hwmodel="ipad5b";;
         iPad6,[34]  ) hwmodel="ipad6b";;
         iPad6,[78]  ) hwmodel="ipad6d";;
+        iPad6,1[12] ) hwmodel="ipad6f";;
         iPad7,[56]  ) hwmodel="ipad7b";;
+        iPad7,1[12] ) hwmodel="ipad7c";;
+        iPad7,*     ) hwmodel="ipad7";;
+        iPad11,[67] ) hwmodel="ipad11b";;
+        iPad11,*    ) hwmodel="ipad11";;
+        iPad12,*    ) hwmodel="ipad12p";;
         *           ) hwmodel="$device_model";;
     esac
     ipsw_hwmodel="$hwmodel"
@@ -12205,23 +12256,18 @@ device_justboot_specialios7() {
 device_enter_ramdisk() {
     if (( device_proc > device_proc_checkm8 )); then
         error "SSH Ramdisk is not supported for this device"
-    elif [[ $device_type == "iPad7,5" || $device_type == "iPad7,6" ]]; then
-        source "../resources/modules/ipad6-ipados17.sh"
-        input "Version Select Option"
-        print "* iOS 17 SSH ramdisk is selected by default. Choose this option if your device is running iOS 17."
-        print "* iOS 14.3 ramdisk is intended for devices running iOS 15 or earlier."
-        print "* Do not use the iOS 14.3 ramdisk on iOS 16 or later, as this will cause a bootloop."
-        select_yesno "Select Y for iOS 17, N for iOS 14.3" 1
-        if [[ $? == 1 ]]; then
-            ipad6_ipados17_ramdisk
-            return
-        fi
     elif [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
-        warn "This option will boot an iOS 14.3 ramdisk. If your device is on iOS 16 or newer, do not continue."
-        print "* iOS 16 and newer will bootloop if you boot this ramdisk due to incompatibility. Proceed with caution."
-        select_yesno "Select Y to continue, N to exit" 0
-        if [[ $? != 1 ]]; then
-            return
+        if [[ -n $device_build ]]; then
+            log "Using current build $device_build for the ramdisk"
+        else
+            warn "Make sure to enter the correct ramdisk build for your device. If unsure, use your current iOS version."
+            warn "Booting an incompatible ramdisk on iOS 16 or newer will cause a bootloop. Proceed with caution."
+            select_yesno "Select Y to continue, N to exit" 0
+            if [[ $? != 1 ]]; then
+                return
+            fi
+            print "* Pressing Enter/Return without entering a build will default to the iOS 14.3 ramdisk. Do not use this default on iOS 16 or newer; enter your current iOS version instead."
+            device_enter_build # this is the user input part
         fi
     elif (( device_proc > 7 )); then
         :
