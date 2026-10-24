@@ -317,22 +317,28 @@ PY
 
     log "Starting ramdisk stuff"
     "$dir/img4" -i tmp1/$ramdisk_dmg_name -o ramdisk.raw
+    local tool="$dir/hfsplus"
+    if (( target_vers_maj > 16 )) || (( target_vers_maj == 16 && target_vers_min >= 1 )); then
+        tool="$dir/apfs-tool"
+    fi
+    log "tool: $tool"
+
     log "asr patch"
-    "$dir/hfsplus" ramdisk.raw extract usr/sbin/asr asr
+    $tool ramdisk.raw extract usr/sbin/asr asr
     "$dir/asr64_patcher" asr asr_patched
     "$dir/ldid" -e asr > ents.plist
     "$dir/ldid" -Sents.plist asr_patched
-    "$dir/hfsplus" ramdisk.raw rm usr/sbin/asr
-    "$dir/hfsplus" ramdisk.raw add asr_patched usr/sbin/asr
-    "$dir/hfsplus" ramdisk.raw chmod 100755 usr/sbin/asr
+    $tool ramdisk.raw rm usr/sbin/asr
+    $tool ramdisk.raw add asr_patched usr/sbin/asr
+    $tool ramdisk.raw chmod 755 usr/sbin/asr
     if (( target_vers_maj >= 14 )); then
         log "libimg4 patch"
-        "$dir/hfsplus" ramdisk.raw extract usr/lib/libimg4.dylib libimg4.dylib
+        $tool ramdisk.raw extract usr/lib/libimg4.dylib libimg4.dylib
         "$dir/libimg4_patcher" libimg4.dylib libimg4.patch
         "$dir/ldid" -Sents.plist libimg4.patch
-        "$dir/hfsplus" ramdisk.raw rm usr/lib/libimg4.dylib
-        "$dir/hfsplus" ramdisk.raw add libimg4.patch usr/lib/libimg4.dylib
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/lib/libimg4.dylib
+        $tool ramdisk.raw rm usr/lib/libimg4.dylib
+        $tool ramdisk.raw add libimg4.patch usr/lib/libimg4.dylib
+        $tool ramdisk.raw chmod 755 usr/lib/libimg4.dylib
     fi
 
     local ramdisk_download_name ramdisk_url
@@ -358,50 +364,39 @@ PY
         fi
         ramdisk_url="https://updates.cdn-apple.com/2019FallFCS/fullrestores/061-08721/B905C96C-C875-11E9-8C18-F4CC329DFA63/iPhone10,3,iPhone10,6_13.0_17A577_Restore.ipsw"
     fi
-    log "restored patch"
-    if (( target_vers_maj >= 16 )); then
-        if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
-            cp -v ../saved/$device_type/$ramdisk_download_name .
-        else
-            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
-            cp -v $ramdisk_download_name ../saved/$device_type/
-        fi
-        if [[ ! -s $ramdisk_download_name ]]; then
-            error "Failed to download ramdisk for restored patch. Please run the script again"
-        fi
-        "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
-        "$dir/hfsplus" ramdisk2.raw extract usr/local/bin/$restored restored_external
-        "$dir/restoredpatcher" restored_external restored_patch -c # patch cryptex1 install validation
-        case $device_type in
-            iPhone12,[135] )
-                mv -v restored_patch restored_patc
-                "$dir/ipx_restored_patcher" restored_patc restored_patch
-            ;;
-        esac
-        "$dir/ldid" -e restored_external > ents.plist
-        "$dir/ldid" -Sents.plist restored_patch
-        "$dir/hfsplus" ramdisk.raw rm usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw add restored_patch usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/local/bin/$restored
 
-    elif [[ $device_type == "iPhone11,"* || $device_type == "iPhone12,"* ]] && [[ $device_type != "iPhone12,8" ]]; then
+    if (( target_vers_maj >= 16 )) || { [[ $device_type == "iPhone11,"* || $device_type == "iPhone12,"* ]] && [[ $device_type != "iPhone12,8" ]]; }; then
+        log "restored patch"
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
             cp -v ../saved/$device_type/$ramdisk_download_name .
         else
-            "$dir/pzb" -g $ramdisk_download_name $ramdisk_url
-            cp -v $ramdisk_download_name ../saved/$device_type/
+            "$dir/pzb" -g "$ramdisk_download_name" "$ramdisk_url"
+            cp -v "$ramdisk_download_name" ../saved/$device_type/
         fi
         if [[ ! -s $ramdisk_download_name ]]; then
             error "Failed to download ramdisk for restored patch. Please run the script again"
         fi
-        "$dir/img4" -i $ramdisk_download_name -o ramdisk2.raw
-        "$dir/hfsplus" ramdisk2.raw extract usr/local/bin/$restored restored_external
-        "$dir/ipx_restored_patcher" restored_external restored_patch
+
+        "$dir/img4" -i "$ramdisk_download_name" -o ramdisk2.raw
+        "$dir/hfsplus" ramdisk2.raw extract "usr/local/bin/$restored" restored_external
+
+        if (( target_vers_maj >= 16 )); then
+            "$dir/restoredpatcher" restored_external restored_patch -c # patch cryptex1 install validation
+            case $device_type in
+                iPhone12,[135] )
+                    mv -v restored_patch restored_patc
+                    "$dir/ipx_restored_patcher" restored_patc restored_patch # needed since ios 27 sep
+                ;;
+            esac
+        else
+            "$dir/ipx_restored_patcher" restored_external restored_patch
+        fi
+
         "$dir/ldid" -e restored_external > ents.plist
         "$dir/ldid" -Sents.plist restored_patch
-        "$dir/hfsplus" ramdisk.raw rm usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw add restored_patch usr/local/bin/$restored
-        "$dir/hfsplus" ramdisk.raw chmod 100755 usr/local/bin/$restored
+        $tool ramdisk.raw rm "usr/local/bin/$restored"
+        $tool ramdisk.raw add restored_patch "usr/local/bin/$restored"
+        $tool ramdisk.raw chmod 755 "usr/local/bin/$restored"
     fi
 
     log "trustcache patch"
@@ -543,7 +538,7 @@ menu_ipsw_a12a13_tethered() {
         echo
 
         local lo="14.0 beta 4"
-        local hi="16.0.3"
+        local hi="16.6.1"
         [[ $device_proc == 13 ]] && lo="13.4"
 
         if [[ -n $ipsw_path ]]; then
@@ -561,7 +556,6 @@ menu_ipsw_a12a13_tethered() {
                 esac
                 print "* This step is required for the tethered iOS 14 or 15 installation to be usable."
             elif (( target_vers_maj > 16 || target_vers_maj < 13 )) ||    # iOS 12 and 17+
-                 (( target_vers_maj == 16 && target_vers_min > 0 )) ||    # iOS 16.1+
                  (( target_vers_maj == 13 && target_vers_min < 4 )); then # iOS 13.3.1-
                 warn "The selected IPSW version is not supported. Select a supported IPSW to continue."
                 print "* Supported iOS versions: $lo to $hi"
@@ -596,11 +590,11 @@ menu_ipsw_a12a13_tethered() {
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
             if [[ $device_proc == 13 ]]; then
                 case $device_target_vers in
-                    13.[4567]* | 1[45].* | 16.0* ) menu_items+=("$start");;
+                    13.[4567]* | 1[456].* ) menu_items+=("$start");;
                 esac
             else
                 case $device_target_vers in
-                    1[45].* | 16.0* ) menu_items+=("$start");;
+                    1[456].* ) menu_items+=("$start");;
                 esac
             fi
         fi
