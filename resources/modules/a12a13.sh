@@ -423,16 +423,27 @@ PY
     fi
     "$dir/img4" -i trustcache.raw -o tmp2/Firmware/$ramdisk_dmg_name_18.trustcache -A -T rtsc
 
-    log "Finalizing"
-    # genisoimage -D -V "RamDisk" -no-pad -r -apple -o ramdisk.iso rd/*
-    # "$dir/dmg" dmg ramdisk.iso ramdisk.raw
-
+    log "Creating ramdisk.tar"
     pushd rd
-    tar -cf ../ramdisk.tar .
+    tar -cvf ../ramdisk.tar .
     popd
-    cp -v ../resources/image.raw ramdisk.raw
-    "$dir/hfsplus" ramdisk.raw untar ramdisk.tar # fails here
+    rm -rf rd
 
+    log "Mounting ramdisk"
+    print "* Enter your user password when prompted"
+    file_extract ../resources/image.zip
+    $sudo /sbin/losetup -fP ramdisk.raw
+    local loop="$($sudo /sbin/losetup -a | grep ramdisk.raw | awk '{print $1}' | tr -d ':')"
+    mkdir -p mount/
+    $sudo mount -t hfsplus -o force,rw $loop mount/
+    log "Extracting ramdisk.tar"
+    $sudo tar -xvf ramdisk.tar -C mount/
+
+    log "Unmounting ramdisk"
+    $sudo umount mount/
+    $sudo /sbin/losetup -d $loop
+
+    log "Finalizing"
     "$dir/img4" -i ramdisk.raw -o tmp2/$ramdisk_dmg_name_18 -A -T rdsk
     rm -rf tmp1/
     pushd tmp2
