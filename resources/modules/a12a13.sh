@@ -321,7 +321,7 @@ PY
     if (( target_vers_maj > 16 )) || (( target_vers_maj == 16 && target_vers_min >= 1 )); then
         tool="$dir/apfs-tool"
     fi
-    log "tool: $tool"
+    log "Tool: $tool"
 
     log "asr patch"
     $tool ramdisk.raw extract usr/sbin/asr asr

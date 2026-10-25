@@ -2344,10 +2344,7 @@ device_enter_mode() {
             local tool_pwned
             local tool
 
-            if [[ $device_skip_ibss == 1 ]]; then
-                warn "Skip iBSS flag detected, skipping pwned DFU check. Proceed with caution"
-                return
-            elif [[ $device_pwnrec == 1 ]]; then
+            if [[ $device_pwnrec == 1 ]]; then
                 warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
                 return
             elif [[ $device_proc == 1 ]]; then
@@ -2383,11 +2380,11 @@ device_enter_mode() {
             if [[ $device_proc == 5 || $device_usbliter8 == 1 ]]; then
                 local exploit="checkm8-a5"
                 local processor="A5(X)"
-                local hardware="an Raspberry Pi Pico or Arduino+USB Host Shield"
+                local hardware="RP2040/Pi Pico"
                 if [[ $device_usbliter8 == 1 ]]; then
                     exploit="usbliter8"
                     processor="A12/A13"
-                    hardware="a compatible RP2350/Pi Pico 2 board"
+                    hardware="RP2350/Pi Pico 2"
                 fi
                 if [[ $device_mode != "DFU" ]]; then
                     device_enter_mode DFU
@@ -2395,7 +2392,7 @@ device_enter_mode() {
                 fi
                 echo
                 print "* DFU mode for $processor device - Make sure that your device is in PWNED DFU mode."
-                print "* You need to have $hardware for $exploit."
+                print "* You need to have a compatible $hardware board for $exploit."
                 print "* For more details, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/$exploit"
                 if [[ $device_proc == 5 ]]; then
                     echo
@@ -2421,7 +2418,7 @@ device_enter_mode() {
                     fi
                     error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
                     error_msg+=$'\n* For more info about kDFU/pwnDFU, read the "Troubleshooting" wiki page in GitHub'
-                    error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#dfu-advanced-menu-a5x-pwndfu-mode-with-arduino-and-usb-host-shield'
+                    error_msg+=$'\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
                     error "$processor device is NOT in PWNED DFU mode. Already pwned iBSS mode?" "$error_msg"
                 fi
                 [[ $device_proc == 5 ]] && device_send_unpacked_ibss
@@ -2466,7 +2463,6 @@ device_enter_mode() {
                 $a6meowing
                 tool_pwned=$?
             elif [[ $tool == "litera1n" ]]; then
-                kuroutadori_init
                 kuroutadori_litera1n -p
                 tool_pwned=$?
             elif [[ $tool == "ipwnder32" ]]; then
@@ -2535,6 +2531,10 @@ device_pwnerror() {
 }
 
 device_send_unpacked_ibss() {
+    case $device_proc in
+        [56] ) :;;
+        * ) return;;
+    esac
     local pwnrec="pwned iBSS"
     local tool_pwned
     if [[ $device_boot4 == 1 ]]; then
@@ -2631,6 +2631,7 @@ kuroutadori_init() {
 
 kuroutadori_litera1n() {
     local tool_pwned
+    kuroutadori_init
     print "* If pwning fails, try to rerun the script with --ra1n-timeout=1000000 (or adjust the value as needed)"
     print "* If it gets stuck at \"checkm8 setup stage\", unplug and replug the device."
     print "* If it gets stuck at \"Checkmate?\", press Ctrl+C to cancel, then re-enter DFU and retry."
@@ -4397,7 +4398,8 @@ replace_plist_data() {
 }
 
 ipsw_bbdigest() {
-    local loc="BuildIdentities:0:"
+    # assume target_identity is already set since this is only used in ipsw_bbreplace
+    local loc="BuildIdentities:$target_identity:"
     if [[ $2 != "UniqueBuildID" ]]; then
         loc+="Manifest:BasebandFirmware:"
     fi
@@ -4436,7 +4438,7 @@ ipsw_bbreplace() {
     local path
     local rsb_latest
     local sbl_latest
-    local bbfw="Print BuildIdentities:0:Manifest:BasebandFirmware"
+    local bbfw
     local ubid
     if [[ $device_use_bb == 0 || $device_target_vers == "$device_latest_vers" ||
           $device_type == "$device_disable_bbupdate" ]] || (( device_proc < 5 )); then
@@ -4447,6 +4449,8 @@ ipsw_bbreplace() {
         log "Extracting BuildManifest from IPSW"
         file_extract_from_archive temp.ipsw BuildManifest.plist
     fi
+    ipsw_get_ramdisk_identity Erase BuildManifest.plist
+    bbfw="Print BuildIdentities:$target_identity:Manifest:BasebandFirmware"
     mkdir -p Firmware
     restore_download_bbsep
     cp $restore_baseband Firmware/$device_use_bb
@@ -5340,17 +5344,11 @@ ipsw_prepare_multipatch() {
     fi
 
     if [[ $(cat BuildManifest.plist | grep -c "Downgrade") == 0 ]]; then
-        local ind=(0)
-        if [[ $device_proc == 6 && $target_vers_maj == 10 ]]; then
-            ind+=(2 4)
-            [[ $device_type == "iPhone5,"* ]] && ind+=(6)
-        fi
         log "Modifying BuildManifest..."
         if [[ $platform == "macos" ]]; then
-            for i in "${ind[@]}"; do
-                $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
-                $PlistBuddy -c "Set BuildIdentities:$i:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-            done
+            ipsw_get_ramdisk_identity Erase BuildManifest.plist
+            $PlistBuddy -c "Set BuildIdentities:$target_identity:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+            $PlistBuddy -c "Set BuildIdentities:$target_identity:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
         else
             awk '
                 /^[[:space:]]*<key>RestoreDeviceTree<\/key>/ { mode = "rdt" }
@@ -6198,6 +6196,7 @@ restore_download_bbsep() {
     local build_id
     local baseband_sha1
     local restore_baseband_check
+    # to revisit if/when a8 ios 10 support is added
     if [[ $device_proc == 8 || $device_latest_vers == "15"* ||
           $device_latest_vers == "16"* || $device_checkm8ipad == 1 ||
           $device_usbliter8 == 1 ]]; then
@@ -6560,7 +6559,7 @@ device_buttons() {
     print "* This device needs to be in pwnDFU/kDFU mode before proceeding."
     if [[ $device_proc == 5 ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
-        print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Arduino+USB Host Shield or Pi Pico)."
+        print "* Selecting pwnDFU is only for those that have the option to use checkm8-a5 (needs Pi Pico)."
         warn "Selecting pwnDFU will require usage of checkm8-a5. For more info, go here: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/checkm8-a5"
     elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $platform_cpu == "AMD"* ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
@@ -6805,19 +6804,18 @@ restore_prepare() {
                 restore_notpwned64
             fi
         ;;
-
-        [89] | 1[01] )
-            if [[ $restore_usepwndfu64 == 1 ]]; then
-                restore_pwned64
-            elif [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]]; then
-                restore_latest
-            else
-                restore_notpwned64
-            fi
-        ;;
-
-        11 ) restore_latest;;
     esac
+    if (( device_proc > device_proc_checkm8 )); then
+        restore_latest
+    elif (( device_proc > 7 )); then
+        if [[ $restore_usepwndfu64 == 1 ]]; then
+            restore_pwned64
+        elif [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]]; then
+            restore_latest
+        else
+            restore_notpwned64
+        fi
+    fi
 }
 
 restore_kuroutadori() {
@@ -6827,7 +6825,6 @@ restore_kuroutadori() {
     fi
     args+=("-y" "$ipsw_path.ipsw")
     device_enter_mode DFU
-    kuroutadori_init
     kuroutadori_litera1n -D
     device_pwnd="$($irecovery -q | grep "PWND" | cut -c 7-)"
     if [[ $device_pwnd != "yolo" ]]; then
@@ -7082,18 +7079,6 @@ ipsw_prepare_ipx() {
     log "Extracting RestoreRamDisk from IPSW"
     file_extract_from_archive "$ipsw_path.ipsw" $restoreramdisk
 
-    local platform2="$platform"
-    [[ $platform2 == "macos" ]] && platform2+="x"
-    ldid="../saved/ldid_${platform2}_$(uname -m)"
-    if [[ ! -s $ldid ]]; then
-        file_download https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/$(basename $ldid) ldid
-        mv ldid $ldid
-    fi
-    if [[ ! -s $ldid ]]; then
-        error "Failed to download ldid. Please run the script again"
-    fi
-    chmod +x $ldid
-
     # patch restored_external for iPhone X downgrades to 14.3-15.x
     log "Processing RestoreRamDisk"
     "$dir/img4" -i $restoreramdisk -o ramdisk.raw
@@ -7102,8 +7087,8 @@ ipsw_prepare_ipx() {
     log "Patching restored_external"
     mv restored_external restored_external.orig
     "$dir/ipx_restored_patcher" restored_external.orig restored_external
-    $ldid -e restored_external.orig > ent.xml
-    $ldid -Sent.xml restored_external
+    "$dir/ldid" -e restored_external.orig > ent.xml
+    "$dir/ldid" -Sent.xml restored_external
     if [[ ! -s restored_external ]]; then
         error "Failed to patch restored_external (???) Please run the script again."
     fi
@@ -7169,13 +7154,16 @@ device_ramdisk64() {
     if [[ -n $device_rd_build ]]; then
         build_id="$device_rd_build"
     fi
-    if [[ $build_id == "22"* ]]; then
-        error "iOS 18 is not supported. Try booting an iOS 17 ramdisk instead?"
-    elif [[ $build_id == "21"* || $build_id == "20"* ]]; then
-        sshtar="../saved/ssh64_upstream.tar"
-        sshtar_download="https://raw.githubusercontent.com/verygenericname/sshtars/6c05c8a74095c63e1d130ecbf309d77efa6d17d5/ssh.tar.gz"
-        sshtar_hash="b4a47daa18e5a391ff704da8424010a27445d1a6"
-    fi
+    case $build_id in
+        22* ) error "iOS 18 is not supported. Try booting an iOS 17 ramdisk instead?";;
+        2[10]* )
+            sshtar="../saved/ssh64_upstream.tar"
+            sshtar_download="https://raw.githubusercontent.com/verygenericname/sshtars/6c05c8a74095c63e1d130ecbf309d77efa6d17d5/ssh.tar.gz"
+            sshtar_hash="b4a47daa18e5a391ff704da8424010a27445d1a6"
+        ;;
+        1[6789]* | 15[EF]* ) :;;
+        * ) error "SSH ramdisk version not supported. Minimum version is 11.3";;
+    esac
 
     if [[ $device_ramdisk_ios8 == 1 ]]; then
         build_id="12B410"
@@ -7326,6 +7314,7 @@ device_ramdisk64() {
                 if (( target_vers_maj > 16 )) || (( target_vers_maj == 16 && target_vers_min >= 1 )); then
                     tool="$dir/apfs-tool"
                 fi
+                log "Tool: $tool"
                 local go=1
                 until [[ $go == 0 ]]; do
                     log "Grow value: $grow"
@@ -8357,7 +8346,6 @@ shsh_save_onboard64() {
     if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
         print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
         print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
-        print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
         select_yesno
         if [[ $? != 1 ]]; then
             return 1
@@ -8375,9 +8363,8 @@ shsh_save_onboard64() {
     echo
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
-        if (( device_proc <= device_proc_checkm8 )); then
+        if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
             print "* Use the SSH Ramdisk option instead: Useful Utilities -> SSH Ramdisk"
-            print "* For A8 and newer, you can also use SSHRD_Script: https://github.com/verygenericname/SSHRD_Script"
         fi
         return
     fi
