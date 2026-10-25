@@ -12353,7 +12353,7 @@ device_appinst() {
 device_plumesign() {
     local plumesign="plumesign-linux-$(uname -m)"
     [[ $platform == "macos" ]] && plumesign="plumesign-macos-universal"
-    local owner="LukeZGD" # claration
+    local owner="claration" # claration
 
     if [[ $plumesign_check_once != 1 ]]; then
         log "Checking for latest plumesign"
