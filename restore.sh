@@ -9995,7 +9995,8 @@ menu_ipsw() {
             echo
         fi
         if [[ $can_start == 1 ]]; then
-            if [[ $device_target_vers == "$device_latest_vers" && $device_mode != "none" && -z $2 ]]; then
+            if [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]] &&
+               [[ $device_mode != "none" && -z $2 ]]; then
                 menu_items+=("(*) Start Update")
             fi
             menu_items+=("$start")
@@ -10036,9 +10037,12 @@ menu_ipsw() {
             "$start" ) mode="downgrade";;
             "(*) Start Update" )
                 print "* The \"Start Update\" will perform an update to your device without clearing device data."
-                print "* One usage of this is to carry over activation records to the latest iOS version."
+                print "* One usage of this is to carry over activation to the latest iOS version."
                 warn "This option should NOT be used if your device is jailbroken."
-                warn "This option is not recommended to be used unless you know what you are doing."
+                if (( device_proc <= device_proc_32bit )); then
+                    warn "This option is not recommended to be used unless you know what you are doing."
+                fi
+                echo
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
