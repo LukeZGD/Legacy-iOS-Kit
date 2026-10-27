@@ -4751,6 +4751,16 @@ ipsw_prepare_ios4multipart() {
         mv $logo_name manifest $all_flash2/
     fi
 
+    local dummy_parts=(AppleLogo BatteryCharging BatteryCharging0 BatteryCharging1 BatteryFull BatteryLow0 BatteryLow1 BatteryPlugin RecoveryMode RestoreLogo)
+    [[ $device_type != iPod* ]] && dummy_parts+=(BasebandFirmware)
+    for part in "${dummy_parts[@]}"; do
+        local check=$($PlistBuddy -c "Print BuildIdentities:0:Manifest:$part:Info:Path" BuildManifest.plist | tr -d '"')
+        if [[ ! -s $ipsw_custom_part1/$check ]]; then
+            log "Creating dummy $part"
+            touch $ipsw_custom_part1/$check
+        fi
+    done
+
     log "Creating $ipsw_custom_part1.ipsw..."
     pushd $ipsw_custom_part1 >/dev/null
     zip -r0 $ipsw_custom_part1.ipsw *
