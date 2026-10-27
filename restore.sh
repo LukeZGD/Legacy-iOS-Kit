@@ -1755,13 +1755,13 @@ device_get_info() {
             device_latest_build="21H461"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.10"
-            device_latest_build="22H374"
+            device_latest_vers="18.7.11"
+            device_latest_build="22H384"
         ;;
-        # iPad8,[12345678] | iPad11,* )
-        #     device_latest_vers="26.7.1"
-        #     device_latest_build="23H30"
-        # ;;
+        iPad8,[12345678] | iPad11,* )
+            device_latest_vers="26.7.2"
+            device_latest_build="23H128"
+        ;;
     esac
     # if latest vers is not set, copy use vers to latest
     if [[ -z $device_latest_vers ]]; then
@@ -3232,7 +3232,7 @@ shsh_save() {
         "bbcheck" ) bbcheck=1;;
     esac
 
-    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "26.6.1" ]]; then
+    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "27.0.1" || $version == "18.7.10" ]]; then
         if [[ $version == "$device_latest_vers" ]]; then
             build_id="$device_latest_build"
         fi
@@ -6399,7 +6399,7 @@ restore_futurerestore() {
     fi
 
     if [[ $target_vers_maj == 10 ]] || (( device_proc <= device_proc_32bit )); then
-        export FUTURERESTORE_I_SOLEMNLY_SWEAR_THAT_I_AM_UP_TO_NO_GOOD=1 # required since custom-latest-ota is broken
+        :
     else
         ExtraArr=("--latest-sep")
         case $device_name in
@@ -8596,6 +8596,8 @@ menu_print_info() {
             print "* Current device baseband will be dumped and stitched to custom IPSW"
             warn "Note that stitching baseband does not always work! There is a chance of non-working baseband after the restore"
         fi
+    # elif [[ $device_deadbb == 1 ]] && (( device_proc <= device_proc_checkm8 )); then
+    #     warn "dead-bb flag detected, baseband flashing disabled. Your device will not activate after restore"
     elif [[ -n $device_disable_bbupdate ]]; then
         warn "disable-bbupdate flag detected, but this flag is not supported for this device"
     fi
@@ -9145,9 +9147,11 @@ menu_shsh() {
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Latest iOS ($device_latest_vers)" "Latest iOS ($device_latest_vers) (Baseband Check)")
-        # if [[ $device_latest_vers == 27* ]]; then
-        #     menu_items+=("iOS 26.6.1 RC")
-        # fi
+        if [[ $device_latest_vers == 27* ]]; then
+            menu_items+=("iOS 27.0.1")
+        elif [[ $device_latest_vers == 18* ]]; then
+            menu_items+=("iOS 18.7.10")
+        fi
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
@@ -9183,9 +9187,13 @@ menu_shsh() {
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latset_build"
             ;;
-            "iOS 26.6.1 RC" )
-                device_target_vers="26.6.1"
-                device_target_build="23G82"
+            "iOS 27.0.1" )
+                device_target_vers="27.0.1"
+                device_target_build="24A446"
+            ;;
+            "iOS 18.7.10" )
+                device_target_vers="18.7.10"
+                device_target_build="22H374"
             ;;
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
@@ -11597,10 +11605,10 @@ device_find_ssh() {
     log "Checking for device..."
     local found=$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo 1")
     if [[ $found != 1 && $mode == *"hacktivate" ]]; then
-        error "Unable to connect to device via SSH. If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
+        error "Unable to connect to device via SSH. Incorrect password? If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
               "* Alternatively, restore using Legacy iOS Kit with the jailbreak option enabled."
     elif [[ $found != 1 ]]; then
-        error "Unable to connect to device via SSH. Make sure your device is jailbroken and OpenSSH is installed."
+        error "Unable to connect to device via SSH. Incorrect password? Make sure your device is jailbroken and OpenSSH is installed."
     fi
 }
 

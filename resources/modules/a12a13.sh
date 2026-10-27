@@ -194,12 +194,9 @@ device_a12a13_ipsw_tethered() {
     "$dir/iBootpatch2" iBSS.patchboot $boot_folder/iBSS.boot
     "$dir/img4" -i $boot_folder/iBSS.patch -o tmp2/Firmware/dfu/$IBEC -A -T ibec
 
-    log "Extract BuildManifests"
-    file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
-    mv BuildManifest.plist bm_base.plist
-    file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
-    mv BuildManifest.plist bm_target.plist
-    chmod 644 *.plist
+    log "Get BuildManifests"
+    mv -v tmp1/BuildManifest.plist bm_target.plist
+    cp -v tmp2/BuildManifest.plist bm_base.plist
 
     local restored="restored_update"
     local rtype="Upgrade"
@@ -247,55 +244,55 @@ PY
     fi
 
     log "Transferring stuff over from target to base"
-    cp -v tmp1/Firmware/AOP/$AOP14 tmp2/Firmware/AOP/$AOP
-    cp -v tmp1/Firmware/agx/$GFX tmp2/Firmware/agx/$GFX
-    cp -v tmp1/Firmware/ane/$ANE tmp2/Firmware/ane/$ANE
-    cp -v tmp1/Firmware/isp_bni/$ISP tmp2/Firmware/isp_bni/$ISP
+    mv -v tmp1/Firmware/AOP/$AOP14 tmp2/Firmware/AOP/$AOP
+    mv -v tmp1/Firmware/agx/$GFX tmp2/Firmware/agx/$GFX
+    mv -v tmp1/Firmware/ane/$ANE tmp2/Firmware/ane/$ANE
+    mv -v tmp1/Firmware/isp_bni/$ISP tmp2/Firmware/isp_bni/$ISP
     if [[ $device_type == "iPhone"* ]]; then
-        cp -v tmp1/Firmware/$CALLAN tmp2/Firmware/$CALLAN
-        cp -v tmp1/Firmware/WirelessPower/$WIRELESS tmp2/Firmware/WirelessPower/$WIRELESS
+        mv -v tmp1/Firmware/$CALLAN tmp2/Firmware/$CALLAN
+        mv -v tmp1/Firmware/WirelessPower/$WIRELESS tmp2/Firmware/WirelessPower/$WIRELESS
     fi
     case $device_type in
         iPhone12,8 ) :;;
-        iPhone1[12],* ) cp -v tmp1/Firmware/$HAPTICASSET tmp2/Firmware/$HAPTICASSET;;
+        iPhone1[12],* ) mv -v tmp1/Firmware/$HAPTICASSET tmp2/Firmware/$HAPTICASSET;;
     esac
-    cp -v tmp1/Firmware/all_flash/$DEVICETREE tmp2/Firmware/all_flash/$DEVICETREE
+    mv -v tmp1/Firmware/all_flash/$DEVICETREE tmp2/Firmware/all_flash/$DEVICETREE
     if [[ $target_vers_maj == 13 ]]; then
-        cp -v tmp1/Firmware/$IOFW13 tmp2/Firmware/$IOFW
-        cp -v tmp1/Firmware/ave/$AVE13 tmp2/Firmware/ave/$AVE
+        mv -v tmp1/Firmware/$IOFW13 tmp2/Firmware/$IOFW
+        mv -v tmp1/Firmware/ave/$AVE13 tmp2/Firmware/ave/$AVE
     else
-        cp -v tmp1/Firmware/$IOFW tmp2/Firmware/$IOFW
-        cp -v tmp1/Firmware/ave/$AVE tmp2/Firmware/ave/$AVE
-        cp -v tmp1/Firmware/$fs_dmg_name.root_hash tmp2/Firmware/$fs_dmg_name_18.root_hash
-        cp -v tmp1/Firmware/$fs_dmg_name.mtree tmp2/Firmware/$fs_dmg_name_18.mtree
+        mv -v tmp1/Firmware/$IOFW tmp2/Firmware/$IOFW
+        mv -v tmp1/Firmware/ave/$AVE tmp2/Firmware/ave/$AVE
+        mv -v tmp1/Firmware/$fs_dmg_name.root_hash tmp2/Firmware/$fs_dmg_name_18.root_hash
+        mv -v tmp1/Firmware/$fs_dmg_name.mtree tmp2/Firmware/$fs_dmg_name_18.mtree
     fi
     if (( target_vers_maj >= 16 )); then
         case $device_type in
             iPhone11,[246] ) log "Using latest MTFW";;
-            * ) cp -v tmp1/Firmware/$MTFW tmp2/Firmware/$MTFW;; # copy MTFW for target iOS
+            * ) mv -v tmp1/Firmware/$MTFW tmp2/Firmware/$MTFW;; # copy MTFW for target iOS
         esac
     else
-        cp -v tmp1/Firmware/$MTFW tmp2/Firmware/$MTFW # copy MTFW for target iOS
+        mv -v tmp1/Firmware/$MTFW tmp2/Firmware/$MTFW # copy MTFW for target iOS
     fi
     if [[ $device_type == "iPhone12,"* ]]; then
         if [[ $device_type != "iPhone12,8" ]]; then
-            cp -v tmp1/Firmware/$LEAPHAPTIC tmp2/Firmware/$LEAPHAPTIC
+            mv -v tmp1/Firmware/$LEAPHAPTIC tmp2/Firmware/$LEAPHAPTIC
         fi
-        cp -v tmp1/Firmware/pmp/$PMP tmp2/Firmware/pmp/$PMP
+        mv -v tmp1/Firmware/pmp/$PMP tmp2/Firmware/pmp/$PMP
     fi
 
-    log "Transferring rootfs, this will take a while"
-    cp -v tmp1/$fs_dmg_name tmp2/$fs_dmg_name_18 # replace rootfs in the IPSW
-    cp -v tmp1/Firmware/$fs_dmg_name.trustcache tmp2/Firmware/$fs_dmg_name_18.trustcache
+    log "Transferring rootfs"
+    mv -v tmp1/$fs_dmg_name tmp2/$fs_dmg_name_18
+    mv -v tmp1/Firmware/$fs_dmg_name.trustcache tmp2/Firmware/$fs_dmg_name_18.trustcache
     cp -v tmp1/Firmware/$ramdisk_dmg_name.trustcache tmp2/Firmware/$ramdisk_dmg_name_18.trustcache
     if (( target_vers_maj >= 16 )); then
-        log "Transferring cryptex stuff, this will take a while"
-        cp -v tmp1/$cryptex_os tmp2/$cryptex_os_18
-        cp -v tmp1/$cryptex_app tmp2/$cryptex_app_18
-        cp -v tmp1/Firmware/$cryptex_os.trustcache tmp2/Firmware/$cryptex_os_18.trustcache
-        cp -v tmp1/Firmware/$cryptex_os.root_hash tmp2/Firmware/$cryptex_os_18.root_hash
-        cp -v tmp1/Firmware/$cryptex_app.trustcache tmp2/Firmware/$cryptex_app_18.trustcache
-        cp -v tmp1/Firmware/$cryptex_app.root_hash tmp2/Firmware/$cryptex_app_18.root_hash
+        log "Transferring cryptex stuff"
+        mv -v tmp1/$cryptex_os tmp2/$cryptex_os_18
+        mv -v tmp1/$cryptex_app tmp2/$cryptex_app_18
+        mv -v tmp1/Firmware/$cryptex_os.trustcache tmp2/Firmware/$cryptex_os_18.trustcache
+        mv -v tmp1/Firmware/$cryptex_os.root_hash tmp2/Firmware/$cryptex_os_18.root_hash
+        mv -v tmp1/Firmware/$cryptex_app.trustcache tmp2/Firmware/$cryptex_app_18.trustcache
+        mv -v tmp1/Firmware/$cryptex_app.root_hash tmp2/Firmware/$cryptex_app_18.root_hash
     fi
 
     log "Starting kernel patch"
@@ -307,10 +304,9 @@ PY
         16 ) "$dir/Kernel64Patcher" kernel.raw kernelboot.patch -we -d;;
     esac
     "$dir/kerneldiff" kernel.raw kernelboot.patch kernelboot.diff
-    rm -f tmp2/$KERNEL
     if (( target_vers_maj >= 16 )); then
         "$dir/img4" -i kernelboot.patch -o tmp2/$KERNEL2 -A -T krnl -J
-        cp -v tmp1/$KERNEL tmp2/$KERNEL
+        mv -v tmp1/$KERNEL tmp2/$KERNEL
     else
         "$dir/img4" -i tmp1/$KERNEL -o tmp2/$KERNEL -T krnl -J -P kernelboot.diff
     fi
@@ -584,7 +580,7 @@ menu_ipsw_a12a13_tethered() {
         echo
 
         menu_items=("Select Target IPSW" "Select Base IPSW")
-        if [[ -n $device_base_vers && -z $ipsw_base_path ]]; then
+        if [[ -z $ipsw_base_path ]]; then
             menu_items+=("Download Base IPSW")
         fi
         if [[ -n $ipsw_path && -n $ipsw_base_path ]]; then
@@ -609,6 +605,7 @@ menu_ipsw_a12a13_tethered() {
             "$start"             ) mode="device_a12a13_restore_tethered";;
             "Select Target IPSW" ) menu_ipsw_browse;;
             "Select Base IPSW"   ) menu_ipsw_browse "base";;
+            "Download Base IPSW" ) ipsw_download "../${device_type}_${device_latest_vers}_${device_latest_build}_Restore" latest;;
             "Go Back" )
                 back=1
 
