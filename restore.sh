@@ -3281,28 +3281,37 @@ shsh_save() {
     if [[ -n $apnonce ]]; then
         ExtraArgs+="--apnonce $apnonce"
 
-    elif (( device_proc > device_proc_checkm8 )) && [[ -z $mode ]]; then
-        log "A12+ device detected. Additional arguments are required; this process is more advanced than regular blob saving."
+    elif [[ -z $mode ]] && { (( device_proc > device_proc_checkm8 )) || [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; }; then
+        if (( device_proc > device_proc_checkm8 )); then
+            log "A12+ device detected. Additional arguments are required; this process is more advanced than regular blob saving."
+        else
+            log "Need cryptex generator and nonce using 0x8A4 and aes_cryptex_nonce."
+            print "* No need for 0x8A3 and entangled nonce, that is for A12+ only."
+        fi
         print "* Please see the instructions here: https://github.com/LukeZGD/aes_nonce-go"
 
         generator="0x1111111111111111"
         cryptex_generator="0x11111111111111111111111111111111"
 
-        read -r -p "$(input 'Enter generator (press Enter/Return to default to all 1s): ')" generator
-        generator="${generator:-0x1111111111111111}"
-        log "Generator: $generator"
+        if (( device_proc > device_proc_checkm8 )); then
+            read -r -p "$(input 'Enter generator (press Enter/Return to default to all 1s): ')" generator
+            generator="${generator:-0x1111111111111111}"
+            log "Generator: $generator"
+
+            until [[ -n $apnonce ]]; do
+                read -r -p "$(input 'Enter entangled nonce (output from aes_nonce): ')" apnonce || return
+                if [[ -z $apnonce ]]; then
+                    log "No input provided. Canceling."
+                    return
+                fi
+            done
+
+            ExtraArgs+="-8 $apnonce "
+        fi
 
         read -r -p "$(input 'Enter cryptex generator (press Enter/Return to default to all 1s): ')" cryptex_generator
         cryptex_generator="${cryptex_generator:-0x11111111111111111111111111111111}"
         log "Cryptex Generator: $cryptex_generator"
-
-        until [[ -n $apnonce ]]; do
-            read -r -p "$(input 'Enter entangled nonce (output from aes_nonce): ')" apnonce || return
-            if [[ -z $apnonce ]]; then
-                log "No input provided. Canceling."
-                return
-            fi
-        done
 
         until [[ -n $cryptex_apnonce ]]; do
             read -r -p "$(input 'Enter entangled cryptex nonce (output from aes_cryptex_nonce): ')" cryptex_apnonce || return
@@ -3312,7 +3321,7 @@ shsh_save() {
             fi
         done
 
-        ExtraArgs+="-g $generator -x $cryptex_generator -8 $apnonce -t $cryptex_apnonce"
+        ExtraArgs+="-g $generator -x $cryptex_generator -t $cryptex_apnonce"
 
     else
         ExtraArgs+="-g 0x1111111111111111"
