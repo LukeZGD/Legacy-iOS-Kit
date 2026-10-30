@@ -9384,13 +9384,13 @@ menu_restore() {
             iPad2,[123] | iPhone4,1 )
                 menu_items+=("iOS 6.1.3");;
             iPhone2,1 )
-                menu_items+=("5.1.1" "4.3.5" "4.1" "3.1.3" "More versions");;
+                menu_items+=("5.1.1" "4.3.5" "4.1" "3.1.3" "More Options");;
             iPod3,1 )
                 menu_items+=("4.1");;
             iPhone1,2 | iPod2,1 )
                 menu_items+=("4.1" "3.1.3")
                 if [[ $device_type == "iPod2,1" ]] && [[ $device_newbr == 0 || $device_mode == "none" ]]; then
-                    menu_items+=("More versions")
+                    menu_items+=("More Options")
                 fi
             ;;
         esac
@@ -9461,7 +9461,7 @@ menu_restore() {
             ;;
             "Other (Custom IPSW)" ) restore_customipsw_confirm;;
             "DFU IPSW" ) device_dfuipsw_confirm $1;;
-            "More versions" ) menu_restore_more "$1";;
+            "More Options" ) menu_restore_more "$1";;
             "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             7.* )
                 case $device_type in
@@ -9844,6 +9844,10 @@ menu_ipsw() {
                 echo
             else
                 print "* Select Base IPSW $text2 to continue"
+                echo
+            fi
+            if [[ -n $base_vers_temp ]]; then
+                warn "This option is experimental and may have deep sleep issues on some target versions."
                 echo
             fi
             if [[ $device_proc == 4 || $device_target_drav6 == 1 ]]; then
