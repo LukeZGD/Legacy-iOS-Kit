@@ -5261,6 +5261,9 @@ ipsw_prepare_partition_script() {
 
     if [[ $device_base_vers == "5."* ]]; then
         local new_bs=64
+        case $device_type in
+            iPad2,[123] ) new_bs=128;;
+        esac
         local new_value=$((new_bs*1024))
         new_bs="${new_bs}k"
         log "Changing exploit size to $new_bs for iOS 5"
@@ -9403,6 +9406,9 @@ menu_restore() {
         if [[ $device_can_powder == 1 && $device_proc != 4 ]]; then
             menu_items+=("Other (powdersn0w $base_vers blobs)")
         fi
+        case $device_type in
+            iPad2,[123] ) menu_items+=("Other (powdersn0w 5.x blobs)");;
+        esac
         if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_checkm8ipad != 1 ]] &&
            (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Other (Use SHSH Blobs)")
@@ -9759,6 +9765,10 @@ menu_ipsw() {
             if [[ $device_proc == 4 ]]; then
                 device_base_vers="$device_latest_vers"
                 device_base_build="$device_latest_build"
+            elif [[ $1 == *"5.x"* ]]; then
+                base_vers="5.x"
+                base_vers_temp="5.x"
+                check_vers_temp="5"
             fi
         elif [[ $1 == *"DRA v6"* ]]; then
             device_target_powder=1
@@ -10099,6 +10109,8 @@ menu_ipsw() {
                 device_bootargs=
                 device_target_drav6=
                 device_target_signed=
+                base_vers_temp=
+                check_vers_temp=
             ;;
         esac
     done
@@ -10378,6 +10390,9 @@ menu_ipsw_browse() {
     elif [[ $device_target_drav6 == 1 ]]; then
         check_vers="$device_base_vers"
         base_vers="$device_base_vers"
+    elif [[ -n $base_vers_temp ]]; then
+        check_vers="$check_vers_temp"
+        base_vers="$base_vers_temp"
     fi
 
     ipsw_latest_set
