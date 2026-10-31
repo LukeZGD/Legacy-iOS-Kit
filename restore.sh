@@ -5262,7 +5262,7 @@ ipsw_prepare_partition_script() {
     if [[ $device_base_vers == "5."* ]]; then
         local new_bs=64
         case $device_type in
-            iPad2,[123] ) new_bs=128;;
+            iPad2,[123] | iPhone4,1 ) new_bs=128;;
         esac
         local new_value=$((new_bs*1024))
         new_bs="${new_bs}k"
@@ -9407,7 +9407,7 @@ menu_restore() {
             menu_items+=("Other (powdersn0w $base_vers blobs)")
         fi
         case $device_type in
-            iPad2,[123] ) menu_items+=("Other (powdersn0w 5.x blobs)");;
+            iPad2,[123] | iPhone4,1 ) menu_items+=("Other (powdersn0w 5.x blobs)");;
         esac
         if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_checkm8ipad != 1 ]] &&
            (( device_proc <= device_proc_checkm8 )); then
