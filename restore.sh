@@ -2949,18 +2949,10 @@ patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
     case $device_type in
-        iPad1,1 | iPod3,1 )
-            build_id="9B206";;
-        iPhone2,1 | iPhone3,[123] | iPod4,1 | iPad3,1 )
-            build_id="10A403";;
-        iPad2,[367] | iPad3,[25] )
-            build_id="12H321";;
-        iPhone5,3 )
-            build_id="11B511";;
-        iPhone5,4 )
-            build_id="11B651";;
-        * )
-            build_id="10B329";;
+        iPad1,1 | iPod3,1 ) build_id="9B206";;
+        iPhone2,1 | iPod4,1 ) build_id="10B500";;
+        iPhone3,[123] ) build_id="11D257";;
+        * ) build_id="12H321";;
     esac
     if [[ -n $device_rd_build ]]; then
         build_id="$device_rd_build"
@@ -2978,11 +2970,7 @@ patch_ibec() {
     log "Decrypting iBEC..."
     "$dir/xpwntool" $name.orig $name.dec -iv $iv -k $key
     log "Patching iBEC..."
-    if [[ $device_proc == 4 || -n $device_rd_build || $device_type == "iPad3,1" ]]; then
-        "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
-    else
-        $bspatch $name.dec $name.patched "../resources/patch/odysseus/$download_targetfile.patch"
-    fi
+    "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     "$dir/xpwntool" $name.patched pwnediBEC.dfu -t $name.orig
     rm $name.dec $name.orig $name.patched
     cp pwnediBEC.dfu ../saved/$device_type/
@@ -8445,14 +8433,32 @@ shsh_save_onboard64() {
     kill $iproxy_pid
 }
 
+shsh_get_buildmanifest() {
+    if [[ -z $device_target_build ]]; then
+        error "No value for device_target_build is not set. Cannot continue."
+    fi
+    local buildmanifest="../saved/$device_type/$device_target_build.plist"
+    if [[ -s $buildmanifest ]]; then
+        cp -v $buildmanifest BuildManifest.plist
+    else
+        ipsw_get_url $device_target_build
+        download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
+        cp -v BuildManifest.plist $buildmanifest
+    fi
+
+    if [[ -z $device_target_vers ]]; then
+        device_target_vers="$($PlistBuddy -c "Print ProductVersion" BuildManifest.plist | tr -d '"')"
+    fi
+}
+
 shsh_save_onboard() {
     if (( device_proc > device_proc_32bit )); then
         shsh_save_onboard64
         [[ $? == 0 ]] && pause
         return
-    else
-        device_buttons
     fi
+
+    device_buttons
     if [[ $device_proc == 4 && $device_pwnrec != 1 ]]; then
         patch_ibss
         log "Sending iBSS..."
@@ -8467,7 +8473,7 @@ shsh_save_onboard() {
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
-    (echo -e "/send ../resources/payload\ngo blobs\n/exit") | $irecovery2 -s
+    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery2 -s
     $irecovery2 -g dump.raw
     log "Rebooting device"
     $irecovery -n
@@ -8491,6 +8497,7 @@ shsh_save_onboard() {
 }
 
 shsh_convert_onboard() {
+    shsh_get_buildmanifest
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc <= device_proc_32bit )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
@@ -8517,12 +8524,16 @@ shsh_convert_onboard() {
             return
         fi
         log "Converting raw dump to SHSH blob"
-        "$dir/ticket" dump.raw dump.shsh "$ipsw_path.ipsw" -z
-        log "Attempting to validate SHSH blob"
-        "$dir/validate" dump.shsh "$ipsw_path.ipsw" -z
-        if [[ $? != 0 ]]; then
-            warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
-            print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
+        "$dir/ticket" dump.raw dump.shsh BuildManifest.plist
+        if [[ $device_target_build == "14"* ]]; then
+            warn "Skipping validate for iOS 10 blobs"
+        else
+            log "Attempting to validate SHSH blob"
+            "$dir/validate" dump.shsh BuildManifest.plist
+            if [[ $? != 0 ]]; then
+                warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
+                print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
+            fi
         fi
     else
         "$dir/img4tool" --convert -s dump.shsh dump.raw
@@ -9189,16 +9200,13 @@ menu_shsh() {
         if (( device_proc <= device_proc_32bit )); then
             menu_items+=("Cydia Blobs")
         fi
-        if [[ $device_type != "iPhone2,1" && $device_type != "iPod3,1" && $device_type != "iPad1,1" ]]; then
-            if [[ $device_mode != "none" ]]; then
-                menu_items+=("Onboard Blobs")
-                if (( device_proc <= device_proc_32bit )); then
-                    menu_items+=("Onboard Blobs (Raw Dump)")
-                fi
+        if [[ $device_mode != "none" ]]; then
+            menu_items+=("Onboard Blobs")
+            if (( device_proc <= device_proc_32bit )); then
+                menu_items+=("Onboard Blobs (Raw Dump)")
             fi
-            menu_items+=("Convert Raw Dump")
         fi
-        menu_items+=("Go Back")
+        menu_items+=("Convert Raw Dump" "Go Back")
         menu_print_info
         print " > Main Menu > Save SHSH Blobs"
         input "Select an option:"
@@ -9277,38 +9285,22 @@ menu_shsh_onboard() {
         shsh_save_onboard
         return
     fi
-    while [[ -z "$mode" && -z "$back" ]]; do
-        menu_items=("Select IPSW")
-        menu_print_info
-        if [[ -n $ipsw_path ]]; then
-            print "* Selected IPSW: $ipsw_path.ipsw"
-            print "* IPSW Version: $device_target_vers-$device_target_build"
-            if [[ $device_mode == "Normal" && $device_target_vers != "$device_vers" ]]; then
-                warn "Selected IPSW does not seem to match the current version."
-                print "* Ignore this warning if this is a DRA/powdersn0w downgraded device."
-            fi
-            menu_items+=("(*) Save Onboard Blobs")
-        else
-            print "* Select IPSW of your current iOS version to continue"
-        fi
-        menu_items+=("Go Back")
-        echo
-        print " > Main Menu > Save SHSH Blobs > Onboard Blobs"
-        input "Select an option:"
-        select_option "${menu_items[@]}"
-        selected="${menu_items[$?]}"
-        case $selected in
-            "Select IPSW" ) menu_ipsw_browse onboard;;
-            "(*) Save Onboard Blobs" ) mode="shsh_save_onboard";;
-            "Go Back" ) back=1;;
-        esac
-    done
+    if [[ -n $device_build ]]; then
+        device_target_build="$device_build"
+    else
+        print "* Enter the build version of your device's current iOS version to dump blobs."
+        device_enter_build
+        device_target_build="$device_rd_build"
+    fi
+
+    mode="shsh_save_onboard"
 }
 
 menu_shsh_convert() {
     local menu_items
     local selected
     local back
+    local build_id
 
     ipsw_path=
     shsh_path=
@@ -9321,24 +9313,19 @@ menu_shsh_convert() {
                 shsh_onboard_iboot="$(cat "$shsh_path" | strings | grep iBoot | head -1)"
                 print "* Raw dump iBoot version: $shsh_onboard_iboot"
                 print "* Go here to find the matching iOS version: https://theapplewiki.com/wiki/IBoot_(Bootloader)"
-                menu_items+=("Select IPSW")
+                menu_items+=("Enter Build Version")
             else
                 menu_items+=("(*) Convert Raw Dump")
             fi
         else
             print "* Select raw dump file to continue"
         fi
-        if [[ -n $ipsw_path ]]; then
-            echo
-            print "* Selected IPSW: $ipsw_path.ipsw"
-            print "* IPSW Version: $device_target_vers-$device_target_build"
-            if [[ $device_target_vers == "10"* ]]; then
-                warn "Saving iOS 10 blobs is not supported, converting raw dump to SHSH blob will fail."
-            fi
+        if [[ -n $build_id ]]; then
+            print "* Build version entered: $build_id"
             menu_items+=("(*) Convert Raw Dump")
         elif (( device_proc <= device_proc_32bit )); then
             echo
-            print "* Select IPSW of the raw dump's iOS version to continue"
+            print "* Enter build version to continue"
         fi
         menu_items+=("Go Back")
         echo
@@ -9347,11 +9334,16 @@ menu_shsh_convert() {
         select_option "${menu_items[@]}"
         selected="${menu_items[$?]}"
         case $selected in
-            "Select IPSW" ) menu_ipsw_browse;;
+            "Enter Build Version" )
+                print "* Enter the build version of the raw dump's iOS version to convert."
+                device_enter_build
+                build_id="$device_rd_build"
+            ;;
             "Select Raw Dump" ) menu_shshdump_browse;;
             "(*) Convert Raw Dump" )
                 rm -f dump.raw
                 cp "$shsh_path" dump.raw
+                device_target_build="$build_id"
                 shsh_convert_onboard
                 pause
             ;;
@@ -10548,13 +10540,6 @@ menu_ipsw_browse() {
     fi
 
     case $1 in
-        "onboard" )
-            if [[ $device_target_vers == "10"* ]]; then
-                log "Saving iOS 10 blobs is not supported for 32-bit devices."
-                pause
-                return
-            fi
-        ;;
         "base" )
             if [[ $device_base_vers != "$check_vers"* ]]; then
                 log "Selected IPSW is not for iOS $base_vers."

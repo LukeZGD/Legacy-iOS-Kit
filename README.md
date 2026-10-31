@@ -213,3 +213,4 @@
 - [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6X pwning on Linux, and iOS 10 tethered restores)
 - [surrealra1n](https://github.com/pwnerblu/surrealra1n) - pwnerblu and contributors (A12–A13 tethered downgrade support and related functionality are heavily based on this project)
 - [libdmg-apfs](https://github.com/LukeZGD/libdmg-apfs) - [NSSpiral](https://github.com/NSSpiral/libdmg-apfs) (LukeZGD fork for fixes and build)
+- Lynx32 (for dumping blobs 32-bit) - tuanemss
