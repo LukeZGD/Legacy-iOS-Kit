@@ -20,6 +20,7 @@
 - Tethered downgrades/restores to supported iOS versions for A5(X)/A6(X) and some other 32-bit devices
 - Jailbreak all 32-bit iOS devices on nearly any iOS version
     - Available on iOS versions 3.0 to 9.3.4 with some small exceptions
+    - [Untethered iOS 10.3.4 restore](resources/ios10/README.md) for iPhone 5, iPhone 5C and iPad 4, using Socket assets, Zebra and Procyon
 - Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices

@@ -1,0 +1,18 @@
+{
+  "upstream": "https://github.com/staturnzz/socket",
+  "commit": "65e06a7ac35304b1f31cc6e279fe1abecac356f4",
+  "release": "1.3",
+  "upstream_sha256": {
+    "jailbreak.h": "6ad1c90ab2dae6985c2550bf7df0492700996f255e8badc9f0d5356577e3f599",
+    "jailbreak.m": "91f6b060b2278cb643dd1eda254d80f6415158345635429a2f36393c29c7d52b",
+    "util.c": "39753204fb3a8dca74d47ae20e48955b967a838a2facc238a72e48d30a49f06f",
+    "util.h": "6705901f2ccdf9fe9e0e72c4d4cd38f90e35a081f50f714cc1535415225ed2bb",
+    "exploit/memory.c": "df0beea8a5cf24772342974337c497ffc95eddd2eb512a3a14954506021ba84f",
+    "exploit/memory.h": "91716a379539fbcd92c473714111abf28c7b6bf9138c77c4139fd114d6777a4a",
+    "exploit/oob_entry.c": "11c400975d263751601a041d52f26427106cdd96813d4f9bdd5249497bf6c06c",
+    "exploit/oob_entry.h": "2f869a71f5a2c1671e312608db0b94a5a90e6592e755146fdf50fe7f526d8ef8",
+    "exploit/util.c": "c0ea4006a049c3a6a900ee89ec9b82c529e9b33acd161c0e23f1f546970d351b",
+    "exploit/util.h": "fb860444abe7f7174438fc40a4c49927a4c5ae6e2c5aab3bfbee4a27960b3068"
+  },
+  "purpose": "Socket system-app adaptation; hardware validation pending"
+}

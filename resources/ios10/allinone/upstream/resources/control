@@ -1,0 +1,11 @@
+Package: com.staturnz.procyon
+Name: procyon untether
+Version: 1.0
+Architecture: iphoneos-arm
+Maintainer: staturnz
+Author: staturnz
+Section: Untether
+Priority: optional
+Description: procyon untether for iOS 10.0-10.3.4 (32bit)
+Depends: firmware (>= 10.0), firmware (<< 11.0)
+Conflicts: cy+cpu.arm64, com.coolbooter.cbuntether (= 1.0)

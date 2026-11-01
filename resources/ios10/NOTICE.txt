@@ -1,0 +1,62 @@
+iOS 10 restore integration - source and component notices
+
+The release installs jailbreak assets and the Procyon untether during the restore.
+See ../../README.md for supported devices, test status and user instructions.
+The historical system-app and jumpstart sources remain for provenance; this
+release does not use those installation routes.
+
+Pinned Socket 1.3 assets are under assets/. manifest.json records their SHA256
+hashes and source. Socket's tar and launchctl headers are repaired exactly as
+Socket does before execution. No Cydia application has been added. Cydia-named
+firmware/bootstrap helpers shipped by Socket remain part of its bootstrap.
+Socket source: https://github.com/staturnzz/socket/tree/v1.3
+Socket license: assets/Socket-LICENSE.
+
+The original Procyon 1.0 package is preserved from Socket 1.3. The all-in-one
+finalizer uses the corresponding source with the adaptations documented in
+ALLINONE.txt and allinone/build.py. Corresponding inspected source
+and license are in assets/procyon-source.tar, commit
+e30a352f59756452befb4f6303a996bf4650eb12 of https://github.com/staturnzz/procyon.
+The all-in-one finalizer creates its persistent data and service configuration
+after data preparation in the restore ramdisk, then checks the result and outputs.
+The upstream package postinst does not propagate installer failure.
+
+The ASR message-reference strategy in macho.py follows dora2ios/planetbeing and
+contributors' GPLv3 patchfinder and ASR patcher in:
+https://github.com/LukeZGD/powdersn0w_pub/tree/main/xpwn
+This implementation adds bounded parsing, executable-section searches and
+CodeDirectory hash verification. See the Kit's LICENSE (GPLv3).
+
+The temporary boot payload is derived from p0insettia-plus commit
+a8e1d262fed3c0629049ce71a5af82178336615b:
+https://github.com/LukeZGD/p0insettia-plus
+Original source snapshot: assets/p0insettia-source.tar.
+Original, unchanged payload: assets/payload_rd (reference only).
+Our separately maintained source: payload-src/, including upstream licenses.
+Changes in the retained historical payload source:
+ - Two AMFI finders now use their already absolute function addresses, rather
+   than adding the physical base again; their scans stay inside the image.
+ - The mask scanner rejects a range shorter than its pattern.
+ - The AMFI branch patch writes one byte instead of overwriting four bytes.
+ - The hook adds a bounded jump-start marker to final boot_args after patches.
+ - The prehook Makefile tracks its embedded payload header on incremental builds.
+ - build_payload.py retains the nonzero ramdisk-mode flag so the payload keeps
+   Apple's /sbin/launchd; it does not install the DRA /haxx/launchd path.
+Original authors include dora2ios/sakuRdev, xerub, planetbeing and synackuk.
+Per-file upstream copyright/license notices take precedence where applicable.
+
+Source layout:
+ - prepare.py: offline IPSW preparation, no USB access.
+ - stage.py: private per-device staging and transport credentials, no USB access.
+ - session.py: persistent host journal and legacy fixed-command diagnostic tools.
+ - socket-system/: modified Socket system app, local install, SSH and AFC logs.
+ - diagnostics/: preserved historical helper implementation for reference.
+ - restore.sh: bridge to Kit's existing platform-specific restorer and DFU tools.
+ - reuse.py: verified image reuse in a separate attempt, retaining old sessions.
+ - memory.py: temporary RAM storage for uncompressed images on macOS/Linux.
+ - serial_capture.py: receive-only DCSD logging, no transmitted serial commands.
+ - ticket_audit.py: summarize explicit ticket evidence from saved restore logs.
+ - build_payload.py: build with a separately supplied arm-none-eabi GCC/binutils.
+ - audit_payload.py: exercise compiled ARM finders using Unicorn 2.x; it does
+   not emulate a complete iPhone boot or prove the kernel patches work at boot.
+ - Tests use synthetic ARM Mach-O files, not redistributed Apple executables.

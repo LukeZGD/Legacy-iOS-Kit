@@ -1,0 +1,877 @@
+{
+  "source_url": "https://updates.cdn-apple.com/2019/ios/091-25277-20190722-0C1B94DE-992C-11E9-A2EE-E2C9A77C2E40/iPhone_4.0_32bit_10.3.4_14G61_Restore.ipsw",
+  "ProductVersion": "10.3.4",
+  "ProductBuildVersion": "14G61",
+  "SupportedProductTypes": [
+    "iPhone5,1",
+    "iPhone5,2",
+    "iPhone5,3",
+    "iPhone5,4"
+  ],
+  "BuildIdentities": [
+    {
+      "Info": {
+        "DeviceClass": "n42ap",
+        "RestoreBehavior": "Erase"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav5-11.80.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n42ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n42ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75249-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n42ap",
+        "RestoreBehavior": "Update"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav5-11.80.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n42ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n42ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75393-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n49ap",
+        "RestoreBehavior": "Erase"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav7Mav8-7.60.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n49ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5b.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n49ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75249-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5b.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n49ap",
+        "RestoreBehavior": "Update"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav7Mav8-7.60.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n49ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5b.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n49ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75393-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5b.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n41ap",
+        "RestoreBehavior": "Erase"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav5-11.80.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n41ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n41ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75249-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n41ap",
+        "RestoreBehavior": "Update"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav5-11.80.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n41ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n41ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75393-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n48ap",
+        "RestoreBehavior": "Erase"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav7Mav8-7.60.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n48ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5b.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n48ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75249-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5b.RELEASE.img3"
+          }
+        }
+      }
+    },
+    {
+      "Info": {
+        "DeviceClass": "n48ap",
+        "RestoreBehavior": "Update"
+      },
+      "Manifest": {
+        "AppleLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BasebandFirmware": {
+          "Info": {
+            "Path": "Firmware/Mav7Mav8-7.60.00.Release.bbfw"
+          }
+        },
+        "BatteryCharging0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryCharging1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterycharging1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryFull": {
+          "Info": {
+            "Path": "Firmware/all_flash/batteryfull@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow0": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow0@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryLow1": {
+          "Info": {
+            "Path": "Firmware/all_flash/batterylow1@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "BatteryPlugin": {
+          "Info": {
+            "Path": "Firmware/all_flash/glyphplugin@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "DeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n48ap.img3"
+          }
+        },
+        "KernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "LLB": {
+          "Info": {
+            "Path": "Firmware/all_flash/LLB.iphone5b.RELEASE.img3"
+          }
+        },
+        "OS": {
+          "Info": {
+            "Path": "058-74968-065.dmg"
+          }
+        },
+        "RecoveryMode": {
+          "Info": {
+            "Path": "Firmware/all_flash/recoverymode@1136~iphone-lightning.s5l8950x.img3"
+          }
+        },
+        "RestoreDeviceTree": {
+          "Info": {
+            "Path": "Firmware/all_flash/DeviceTree.n48ap.img3"
+          }
+        },
+        "RestoreKernelCache": {
+          "Info": {
+            "Path": "kernelcache.release.iphone5b"
+          }
+        },
+        "RestoreLogo": {
+          "Info": {
+            "Path": "Firmware/all_flash/applelogo@2x~iphone.s5l8950x.img3"
+          }
+        },
+        "RestoreRamDisk": {
+          "Info": {
+            "Path": "058-75393-065.dmg"
+          }
+        },
+        "iBEC": {
+          "Info": {
+            "Path": "Firmware/dfu/iBEC.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBSS": {
+          "Info": {
+            "Path": "Firmware/dfu/iBSS.iphone5b.RELEASE.dfu"
+          }
+        },
+        "iBoot": {
+          "Info": {
+            "Path": "Firmware/all_flash/iBoot.iphone5b.RELEASE.img3"
+          }
+        }
+      }
+    }
+  ]
+}

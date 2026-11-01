@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "source": "https://github.com/staturnzz/socket/releases/tag/v1.3",
+  "socket_version": "1.3",
+  "ipa_sha256": "10a291182941a2623cb6e1e0dc7ada5c81087bf06cfae55270482b5a09ea66f1",
+  "sha256": {
+    "bootstrap.tar": "c7fedee79302b3c96df9faa9bc6ea877e1908ea297a3cea1727a19825ce8ee90",
+    "procyon.deb": "a186d1499a1ef1d04503795922a2e041ab35f67b51f625c9bd47c93d8bcd2614",
+    "zebra.deb": "e724e4e45807880b9a4122100e89c4ea8326ce56dd3223abbbb01757779d5f5f",
+    "tar": "de48b59b1eab22459610acc3d66916636a5aff4bb196b1193d5cedb5223cf743",
+    "launchctl": "8d60d644e01adf56e9658eda61dffb1b0747c663e2e843038e8e7ed26ccc2e9d",
+    "payload_rd": "a4d8eddf009bc79798f6999996f066a034c6379c40b2d593c8e11df11f2cf1ca",
+    "p0insettia-source.tar": "62d437aabfd773105c50c2777c1a8771efa5d3302068f651c4846f9376c018b4",
+    "procyon-source.tar": "7ff57c704e5c064d7b65edd9505c7638ac9a889a1ba78da952d09ec57d1e1eb6",
+    "Socket-LICENSE": "087b390187b07d66dc85242abeb9bdb0bda5f52e68d1db0f4b3e80d0bd6e446a",
+    "payload_jumpstart": "c14a68beda4d3045bb270cdecedde43c7f7f89c89fb9479e332919063fe12c60",
+    "procyon-postinst": "d86e0e0e988733c785fd3223f430c42d3d4344a81577ce655b3243705582cab1",
+    "procyon-disabled.plist": "5e9d01162c3d1c9b74b67c0dc1787ef6556cee28782fc7e61d9f1f8b3432caba",
+    "diagnostics.tar": "748e3e4012898f5d7f449cced3414d5c96748cd60513e281e5cb4b36ecd51fe2",
+    "diagnostics-build.json": "2c10c8a8dc3bba19198a3177bf37ae8c820f8d898358f7297b07201f7f5e7471",
+    "socket-system.tar": "2fc7b240febe14245cbd4988fdb659601136f79cea5db8df933467d3d7e7ef4c",
+    "socket-system-build.json": "7f8ec37efafe4e666f266be605b465f0f83b2de8e77577bbb9899b7056dddc9d",
+    "allinone-lik-restore-finalize": "11416b129e3e1b2d5a10712970b58a61ef50fe675496f01dc9780e79176e1759",
+    "allinone-nvram": "f0bcebd7cffb94e6a556493fdd8fb5fe4a9070dee955f01755ea9d0cc66c6fe6",
+    "allinone-build.json": "89a1a43ac4d502a595263395866757033f88551609f9ce78bed5b34dbdd97926"
+  },
+  "p0insettia": {
+    "repository": "https://github.com/LukeZGD/p0insettia-plus",
+    "commit": "a8e1d262fed3c0629049ce71a5af82178336615b",
+    "payload": "iphoneos-arm/iboot/payload_rd",
+    "status": "unmodified upstream payload; hardware validation pending"
+  },
+  "procyon": {
+    "repository": "https://github.com/staturnzz/procyon",
+    "commit": "e30a352f59756452befb4f6303a996bf4650eb12",
+    "inspection_assets": "procyon-postinst is the unchanged package control script; procyon-disabled.plist is the unchanged __DATA,__disabled section of its executable."
+  },
+  "helper_change": "Socket tar and launchctl have their first four bytes restored to cafebabe, matching Socket install_bootstrap.",
+  "custom_payload": {
+    "file": "payload_jumpstart",
+    "corresponding_source": "../payload-src",
+    "builder": "../build_payload.py",
+    "compiler": "arm-none-eabi-gcc (Arm GNU Toolchain 12.3.Rel1 (Build arm-12.35)) 12.3.1 20230626",
+    "stock_launchd": true,
+    "hardware_tested": false
+  },
+  "socket_source_commit": "65e06a7ac35304b1f31cc6e279fe1abecac356f4",
+  "diagnostics": {
+    "build": "ios10-dev.9",
+    "source": "../diagnostics",
+    "hardware_tested": false
+  },
+  "socket_system": {
+    "build": "ios10-dev.10",
+    "source": "../socket-system",
+    "upstream_commit": "65e06a7ac35304b1f31cc6e279fe1abecac356f4",
+    "hardware_tested": false
+  },
+  "allinone": {
+    "build": "ios10-dev.14-allinone",
+    "source": "../allinone",
+    "hardware_tested": false
+  }
+}

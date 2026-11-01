@@ -1,0 +1,19 @@
+#!/bin/bash
+
+function exit_script() {
+	if ! [ -z "$CYDIA" ]; then
+		read -r fd ver <<EOT
+$CYDIA
+EOT
+        if [ "$ver" -ge 1 ]; then
+            echo "finish:$1" >&$fd
+        fi
+    fi
+    exit 0
+}
+
+set -o pipefail
+
+/usr/bin/procyon install 1>&1 2>&2
+set +o pipefail
+exit_script reboot

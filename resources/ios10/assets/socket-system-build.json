@@ -1,0 +1,34 @@
+{
+  "architecture": "armv7",
+  "builder": "../socket-system/build.py",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "files_sha256": {
+    "Applications/LIKTools.app/Default-568h@2x.png": "5d2b7115c934304555652e8dd442f5c2a318901ad532adefd7aa54d0587d5bef",
+    "Applications/LIKTools.app/Icon60@2x.png": "a059fbba4b86a44f4bf4349955b0ae62c9d2fd62607befaa6572134adb147cf6",
+    "Applications/LIKTools.app/Icon76.png": "99781c436feb53e881290c8ae848f38e5a941b8a0893d1ff6b0c11b945fdf970",
+    "Applications/LIKTools.app/Icon76@2x.png": "85ddd399928828b6ef6e033055075023e1584bc82c2c9d31746ca42ad0cf6575",
+    "Applications/LIKTools.app/Icon83.5@2x.png": "2d6a857a7782f452bfc49da58a1dae8cb04a4fcbf6ec8dbcbc45c8e20764a22e",
+    "Applications/LIKTools.app/Info.plist": "2642cd929360f0325ff4a871d9ac809c364846f5bdc6ea8c86baab8af401babc",
+    "Applications/LIKTools.app/LIKTools": "8122ac67e9a3744f77ae447ea5a02d68ee18b96f2b83ab877e3ee71efe037042",
+    "Applications/LIKTools.app/Socket-LICENSE": "087b390187b07d66dc85242abeb9bdb0bda5f52e68d1db0f4b3e80d0bd6e446a",
+    "Applications/LIKTools.app/_CodeSignature/CodeResources": "74a01b833a10f6cc5dc03e4e69a8cd2ddaff92407b61547cac04101e86033b0e"
+  },
+  "hardware_tested": false,
+  "link_stub_adjustments": "Build-local device-only TBD headers and missing standard libSystem resolver declarations: memcmp, memset, strcmp",
+  "minimum_ios": "10.0",
+  "sdk": "iPhoneOS10.3",
+  "sdk_archive_sha256": "bc32f1dd2a7a474bc3c74c225d2b3ad182f56f1cd1c9a432c39e83d0555acc0c",
+  "sdk_source": "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS10.3.sdk.tar.xz",
+  "source": "../socket-system",
+  "source_sha256": {
+    "App.m": "5f0742b918c844d9f0c3978238ff9a3c7a1b4d9afd2c0d1ae5ba54b5d153a8fd",
+    "Diagnostics.h": "634c1ee07c0b4207f0a7cd71d993e47b61aae734074e0179fc6431f6df124130",
+    "Diagnostics.m": "7e9b5a3396cecb21e6140b970d5d7282f4facad8a37092287a4bb289685ea864",
+    "Installer.h": "1a98b73530f6c07a8e04a5bfd03620f5d11290586c6b7f87c91ed0608a454367",
+    "Installer.m": "1497a1c13a2d95b932f778aae7cfdbeccb598707e429c47ba183dc850cabecbd",
+    "SSH.m": "2e81297af0494c9d6b0bc3a1ccae4380a1d676d77b4563abf2bb8fb67a4e6872",
+    "SocketCore.h": "65779bdb5e5a558b4cb15cad9890320d31f86dc4903551385673ee6ce199b96b",
+    "SocketCore.m": "b223834485f8ed4e9ad71419ba049641096a166802a0a62dfeeac0551efb6259",
+    "build.py": "a6e6a32fd85065d31f385d11a1bd9a3a4107b98158cec19fc143bd38724bba12"
+  }
+}

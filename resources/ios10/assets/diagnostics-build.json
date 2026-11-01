@@ -1,0 +1,34 @@
+{
+  "architecture": "armv7",
+  "builder": "../diagnostics/build.py",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "files_sha256": {
+    "Applications/LIKTools.app/Default-568h@2x.png": "5d2b7115c934304555652e8dd442f5c2a318901ad532adefd7aa54d0587d5bef",
+    "Applications/LIKTools.app/Icon60@2x.png": "a059fbba4b86a44f4bf4349955b0ae62c9d2fd62607befaa6572134adb147cf6",
+    "Applications/LIKTools.app/Icon76.png": "99781c436feb53e881290c8ae848f38e5a941b8a0893d1ff6b0c11b945fdf970",
+    "Applications/LIKTools.app/Icon76@2x.png": "85ddd399928828b6ef6e033055075023e1584bc82c2c9d31746ca42ad0cf6575",
+    "Applications/LIKTools.app/Icon83.5@2x.png": "2d6a857a7782f452bfc49da58a1dae8cb04a4fcbf6ec8dbcbc45c8e20764a22e",
+    "Applications/LIKTools.app/Info.plist": "4bd46a21ef872a7bd27351344d01d57816ee2cdd33f635e192820faf5e0dae75",
+    "Applications/LIKTools.app/LIKTools": "b2cf082f74ca4f68370370cf89aa13ad1aff7e6e391a47327849897e63fcbdf0",
+    "Applications/LIKTools.app/_CodeSignature/CodeResources": "e0c39f031f249f706ede528ddac57fd1e33e450e8c42f260cbca8943659d182e",
+    "System/Library/LaunchDaemons/org.legacyioskit.ios10.diagnostics.plist": "a6e17c457828011ed14cf03e6d7513bb6d1a9e7c67872b5d0c779574c369b845",
+    "usr/local/share/lik-ios10/diagnostic-helper": "9909df6b5d789c1b668029e02955c70cc55483b835386efe07b534fc3e43bdb6"
+  },
+  "hardware_tested": false,
+  "link_stub_adjustments": "Build-local device-only TBD headers and missing standard libSystem resolver declarations: memcmp, memset, strcmp",
+  "minimum_ios": "10.0",
+  "sdk": "iPhoneOS10.3",
+  "sdk_archive_sha256": "bc32f1dd2a7a474bc3c74c225d2b3ad182f56f1cd1c9a432c39e83d0555acc0c",
+  "sdk_source": "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS10.3.sdk.tar.xz",
+  "source": "../diagnostics",
+  "source_sha256": {
+    "App.m": "b85f8cf782f358600ca69a712513e0860b2502e2e9f582da376ee5a4e35fb8aa",
+    "Diagnostics.h": "634c1ee07c0b4207f0a7cd71d993e47b61aae734074e0179fc6431f6df124130",
+    "Diagnostics.m": "b41012d483301a3a30192f7423745aa0ab9e009e4e929f7734c100b04bb96df6",
+    "Helper.m": "b0c8f64cad65dbbe0acbd21319b9b169849062860cfceff7b10e99258efa896e",
+    "Installer.h": "1a98b73530f6c07a8e04a5bfd03620f5d11290586c6b7f87c91ed0608a454367",
+    "Installer.m": "85d11f9ea6fa8fd136b147294268d7ec302591ef13afddd22b97a18da45b5941",
+    "SSH.m": "2e81297af0494c9d6b0bc3a1ccae4380a1d676d77b4563abf2bb8fb67a4e6872",
+    "build.py": "03d641f93141226fa78e2fe92b90b83198f3bc671bdb13cdf1becfb2ce1b5748"
+  }
+}

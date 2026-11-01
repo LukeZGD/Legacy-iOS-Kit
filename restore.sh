@@ -2537,7 +2537,11 @@ device_send_unpacked_ibss() {
     esac
     local pwnrec="pwned iBSS"
     local tool_pwned
-    if [[ $device_boot4 == 1 ]]; then
+    if [[ -n $ios10_ibss_dir ]]; then
+        ios10_session verify-boot || return 1
+        cp "$ios10_ibss_dir/iBSS.restore.img3" pwnediBSS.dfu || return 1
+        cp "$ios10_ibss_dir/iBSS.restore.patched" pwnediBSS || return 1
+    elif [[ $device_boot4 == 1 ]]; then
         pwnrec="pwned recovery"
         cp iBSS.patched pwnediBSS
     else
@@ -2562,8 +2566,17 @@ device_send_unpacked_ibss() {
     fi
     rm -f pwnediBSS
     if [[ $tool_pwned != 0 ]]; then
-        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." \
-              "* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying."
+        local retry_help=("* You might need to exit DFU and (re-)enter PWNED DFU mode before retrying.")
+        if [[ $ipsw_jailbreak_ios10 == 1 ]]; then
+            retry_help=("* Relaunch, return to the same Restore/Downgrade menu, and select Reuse IPSW."
+                        "* Follow that restore flow's DFU instructions."
+                        "* Manual pwnDFU through Useful Utilities does not work with this custom restore flow.")
+        elif [[ $ios10_jumpstart_active == 1 ]]; then
+            retry_help+=("* Your custom iOS 10 restore has completed; the second-stage jump-start is still pending."
+                         "* Relaunch the script if it closes, then go to Main Menu -> Jumpstart iOS 10 Untethered Jailbreak."
+                         "* Use that option only after a successful custom iOS 10 restore and a failed second-stage pwnDFU attempt.")
+        fi
+        error "Failed to send iBSS. Your device has likely failed to enter PWNED DFU mode." "${retry_help[@]}"
     fi
     sleep 1
     log "Checking for device"
@@ -2991,11 +3004,91 @@ ipsw_nojailbreak_message() {
     echo
 }
 
+ipsw_ios10_jailbreak_target() {
+    # Socket/Procyon targets for Latest and SHSH restores. Tethered/DRA restores
+    # have a separate boot chain and are not part of this integration.
+    [[ $device_proc == 6 && $device_target_vers == 10.* && $ipsw_isbeta != 1 &&
+       $device_target_tethered != 1 && $device_target_powder != 1 ]] || return 1
+    case $device_type in
+        iPhone5,[1234] | iPad3,[456] ) ;;
+        * ) return 1;;
+    esac
+    [[ $device_target_vers == "$device_latest_vers" || $device_target_other == 1 ]]
+}
+
+ipsw_ios10_jailbreak_message() {
+    print "* Installs Socket's jailbreak assets, Zebra, and the Procyon untether during restore."
+    print "* Boots jailbroken without sideloading, a second DFU step, or an installer app."
+    print "* Back up your data first. Start Restore erases the device."
+    print "* The first boot may take longer than later boots. Allow time for it to finish."
+    print "* Do not sideload or run Socket with this installation: it may cause conflicts and is not supported."
+    print "* For Socket's option to boot without the jailbreak, use a fresh stock restore and Socket normally."
+    warn "Do not install CoolBooter Untetherer: Procyon reports it causes a blank screen. Regular CoolBooter is separate."
+    print "* Uses the same Procyon untether as Socket; comparable boot reliability is expected on the same model and firmware."
+    print "* Boot success rates have not been independently measured for this integration. Take care on all supported devices."
+    case "$device_type:$device_target_vers" in
+        iPad3,[456]:10.3.[234] )
+            warn "Procyon reports about 93% boot success on iPad 4 with iOS 10.3.2 or later. About 7% of boot attempts may fail."
+            print "* If it does not reach the Home Screen, manually reboot and try again. This can affect any boot."
+            print "* Socket leaves the untether off by default on these iPads; enabling this jailbreak option installs it."
+            print "* Socket's guide says this specific issue does not affect iPhone 5 or iPhone 5c."
+        ;;
+    esac
+    print "* Procyon guidance: https://github.com/staturnzz/procyon#information"
+    print "* Socket guidance: https://ios.cfw.guide/installing-socket/"
+    if [[ $platform == linux ]]; then
+        warn "This iOS 10 restore flow has not been tested on Linux, but is expected to work. Include the saved restore log if reporting an issue."
+    fi
+    if [[ $device_target_vers == 10.3.4 && $device_target_build == 14G61 && $device_target_other != 1 ]]; then
+        case "$device_type" in
+            iPhone5,2|iPhone5,4|iPad3,4) ;;
+            *) warn "Experimental support for $device_type: firmware checks passed; this model has not been tested on hardware.";;
+        esac
+        print "* Entering pwnDFU manually through Useful Utilities does not work with this custom restore flow."
+        print "* If pwnDFU fails after IPSW creation, relaunch, use the same Restore/Downgrade menu, and select Reuse IPSW."
+        print "* Follow that restore flow's DFU instructions. Select N for a normal restore."
+    else
+        warn "The iOS 10 jailbreak option supports Latest iOS 10.3.4 (14G61) only; SHSH and other firmware routes are not supported."
+        print "* Selecting Y will stop before device preparation or restore. Select N for a normal restore."
+    fi
+}
+
+ipsw_ios10_jailbreak_preview() {
+    ipsw_ios10_jailbreak_target || return 0
+    # Latest has a known target immediately. For SHSH restores, wait until the
+    # target IPSW and blob are selected; do not infer iOS from a blob filename.
+    if [[ $device_target_other == 1 && ( -z $ipsw_path || -z $shsh_path ) ]]; then
+        return 0
+    fi
+    input "Jailbreak Option"
+    print "* Start Restore will ask whether to enable the iOS 10 jailbreak option."
+    ipsw_ios10_jailbreak_message
+    echo
+}
+
+ipsw_jailbreak_preflight() {
+    if [[ $device_proc == 6 && $device_target_vers == 10.* && $ipsw_jailbreak == 1 ]]; then
+        ios10_load_bridge && ios10_preflight && return 0
+        warn "iOS 10 jailbreak preparation did not pass. Device preparation and restore have not started."
+        return 1
+    fi
+    return 0
+}
+
+ios10_load_bridge() {
+    source ../resources/ios10/restore.sh
+}
+
+
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
         [76543]* ) ipsw_canjailbreak=1;;
     esac
+    ipsw_jailbreak_ios10=
+    if ipsw_ios10_jailbreak_target; then
+        ipsw_canjailbreak=1
+    fi
     if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]] ||
        [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]] ||
        [[ $device_proc == 5 && $target_vers_maj == 5 && $device_target_powder == 1 ]]; then
@@ -3010,7 +3103,8 @@ ipsw_preference_set() {
         return
     fi
 
-    # jailbreak option: available for versions 3.1.3 to 9.3.4, with some exceptions:
+    # jailbreak option: 3.1.3 to 9.3.4, plus the iOS 10 Socket/Procyon selection.
+    # iOS 10 installation has separate identity and restore-route checks.
     # 3.1-4.1: option is disabled due to an issue with putting .launchd_use_gmalloc in the correct partition.
     # it should be in system, but restore puts it in data instead due to it being in var.
     # for some reason though, it does it correctly on 4.x for 3gs and touch 2, so its enabled for those.
@@ -3022,6 +3116,9 @@ ipsw_preference_set() {
     case $device_target_vers in
         9.3.[4321] | 9.3 | 9.[210]* | [876543].* ) ipsw_canjailbreak=1;;
     esac
+    if ipsw_ios10_jailbreak_target; then
+        ipsw_canjailbreak=1
+    fi
     if [[ $device_target_powder == 1 ]]; then
         case $device_target_vers in
         4.[10]* )
@@ -3098,11 +3195,20 @@ ipsw_preference_set() {
         ipsw_jailbreak=1
     elif [[ $ipsw_jailbreak == 1 && $jbpowder != 1 ]]; then
         warn "Jailbreak flag detected, jailbreak option enabled by user."
+        if ipsw_ios10_jailbreak_target; then
+            ipsw_ios10_jailbreak_message
+        fi
     elif [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
-        print "* Recommended setting: Enabled (Y) for jailbreak and Cydia to be pre-installed."
-        print "* Select this option if unsure."
-        select_yesno "Enable this option?" 1
+        local jailbreak_default=1
+        if ipsw_ios10_jailbreak_target; then
+            ipsw_ios10_jailbreak_message
+            jailbreak_default=0 # Require explicit selection of the untethered restore.
+        else
+            print "* Recommended setting: Enabled (Y) for jailbreak and Cydia to be pre-installed."
+            print "* Select this option if unsure."
+        fi
+        select_yesno "Enable this option?" "$jailbreak_default"
         if [[ $? != 1 ]]; then
             ipsw_jailbreak=
             log "Jailbreak option disabled by user."
@@ -3111,6 +3217,9 @@ ipsw_preference_set() {
             log "Jailbreak option enabled."
         fi
         echo
+    fi
+    if [[ $ipsw_jailbreak == 1 ]] && ipsw_ios10_jailbreak_target; then
+        ipsw_jailbreak_ios10=1
     fi
 
     if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $ipsw_canhacktivate == 1 ]]; then
@@ -6285,8 +6394,15 @@ restore_idevicerestore() {
     local ExtraArgs="-ewy --cache-path ."
     local idevicerestore2="$idevicerestore"
 
-    mkdir -p shsh
-    cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
+    if [[ $1 == ios10 ]]; then
+        # Latest signed iOS 10: use the same TSS negotiation as restore_latest.
+        # -w forces a cached ticket and omits the normal iBEC ticket prefix.
+        # Retain debug output for comparing nonce/ticket handling with DCSD.
+        ExtraArgs="-ey -d --cache-path ."
+    else
+        mkdir -p shsh
+        cp "$shsh_path" shsh/$device_ecid-$device_type-$device_target_vers.shsh
+    fi
     if [[ $device_use_bb == 0 || $device_type == "$device_disable_bbupdate" ]]; then
         log "Device $device_type has no baseband/disabled baseband update"
     fi
@@ -6308,14 +6424,14 @@ restore_idevicerestore() {
         $irecovery -f "iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
     fi
-    if [[ $debug_mode == 1 ]]; then
-        ExtraArgs+="d"
+    if [[ $debug_mode == 1 && $1 != ios10 ]]; then
+        ExtraArgs+=" -d"
     fi
 
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_custom.ipsw"
     opt=$?
-    if [[ $1 == "first" ]]; then
+    if [[ $1 == "first" || $1 == "ios10" ]]; then
         return $opt
     fi
     echo
@@ -6696,6 +6812,25 @@ restore_deviceprepare() {
             fi
         ;;
     esac
+}
+
+restore_run() {
+    # Both Latest and SHSH restores reach this point after selecting a target.
+    # Check the requested jailbreak before changing device mode or preparing an
+    # image, including when the user supplies --jailbreak on the command line.
+    ipsw_preference_set
+    ipsw_jailbreak_preflight || return 1
+    if [[ $ipsw_jailbreak_ios10 == 1 ]]; then
+        ios10_restore_run
+        return $?
+    fi
+    restore_deviceprepare
+    ipsw_prepare
+    if [[ $mode == "custom-ipsw" ]]; then
+        log "Done creating custom IPSW"
+    else
+        restore_prepare
+    fi
 }
 
 restore_prepare() {
@@ -10007,6 +10142,9 @@ menu_ipsw() {
             echo
         fi
 
+        if [[ -z $2 ]]; then
+            ipsw_ios10_jailbreak_preview
+        fi
         if [[ $ipsw_cancustomlogo2 == 1 ]]; then
             print "* You can select your own custom Apple logo image. This is optional and an experimental option"
             print "* Note: The images must be in PNG format, and up to your device resolution"
@@ -10037,7 +10175,7 @@ menu_ipsw() {
         fi
         if [[ $can_start == 1 ]]; then
             if [[ $device_target_vers == "$device_latest_vers" || $device_target_signed == 1 ]] &&
-               [[ $device_mode != "none" && -z $2 ]]; then
+               [[ $device_mode != "none" && -z $2 && $device_target_other != 1 && $device_target_tethered != 1 ]]; then
                 menu_items+=("(*) Start Update")
             fi
             menu_items+=("$start")
@@ -10481,11 +10619,12 @@ menu_ipsw_browse() {
         return
     fi
     if [[ $device_target_vers == "$device_latest_vers" ]] &&
-       [[ $device_target_other == 1 || $device_target_tethered == 1 ]]; then
+       [[ $device_target_other == 1 || $device_target_tethered == 1 ]] &&
+       ! ipsw_ios10_jailbreak_target; then
         log "For restoring to latest iOS, select the \"Latest iOS\" option instead of \"Other\""
         pause
         return
-    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_tethered != 1 &&
+    elif [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_vers != "10.3.4" && $device_target_tethered != 1 &&
             $device_target_other != 1 && $device_target_powder != 1 && $1 != "justboot" ]]; then
         log "Selected IPSW ($device_target_vers) is not supported as target version."
         print "* iOS 10 versions that are not 10.3.4 are not supported for 32-bit devices."
@@ -12729,18 +12868,7 @@ main() {
     fi
 
     case $mode in
-        "custom-ipsw" )
-            ipsw_preference_set
-            restore_deviceprepare
-            ipsw_prepare
-            log "Done creating custom IPSW"
-        ;;
-        "downgrade" )
-            ipsw_preference_set
-            restore_deviceprepare
-            ipsw_prepare
-            restore_prepare
-        ;;
+        "custom-ipsw" | "downgrade" ) restore_run;;
         "baseband" )
             device_dump baseband
             log "Baseband dumping is done"

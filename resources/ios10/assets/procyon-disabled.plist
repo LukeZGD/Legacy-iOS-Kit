@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.magicswitchd.companion</key>
+	<true/>
+	<key>com.apple.bootpd</key>
+	<true/>
+	<key>com.apple.ftp-proxy-embedded</key>
+	<false/>
+	<key>com.apple.backboardd</key>
+	<true/>
+	<key>com.apple.SpringBoard</key>
+	<true/>
+	<key>com.apple.assertiond</key>
+	<true/>
+	<key>com.apple.locationd</key>
+	<true/>
+	<key>com.apple.BTServer</key>
+	<true/>
+</dict>
+</plist>

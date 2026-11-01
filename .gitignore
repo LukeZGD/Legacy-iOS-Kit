@@ -17,3 +17,16 @@ resources/jailbreak/g1lbertJB/payload/Cydia.tar
 resources/jailbreak/g1lbertJB/var
 saved*/
 tmp*/
+
+# Pinned iOS 10 component metadata and synthetic test fixtures
+!resources/ios10/**/*.json
+!tests/fixtures/*.json
+__pycache__/
+*.pyc
+
+# Generated legacy payload build intermediates (not release assets)
+resources/ios10/payload-src/**/*.o
+resources/ios10/payload-src/**/*.a
+resources/ios10/payload-src/**/*.elf
+resources/ios10/payload-src/**/payload
+resources/ios10/payload-src/**/payload.h

@@ -1,0 +1,53 @@
+iOS 10 all-in-one restore integration - recipe 11
+
+Sources: Socket v1.3 65e06a7ac35304b1f31cc6e279fe1abecac356f4;
+Procyon e30a352f59756452befb4f6303a996bf4650eb12.
+Procyon upstream source is preserved under allinone/upstream with its MIT notice.
+Adaptations are applied to a build-local copy by allinone/build.py.
+
+The host stages packages, prepares the image, verifies its identity and invokes
+Kit's platform-specific restore tools. The all-in-one route does not send a
+p0insettia payload or use a temporary jumpstart boot. Historical app and temporary
+boot sources are retained for provenance, not exposed as this release's flow.
+
+The restore ramdisk wraps nvram, preserving the original as nvram.stock, to run
+the finalizer after Apple's data-volume preparation and before final unmount.
+The installed operating system's nvram executable is not replaced by this hook.
+The finalizer checks root identity, mounted HFS paths, model, firmware and fresh
+data state. Existing Apple directory metadata is preserved.
+
+Procyon generates stages from the installed kernelcache and full dyld cache.
+Only generator filesystem calls use ramdisk mount paths; persistent payload paths
+remain their ordinary boot paths. cache_rebase.c decodes slide-info v1/v2 before
+emitting repair writes. Only pointers receive the future cache slide. The stock
+cache remains unchanged. Malformed metadata causes generation to fail.
+
+The integration verifies stages, backups, trigger links and service configuration
+before committing dpkg status and its receipt. Finalization failures return
+nonzero and request auto-boot=false. Host restore success alone is not reported
+as proof that the device has booted successfully. Raw DCSD evidence is checked
+when available; missing evidence is distinguished from an explicit failure.
+
+Zebra's offline package installation includes supersling ownership/permissions
+and the sileo URL scheme. Bootstrap startup refreshes firmware/GraphicsServices
+virtual packages and registers icons after Procyon loads custom launch daemons.
+Normal AutoInstall handling is retained. Missing bootstrap Status fields are
+filled only after checking installed file lists and payloads.
+
+The bundled upstream generator's stage3 descriptor used a different spelling for
+vm_map_protect than the embedded JavaScript expects. The build adapter corrects
+that key; a regression check compares JavaScript lookups with generated names.
+
+The tested system sizing remains +160 MiB with no additional partition. Release
+cleanup does not change the native binaries, stage generator, bootstrap or image
+recipe. See ../../README.md for current hardware results and warnings. Latest
+10.3.4 is enabled for iPhone5,1-5,4 and iPad3,4-3,6; SHSH jailbreak routes remain
+unsupported. Compatible images retain the existing reuse checks.
+
+Native source build (not required to restore):
+python3 resources/ios10/allinone/build.py --sdk /path/to/iPhoneOS10.3.sdk \
+    --build-dir /path/to/disposable/build
+
+Both macOS and Linux package the same prebuilt ARMv7 device binaries. Host tools
+remain in their original platform/architecture directories. No SDK is required
+for ordinary IPSW creation or restore. Linux runtime support remains untested.
