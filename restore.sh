@@ -1238,7 +1238,7 @@ device_s5l8900xall() {
     log "Sending patched WTF.s5l8900xall (Pwnage 2.0)"
     $irecovery -f "$wtf_patched"
     if [[ $platform == "macos" ]]; then
-        print "* If your device is unable to be detected in DFU mode, try switching to a USB-C to USB-A dongle instead of USB-C dock/hub."
+        print "* If your device is unable to be detected in DFU mode, try switching to a USB-C to USB-A dongle instead of USB-C dock/hub. (for S5L8900 devices only)"
     fi
     device_find_mode DFUreal
     device_srtg="$($irecovery -q | grep "SRTG" | cut -c 7-)"
@@ -6486,6 +6486,9 @@ restore_latest() {
     elif [[ $device_proc == 1 && $1 == "custom" ]]; then
         if [[ $device_mode == "WTF" ]]; then
             log "Sending s5l8900xall..."
+            if [[ $platform == "macos" ]]; then
+                print "* If your device is unable to be detected in DFU mode, try switching to a USB-C to USB-A dongle instead of USB-C dock/hub. (for S5L8900 devices only)"
+            fi
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
             $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
             if [[ $target_vers_maj != 1 ]]; then
@@ -6505,7 +6508,7 @@ restore_latest() {
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_path.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_path.ipsw"
     local opt=$?
-    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    if [[ $platform == "macos" && $platform_arch == "arm64" && $device_proc != 1 ]]; then
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
     fi
@@ -8438,6 +8441,7 @@ shsh_get_buildmanifest() {
         error "No value for device_target_build is not set. Cannot continue."
     fi
     local buildmanifest="../saved/$device_type/$device_target_build.plist"
+    log "Getting BuildManifest for raw dump conversion"
     if [[ -s $buildmanifest ]]; then
         cp -v $buildmanifest BuildManifest.plist
     else
@@ -8501,22 +8505,27 @@ shsh_convert_onboard() {
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc <= device_proc_32bit )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
-        # remove ibob for powdersn0w/dra downgraded devices. fixes unknown magic 69626f62
+        # fix unknown magic errors for powdersn0w/DRA downgraded devices
         local blob=$(xxd -p dump.raw | tr -d '\n')
-        local bobi="626f6269"
-        local blli="626c6c69"
         local search=
         local desc=
 
-        if [[ $blob == *"$bobi"* ]]; then
-            search=$bobi
-            desc="ibob"
-        fi
+        for magic in 626f6269 62676f6c 34676f6c 62636572 34636572; do
+            case $magic in
+                626f6269 ) desc="ibob";;
+                62676f6c ) desc="logb";;
+                34676f6c ) desc="log4";;
+                62636572 ) desc="recb";;
+                34636572 ) desc="rec4";;
+            esac
 
-        if [[ -n $search ]]; then
-            log "Detected \"$desc\". Fixing... (This happens on DRA/powdersn0w downgraded devices)"
-            printf '%s' "${blob/"$search"/"$blli"}" | xxd -r -p > dump.raw
-        fi
+            if [[ $blob == *"$magic"* ]]; then
+                log "Detected \"$desc\". Fixing... (This happens on DRA/powdersn0w downgraded devices)"
+                blob=${blob/"$magic"/"626c6c69"}
+            fi
+        done
+
+        printf '%s' "$blob" | xxd -r -p > dump.raw
 
         shsh_onboard_iboot="$(cat dump.raw | strings | grep iBoot | head -1)"
         log "Raw dump iBoot version: $shsh_onboard_iboot"
@@ -9285,12 +9294,18 @@ menu_shsh_onboard() {
         shsh_save_onboard
         return
     fi
-    if [[ -n $device_build ]]; then
+    print "* Enter the build version of your device's current iOS version to dump blobs."
+    print "* For powdersn0w/DRA-restored devices, enter the base iOS version used instead."
+    device_enter_build
+    if [[ -n $device_rd_build ]]; then
+        log "Entered build version: $device_rd_build"
+        device_target_build="$device_rd_build"
+    elif [[ -n $device_build ]]; then
+        log "No build version entered, using detected build: $device_build"
         device_target_build="$device_build"
     else
-        print "* Enter the build version of your device's current iOS version to dump blobs."
-        device_enter_build
-        device_target_build="$device_rd_build"
+        warn "No build version entered, cannot continue."
+        return
     fi
 
     mode="shsh_save_onboard"
@@ -9335,14 +9350,15 @@ menu_shsh_convert() {
         selected="${menu_items[$?]}"
         case $selected in
             "Enter Build Version" )
-                print "* Enter the build version of the raw dump's iOS version to convert."
+                print "* Enter the build version of the raw dump's iOS version to dump blobs."
+                print "* For powdersn0w/DRA-restored devices, enter the base iOS version used instead."
                 device_enter_build
                 build_id="$device_rd_build"
             ;;
             "Select Raw Dump" ) menu_shshdump_browse;;
             "(*) Convert Raw Dump" )
                 rm -f dump.raw
-                cp "$shsh_path" dump.raw
+                cp -v "$shsh_path" dump.raw
                 device_target_build="$build_id"
                 shsh_convert_onboard
                 pause
@@ -10573,9 +10589,6 @@ menu_ipsw_browse() {
         *"powdersn0w"* )
             if [[ $device_target_build == "14"* ]]; then
                 log "Selected IPSW ($device_target_vers) is not supported as target version."
-                case $device_type in
-                    iPhone5,[12] ) print "* If you want to jailbreak iOS 10 untethered, use p0insettia plus: https://github.com/LukeZGD/p0insettia-plus";;
-                esac
                 pause
                 return
             elif [[ $device_target_build == "11D257" && $device_type == "iPhone3,"* ]] ||
@@ -10678,8 +10691,8 @@ menu_shsh_browse() {
         shsh_validate=$?
     fi
     if [[ $shsh_validate != 0 ]]; then
-        warn "Validation failed. Did you select the correct IPSW/SHSH?"
-        print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
+        warn "Validation failed. Did you select the correct build/SHSH?"
+        print "* If you selected the correct build version and the error is not APTicket, iBoot, KernelCache, or LLB, the blob is most likely usable."
         pause
     fi
     shsh_path="$newpath"
@@ -11805,7 +11818,7 @@ restore_customipsw_confirm() {
         warn "Restoring to 2.x might not work on newer macOS versions."
         print "* Try installing usbmuxd from MacPorts, and run 'sudo usbmuxd -pf' in another Terminal window"
         print "* Another option is to just do 2.x restores on Linux instead."
-        print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting#restoring-to-iphoneosios-2x-on-macos"
+        print "* For more info, go to: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/usbmuxd-usage-on-macOS"
     fi
     if [[ $device_type == "iPhone1,"* ]]; then
         echo
