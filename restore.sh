@@ -11570,6 +11570,9 @@ device_dumprd() {
         return
     fi
     log "Mounting filesystems"
+    case $vers in
+        9.* | 10.* ) $ssh -t -p $ssh_port root@127.0.0.1 "/sbin/fsck_hfs -f /dev/disk0s1s2";;
+    esac
     $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh"
     sleep 1
 
