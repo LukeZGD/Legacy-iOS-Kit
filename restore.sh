@@ -184,22 +184,35 @@ zip() {
 file_extract() {
     local archive="$1"
     local dest="$2"
-    local exclude=
-    [[ $3 == "exclude" ]] && exclude="$4"
     local arr=()
 
     if [[ $platform == "macos" ]]; then
         arr+=("-xzvf" "$archive")
         [[ -n $dest ]] && arr+=("-C" "$dest")
-        [[ -n $exclude ]] && arr+=("--exclude=$exclude")
-        tar "${arr[@]}"
-        return
+    else
+        arr+=("-o" "$archive")
+        [[ -n $dest ]] && arr+=("-d" "$dest")
     fi
 
-    arr+=("-o" "$archive")
-    [[ -n $dest ]] && arr+=("-d" "$dest")
-    [[ -n $exclude ]] && arr+=("-x" "$exclude")
-    unzip "${arr[@]}"
+    if [[ $3 == "exclude" ]]; then
+        shift 3
+        if [[ $platform != "macos" ]]; then
+            arr+=("-x")
+        fi
+        for exclude in "$@"; do
+            if [[ $platform == "macos" ]]; then
+                arr+=("--exclude=$exclude")
+            else
+                arr+=("$exclude")
+            fi
+        done
+    fi
+
+    if [[ $platform == "macos" ]]; then
+        tar "${arr[@]}"
+    else
+        unzip "${arr[@]}"
+    fi
 }
 
 file_extract_from_archive() {
@@ -3231,7 +3244,7 @@ shsh_save() {
                 file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
             else
                 ipsw_get_url $build_id
-                download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
+                download_with_pzb "$ipsw_url" BuildManifest.plist
             fi
             mv BuildManifest.plist $buildmanifest
         fi
@@ -4652,7 +4665,7 @@ ipsw_prepare_ios4multipart() {
     elif [[ -e $saved_path/BuildManifest.plist ]]; then
         cp $saved_path/BuildManifest.plist .
     else
-        download_with_pzb "$url" BuildManifest.plist BuildManifest.plist
+        download_with_pzb "$url" BuildManifest.plist
         cp BuildManifest.plist $saved_path/
     fi
     $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
@@ -4779,6 +4792,9 @@ download_with_pzb() {
     local file="$2"
     local file_out="$3"
     local sha="$4"
+    if [[ -z $file_out ]]; then
+        file_out="$file"
+    fi
     log "Downloading $file from: $url"
     "$dir/pzb" -g "$file" -o "$file_out" "$url"
     if [[ -n $sha ]]; then
@@ -7217,7 +7233,7 @@ device_ramdisk64() {
     if [[ -s $ramdisk_path/BuildManifest.plist ]]; then
         cp $ramdisk_path/BuildManifest.plist .
     else
-        download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
+        download_with_pzb "$ipsw_url" BuildManifest.plist
         cp BuildManifest.plist $ramdisk_path/
     fi
     ipsw_get_ramdisk_identity Erase BuildManifest.plist
@@ -7790,7 +7806,7 @@ device_ramdisk() {
                     untether="${device_type}_${build}.tar"
                 fi
 
-                # 3.1.3–4.1 untether must be extracted before data partition mount
+                # 3.1.3-4.1 untether must be extracted before data partition mount
                 case $vers in
                     4.[10]* | 3.2* | 3.1.3 )
                         log "Extracting $untether"
@@ -8446,7 +8462,7 @@ shsh_get_buildmanifest() {
         cp -v $buildmanifest BuildManifest.plist
     else
         ipsw_get_url $device_target_build
-        download_with_pzb "$ipsw_url" BuildManifest.plist BuildManifest.plist
+        download_with_pzb "$ipsw_url" BuildManifest.plist
         cp -v BuildManifest.plist $buildmanifest
     fi
 
@@ -8541,7 +8557,7 @@ shsh_convert_onboard() {
             "$dir/validate" dump.shsh BuildManifest.plist
             if [[ $? != 0 ]]; then
                 warn "Saved SHSH blobs might be invalid. Did you select the correct IPSW?"
-                print "* If you selected the correct IPSW and the error is not APTicket and/or LLB, the blob is most likely usable."
+                print "* If you selected the correct build version and the error is not APTicket, iBoot, KernelCache, or LLB, the blob is most likely usable."
             fi
         fi
     else

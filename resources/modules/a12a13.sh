@@ -171,7 +171,7 @@ device_a12a13_ipsw_tethered() {
     log "Extracting target IPSW: $ipsw_path.ipsw"
     file_extract "$ipsw_path.ipsw" tmp1/
     log "Extracting base IPSW: $ipsw_base_path.ipsw"
-    file_extract "$ipsw_base_path.ipsw" tmp2/ exclude "*.aea"
+    file_extract "$ipsw_base_path.ipsw" tmp2/ exclude "*.aea" "*.dmg"
     chmod 644 tmp1/*.plist tmp2/*.plist
 
     # prepare target keys
@@ -366,7 +366,7 @@ PY
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
             cp -v ../saved/$device_type/$ramdisk_download_name .
         else
-            "$dir/pzb" -g "$ramdisk_download_name" "$ramdisk_url"
+            download_with_pzb "$ramdisk_url" "$ramdisk_download_name"
             cp -v "$ramdisk_download_name" ../saved/$device_type/
         fi
         if [[ ! -s $ramdisk_download_name ]]; then

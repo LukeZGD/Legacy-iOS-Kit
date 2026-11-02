@@ -17,20 +17,20 @@
     - Includes downgrading iPhone 2G, 3G, 3GS, iPhone 4 GSM and CDMA, iPod touch 1, 2, 3, iPad 1
     - "without" is in quotes because powdersn0w uses iOS 5/7 blobs for touch 3 and A4 devices, but it is signed for everyone to use
     - Other devices however are true blobless
-- Tethered downgrades/restores to supported iOS versions for A5(X)/A6(X) and some other 32-bit devices
+- Tethered downgrades/restores to supported iOS versions for some 32-bit and A12/A13 devices
 - Jailbreak all 32-bit iOS devices on nearly any iOS version
-    - Available on iOS versions 3.0 to 9.3.4 with some small exceptions
-- Hacktivation for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
+    - Available on release iOS versions 3.0 to 9.3.4
+- [Hacktivation](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Hacktivation) for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
-- Sideload IPA files for supported devices on Linux (and macOS)
+- Sideload IPA files for supported devices on Linux and macOS
 - Save SHSH blobs from Cydia servers for 32-bit devices
 - Enter pwned iBSS/kDFU mode for supported 32-bit devices
 - Save onboard SHSH blobs for jailbroken 64-bit devices
     - This also saves onboard Cryptex APTicket and seed for iOS 16+ (x8A4)
 - Multiple methods of installing [TrollStore](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/TrollStore) are supported
 - Clear NVRAM for 32-bit devices
-- Device activation using ideviceactivation (especially useful for iOS 4 and lower)
+- Device activation using ideviceactivation (especially useful for older iOS versions)
 - The latest baseband will be flashed for certain A5/A6 devices (for iPhone 4S, 5, 5C, iPad 4, mini 1)
     - For more info on baseband, go to [Baseband Update](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Baseband-Update) wiki page
 - Dumping and stitching baseband to IPSW (requires `--disable-bbupdate`)
@@ -211,6 +211,6 @@
     - [ipad-1-ios-7](https://github.com/amy-and-nicole/ipad-1-ios-7) - amy-and-nicole and pwnerblu, also uses stuff from SundanceInH2A
 - iPod touch 4 unofficial upgrades: fixes contributions by [pwnerblu](https://github.com/pwnerblu) and [Peterdobby](https://github.com/Peterdobby/)
 - [kurouta dori](https://sep.lol/legacy/index.html) (turdus merula A6(X)) - dora/kok3shidoll (used for A6X pwning on Linux, and iOS 10 tethered restores)
-- [surrealra1n](https://github.com/pwnerblu/surrealra1n) - pwnerblu and contributors (A12–A13 tethered downgrade support and related functionality are heavily based on this project)
+- [surrealra1n](https://github.com/pwnerblu/surrealra1n) - pwnerblu and contributors (A12-A13 tethered downgrade support and related functionality are heavily based on this project)
 - [libdmg-apfs](https://github.com/LukeZGD/libdmg-apfs) - [NSSpiral](https://github.com/NSSpiral/libdmg-apfs) (LukeZGD fork for fixes and build)
-- Lynx32 (for dumping blobs 32-bit) - tuanemss
+- [Lynx32](https://github.com/tuanemss/Lynx32) (for dumping blobs 32-bit) - tuanemss
