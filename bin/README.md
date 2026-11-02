@@ -1,5 +1,9 @@
 ## Binary Sources
 
+The deps scripts included are intended for reference and maintenance purposes only. **End users should not run these scripts.**
+
+This README documents the sources used to build the binaries distributed with Legacy iOS Kit. It also serves as a reference for the binary source matrix in this README, indicating which projects each binary is built from and any platform-specific differences.
+
 ### Shared Sources
 
 These binaries use the same source on Linux and macOS.
