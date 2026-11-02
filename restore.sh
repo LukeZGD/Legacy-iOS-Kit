@@ -7891,7 +7891,7 @@ device_ramdisk() {
             case $vers in
                 9.* | 8.[43]* ) :;;
                 * )
-                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
+                    $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/var/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                     device_send_rdtar nopatcyh.tar
                 ;;
             esac
