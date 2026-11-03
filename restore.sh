@@ -2646,7 +2646,7 @@ kuroutadori_litera1n() {
     local tool_pwned
     kuroutadori_init
     print "* If pwning fails, try to rerun the script with --ra1n-timeout=1000000 (or adjust the value as needed)"
-    print "* If it gets stuck at \"checkm8 setup stage\", unplug and replug the device."
+    print "* If it gets stuck at \"checkm8 reset/setup stage\", unplug and replug the device."
     print "* If it gets stuck at \"Checkmate?\", press Ctrl+C to cancel, then re-enter DFU and retry."
     for i in {1..3}; do
         log "Running litera1n (attempt $i): $kuroutadori/litera1n $1"
