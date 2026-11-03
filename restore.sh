@@ -511,6 +511,7 @@ set_tool_paths() {
             gaster="$sudo "
             idevicerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             irecovery="$sudo "
+            irecovery2="$sudo "
             primepwn="$sudo "
         fi
         if [[ $(command -v gio) && ! -e ../resources/new && $device_argmode != "none" ]]; then
@@ -642,6 +643,7 @@ set_tool_paths() {
     ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
     irecovery+="$dir/irecovery"
+    irecovery2+="$dir/irecovery2"
     jq="$dir/jq"
     primepwn+="$dir/primepwn"
     sshfs="$(command -v sshfs)"
@@ -1677,7 +1679,9 @@ device_get_info() {
         warn "Unable to detect device type/ECID. Is your device on 2.x or lower?"
         warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
         print "* For better support, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
-        print "* For iOS 1.x support, use Antares: https://github.com/theiphoneos1project/Antares"
+        print "* For iOS 1.x support, use Antares and PXLInstaller:"
+        print "  - https://ios.cfw.guide/installing-antares"
+        print "  - https://ios.cfw.guide/installing-antares/using-pxlinstaller.html"
         pause
         [[ -z $device_vers_maj ]] && device_vers_maj=1
     fi
@@ -8492,8 +8496,8 @@ shsh_save_onboard() {
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
-    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery -s
-    $irecovery -g dump.raw
+    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery2 -s
+    $irecovery2 -g dump.raw
     log "Rebooting device"
     $irecovery -n
     local raw
@@ -8715,8 +8719,13 @@ menu_print_info() {
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
-    else
+    elif [[ -n $device_vers ]]; then
         print "* iOS Version: $device_vers"
+    elif [[ $device_mode == "Normal" && $device_proc == 1 ]]; then
+        warn "Unable to detect iOS version. Is your device on 1.x?"
+        print "* For iOS 1.x support, use Antares and PXLInstaller:"
+        print "  - https://ios.cfw.guide/installing-antares"
+        print "  - https://ios.cfw.guide/installing-antares/using-pxlinstaller.html"
     fi
     if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc <= device_proc_32bit )); then
         print "* To get iOS version, go to: Misc Utilities -> Get iOS Version"

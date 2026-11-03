@@ -41,6 +41,7 @@ These binaries use the same source on Linux and macOS.
 | ipsw                 | https://github.com/LukeZGD/daibutsuCFW |
 | ipx_restored_patcher | https://gist.github.com/LukeZGD/244d7dc3f07ec98a4505e4084c5dbf6b |
 | irecovery            | https://github.com/LukeZGD/idevicerestore |
+| irecovery2           | https://github.com/LukeZGD/irecovery |
 | jq                   | https://jqlang.org |
 | Kernel64Patcher     | https://github.com/LukeZGD/Kernel64Patcher |
 | kerneldiff           | https://gist.github.com/LukeZGD/8c719b613ca28d6883552437bdd500de |
