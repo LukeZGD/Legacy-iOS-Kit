@@ -109,7 +109,6 @@
     - See the ["A12/A13 Tethered" wiki page](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/A12-A13-Tethered)
 - Restoring to other unsigned versions without blobs is supported on the following devices and target version range:
     - iPhone 2G, 3G, 3GS, iPod touch 1, touch 2 - All versions are supported
-    - Lowest downgradable version is 2.0. Going to 1.x does not work
     - For jailbreaking support, see below
 - [Restoring the iPod touch 3rd gen and iPad 1 to iOS 6 (and also iOS 7 for iPad 1) untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
 - [Restoring the iPod touch 4th gen to iOS 7 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
@@ -158,7 +157,7 @@
 - [a6meowing](https://github.com/kok3shidoll/a6meowing) - dora/kok3shidoll; [LukeZGD fork](https://github.com/LukeZGD/a6meowing) with changes from [retr0id](https://github.com/DavidBuchanan314/a6meowing) for Linux support
 - [daibutsuCFW](https://github.com/LukeZGD/daibutsuCFW) - dora2ios; LukeZGD fork
 - [libimobiledevice](https://github.com/LukeZGD/libimobiledevice) - libimobiledevice
-- [libirecovery](https://github.com/LukeZGD/libirecovery) - libimobiledevice
+- [libirecovery](https://github.com/LukeZGD/libirecovery) - libimobiledevice; LukeZGD fork with changes from [testingthings](https://github.com/justtestingafewthings/libirecovery)
 - [libideviceactivation](https://github.com/libimobiledevice/libideviceactivation) - libimobiledevice
 - [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) - libimobiledevice
 - [static-cross-openssh](https://codeberg.org/binary-manu/static-cross-openssh) - scp and ssh binaries (used on Linux only)
@@ -169,7 +168,7 @@
 - [x8A4](https://github.com/Cryptiiiic/x8A4) - Cryptiiiic (for getting Cryptex seed)
 - [futurerestore](https://github.com/LukeZGD/futurerestore) - LukeZGD fork (multiple branches, based on [futurerestore nightly](https://github.com/futurerestore/futurerestore/))
 - [iBoot32Patcher](https://github.com/LukeZGD/iBoot32Patcher/) - Merculous fork with fixes from Pingzi610
-- [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork
+- [idevicerestore](https://github.com/LukeZGD/idevicerestore) - libimobiledevice; LukeZGD fork with changes from [testingthings](https://github.com/justtestingafewthings/idevicerestore)
 - [kloader from Odysseus](https://www.youtube.com/watch?v=fh0tB6fp0Sc)
 - [kloader from axi0mX](https://github.com/axi0mX/ios-kexec-utils/blob/master/kloader) (used on iOS 4/5 only)
 - [kloader for iOS 5](https://www.pmbonneau.com/cydia/com.pmbonneau.kloader5_1.2_iphoneos-arm.deb) (used on A5X iOS 5 only)

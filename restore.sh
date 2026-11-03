@@ -511,8 +511,6 @@ set_tool_paths() {
             gaster="$sudo "
             idevicerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             irecovery="$sudo "
-            irecovery2="$sudo "
-            irecovery3="$sudo "
             primepwn="$sudo "
         fi
         if [[ $(command -v gio) && ! -e ../resources/new && $device_argmode != "none" ]]; then
@@ -644,8 +642,6 @@ set_tool_paths() {
     ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
     irecovery+="$dir/irecovery"
-    irecovery2+="$dir/irecovery2"
-    irecovery3+="../$dir/irecovery"
     jq="$dir/jq"
     primepwn+="$dir/primepwn"
     sshfs="$(command -v sshfs)"
@@ -1681,6 +1677,7 @@ device_get_info() {
         warn "Unable to detect device type/ECID. Is your device on 2.x or lower?"
         warn "Limited support for iOS versions lower than 3.x. Expect features to not work properly."
         print "* For better support, enter Recovery/DFU mode and/or update your device to iOS 3.x or newer."
+        print "* For iOS 1.x support, use Antares: https://github.com/theiphoneos1project/Antares"
         pause
         [[ -z $device_vers_maj ]] && device_vers_maj=1
     fi
@@ -6327,6 +6324,9 @@ restore_idevicerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
     fi
+    case $device_proc in
+        [56] ) ExtraArgs+=" --ibss-loaded";;
+    esac
 
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_custom.ipsw"
@@ -6511,7 +6511,7 @@ restore_latest() {
                 device_find_mode DFUreal
             fi
         fi
-        if [[ $target_vers_maj == 4 ]]; then
+        if [[ $target_vers_maj == 1 || $target_vers_maj == 4 ]]; then
             log "Sending iBSS..."
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
             $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
@@ -8493,8 +8493,8 @@ shsh_save_onboard() {
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
-    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery2 -s
-    $irecovery2 -g dump.raw
+    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery -s
+    $irecovery -g dump.raw
     log "Rebooting device"
     $irecovery -n
     local raw
@@ -9455,7 +9455,7 @@ menu_restore() {
         else
             print " > Main Menu > Restore/Downgrade"
             if [[ $device_proc == 1 ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.0 to 3.1.2) (1.x will not work)"
+                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (1.x to 3.1.2)"
                 echo
             elif [[ $device_type == "iPod2,1" && $device_newbr == 0 ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.1.1 to 3.0)"
