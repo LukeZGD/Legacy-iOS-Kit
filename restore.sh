@@ -511,7 +511,6 @@ set_tool_paths() {
             gaster="$sudo "
             idevicerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             irecovery="$sudo "
-            irecovery2="$sudo "
             primepwn="$sudo "
         fi
         if [[ $(command -v gio) && ! -e ../resources/new && $device_argmode != "none" ]]; then
@@ -643,7 +642,6 @@ set_tool_paths() {
     ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
     irecovery+="$dir/irecovery"
-    irecovery2+="$dir/irecovery2"
     jq="$dir/jq"
     primepwn+="$dir/primepwn"
     sshfs="$(command -v sshfs)"
@@ -8496,8 +8494,8 @@ shsh_save_onboard() {
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
-    (echo -e "/send ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery2 -s
-    $irecovery2 -g dump.raw
+    (echo -e "/upload ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery -s
+    $irecovery -g dump.raw
     log "Rebooting device"
     $irecovery -n
     local raw
