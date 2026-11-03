@@ -1699,7 +1699,7 @@ device_get_info() {
         if [[ $device_srtg == "iBoot-636.66.3x" ]]; then
             device_pwnd="Pwnage 2.0"
         else
-            log "S5L8900 detected in $device_mode mode. WTF mode is required."
+            log "S5L8900 detected in DFU mode. WTF mode is required."
             print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
             warn "It is recommended to re-enter WTF mode as continuing in DFU may cause unexpected issues."
             pause
@@ -1877,7 +1877,6 @@ device_find_mode() {
     local device_in
     local mode="$1"
     local mode2
-    local wtfreal
 
     if [[ $mode == "Recovery" ]]; then
         usb=1281
@@ -1888,7 +1887,7 @@ device_find_mode() {
             usb=1227
         elif [[ $mode == "WTFreal" ]]; then
             mode="WTF"
-            wtfreal=1
+            device_wtfreal=1
         elif [[ $mode == "DFU" ]]; then
             mode="WTF"
         fi
@@ -1934,7 +1933,9 @@ device_find_mode() {
             [123] ) return 1;;
             * ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
         esac
-    elif [[ $mode == "WTF" && $wtfreal != 1 ]]; then
+    elif [[ $mode == "WTF" && $device_wtfreal == 1 ]]; then
+        device_wtfreal= # clear the value, device is now in wtf mode
+    elif [[ $mode == "WTF" ]]; then
         device_s5l8900xall
     fi
 }
@@ -2196,16 +2197,17 @@ device_enter_mode() {
             if [[ $device_mode == "WTF" ]]; then
                 return
             elif [[ $device_mode == "Normal" ]]; then
+                device_wtfreal=1
                 device_enter_mode Recovery
             fi
             if [[ $device_mode == "Recovery" ]]; then
                 device_dfuhelper norec WTFreal
-                return
+            elif [[ $device_mode == "DFU" ]]; then
+                log "S5L8900 detected in DFU mode. WTF mode is required."
+                print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
+                warn "It is recommended to re-enter WTF mode as continuing in DFU may cause unexpected issues."
+                pause
             fi
-            log "S5L8900 detected in $device_mode mode. WTF mode is required."
-            print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
-            warn "It is recommended to re-enter WTF mode as continuing in DFU may cause unexpected issues."
-            pause
         ;;
 
         "Recovery" )
@@ -6515,7 +6517,7 @@ restore_latest() {
             log "Sending iBSS..."
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
             $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
-            device_find_mode Recovery
+            device_find_mode Recovery 50
         fi
     fi
     if [[ $debug_mode == 1 ]]; then
