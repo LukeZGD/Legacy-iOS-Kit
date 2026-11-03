@@ -1329,7 +1329,7 @@ device_get_info() {
                 device_entry
             else
                 device_type=$($irecovery -q | grep "PRODUCT" | cut -c 10-)
-                device_ecid=$(printf "%d" $($irecovery -q | grep "ECID" | cut -c 7-)) # converts hex ecid to dec
+                device_ecid=$(printf "%d" "$($irecovery -q | awk '/ECID/ {print $2}')") # converts hex ecid to dec
             fi
             device_model=$($irecovery -q | grep "MODEL" | cut -c 8-)
             if [[ $device_mode != "DFU" && $device_argmode != "entry" && $device_model == "m68ap" ]]; then
@@ -6326,9 +6326,6 @@ restore_idevicerestore() {
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
     fi
-    case $device_proc in
-        [56] ) ExtraArgs+=" --ibss-loaded";;
-    esac
 
     log "Running idevicerestore with command: $idevicerestore2 $ExtraArgs \"$ipsw_custom.ipsw\""
     $idevicerestore2 $ExtraArgs "$ipsw_custom.ipsw"
