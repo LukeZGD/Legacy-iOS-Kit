@@ -6501,18 +6501,16 @@ restore_latest() {
         $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
     elif [[ $device_proc == 1 && $1 == "custom" ]]; then
-        if [[ $device_mode == "WTF" ]]; then
+        if [[ $device_mode == "WTF" && $target_vers_maj != 1 ]]; then
             log "Sending s5l8900xall..."
             if [[ $platform == "macos" ]]; then
                 print "* If your device is unable to be detected in DFU mode, try switching to a USB-C to USB-A dongle instead of USB-C dock/hub. (for S5L8900 devices only)"
             fi
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
             $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
-            if [[ $target_vers_maj != 1 ]]; then
-                device_find_mode DFUreal
-            fi
+            device_find_mode DFUreal
         fi
-        if [[ $target_vers_maj == 1 || $target_vers_maj == 4 ]]; then
+        if [[ $target_vers_maj == 4 ]]; then
             log "Sending iBSS..."
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBSS.${device_model}ap.RELEASE.dfu"
             $irecovery -f "iBSS.${device_model}ap.RELEASE.dfu"
