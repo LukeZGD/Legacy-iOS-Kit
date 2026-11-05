@@ -2934,7 +2934,12 @@ download_comp() {
 
     if [[ -e "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
         cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
-    else
+    elif [[ "$(ls ../${device_type}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
+        file_extract_from_archive "$(ls ../${device_type}*${build_id}_Restore.ipsw)" "Firmware/dfu/$download_targetfile.dfu"
+        cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
+    fi
+
+    if [[ ! -s $comp ]]; then
         download_with_pzb "$ipsw_url" "Firmware/dfu/$download_targetfile.dfu" "${comp}"
         cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
     fi
@@ -3237,15 +3242,29 @@ shsh_save() {
             build_id="$device_latest_build"
         fi
         buildmanifest="../saved/$device_type/$build_id.plist"
-        if [[ ! -e $buildmanifest ]]; then
-            if [[ -e "$ipsw_base_path.ipsw" ]]; then
+        if [[ ! -s $buildmanifest ]]; then
+            ipsw_latest_set
+            if [[ -s "$ipsw_base_path.ipsw" ]]; then
                 log "Extracting BuildManifest from $version IPSW..."
                 file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
-            else
+            elif [[ -s "$ipsw_path.ipsw" ]]; then
+                log "Extracting BuildManifest from $version IPSW..."
+                file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
+            elif [[ -s "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
+                log "Extracting BuildManifest from $version IPSW..."
+                file_extract_from_archive "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw)" BuildManifest.plist
+            fi
+
+            if [[ ! -s BuildManifest.plist ]]; then
                 ipsw_get_url $build_id
                 download_with_pzb "$ipsw_url" BuildManifest.plist
             fi
-            mv BuildManifest.plist $buildmanifest
+
+            if [[ ! -s BuildManifest.plist ]]; then
+                error "Downloading BuildManifest.plist failed. Please run the script again"
+            fi
+
+            mv -v BuildManifest.plist $buildmanifest
         fi
     elif [[ $device_target_drav6 == 1 && $device_proc == 5 ]]; then
         buildmanifest="../resources/manifest/BuildManifest_${device_type}_${version}.plist"
@@ -8455,10 +8474,11 @@ shsh_get_buildmanifest() {
     local buildmanifest="../saved/$device_type/$device_target_build.plist"
 
     log "Getting BuildManifest for raw dump conversion/validation"
+    ipsw_latest_set
     if [[ -s $buildmanifest ]]; then
         cp -v $buildmanifest BuildManifest.plist
-    elif [[ "$(ls ../${device_type}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
-        file_extract_from_archive "$(ls ../${device_type}*${build_id}_Restore.ipsw)" BuildManifest.plist
+    elif [[ "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
+        file_extract_from_archive "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw)" BuildManifest.plist
     fi
 
     if [[ ! -s BuildManifest.plist ]]; then
