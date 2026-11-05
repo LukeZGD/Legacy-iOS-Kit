@@ -2021,12 +2021,7 @@ device_dfuhelper() {
         rec=""
     fi
 
-    if [[ $device_mode == "DFU" && $1 == "DFUreal" ]]; then
-        log "Device is already in DFU mode"
-        return
-    fi
-
-    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" && $device_proc != 1 ]]; then
+    if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
         log "Device is already in DFU mode"
         return
     fi
@@ -2239,7 +2234,7 @@ device_enter_mode() {
             elif [[ $device_mode == "DFU" ]]; then
                 return
             fi
-            device_dfuhelper DFUreal
+            device_dfuhelper
         ;;
 
         "kDFU" )
