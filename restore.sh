@@ -3647,7 +3647,7 @@ ipsw_prepare_jailbreak() {
             [43].* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             *      ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
-        JBFiles+=("freeze.tar")
+        JBFiles+=("freeze.tar" "$jelbrek/melder.tar")
         case $device_target_vers in
             4.2.[8761] )
                 if [[ $device_type != "iPhone1,2" ]]; then
@@ -3662,7 +3662,7 @@ ipsw_prepare_jailbreak() {
             ;;
         esac
         case $device_target_vers in
-            [543].* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
+            [543].* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
         if [[ $device_target_vers == "3."* ]]; then
             JBFiles+=("$jelbrek/cydiahttpatch.tar")
@@ -4330,10 +4330,10 @@ ipsw_prepare_32bit() {
             4.*    ) JBFiles+=("$jelbrek/fstab_old.tar");;
             *      ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
-        JBFiles+=("freeze.tar")
+        JBFiles+=("freeze.tar" "$jelbrek/melder.tar")
         case $device_target_vers in
-            9.* ) JBFiles+=("$jelbrek/launchctl.tar" "$jelbrek/zebra.tar");;
-            5.* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
+            9.* ) JBFiles+=("$jelbrek/launchctl.tar");;
+            5.* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
@@ -5108,6 +5108,7 @@ ipsw_prepare_specialios7() {
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
         "$dir/hfsplus" rootfs.dec untar freeze.tar
+        "$dir/hfsplus" rootfs.dec untar melder.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
         touch .cydia_no_stash
         "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
@@ -5755,8 +5756,8 @@ ipsw_prepare_ios4powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate.tar" "freeze.tar")
-        for i in {0..2}; do
+        JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate5.tar" "melder.tar" "freeze.tar")
+        for i in {0..3}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
         if [[ $ipsw_openssh == 1 ]]; then
@@ -5877,13 +5878,13 @@ ipsw_prepare_powder() {
             JBFiles[0]=$jelbrek/${JBFiles[0]}
         fi
         case $device_target_vers in
-            9.* ) JBFiles+=("$jelbrek/zebra.tar");;
-            5.* ) JBFiles+=("$jelbrek/cydiasubstrate.tar");;
+            5.* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
         case $device_target_vers in
             [689].* ) :;;
             * ) JBFiles+=("freeze.tar");;
         esac
+        JBFiles+=("melder.tar")
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
             gzip -d openssh.tar.gz
@@ -7883,6 +7884,7 @@ device_ramdisk() {
             else
                 device_send_rdtar freeze.tar gz
             fi
+            device_send_rdtar melder.tar
 
             # extras extraction
             if [[ $ipsw_openssh == 1 ]]; then
@@ -7891,7 +7893,7 @@ device_ramdisk() {
                 device_send_rdtar openssl.tar gz
             fi
             case $vers in
-                [543]* ) device_send_rdtar cydiasubstrate.tar;;
+                [543]* ) device_send_rdtar cydiasubstrate5.tar;;
             esac
             case $vers in
                 9.* ) device_send_rdtar launchctl.tar; device_send_rdtar zebra.tar;;

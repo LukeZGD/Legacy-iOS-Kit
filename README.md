@@ -213,3 +213,4 @@
 - [surrealra1n](https://github.com/pwnerblu/surrealra1n) - pwnerblu and contributors (A12-A13 tethered downgrade support and related functionality are heavily based on this project)
 - [libdmg-apfs](https://github.com/LukeZGD/libdmg-apfs) - [NSSpiral](https://github.com/NSSpiral/libdmg-apfs) (LukeZGD fork for fixes and build)
 - [Lynx32](https://github.com/tuanemss/Lynx32) (for dumping blobs 32-bit) - tuanemss
+- [Melder](http://repo.k0.tel/depictions/com.koutsie.melder.html) - koutsie; installed alongside Cydia as an alternative/replacement package manager
