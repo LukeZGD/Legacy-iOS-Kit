@@ -2555,7 +2555,6 @@ device_send_unpacked_ibss() {
         pwnrec="pwned recovery"
         cp iBSS.patched pwnediBSS
     else
-        device_rd_build=
         patch_ibss
     fi
     if [[ $device_pwnd == *"wnder" ]]; then
@@ -2919,11 +2918,19 @@ download_comp() {
     local build_id="$1"
     local comp="$2"
     ipsw_get_url $build_id
-    download_targetfile="$comp.$device_model"
-    if [[ $build_id != "12"* ]]; then
-        download_targetfile+="ap"
-    fi
-    download_targetfile+=".RELEASE"
+    local hwmodel="$device_model"
+    case $build_id in
+        14[EFG]* )
+            case $device_type in
+                iPhone5,[12] ) hwmodel="iphone5";;
+                iPhone5,[34] ) hwmodel="iphone5b";;
+                iPad3,[456]  ) hwmodel="ipad3b";;
+            esac
+        ;;
+        1[234]* ) :;;
+        * ) hwmodel+="ap";;
+    esac
+    download_targetfile="$comp.$hwmodel.RELEASE"
 
     if [[ -e "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
         cp "../saved/$device_type/${comp}_$build_id.dfu" ${comp}
@@ -2931,20 +2938,19 @@ download_comp() {
         download_with_pzb "$ipsw_url" "Firmware/dfu/$download_targetfile.dfu" "${comp}"
         cp ${comp} "../saved/$device_type/${comp}_$build_id.dfu"
     fi
+
+    if [[ ! -s $comp ]]; then
+        error "Downloading $comp failed. Please run the script again"
+    fi
 }
 
 patch_ibss() {
     # creates file pwnediBSS to be sent to device
     local build_id
-    case $device_type in
-        iPad1,1 | iPod3,1 ) build_id="9B206";;
-        iPhone2,1 | iPod4,1 ) build_id="10B500";;
-        iPhone3,[123] ) build_id="11D257";;
+    case $device_proc in
+        4 ) build_id="$device_latest_build";;
         * ) build_id="12H321";;
     esac
-    if [[ -n $device_rd_build ]]; then
-        build_id="$device_rd_build"
-    fi
     download_comp $build_id iBSS
     device_fw_key_check temp $build_id
     local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBSS") | .iv')
@@ -2954,23 +2960,16 @@ patch_ibss() {
     log "Patching iBSS..."
     "$dir/iBoot32Patcher" iBSS.dec pwnediBSS --rsa
     "$dir/xpwntool" pwnediBSS pwnediBSS.dfu -t iBSS
-    cp pwnediBSS pwnediBSS.dfu ../saved/$device_type/
-    log "Pwned iBSS saved at: saved/$device_type/pwnediBSS"
-    log "Pwned iBSS img3 saved at: saved/$device_type/pwnediBSS.dfu"
+    cp -v pwnediBSS pwnediBSS.dfu ../saved/$device_type/
 }
 
 patch_ibec() {
     # creates file pwnediBEC to be sent to device for blob dumping
     local build_id
-    case $device_type in
-        iPad1,1 | iPod3,1 ) build_id="9B206";;
-        iPhone2,1 | iPod4,1 ) build_id="10B500";;
-        iPhone3,[123] ) build_id="11D257";;
+    case $device_proc in
+        4 ) build_id="$device_latest_build";;
         * ) build_id="12H321";;
     esac
-    if [[ -n $device_rd_build ]]; then
-        build_id="$device_rd_build"
-    fi
     download_comp $build_id iBEC
     device_fw_key_check temp $build_id
     local name="iBEC"
@@ -2987,8 +2986,7 @@ patch_ibec() {
     "$dir/iBoot32Patcher" $name.dec $name.patched --rsa --ticket -b "rd=md0 -v amfi=0xff cs_enforcement_disable=1" -c "go" $address
     "$dir/xpwntool" $name.patched pwnediBEC.dfu -t $name.orig
     rm $name.dec $name.orig $name.patched
-    cp pwnediBEC.dfu ../saved/$device_type/
-    log "Pwned iBEC img3 saved at: saved/$device_type/pwnediBEC.dfu"
+    cp -v pwnediBEC.dfu ../saved/$device_type/
 }
 
 ipsw_nojailbreak_message() {
@@ -6311,7 +6309,6 @@ restore_idevicerestore() {
         first   ) cp "$shsh_path" shsh/$device_ecid-$device_type-5.1.1.shsh;;
         special ) cp "$shsh_path" shsh/$device_ecid-$device_type-$device_base_vers.shsh;;
     esac
-    device_rd_build=
     if [[ $device_type == "iPad"* && $device_pwnrec != 1 ]] &&
        [[ $device_target_vers == "3"* || $device_target_vers == "4"* ]]; then
         if [[ $device_type == "iPad1,1" ]]; then
@@ -6592,7 +6589,7 @@ device_buttons() {
     elif [[ $device_proc == 6 && $platform != "macos" ]] || [[ $platform_cpu == "AMD"* ]]; then
         print "* Selecting kDFU is recommended. Your device must be jailbroken and have OpenSSH installed for this option."
         print "* Selecting pwnDFU is only for those that do not want to/cannot jailbreak their device."
-        [[ $device_proc == 6 ]] && warn "Selecting pwnDFU will use checkm8 which has lower success rates on Linux for A6 devices."
+        [[ $device_proc == 6 && $device_type == iPad* ]] && warn "Selecting pwnDFU will use checkm8 which has lower success rates on Linux for A6X devices."
         if [[ $platform_cpu == "AMD"* ]]; then
             case $device_type in
                 iPhone3,* | iPad1,1 | iPod4,1 ) :;;
@@ -7501,15 +7498,15 @@ device_ramdisk() {
                     case $device_type in
                         iPhone5,[12] ) hwmodel="iphone5";;
                         iPhone5,[34] ) hwmodel="iphone5b";;
-                        iPad3,[456] )  hwmodel="ipad3b";;
+                        iPad3,[456]  ) hwmodel="ipad3b";;
                     esac
                 ;;
                 [789]* | 10* | 11* ) hwmodel+="ap";;
             esac
             case $getcomp in
                 "iBSS" | "iBEC" ) name="$getcomp.$hwmodel.RELEASE.dfu";;
-                "DeviceTree" )    name="$getcomp.${device_model}ap.img3";;
-                "Kernelcache" )   name="kernelcache.release.$hwmodel";;
+                "DeviceTree"    ) name="$getcomp.${device_model}ap.img3";;
+                "Kernelcache"   ) name="kernelcache.release.$hwmodel";;
             esac
         fi
         [[ $name == *".dmg" ]] && name="${name%%.dmg*}.dmg"
@@ -8456,13 +8453,22 @@ shsh_get_buildmanifest() {
         error "No value for device_target_build is not set. Cannot continue."
     fi
     local buildmanifest="../saved/$device_type/$device_target_build.plist"
-    log "Getting BuildManifest for raw dump conversion"
+
+    log "Getting BuildManifest for raw dump conversion/validation"
     if [[ -s $buildmanifest ]]; then
         cp -v $buildmanifest BuildManifest.plist
-    else
+    elif [[ "$(ls ../${device_type}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
+        file_extract_from_archive "$(ls ../${device_type}*${build_id}_Restore.ipsw)" BuildManifest.plist
+    fi
+
+    if [[ ! -s BuildManifest.plist ]]; then
         ipsw_get_url $device_target_build
         download_with_pzb "$ipsw_url" BuildManifest.plist
         cp -v BuildManifest.plist $buildmanifest
+    fi
+
+    if [[ ! -s BuildManifest.plist ]]; then
+        return 1
     fi
 
     if [[ -z $device_target_vers ]]; then
@@ -8516,7 +8522,7 @@ shsh_save_onboard() {
 }
 
 shsh_convert_onboard() {
-    shsh_get_buildmanifest
+    local err
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc <= device_proc_32bit )); then
         shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
@@ -8546,6 +8552,13 @@ shsh_convert_onboard() {
         log "Raw dump iBoot version: $shsh_onboard_iboot"
         if [[ $1 == "dump" ]]; then
             return
+        else
+            shsh_get_buildmanifest
+            err=$?
+            if [[ $err != 0 ]]; then
+                warn "Failed to get BuildManifest for blob conversion/validation. Cannot continue."
+                return $err
+            fi
         fi
         log "Converting raw dump to SHSH blob"
         "$dir/ticket" dump.raw dump.shsh BuildManifest.plist
