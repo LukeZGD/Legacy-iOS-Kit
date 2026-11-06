@@ -5103,7 +5103,7 @@ ipsw_prepare_specialios7() {
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
         "$dir/hfsplus" rootfs.dec untar freeze.tar
-        "$dir/hfsplus" rootfs.dec untar melder.tar
+        "$dir/hfsplus" rootfs.dec untar $jelbrek/melder.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
         touch .cydia_no_stash
         "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
@@ -5879,7 +5879,7 @@ ipsw_prepare_powder() {
             [689].* ) :;;
             * ) JBFiles+=("freeze.tar");;
         esac
-        JBFiles+=("melder.tar")
+        JBFiles+=("$jelbrek/melder.tar")
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
             gzip -d openssh.tar.gz
