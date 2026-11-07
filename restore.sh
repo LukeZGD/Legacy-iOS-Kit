@@ -9818,6 +9818,9 @@ menu_ipsw() {
             if [[ -n $base_vers_temp ]]; then
                 warn "This option is experimental and may have deep sleep issues on some target versions."
                 echo
+            elif [[ $device_target_drav6 == 1 ]] && [[ $device_type == "iPad2,2" || $device_type == "iPad2,3" ]]; then
+                warn "This option is experimental and may have very low success rates booting."
+                echo
             fi
             if [[ $device_proc == 4 || $device_target_drav6 == 1 ]]; then
                 shsh_path=1
