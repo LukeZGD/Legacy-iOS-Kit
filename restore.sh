@@ -7,6 +7,7 @@ jelbrek="../resources/jailbreak"
 sundance="../saved/SundanceInH2A"
 ssh_port=6414
 system_partition_add=300
+# ipsw_24o=1 # for testing only
 
 bash_test=$(echo -n 0)
 (( bash_test += 1 ))
@@ -3630,6 +3631,10 @@ ipsw_prepare_jailbreak() {
     local ExtraArgs=
     local JBFiles=()
     local daibutsu=$1
+    if (( target_vers_maj <= 4 )); then
+        system_partition_add=100
+        [[ $device_proc == 1 || $device_type == "iPod2,1" ]] && system_partition_add=40
+    fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -4048,6 +4053,8 @@ ipsw_prepare_bundle() {
         root_size=1000
     elif [[ $target_vers_maj == 3 ]]; then
         root_size=750
+        [[ $device_proc == 1 ]] && root_size=420
+        [[ $device_type == "iPod2,1" ]] && root_size=450
     elif [[ $platform == "macos" ]]; then
         plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
         root_size=$(cat size | sed -ne '/<integer>/,/<\/integer>/p' | sed -e "s/<integer>//" | sed "s/<\/integer>//" | sed '2d')
@@ -6024,10 +6031,9 @@ ipsw_prepare_patchcomp() {
 }
 
 ipsw_prepare_s5l8900() {
-    local rname="018-6494-014.dmg"
-    local sha1E="4f6539d2032a1c7e1a068c667e393e62d8912700"
+    local rname
+    local sha1E
     local sha1L="none"
-    ipsw_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/jailbreak/"
     if [[ $device_target_vers == "4.1" ]]; then
         rname="018-7079-079.dmg"
         sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
@@ -6061,10 +6067,10 @@ ipsw_prepare_s5l8900() {
     mv "$ipsw_custom.ipsw" temp.ipsw
     ipsw_prepare_patchcomp LLB
     ipsw_prepare_patchcomp iBoot
-    ipsw_prepare_patchcomp RestoreRamdisk
-    if [[ $device_target_vers == "4"* ]]; then
-        ipsw_prepare_patchcomp WTF2
+    if [[ $device_target_vers == "4."* ]]; then
         ipsw_prepare_patchcomp iBEC
+        ipsw_prepare_patchcomp RestoreRamdisk
+        ipsw_prepare_patchcomp WTF2
     fi
     if [[ $device_target_vers == "4.2.1" ]]; then
         ipsw_prepare_patchcomp iBSS
@@ -7755,7 +7761,6 @@ device_ramdisk() {
             case $vers in
                 [43].* )
                     log "fstab"
-                    device_send_rdtar fstab_old.tar
                     local fstab="fstab_new" # disk0s2s1 data
                     if [[ $device_proc == 1 || $device_type == "iPod2,1" ]]; then
                         fstab="fstab_old" # disk0s2 data
