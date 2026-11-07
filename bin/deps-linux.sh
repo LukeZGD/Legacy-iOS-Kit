@@ -125,6 +125,14 @@ unzip img4tool_linux-x86_64.zip
 mv img4tool/img4tool linux/x86_64/
 rm -rf img4tool *.zip
 
+curl -LO https://github.com/LukeZGD/partialZipBrowser/releases/download/latest/pzb_linux-aarch64.zip
+curl -LO https://github.com/LukeZGD/partialZipBrowser/releases/download/latest/pzb_linux-x86_64.zip
+unzip pzb_linux-aarch64.zip
+mv pzb/pzb linux/aarch64/
+unzip pzb_linux-x86_64.zip
+mv pzb/pzb linux/x86_64/
+rm -rf pzb *.zip
+
 curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-arm64
 curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
 mv jq-linux-arm64 linux/aarch64/jq

@@ -148,6 +148,8 @@
         - iPad 4 7.0.x and 7.1.x
         - iPod touch 5 7.0.x
     - [iPad 2 and iPhone 4S 5.x ramdisks are from tuanemss](https://github.com/tuanemss/iBoot-Exploit-Stuff/releases/tag/5.1.1)
+    - [iPad 2 and iPhone 4S 5.x ramdisks are from tuanemss](https://github.com/tuanemss/iBoot-Exploit-Stuff/releases/tag/5.1.1)
+    - [iPad 2 cellular DRA v6 ramdisk is from tuanemss](https://github.com/tuanemss/De-Rebus-Antiquis-v666/tree/main/payloadGenerator/targets/iPad2%2C2/10B329)
 - [De-Rebus-Antiquis-v6](https://github.com/synackuk/De-Rebus-Antiquis-v6) - [synackuk](https://github.com/synackuk) and [Pingzi610](https://github.com/Pingzi610/De-Rebus-Antiquis-v6)
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX; LukeZGD fork
 - [iPwnder32](https://github.com/dora2ios/iPwnder32) - dora2ios
