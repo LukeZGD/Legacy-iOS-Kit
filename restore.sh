@@ -6078,9 +6078,7 @@ ipsw_prepare_patchcomp() {
         if [[ -n $iv && -n $key ]]; then
             ivkey="-iv $iv -k $key"
         fi
-        if [[ $component == "Kernelcache" ]]; then
-            ivkey+=" --old-img3-decrypt"
-        fi
+        ivkey+=" --old-img3-decrypt"
         "$dir/xpwntool" "$name.$ext" $component.dec $ivkey
         $bspatch "$component.dec" "$component.patch" "$patch"
         "$dir/xpwntool" "$component.patch" "$name.patched" -t "$name.$ext" $ivkey
@@ -6135,7 +6133,6 @@ ipsw_prepare_s5l8900() {
         ipsw_prepare_patchcomp Kernelcache
         ipsw_prepare_patchcomp LLB
         ipsw_prepare_patchcomp RestoreRamdisk
-        ipsw_prepare_patchcomp WTF2
 
     elif [[ $device_target_vers == "3.0"* ]]; then
         ipsw_prepare_patchcomp Kernelcache
@@ -6324,6 +6321,10 @@ restore_idevicerestore() {
         file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/iBEC.${device_model}ap.RELEASE.dfu"
         $irecovery -f "iBEC.${device_model}ap.RELEASE.dfu"
         device_find_mode Recovery
+    elif [[ $target_vers_maj == 2 && $device_mode == "WTF" ]]; then
+        log "Sending s5l8900xall for 2.x..."
+        $irecovery -f "../resources/WTF.s5l8900xall.2.x.dfu"
+        device_find_mode DFUreal
     fi
     if [[ $debug_mode == 1 ]]; then
         ExtraArgs+="d"
@@ -9593,7 +9594,7 @@ menu_restore_more() {
         if [[ $device_proc == 1 ]]; then
             menu_items+=("3.1.2")
             [[ $device_type == "iPod1,1" ]] && menu_items+=("3.1.1") || menu_items+=("3.1")
-            # menu_items+=("3.0" "2.2.1" "2.2" "2.1" "2.0.2" "2.0.1" "2.0")
+            menu_items+=("3.0" "2.2.1" "2.2" "2.1" "2.0.2" "2.0.1" "2.0")
         fi
         menu_items+=("Go Back")
         menu_print_info
@@ -9610,6 +9611,8 @@ menu_restore_more() {
                 menu_items+=("Go Back")
             fi
             echo
+        elif [[ $device_proc == 1 ]]; then
+            warn "Versions below 3.1.x listed here are experimental, known to currently not restore properly"
         fi
         input "Select an option:"
         select_option "${menu_items[@]}"
