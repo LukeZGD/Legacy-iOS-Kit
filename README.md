@@ -113,7 +113,7 @@
 - [Restoring the iPod touch 3rd gen and iPad 1 to iOS 6 (and also iOS 7 for iPad 1) untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch3-ios6)
 - [Restoring the iPod touch 4th gen to iOS 7 untethered](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/touch4-ios7)
 - Jailbreaking for 32-bit devices and versions support:
-    - iPhone 2G and touch 1 - 3.1.3 only
+    - iPhone 2G and touch 1 - 3.1 to 3.1.3
     - iPhone 3G and touch 2 - 3.1.3 to 4.2.1
     - iPod touch 2 - 3.1.1 to 4.2.1
     - iPhone 3GS - All release versions from 3.0 to 6.1.6 are supported
@@ -181,7 +181,6 @@
 - [datautils0](https://github.com/comex/datautils0) - comex (used for iPad 2 4.3.x kernel diffs)
 - [sshpass](https://github.com/LukeZGD/sshpass)
 - Bootstrap tar from [SpiritNET](https://invoxiplaygames.uk/projects/spiritnet/)
-- [Cydia HTTPatch](https://cydia.invoxiplaygames.uk/package/cydiahttpatch) for 3.1.3 downgrades/jailbreaks
 - [Aquila](https://github.com/staturnzz/aquila)
 - [aquila_cdma](https://github.com/tuanemss/aquila_cdma)
 - [BSPQMIShim](https://github.com/tuanemss/BSPQMIShim)
@@ -193,7 +192,7 @@
 - [g1lbertJB](https://github.com/g1lbertJB/g1lbertJB)
 - [UntetherHomeDepot](https://www.theapplewiki.com/wiki/UntetherHomeDepot)
 - [greenpois0n](https://github.com/OpenJailbreak/greenpois0n/tree/0f1eac8e748abb200fc36969e616aaad009f7ebf)
-- Some patches from [PwnageTool](https://www.theapplewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theapplewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theapplewiki.com/wiki/redsn0w)
+- Some patches from [PwnageTool](https://www.theapplewiki.com/wiki/PwnageTool), [sn0wbreeze](https://www.theapplewiki.com/wiki/sn0wbreeze), [redsn0w](https://www.theapplewiki.com/wiki/redsn0w), xpwn
 - Many patches for the 3GS are made using patchers by Merculous (including [Bundle-Creation](https://github.com/Merculous/Bundle-Creation))
 - SSH Ramdisk tars from Ralph0045's [SSH-Ramdisk-Maker-and-Loader](https://github.com/Ralph0045/SSH-Ramdisk-Maker-and-Loader) and msftguy's [ssh-rd](https://github.com/msftguy/ssh-rd)
 - 64-bit SSH Ramdisk stuff is based on Nathan's [SSHRD_Script](https://github.com/verygenericname/SSHRD_Script) (iOS 12+), and exploit3dguy's iram tar from [iarchive.app](https://web.archive.org/web/20240324134204/https://ios7.iarchive.app/downgrade/making-ramdisk.html) (iOS 8)

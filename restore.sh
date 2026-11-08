@@ -3666,9 +3666,6 @@ ipsw_prepare_jailbreak() {
         case $device_target_vers in
             [543].* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
-        if [[ $target_vers_maj == 3 ]]; then
-            JBFiles+=("$jelbrek/cydiahttpatch.tar")
-        fi
         ExtraArgs+=" -S $system_partition_add"
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
@@ -7857,7 +7854,6 @@ device_ramdisk() {
             esac
             case $vers in
                 9.* ) device_send_rdtar launchctl.tar; device_send_rdtar zebra.tar;;
-                3.* ) device_send_rdtar cydiahttpatch.tar;;
             esac
             case $vers in
                 [43].* ) :;;
@@ -9457,7 +9453,7 @@ menu_restore() {
         else
             print " > Main Menu > Restore/Downgrade"
             if [[ $device_proc == 1 ]]; then
-                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (1.x to 3.1.2)"
+                print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (1.x to 3.0.x)"
                 echo
             elif [[ $device_type == "iPod2,1" && $device_newbr == 0 ]]; then
                 print "* Select \"Other (Custom IPSW)\" to restore to other iOS versions (2.1.1 to 3.0)"
