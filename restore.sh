@@ -2385,8 +2385,7 @@ device_enter_mode() {
                     ;;
                 esac
                 return
-            elif [[ $device_mode == "DFU" && $device_boot4 != 1 && $device_srtg != "iBoot"* ]] &&
-                 [[ $device_proc == 4 || $device_proc == 5 || $device_proc == 6 ]]; then
+            elif [[ $device_mode == "DFU" && $device_srtg != "iBoot"* ]] && (( device_proc <= device_proc_32bit )); then
                 log "No SRTG for device in DFU mode! Already pwned iBSS mode?"
                 print "* If your device is not in pwnDFU/kDFU mode, sending iBEC will fail."
                 return
@@ -2551,14 +2550,8 @@ device_send_unpacked_ibss() {
         [56] ) :;;
         * ) return;;
     esac
-    local pwnrec="pwned iBSS"
     local tool_pwned
-    if [[ $device_boot4 == 1 ]]; then
-        pwnrec="pwned recovery"
-        cp iBSS.patched pwnediBSS
-    else
-        patch_ibss
-    fi
+    patch_ibss
     if [[ $device_pwnd == *"wnder" ]]; then
         log "Sending packed iBSS..."
         $primepwn pwnediBSS.dfu
@@ -2585,12 +2578,12 @@ device_send_unpacked_ibss() {
     local idi_output="$($irecovery -q 2>&1)"
     device_pwnd="$(echo "$idi_output" | awk '/PWND/ {print $2}')"
     if [[ -z $device_pwnd && $idi_output != "ERROR"* ]]; then
-        log "Device should now be in $pwnrec mode."
+        log "Device should now be in pwned iBSS mode."
     elif [[ $device_proc == 5 ]]; then
-        error "Device failed to enter $pwnrec mode." \
+        error "Device failed to enter pwned iBSS mode." \
               "* If you are using Arduino for checkm8-a5, make sure you are using my (LukeZGD) or synackuk fork of checkm8-a5. Do not use a1exdandy checkm8-a5."
     else
-        error "Device failed to enter $pwnrec mode."
+        error "Device failed to enter pwned iBSS mode."
     fi
 }
 
@@ -7585,16 +7578,7 @@ device_ramdisk() {
         fi
         log "Patch iBSS"
         "$dir/xpwntool" iBSS.dec iBSS.raw
-        if [[ $device_type == "iPad2,"* || $device_type == "iPhone3,3" ]]; then
-            case $build_id in
-                8[FGHJKL]* | 8E600 | 8E501 ) device_boot4=1;;
-            esac
-        fi
-        if [[ $device_boot4 == 1 && $build_id == "8E"* ]]; then
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "-v amfi=0xff cs_enforcement_disable=1"
-        else
-            "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "$device_bootargs"
-        fi
+        "$dir/iBoot32Patcher" iBSS.raw iBSS.patched --rsa --debug -b "$device_bootargs"
         "$dir/xpwntool" iBSS.patched iBSS -t iBSS.dec
         if [[ $build_id == "7"* || $build_id == "8"* ]] && [[ $device_type != "iPad"* ]]; then
             :
@@ -7608,14 +7592,6 @@ device_ramdisk() {
             fi
             "$dir/xpwntool" iBEC.patched iBEC -t iBEC.dec
         fi
-    fi
-
-    if [[ $device_boot4 == 1 && $build_id == "8E"* ]]; then
-        log "Patch Kernelcache"
-        mv Kernelcache.dec Kernelcache0.dec
-        "$dir/xpwntool" Kernelcache0.dec Kernelcache.raw
-        $bspatch Kernelcache.raw Kernelcache.patched ../resources/patch/kernelcache.release.${device_model}.${build_id}.patch
-        "$dir/xpwntool" Kernelcache.patched Kernelcache.dec -t Kernelcache0.dec
     fi
 
     if [[ $device_argmode == "none" ]]; then
