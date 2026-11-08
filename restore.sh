@@ -1156,7 +1156,7 @@ device_get_name() {
 }
 
 device_get_paired_info() {
-    local idi_output=$($ideviceinfo)
+    local idi_output="$($ideviceinfo)"
     device_serial="$(echo "$idi_output" | awk '/SerialNumber/ {print $2}' | cut -c 3- | cut -c -3)"
     device_unactivated=$(echo "$idi_output" | awk '/ActivationState/ {print $2}' | grep -c "Unactivated")
     device_imei=$(echo "$idi_output" | awk '/InternationalMobileEquipmentIdentity/ {print $2}')
@@ -4196,7 +4196,7 @@ ipsw_prepare_bundle() {
             elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
                 : # dont patch iboot/kcache for new bootrom ipod2,1 3.1.3
             elif [[ $device_proc == 1 ]]; then
-                if [[ $target_vers_maj == 3 && $target_vers_min == 1 ]] || [[ $target_vers_maj == 4 ]]; then
+                if [[ $device_target_vers == "3.1"* || $target_vers_maj == 4 ]]; then
                     ipsw_prepare_keys KernelCache $1
                 fi
                 if [[ $target_vers_maj == 3 ]]; then
@@ -6072,11 +6072,14 @@ ipsw_prepare_patchcomp() {
     # Standard extraction and patching
     file_extract_from_archive "$ipsw_path.ipsw" "${path}${name}.$ext"
 
-    if [[ $target_vers_maj == 2 && $component != "LLB" ]]; then
+    if [[ $target_vers_maj == 2 && $component != "WTF2" ]]; then
         iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$component'") | .iv')
         key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$component'") | .key')
         if [[ -n $iv && -n $key ]]; then
             ivkey="-iv $iv -k $key"
+        fi
+        if [[ $component == "Kernelcache" ]]; then
+            ivkey+=" --old-img3-decrypt"
         fi
         "$dir/xpwntool" "$name.$ext" $component.dec $ivkey
         $bspatch "$component.dec" "$component.patch" "$patch"
@@ -6085,7 +6088,7 @@ ipsw_prepare_patchcomp() {
         $bspatch "$name.$ext" "$name.patched" "$patch"
     fi
 
-    mkdir -p "$path"
+    mkdir -p "$path" 2>/dev/null
     mv "$name.patched" "${path}${name}.$ext"
 
     zip -r0 temp.ipsw "${path}${name}.$ext"
@@ -6133,6 +6136,9 @@ ipsw_prepare_s5l8900() {
         ipsw_prepare_patchcomp LLB
         ipsw_prepare_patchcomp RestoreRamdisk
         ipsw_prepare_patchcomp WTF2
+
+    elif [[ $device_target_vers == "3.0"* ]]; then
+        ipsw_prepare_patchcomp Kernelcache
 
     elif [[ $target_vers_maj == 4 ]]; then
         ipsw_prepare_patchcomp iBEC
@@ -6648,10 +6654,8 @@ restore_deviceprepare() {
     fi
     case $device_proc in
         1 )
-            if [[ $target_vers_maj == 4 && $ipsw_jailbreak == 1 ]]; then
+            if [[ $ipsw_jailbreak == 1 ]]; then
                 device_enter_mode WTFreal
-            elif [[ $ipsw_jailbreak == 1 ]]; then
-                device_enter_mode DFU
             fi
         ;;
 
