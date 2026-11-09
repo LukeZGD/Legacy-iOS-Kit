@@ -1158,9 +1158,9 @@ device_get_name() {
 
 device_get_paired_info() {
     local idi_output="$($ideviceinfo)"
-    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
-    device_unactivated=$(echo "$idi_output" | awk '/ActivationState/ {print $2}' | grep -c "Unactivated")
-    device_imei=$(echo "$idi_output" | awk '/InternationalMobileEquipmentIdentity/ {print $2}')
+    device_serial="$(echo "$idi_output" | awk '/^SerialNumber/ {print $2}' | cut -c 3- | cut -c -3)"
+    device_unactivated=$(echo "$idi_output" | awk '/^ActivationState/ {print $2}' | grep -c "Unactivated")
+    device_imei=$(echo "$idi_output" | awk '/^InternationalMobileEquipmentIdentity/ {print $2}')
 }
 
 device_manufacturing() {
@@ -1255,12 +1255,12 @@ device_s5l8900xall() {
     fi
     device_find_mode DFUreal
     local idi_output="$($irecovery -q)"
-    device_srtg="$(echo "$idi_output" | awk '/SRTG/ {print $2}')"
+    device_srtg="$(echo "$idi_output" | awk '/^SRTG/ {print $2}')"
     log "SRTG: $device_srtg"
     if [[ $device_srtg == "iBoot-636.66.3x" ]]; then
         device_argmode=
-        device_type=$(echo "$idi_output" | awk '/PRODUCT/ {print $2}')
-        device_model=$(echo "$idi_output" | awk '/MODEL/ {print $2}')
+        device_type=$(echo "$idi_output" | awk '/^PRODUCT/ {print $2}')
+        device_model=$(echo "$idi_output" | awk '/^MODEL/ {print $2}')
         device_model="${device_model%??}"
         device_get_name
         device_pwnd="Pwnage 2.0"
@@ -1307,7 +1307,7 @@ device_get_info() {
 
     if [[ -z $device_mode ]]; then
         log "Finding device in Recovery/DFU mode..."
-        device_mode="$($irecovery -q | awk '/MODE:/ {print $2}')"
+        device_mode="$($irecovery -q | awk '/^MODE:/ {print $2}')"
     fi
 
     if [[ $device_mode == "Recovery" && $device_pwnrec == 1 ]]; then
@@ -1335,11 +1335,11 @@ device_get_info() {
                 device_entry
             else
                 idi_output="$($irecovery -q)"
-                device_type=$(echo "$idi_output" | awk '/PRODUCT/ {print $2}')
-                device_ecid=$(printf "%d" "$(echo "$idi_output" | awk '/ECID/ {print $2}')") # converts hex ecid to dec
+                device_type=$(echo "$idi_output" | awk '/^PRODUCT/ {print $2}')
+                device_ecid=$(printf "%d" "$(echo "$idi_output" | awk '/^ECID/ {print $2}')") # converts hex ecid to dec
             fi
             [[ -z $idi_output ]] && idi_output="$($irecovery -q)"
-            device_model=$(echo "$idi_output" | awk '/MODEL/ {print $2}')
+            device_model=$(echo "$idi_output" | awk '/^MODEL/ {print $2}')
             if [[ $device_mode != "DFU" && $device_argmode != "entry" && $device_model == "m68ap" ]]; then
                 device_entry_s5l8900
             fi
@@ -1352,7 +1352,7 @@ device_get_info() {
                     device_vers+=". Re-enter recovery mode to get iBoot version"
                 fi
             fi
-            device_serial="$(echo "$idi_output" | awk '/SRNM/ {print $2}' | cut -c 3- | cut -c -3)"
+            device_serial="$(echo "$idi_output" | awk '/^SRNM/ {print $2}' | cut -c 3- | cut -c -3)"
             device_get_name
             print "* Device: $device_name (${device_type} - ${device_model}) in $device_mode mode"
             print "* iOS Version: $device_vers"
@@ -1365,33 +1365,33 @@ device_get_info() {
             elif [[ $device_type == "iPhone2,1" ]]; then
                 device_newbr="$(echo "$idi_output" | grep -c '359.3.2')"
             fi
-            device_pwnd="$(echo "$idi_output" | awk '/PWND/ {print $2}')"
-            device_srtg="$(echo "$idi_output" | awk '/SRTG/ {print $2}')"
+            device_pwnd="$(echo "$idi_output" | awk '/^PWND/ {print $2}')"
+            device_srtg="$(echo "$idi_output" | awk '/^SRTG/ {print $2}')"
         ;;
 
         "Normal" )
             if [[ -n $device_argmode ]]; then
                 device_entry
             elif [[ -z $device_type ]]; then
-                device_type=$(echo "$idi_output" | awk '/ProductType/ {print $2}')
+                device_type=$(echo "$idi_output" | awk '/^ProductType/ {print $2}')
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
-                device_ecid=$(echo "$idi_output" | awk '/UniqueChipID/ {print $2}')
-                device_model=$(echo "$idi_output" | awk '/HardwareModel/ {print $2}')
-                device_vers=$(echo "$idi_output" | awk '/ProductVersion/ {print $2}')
+                device_ecid=$(echo "$idi_output" | awk '/^UniqueChipID/ {print $2}')
+                device_model=$(echo "$idi_output" | awk '/^HardwareModel/ {print $2}')
+                device_vers=$(echo "$idi_output" | awk '/^ProductVersion/ {print $2}')
                 [[ -z $device_vers ]] && device_vers=$($ideviceinfo -k ProductVersion)
                 device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
                 device_vers_min=$(echo "$device_vers" | cut -d. -f2)
-                device_build=$(echo "$idi_output" | awk '/BuildVersion/ {print $2}')
+                device_build=$(echo "$idi_output" | awk '/^BuildVersion/ {print $2}')
                 [[ -z $device_build ]] && device_build=$($ideviceinfo -k BuildVersion)
-                device_udid=$(echo "$idi_output" | awk '/UniqueDeviceID/ {print $2}')
+                device_udid=$(echo "$idi_output" | awk '/^UniqueDeviceID/ {print $2}')
                 [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
                 if [[ $device_type == "iPod2,1" ]]; then
-                    device_newbr="$(echo "$idi_output" | awk '/ModelNumber/ {print $2}' | grep -c 'C')"
+                    device_newbr="$(echo "$idi_output" | awk '/^ModelNumber/ {print $2}' | grep -c 'C')"
                 fi
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_get_paired_info
-                device_protocol=$(echo "$idi_output" | awk '/ProtocolVersion/ {print $2}')
+                device_protocol=$(echo "$idi_output" | awk '/^ProtocolVersion/ {print $2}')
                 if [[ $device_protocol == 1 && -z $device_type ]]; then
                     device_entry_s5l8900
                 fi
@@ -1915,13 +1915,13 @@ device_find_mode() {
             device_in=$(lsusb | grep -c "05ac:$usb")
         fi
         if [[ $mode == "Recovery" && $timeout == 50 ]]; then # find recovery/dfu instead of just recovery, only if timeout is 50
-            mode2="$($irecovery -q 2>/dev/null | awk '/MODE:/ {print $2}')"
+            mode2="$($irecovery -q 2>/dev/null | awk '/^MODE:/ {print $2}')"
             if [[ -n $mode2 ]]; then
                 device_in=1
                 mode="$mode2"
             fi
         elif [[ $platform != "linux" ]]; then
-            mode2="$($irecovery -q 2>/dev/null | awk '/MODE:/ {print $2}')"
+            mode2="$($irecovery -q 2>/dev/null | awk '/^MODE:/ {print $2}')"
             if [[ $mode2 == "$mode" ]]; then
                 device_in=1
             fi
@@ -2076,7 +2076,7 @@ device_dfuhelper() {
         fi
 
         print "* Get ready..."
-        device_mode="$($irecovery -q 2>/dev/null | awk '/MODE:/ {print $2}')"
+        device_mode="$($irecovery -q 2>/dev/null | awk '/^MODE:/ {print $2}')"
         if [[ $device_mode == "$mode_name" && $mode != "device_dfuhelper" ]]; then
             log "Found device in $mode_name mode."
             unset -f _step
@@ -2331,7 +2331,7 @@ device_enter_mode() {
             fi
             while (( attempt <= attempts )); do
                 log "Finding device in kDFU mode... (Attempt $attempt of $attempts)"
-                if [[ $($irecovery -q 2>/dev/null | awk '/MODE:/ {print $2}') == "DFU" ]]; then
+                if [[ $($irecovery -q 2>/dev/null | awk '/^MODE:/ {print $2}') == "DFU" ]]; then
                     device_in=1
                 fi
                 if [[ $device_in == 1 ]]; then
@@ -2369,8 +2369,8 @@ device_enter_mode() {
 
             if [[ $device_mode == "DFU" ]]; then
                 local idi_output="$($irecovery -q)"
-                device_pwnd="$(echo "$idi_output" | awk '/PWND/ {print $2}')"
-                device_srtg="$(echo "$idi_output" | awk '/SRTG/ {print $2}')"
+                device_pwnd="$(echo "$idi_output" | awk '/^PWND/ {print $2}')"
+                device_srtg="$(echo "$idi_output" | awk '/^SRTG/ {print $2}')"
             fi
             if [[ -n $device_pwnd ]]; then
                 log "Device seems to be already in pwned DFU mode"
@@ -2418,7 +2418,7 @@ device_enter_mode() {
                 pause
                 echo
                 log "Checking for device"
-                device_pwnd="$($irecovery -q | awk '/PWND/ {print $2}')"
+                device_pwnd="$($irecovery -q | awk '/^PWND/ {print $2}')"
                 if [[ -n $device_pwnd ]]; then
                     log "Found device in pwned DFU mode."
                     print "* Pwned: $device_pwnd"
@@ -2500,7 +2500,7 @@ device_enter_mode() {
             log "Checking for device"
             local idi_output="$($irecovery -q)"
             irec_pwned=$(echo "$idi_output" | grep -c "PWND")
-            device_pwnd="$(echo "$idi_output" | awk '/PWND/ {print $2}')"
+            device_pwnd="$(echo "$idi_output" | awk '/^PWND/ {print $2}')"
             # irec_pwned is instances of "PWND" in serial, must be 1
             # tool_pwned is error code of pwning tool, must be 0
             if [[ $irec_pwned != 1 && $tool_pwned != 0 ]]; then
@@ -2513,7 +2513,7 @@ device_enter_mode() {
                     device_send_unpacked_ibss
                 fi
             elif [[ $device_proc == 6 ]]; then
-                device_srtg="$(echo "$idi_output" | awk '/SRTG/ {print $2}')"
+                device_srtg="$(echo "$idi_output" | awk '/^SRTG/ {print $2}')"
                 if [[ $device_srtg != "iBoot"* ]]; then
                     log "Found device in pwned iBSS mode."
                 else
@@ -2577,7 +2577,7 @@ device_send_unpacked_ibss() {
     sleep 1
     log "Checking for device"
     local idi_output="$($irecovery -q 2>&1)"
-    device_pwnd="$(echo "$idi_output" | awk '/PWND/ {print $2}')"
+    device_pwnd="$(echo "$idi_output" | awk '/^PWND/ {print $2}')"
     if [[ -z $device_pwnd && $idi_output != "ERROR"* ]]; then
         log "Device should now be in pwned iBSS mode."
     elif [[ $device_proc == 5 ]]; then
@@ -3228,7 +3228,7 @@ shsh_save() {
     local generator cryptex_generator apnonce cryptex_apnonce
 
     case $1 in
-        "apnonce" ) apnonce="$($irecovery -q | awk '/NONC/ {print $2}')";;
+        "apnonce" ) apnonce="$($irecovery -q | awk '/^NONC/ {print $2}')";;
         "version" ) version=$2;;
         "bbcheck" ) bbcheck=1;;
     esac
@@ -6714,7 +6714,7 @@ restore_prepare() {
                         fi
                         log "Finding device in Recovery/DFU mode..."
                         until [[ -n $device_mode ]]; do
-                            device_mode="$($irecovery -q 2>/dev/null | awk '/MODE:/ {print $2}')"
+                            device_mode="$($irecovery -q 2>/dev/null | awk '/^MODE:/ {print $2}')"
                         done
                         ipsw_custom="$ipsw_custom_part2"
                         print "* If pwning fails here, re-enter DFU and run the script again with --skip-first flag enabled to continue the process."
@@ -6819,7 +6819,7 @@ restore_kuroutadori() {
     args+=("-y" "$ipsw_path.ipsw")
     device_enter_mode DFU
     kuroutadori_litera1n -D
-    device_pwnd="$($irecovery -q | awk '/PWND/ {print $2}')"
+    device_pwnd="$($irecovery -q | awk '/^PWND/ {print $2}')"
     if [[ $device_pwnd != "yolo" ]]; then
         device_pwnerror
     fi
