@@ -439,6 +439,7 @@ set_tool_paths() {
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
+        PlistBuddy="$dir/PlistSet"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
@@ -596,9 +597,9 @@ set_tool_paths() {
         /usr/bin/xattr -cr ../bin/macos
 
         bspatch="$(command -v bspatch)"
-        cocoadialog="$(command -v cocoadialog)"
         gaster+="../bin/macos/gaster"
         PlistBuddy="/usr/libexec/PlistBuddy"
+        PlistSet="$PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
         zenity="$dir/zenity"
@@ -3871,7 +3872,7 @@ ipsw_prepare_paths() {
     if [[ $2 == "target" ]]; then
         case $comp in
             *"AppleLogo" )
-                if [[ $device_latest_vers == "5"* ]]; then
+                if [[ $device_latest_vers == "5."* ]]; then
                     logostuff=1
                 else
                     case $device_target_vers in
@@ -4077,7 +4078,7 @@ ipsw_prepare_bundle() {
     echo "<key>RootFilesystemKey</key><string>$rootfs_key</string>" >> $NewPlist
     echo "<key>RootFilesystemSize</key><integer>$root_size</integer>" >> $NewPlist
     printf "<key>RamdiskOptionsPath</key><string>/usr/local/share/restore/options" >> $NewPlist
-    if [[ $device_target_vers != "3"* && $device_target_vers != "4"* ]] ||
+    if [[ $target_vers_maj != 3 && $target_vers_maj != 4 ]] ||
        [[ $device_type == "iPad1,1" && $target_vers_maj == 4 ]]; then
         printf ".%s" "$device_model" >> $NewPlist
     fi
@@ -4134,7 +4135,7 @@ ipsw_prepare_bundle() {
 
     if [[ $1 == "base" ]]; then
         echo "<key>Firmware</key><dict/>" >> $NewPlist
-    elif [[ $1 == "target" && $vers == "4"* ]]; then
+    elif [[ $1 == "target" && $vers == "4."* ]]; then
         echo "<key>Firmware</key><dict>" >> $NewPlist
         ipsw_prepare_keys iBSS $1
         ipsw_prepare_keys RestoreDeviceTree $1
@@ -4160,7 +4161,7 @@ ipsw_prepare_bundle() {
         fi
         ipsw_prepare_keys iBSS $1
         # ios 4 and lower do not need ibec patches. the exception is the ipad lineup
-        if [[ $vers != "3"* && $vers != "4"* ]] || [[ $device_type == "iPad1,1" || $device_type == "iPad2"* ]]; then
+        if [[ $vers != "3."* && $vers != "4."* ]] || [[ $device_type == "iPad1,1" || $device_type == "iPad2"* ]]; then
             ipsw_prepare_keys iBEC $1
         fi
         if [[ $device_proc == 1 && $device_target_vers != "4.2.1" ]]; then
@@ -4223,7 +4224,7 @@ ipsw_prepare_bundle() {
         echo "</dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
         echo "<key>FirmwareReplace</key><dict>" >> $NewPlist
-        if [[ $vers == "4"* ]]; then
+        if [[ $vers == "4."* ]]; then
             ipsw_prepare_paths APTicket $1
         fi
         ipsw_prepare_paths AppleLogo $1
@@ -4697,8 +4698,8 @@ ipsw_prepare_ios4multipart() {
         download_with_pzb "$url" BuildManifest.plist
         cp BuildManifest.plist $saved_path/
     fi
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+    $PlistSet -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+    $PlistSet -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
     cp BuildManifest.plist $ipsw_custom_part1/
 
     log "Restore Ramdisk"
@@ -4780,7 +4781,7 @@ ipsw_prepare_ios4multipart() {
         echo "0000020: 3467" | xxd -r - $logo_name
     fi
     log "Add AppleLogo to all_flash"
-    if [[ $device_latest_vers == "5"* ]]; then
+    if [[ $device_latest_vers == "5."* ]]; then
         mv $logo_name $all_flash2/applelogo4.img3
         echo "applelogo4.img3" >> $all_flash2/manifest
     else
@@ -4958,11 +4959,11 @@ ipsw_prepare_specialios7() {
 
     log "Base manifest plist"
     file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-    $PlistBuddy -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
-    $PlistBuddy -c "Set ProductBuildVersion $device_target_build" BuildManifest.plist
-    $PlistBuddy -c "Set ProductVersion $device_target_vers" BuildManifest.plist
+    $PlistSet -c "Set BuildIdentities:0:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+    $PlistSet -c "Set BuildIdentities:0:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
+    $PlistSet -c "Set BuildIdentities:0:Manifest:RestoreLogo:Info:Path Downgrade/RestoreLogo" BuildManifest.plist
+    $PlistSet -c "Set ProductBuildVersion $device_target_build" BuildManifest.plist
+    $PlistSet -c "Set ProductVersion $device_target_vers" BuildManifest.plist
     cp BuildManifest.plist $ipsw_custom/
 
     local ramdisk_name=$(echo $device_fw_key_base | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
@@ -5401,30 +5402,9 @@ ipsw_prepare_multipatch() {
 
     if [[ $(cat BuildManifest.plist | grep -c "Downgrade") == 0 ]]; then
         log "Modifying BuildManifest..."
-        if [[ $platform == "macos" ]]; then
-            ipsw_get_ramdisk_identity Erase BuildManifest.plist
-            $PlistBuddy -c "Set BuildIdentities:$target_identity:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
-            $PlistBuddy -c "Set BuildIdentities:$target_identity:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
-        else
-            awk '
-                /^[[:space:]]*<key>RestoreDeviceTree<\/key>/ { mode = "rdt" }
-                /^[[:space:]]*<key>RestoreKernelCache<\/key>/ { mode = "rkc" }
-                /^[[:space:]]*<key>Path<\/key>/ && mode {
-                    print
-                    getline
-                    match($0, /^[[:space:]]*/)
-                    indent = substr($0, RSTART, RLENGTH)
-                    if (mode == "rdt") {
-                        sub(/^[[:space:]]*.*/, indent "<string>Downgrade/RestoreDeviceTree</string>")
-                    } else if (mode == "rkc" && $0 ~ /<string>.*kernelcache.*<\/string>/) {
-                        sub(/^[[:space:]]*.*/, indent "<string>Downgrade/RestoreKernelCache</string>")
-                    }
-                    mode = ""
-                }
-                { print }
-            ' BuildManifest.plist > BuildManifest.tmp
-            mv BuildManifest.tmp BuildManifest.plist
-        fi
+        ipsw_get_ramdisk_identity Erase BuildManifest.plist
+        $PlistSet -c "Set BuildIdentities:$target_identity:Manifest:RestoreDeviceTree:Info:Path Downgrade/RestoreDeviceTree" BuildManifest.plist
+        $PlistSet -c "Set BuildIdentities:$target_identity:Manifest:RestoreKernelCache:Info:Path Downgrade/RestoreKernelCache" BuildManifest.plist
         if [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_vers != "$device_latest_vers" ]]; then
             ipsw_bbreplace exist
         else
@@ -5873,10 +5853,10 @@ ipsw_prepare_powder() {
     if [[ $device_type == "iPhone5,"* && $ipsw_powder_5c70 != 1 ]]; then
         # do this stuff because these use ramdiskH (jump to /boot/iBEC) instead of ramdiskI (jump ibot to ibob)
         ipsw_powder_ramdiskH=1
-        if [[ $device_target_vers == "9"* ]]; then
+        if [[ $target_vers_maj == 9 ]]; then
             ExtraArr[0]+="9"
         fi
-        if [[ $ipsw_jailbreak == 1 && $device_target_vers != "7"* ]]; then
+        if [[ $ipsw_jailbreak == 1 && $target_vers_maj == 7 ]]; then
             bootargs+=" cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff"
         fi
         ExtraArr+=("-b" "$bootargs")
@@ -6219,7 +6199,7 @@ restore_download_bbsep() {
           $device_latest_vers == "16"* || $device_checkm8ipad == 1 ||
           $device_usbliter8 == 1 ]]; then
         return
-    elif [[ $device_latest_vers == "$device_use_vers" || $device_target_vers == "10"* ]]; then
+    elif [[ $device_latest_vers == "$device_use_vers" || $target_vers_maj == 10 ]]; then
         build_id="$device_use_build"
         restore_baseband="$device_use_bb"
         baseband_sha1="$device_use_bb_sha1"
@@ -6233,7 +6213,7 @@ restore_download_bbsep() {
     mkdir -p tmp
     # BuildManifest
     if [[ ! -e ../saved/$device_type/$build_id.plist ]]; then
-        if [[ $device_proc == 7 && $device_target_vers == "10"* ]]; then
+        if [[ $device_proc == 7 && $target_vers_maj == 10 ]]; then
             cp ../resources/manifest/BuildManifest_${device_type}_10.3.3.plist $build_id.plist
         else
             download_with_pzb "$ipsw_url" BuildManifest.plist $build_id.plist
@@ -7556,13 +7536,13 @@ device_ramdisk() {
             cp ../resources/sshrd/ssh.tar.gz .
             gzip -d ssh.tar.gz
             "$dir/hfsplus" Ramdisk.raw untar ssh.tar
-            if [[ $1 == "jailbreak" && $device_vers == "8"* ]]; then
+            if [[ $1 == "jailbreak" && $device_vers_maj == 8 ]]; then
                 "$dir/hfsplus" Ramdisk.raw untar $jelbrek/daibutsu/bin.tar
             fi
             "$dir/hfsplus" Ramdisk.raw mv sbin/reboot sbin/reboot_bak
             "$dir/hfsplus" Ramdisk.raw mv sbin/halt sbin/halt_bak
             case $build_id in
-                 "12"* | "13"* | "14"* )
+                 1[234]* )
                     echo '#!/bin/bash' > restored_external
                     echo "/sbin/sshd; exec /usr/local/bin/restored_external_o" >> restored_external
                     "$dir/hfsplus" Ramdisk.raw mv usr/local/bin/restored_external usr/local/bin/restored_external_o
@@ -7939,7 +7919,7 @@ device_ramdisk_setnvram() {
             iPad1,1 | iPhone3,1 | iPod3,1 )
                 if [[ $device_type != "iPhone3,1" ]]; then
                     device_ramdisk_iosvers
-                    if [[ $device_vers == "3"* ]]; then
+                    if [[ $device_vers_maj == 3 ]]; then
                         device_ramdisk_ios3exploit
                     fi
                 fi
@@ -7954,7 +7934,7 @@ device_ramdisk_setnvram() {
         esac
     elif [[ $device_type == "iPad1,1" ]]; then
         device_ramdisk_iosvers
-        if [[ $device_vers == "3"* && -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+        if [[ $device_vers_maj == 3 && -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
             untether="${device_type}_${device_build}.tar"
             log "Sending $untether"
             $scp -P $ssh_port $jelbrek/greenpois0n/$untether root@127.0.0.1:/mnt1
@@ -8026,6 +8006,8 @@ device_ramdisk_iosvers() {
         device_build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
     else
         device_vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
+        device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
+        device_vers_min=$(echo "$device_vers" | cut -d. -f2)
         device_build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     fi
     if [[ -n $device_vers ]]; then
@@ -8261,9 +8243,10 @@ menu_ramdisk() {
                 cp $jelbrek/freeze.tar.gz .
                 gzip -d freeze.tar.gz
                 cat freeze.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib private"
-                if [[ $device_vers == "9"* ]]; then
+                if [[ $device_vers_maj == 9 ]]; then
                     cat $jelbrek/launchctl.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xvf - -C /mnt1"
                 fi
+                cat $jelbrek/melder.tar | $ssh -p $ssh_port root@127.0.0.1 "tar -xf - -C /mnt1"
                 cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
                 gzip -d openssh.tar.gz
                 gzip -d openssl.tar.gz
@@ -12021,7 +12004,7 @@ menu_justboot() {
     local menu_items
     local selected
     local back
-    local vers
+    local build_id
     local recent="../saved/$device_type/justboot_${device_ecid}"
 
     # Store original device info to prevent it from being overwritten
@@ -12056,7 +12039,7 @@ menu_justboot() {
         if [[ $device_type == "iPod4,1" ]]; then
             menu_items+=("(*) iOS 7.1.2")
         fi
-        if [[ -n $vers ]]; then
+        if [[ -n $build_id ]]; then
             menu_items+=("(*) Just Boot")
         fi
         menu_items+=("Go Back")
@@ -12068,8 +12051,8 @@ menu_justboot() {
         if [[ -n $ipsw_justboot_path ]]; then
             print "* Selected IPSW: $ipsw_justboot_path.ipsw"
             print "* IPSW Version: $device_target_vers-$device_target_build"
-        elif [[ -n $vers ]]; then
-            print "* Build Version entered: $vers"
+        elif [[ -n $build_id ]]; then
+            print "* Build version entered: $build_id"
         else
             print "* Enter build version or select IPSW to continue"
         fi
@@ -12096,24 +12079,24 @@ menu_justboot() {
                     ;;
                 esac
                 ipsw_justboot_path=
-                vers="$device_rd_build"
+                build_id="$device_rd_build"
             ;;
             "Select IPSW" )
                 menu_ipsw_browse "justboot"
                 ipsw_justboot_path="$ipsw_path"
-                vers="$device_target_build"
-                device_rd_build="$vers"
+                build_id="$device_target_build"
+                device_rd_build="$build_id"
             ;;
             "Connected Device ["* )
-                vers="$(cat $recent)"
-                device_rd_build="$vers"
-                log "Selected connected device build version: $vers"
+                build_id="$(cat $recent)"
+                device_rd_build="$build_id"
+                log "Selected connected device build version: $build_id"
             ;;
             "Boot History" | "Boot History (All Devices)" )
-                vers=
+                build_id=
                 menu_justboot_history
-                if [[ -n $vers ]]; then
-                    device_rd_build="$vers"
+                if [[ -n $build_id ]]; then
+                    device_rd_build="$build_id"
                 fi
                 # Restore original device info after history menu
                 device_type="$original_device_type"
@@ -12121,9 +12104,9 @@ menu_justboot() {
                 device_name="$original_device_name"
             ;;
             "(*) Just Boot" )
-                echo "$vers" > $recent
+                echo "$build_id" > $recent
                 mode="device_justboot"
-                if [[ $device_type == "iPod4,1" && $vers == "11"* ]]; then
+                if [[ $device_type == "iPod4,1" && $build_id == "11"* ]]; then
                     mode="device_justboot_specialios7"
                 fi
             ;;

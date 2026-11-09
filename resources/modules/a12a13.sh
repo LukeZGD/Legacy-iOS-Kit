@@ -160,10 +160,6 @@ device_a12a13_ipsw_tethered() {
         return
     fi
 
-    if (( target_vers_maj >= 16 )); then
-        python3_init
-    fi
-
     # prepare folders
     mkdir -p $boot_folder tmp1/ tmp2/
 
@@ -224,20 +220,7 @@ device_a12a13_ipsw_tethered() {
         cryptex_app="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:Cryptex1,AppOS:Info:Path" bm_target.plist | tr -d '"')"
         cryptex_os="$($PlistBuddy -c "Print BuildIdentities:$target_identity:Manifest:Cryptex1,SystemOS:Info:Path" bm_target.plist | tr -d '"')"
         log "Modify base BuildManifest with KERNEL2: $KERNEL2"
-        env KERNEL2="$KERNEL2" IDENTITY="$base_identity" python3 <<'PY'
-import os
-import plistlib
-
-with open("tmp2/BuildManifest.plist", "rb") as f:
-    plist = plistlib.load(f)
-
-identity = int(os.environ["IDENTITY"])
-
-plist["BuildIdentities"][identity]["Manifest"]["KernelCache"]["Info"]["Path"] = os.environ["KERNEL2"]
-
-with open("tmp2/BuildManifest.plist", "wb") as f:
-    plistlib.dump(plist, f)
-PY
+        $PlistSet -c "Set BuildIdentities:$base_identity:Manifest:KernelCache:Info:Path $KERNEL2" tmp2/BuildManifest.plist
     else
         touch tmp2/$cryptex_app_18
         touch tmp2/$cryptex_os_18

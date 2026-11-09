@@ -133,6 +133,14 @@ unzip pzb_linux-x86_64.zip
 mv pzb/pzb linux/x86_64/
 rm -rf pzb *.zip
 
+curl -LO https://github.com/LukeZGD/PlistSet/releases/download/latest/PlistSet_linux-aarch64.zip
+curl -LO https://github.com/LukeZGD/PlistSet/releases/download/latest/PlistSet_linux-x86_64.zip
+unzip PlistSet_linux-aarch64.zip
+mv PlistSet linux/aarch64/
+unzip PlistSet_linux-x86_64.zip
+mv PlistSet linux/x86_64/
+rm -rf PlistSet *.zip
+
 curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-arm64
 curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
 mv jq-linux-arm64 linux/aarch64/jq

@@ -21,9 +21,9 @@ These binaries use the same source on Linux and macOS.
 | hfsplus              | https://github.com/LukeZGD/daibutsuCFW |
 | iBoot32Patcher       | https://github.com/LukeZGD/iBoot32Patcher |
 | iBoot64Patcher      | https://github.com/LukeZGD/iBoot64Patcher |
-| ibootpatch2         | https://github.com/LukeZGD/ibootpatch2 |
-| iBootPatcher        | https://gist.github.com/pwnerblu/c759c0060b5167a411b3b3adfcd07572 |
 | ibootim              | https://github.com/LukeZGD/ibootim |
+| ibootpatch2         | https://github.com/LukeZGD/ibootpatch2 |
+| iBootPatch        | https://gist.github.com/pwnerblu/c759c0060b5167a411b3b3adfcd07572 |
 | ideviceactivation    | https://github.com/LukeZGD/idevicerestore |
 | idevicebackup2       | https://github.com/LukeZGD/idevicerestore |
 | idevicediagnostics   | https://github.com/LukeZGD/idevicerestore |
@@ -51,8 +51,8 @@ These binaries use the same source on Linux and macOS.
 | powdersn0w           | https://github.com/LukeZGD/powdersn0w_pub |
 | primepwn             | https://github.com/LukeZGD/primepwn |
 | pzb                  | https://github.com/LukeZGD/partialzipbrowser |
-| sshpass              | https://github.com/LukeZGD/sshpass |
 | restoredpatcher     | https://gist.github.com/LukeZGD/d7c529aa5ef6e665cfbba5053ea7dc5b |
+| sshpass              | https://github.com/LukeZGD/sshpass |
 | ticket               | https://github.com/LukeZGD/powdersn0w_pub |
 | trustcache          | https://github.com/LukeZGD/trustcache |
 | tsschecker           | https://github.com/1Conan/tsschecker/releases/tag/440 |
@@ -65,6 +65,8 @@ These binaries use the same source on Linux and macOS.
 | ----------------- | ------- |
 | a6meowing         | https://github.com/LukeZGD/a6meowing |
 | bspatch           | https://github.com/LukeZGD/bsdiff |
+| PlistBuddy           | https://github.com/LukeZGD/xcbuild |
+| PlistSet           | https://github.com/LukeZGD/PlistSet |
 | scp               | https://codeberg.org/binary-manu/static-cross-openssh |
 | ssh               | https://codeberg.org/binary-manu/static-cross-openssh |
 | usbmuxd           | https://github.com/g1lbertJB/g1lbertJB |
