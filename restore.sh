@@ -1158,7 +1158,7 @@ device_get_name() {
 
 device_get_paired_info() {
     local idi_output="$($ideviceinfo)"
-    device_serial="$(echo "$idi_output" | awk '/SerialNumber/ {print $2}' | cut -c 3- | cut -c -3)"
+    device_serial="$($ideviceinfo -k SerialNumber | cut -c 3- | cut -c -3)"
     device_unactivated=$(echo "$idi_output" | awk '/ActivationState/ {print $2}' | grep -c "Unactivated")
     device_imei=$(echo "$idi_output" | awk '/InternationalMobileEquipmentIdentity/ {print $2}')
 }
