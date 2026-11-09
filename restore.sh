@@ -439,7 +439,7 @@ set_tool_paths() {
         fi
         bspatch="$dir/bspatch"
         PlistBuddy="$dir/PlistBuddy"
-        PlistBuddy="$dir/PlistSet"
+        PlistSet="$dir/PlistSet"
         sha1sum="$(command -v sha1sum)"
         tsschecker="$dir/tsschecker"
         zenity="$(command -v zenity)"
@@ -6070,10 +6070,10 @@ ipsw_prepare_s5l8900() {
     local sha1L="none"
     if [[ $device_target_vers == "4.1" ]]; then
         rname="018-7079-079.dmg"
-        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
+        sha1E="cd439dddb48476f7b29a3bc2f4faed94319c50d4"
     elif [[ $device_target_vers == "4.2.1" ]]; then
         rname="038-0029-002.dmg"
-        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
+        sha1E="cd439dddb48476f7b29a3bc2f4faed94319c50d4"
     fi
 
     if [[ $target_vers_maj == 4 && -e "$ipsw_custom.ipsw" ]]; then
@@ -6101,17 +6101,11 @@ ipsw_prepare_s5l8900() {
     mv "$ipsw_custom.ipsw" temp.ipsw
     if [[ $target_vers_maj == 2 ]]; then
         ipsw_prepare_patchcomp iBSS
-        ipsw_prepare_patchcomp iBoot
         ipsw_prepare_patchcomp Kernelcache
-        ipsw_prepare_patchcomp LLB
-        ipsw_prepare_patchcomp RestoreRamdisk
-        ipsw_prepare_patchcomp WTF2
-
     elif [[ $device_target_vers == "3.0"* ]]; then
         ipsw_prepare_patchcomp Kernelcache
-
-    elif [[ $target_vers_maj == 4 ]]; then
-        ipsw_prepare_patchcomp iBEC
+    fi
+    if [[ $target_vers_maj != 3 ]]; then
         ipsw_prepare_patchcomp iBoot
         ipsw_prepare_patchcomp LLB
         ipsw_prepare_patchcomp RestoreRamdisk
