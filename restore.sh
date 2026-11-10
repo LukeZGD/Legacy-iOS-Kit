@@ -1275,6 +1275,7 @@ device_get_info() {
     device_latest_bb, device_latest_bb_sha1, device_proc
     '
     local idi_output
+    local idi_output2
 
     if [[ ! -s $ideviceinfo ]]; then
         error "ideviceinfo not found. Make sure to update the script and/or check your Internet connection."
@@ -1298,9 +1299,10 @@ device_get_info() {
         if [[ $? == 0 ]]; then
             device_mode="Normal"
         else
-            idi_output="$($ideviceinfo)"
+            idi_output2="$($ideviceinfo)"
             if [[ $? == 0 ]]; then
                 device_mode="Normal"
+                idi_output="$idi_output2"
             fi
         fi
     fi
@@ -1373,21 +1375,24 @@ device_get_info() {
             if [[ -n $device_argmode ]]; then
                 device_entry
             elif [[ -z $device_type ]]; then
+                [[ -z $idi_output2 ]] && idi_output2="$($ideviceinfo)"
                 device_type=$(echo "$idi_output" | awk '/^ProductType/ {print $2}')
+                [[ -z $device_vers ]] && device_type=$(echo "$idi_output2" | awk '/^ProductType/ {print $2}')
             fi
             if [[ $main_argmode != "device_enter_ramdisk"* ]]; then
+                [[ -z $idi_output2 ]] && idi_output2="$($ideviceinfo)"
                 device_ecid=$(echo "$idi_output" | awk '/^UniqueChipID/ {print $2}')
                 device_model=$(echo "$idi_output" | awk '/^HardwareModel/ {print $2}')
                 device_vers=$(echo "$idi_output" | awk '/^ProductVersion/ {print $2}')
-                [[ -z $device_vers ]] && device_vers=$($ideviceinfo -k ProductVersion)
+                [[ -z $device_vers ]] && device_vers=$(echo "$idi_output2" | awk '/^ProductVersion/ {print $2}')
                 device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
                 device_vers_min=$(echo "$device_vers" | cut -d. -f2)
                 device_build=$(echo "$idi_output" | awk '/^BuildVersion/ {print $2}')
-                [[ -z $device_build ]] && device_build=$($ideviceinfo -k BuildVersion)
+                [[ -z $device_build ]] && device_build=$(echo "$idi_output2" | awk '/^BuildVersion/ {print $2}')
                 device_udid=$(echo "$idi_output" | awk '/^UniqueDeviceID/ {print $2}')
-                [[ -z $device_udid ]] && device_udid=$($ideviceinfo -k UniqueDeviceID)
+                [[ -z $device_udid ]] && device_udid=$(echo "$idi_output2" | awk '/^UniqueDeviceID/ {print $2}')
                 if [[ $device_type == "iPod2,1" ]]; then
-                    device_newbr="$(echo "$idi_output" | awk '/^ModelNumber/ {print $2}' | grep -c 'C')"
+                    device_newbr="$(echo "$idi_output2" | awk '/^ModelNumber/ {print $2}' | grep -c 'C')"
                 fi
                 # i'd like to force pair for all it but would prob get annoying quick especially on linux
                 device_get_paired_info
@@ -1773,12 +1778,12 @@ device_get_info() {
             device_latest_build="21H461"
         ;;
         iPad7,1[12] | iPhone11,* )
-            device_latest_vers="18.7.11"
-            device_latest_build="22H384"
+            device_latest_vers="18.7.12"
+            device_latest_build="22H390"
         ;;
         iPad8,[12345678] | iPad11,* )
-            device_latest_vers="26.7.2"
-            device_latest_build="23H128"
+            device_latest_vers="26.7.3"
+            device_latest_build="23H131"
         ;;
     esac
     # if latest vers is not set, copy use vers to latest
@@ -3233,7 +3238,7 @@ shsh_save() {
         "bbcheck" ) bbcheck=1;;
     esac
 
-    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "27.0.1" || $version == "18.7.10" ]]; then
+    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "27.2" || $version == "18.7.11" ]]; then
         if [[ $version == "$device_latest_vers" ]]; then
             build_id="$device_latest_build"
         fi
@@ -3667,7 +3672,6 @@ ipsw_prepare_jailbreak() {
         case $device_target_vers in
             [543].* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
-        ExtraArgs+=" -S $system_partition_add"
         if [[ $ipsw_openssh == 1 ]]; then
             JBFiles+=("$jelbrek/sshdeb.tar")
             if (( target_vers_maj >= 4 )); then
@@ -3686,6 +3690,10 @@ ipsw_prepare_jailbreak() {
         fi
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
+    fi
+    ExtraArgs+=" -S $system_partition_add"
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
     fi
 
     ipsw_prepare_bundle $daibutsu
@@ -3710,13 +3718,14 @@ ipsw_prepare_jailbreak() {
         ipsw_prepare_systemversion
         ExtraArgs+=" systemversion.tar"
     fi
-    if [[ $ipsw_hacktivate == 1 && ! -s $FirmwareBundle/lockdownd.patch ]]; then
-        hacktivate_prepare
-        if [[ $hacktivate_dap == 1 ]]; then
-            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
-        else
-            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
-        fi
+    if [[ $hacktivate_dap == 1 ]]; then
+        ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+    elif [[ -s "$hacktivate_patch" ]]; then
+        cp "$hacktivate_patch" "$FirmwareBundle/lockdownd.patch"
+    fi
+
+    if [[ $device_type == "iPod2,1" && $target_vers_maj == 3 ]]; then
+        export SECTORS_AT_A_TIME=0x200
     fi
 
     log "Preparing custom IPSW: $dir/ipsw $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -4060,6 +4069,7 @@ ipsw_prepare_bundle() {
     else
         root_size="$($PlistBuddy -c "Print SystemPartitionSize" options.$device_model.plist | tr -d '"')"
     fi
+    log "root_size: $root_size + $system_partition_add"
     root_size=$((root_size+system_partition_add))
     local rootfs_name
     [[ -s BuildManifest.plist ]] && rootfs_name="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
@@ -4121,7 +4131,7 @@ ipsw_prepare_bundle() {
     elif [[ -d $FirmwareBundle2 ]]; then
         echo "<key>RamdiskPatches</key><dict/>" >> $NewPlist
     fi
-    if [[ $ipsw_hacktivate == 1 ]] && (( target_vers_maj <= 6 )); then
+    if [[ $ipsw_hacktivate == 1 && $hacktivate_dap != 1 ]]; then
         echo "<key>FilesystemPatches</key><dict>" >> $NewPlist
         echo "<key>Hacktivation</key><array><dict>" >> $NewPlist
         echo "<key>Action</key><string>Patch</string><key>File</key><string>usr/libexec/lockdownd</string>" >> $NewPlist
@@ -4166,6 +4176,7 @@ ipsw_prepare_bundle() {
         else
             ipsw_prepare_keys RestoreDeviceTree $1
         fi
+
         if [[ $1 == "target" ]]; then
             case $vers in
                 [57]* ) ipsw_prepare_keys RestoreKernelCache $1;;
@@ -4173,12 +4184,15 @@ ipsw_prepare_bundle() {
             esac
         elif [[ $device_proc == 1 && $device_target_vers == "4.2.1" ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
+        elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]] || [[ $ipsw_24o == 1 ]]; then
+            : # skip restorekernelcache for these
         elif [[ $device_proc != 1 && $device_target_vers != "3.0"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
         fi
+
         ipsw_prepare_keys RestoreRamdisk $1
         if [[ $1 == "old" ]]; then
-            if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1 3.1.3
+            if [[ $ipsw_24o == 1 ]]; then # old bootrom ipod2,1 3.1.x
                 ipsw_prepare_keys iBoot $1
                 ipsw_prepare_keys KernelCache $1
             elif [[ $device_type == "iPod2,1" && $device_target_vers == "3.1.3" ]]; then
@@ -4305,6 +4319,9 @@ ipsw_prepare_32bit() {
         return
     fi
     ipsw_prepare_usepowder=1
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
+    fi
 
     ipsw_prepare_bundle $daibutsu
 
@@ -4377,13 +4394,10 @@ ipsw_prepare_32bit() {
     if [[ $device_actrec == 1 ]]; then
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
-    if [[ $ipsw_hacktivate == 1 ]]; then
-        hacktivate_prepare
-        if [[ $hacktivate_dap == 1 ]]; then
-            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
-        else
-            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
-        fi
+    if [[ $hacktivate_dap == 1 ]]; then
+        ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+    elif [[ -s "$hacktivate_patch" ]]; then
+        cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -5701,8 +5715,8 @@ ipsw_prepare_ios4powder() {
         fi
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
-        ExtraArgs+=" -S $system_partition_add"
     fi
+    ExtraArgs+=" -S $system_partition_add"
 
     ipsw_prepare_bundle base
     ipsw_prepare_bundle target
@@ -5789,6 +5803,9 @@ ipsw_prepare_powder() {
         return
     fi
     ipsw_prepare_usepowder=1
+    if [[ $ipsw_hacktivate == 1 ]]; then
+        hacktivate_prepare
+    fi
 
     ipsw_prepare_bundle base
     ipsw_prepare_bundle target
@@ -5832,8 +5849,8 @@ ipsw_prepare_powder() {
         JBFiles+=("$jelbrek/LukeZGD.tar")
         cp $jelbrek/freeze.tar.gz .
         gzip -d freeze.tar.gz
-        ExtraArgs+=" -S $system_partition_add"
     fi
+    ExtraArgs+=" -S $system_partition_add"
 
     local ExtraArr=("--boot-partition" "--boot-ramdisk")
     local bootargs="$device_bootargs_default"
@@ -5880,13 +5897,10 @@ ipsw_prepare_powder() {
         ExtraArgs+=" ../saved/$device_type/activation-$device_ecid.tar"
     fi
     ipsw_prepare_partition_script
-    if [[ $ipsw_hacktivate == 1 ]]; then
-        hacktivate_prepare
-        if [[ $hacktivate_dap == 1 ]]; then
-            ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
-        else
-            cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
-        fi
+    if [[ $hacktivate_dap == 1 ]]; then
+        ExtraArgs+=" $jelbrek/hacktivate_dap.tar"
+    elif [[ -s "$hacktivate_patch" ]]; then
+        cp "$hacktivate_patch" $FirmwareBundle/lockdownd.patch
     fi
 
     log "Preparing custom IPSW: $dir/powdersn0w $ipsw_path.ipsw temp.ipsw -base $ipsw_base_path.ipsw $ExtraArgs ${JBFiles[*]}"
@@ -6706,7 +6720,7 @@ restore_prepare() {
                             print "* Please put the device in DFU mode after it reboots!"
                             sleep 5
                             device_mode=
-                            log "Press Enter/Return when the device reboots and is on black screen, Apple logo, or iTunes logo."
+                            log "Press Enter/Return when the device reboots and is on black/white screen, Apple logo, or iTunes logo."
                             device_enter_mode DFU
                         fi
                         log "Finding device in Recovery/DFU mode..."
@@ -7835,6 +7849,7 @@ device_ramdisk() {
             case $vers in
                 9.* | 8.[43]* ) :;;
                 * )
+                    log "Removing patcyh"
                     $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/var/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                     device_send_rdtar nopatcyh.tar
                 ;;
@@ -9166,11 +9181,11 @@ menu_shsh() {
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Latest iOS ($device_latest_vers)" "Latest iOS ($device_latest_vers) (Baseband Check)")
-        # if [[ $device_latest_vers == 27* ]]; then
-        #     menu_items+=("iOS 27.0.1")
-        # elif [[ $device_latest_vers == 18* ]]; then
-        #     menu_items+=("iOS 18.7.10")
-        # fi
+        if [[ $device_latest_vers == 27* ]]; then
+            menu_items+=("iOS 27.2")
+        elif [[ $device_latest_vers == 18* ]]; then
+            menu_items+=("iOS 18.7.11")
+        fi
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
@@ -9203,12 +9218,12 @@ menu_shsh() {
                 device_target_vers="$device_latest_vers"
                 device_target_build="$device_latset_build"
             ;;
-            "iOS 27.0.1" )
-                device_target_vers="27.0.1"
+            "iOS 27.2" )
+                device_target_vers="27.2"
                 device_target_build="24A446"
             ;;
-            "iOS 18.7.10" )
-                device_target_vers="18.7.10"
+            "iOS 18.7.11" )
+                device_target_vers="18.7.11"
                 device_target_build="22H374"
             ;;
             "iOS 10.3.3" )
