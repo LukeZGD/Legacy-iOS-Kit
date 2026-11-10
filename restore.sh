@@ -6662,10 +6662,14 @@ restore_deviceprepare() {
                 if [[ $device_target_powder == 1 ]]; then
                     shsh_save version $device_latest_vers
                 fi
-                case $device_target_vers in
-                    [34]* ) device_enter_mode pwnDFU;;
-                    * ) device_buttons;;
-                esac
+                if [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]]; then
+                    device_enter_mode pwnDFU
+                else
+                    case $device_target_vers in
+                        [34]* ) device_enter_mode pwnDFU;;
+                        * ) device_buttons;;
+                    esac
+                fi
             fi
         ;;
 
@@ -9220,11 +9224,11 @@ menu_shsh() {
             ;;
             "iOS 27.2" )
                 device_target_vers="27.2"
-                device_target_build="24A446"
+                device_target_build="24B119"
             ;;
             "iOS 18.7.11" )
                 device_target_vers="18.7.11"
-                device_target_build="22H374"
+                device_target_build="22H384"
             ;;
             "iOS 10.3.3" )
                 device_target_vers="10.3.3"
