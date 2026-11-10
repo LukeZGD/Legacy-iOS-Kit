@@ -3630,7 +3630,7 @@ ipsw_prepare_jailbreak() {
     local daibutsu=$1
     if (( target_vers_maj <= 4 )); then
         system_partition_add=100
-        [[ $device_proc == 1 || $device_type == "iPod2,1" ]] && system_partition_add=40
+        [[ $device_proc == 1 || $device_type == "iPod2,1" ]] && system_partition_add=30
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
