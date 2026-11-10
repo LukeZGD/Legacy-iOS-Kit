@@ -7842,7 +7842,7 @@ device_ramdisk() {
                 [543]* ) device_send_rdtar cydiasubstrate5.tar;;
             esac
             case $vers in
-                9.* ) device_send_rdtar launchctl.tar; device_send_rdtar zebra.tar;;
+                9.* ) device_send_rdtar launchctl.tar;;
             esac
             case $vers in
                 [43].* ) :;;
