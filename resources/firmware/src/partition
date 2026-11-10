@@ -43,7 +43,7 @@ New_Data_LastSector="$(($Data_LastSector-$Exploit_LastSector))"
 New_Data_SectorSize="$(($New_Data_LastSector-$System_LastSector))"
 New_Data_Size="$(($New_Data_SectorSize*$LogicalSector))"
 
-hfs_resize /mnt1/private/var $New_Data_Size
+hfs_resize /mnt1/private/var "$New_Data_Size" || exit 20
 
 if [[ "$Data_Attributeflags" = "0001000000000000" ]]; then
     echo -e "d\n2\nn\n\n$New_Data_LastSector\n\nc\n2\nData\nx\na\n2\n48\n\nc\n2\n$Data_GUID\ns\n4\nm\nn\n3\n\n$Data_LastSector\n\nw\nY\n" | gptfdisk /dev/rdisk0s1
@@ -51,13 +51,17 @@ else
     echo -e "d\n2\nn\n\n$New_Data_LastSector\n\nc\n2\nData\nx\na\n2\n48\n49\n\nc\n2\n$Data_GUID\ns\n4\nm\nn\n3\n\n$Data_LastSector\n\nw\nY\n" | gptfdisk /dev/rdisk0s1
 fi
 
+sleep 1
 exploitDisk="/dev/rdisk0s1s3"
 if [[ $isIOS5 == 1 ]]; then
     exploitDisk="/dev/rdisk0s1s4"
 fi
-newfs_hfs -s -v exploit
-fsck_hfs -f $exploitDisk
-dd of=$exploitDisk if=/exploit bs=512k count=1
+newfs_hfs -s -v exploit "$exploitDisk"
+sleep 1
+fsck_hfs -f "$exploitDisk"
+sleep 2
+dd of="$exploitDisk" if=/exploit bs=512k count=1
+sync
 
 nvram -c
 nvram boot-partition=2
