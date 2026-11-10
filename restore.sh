@@ -4057,11 +4057,8 @@ ipsw_prepare_bundle() {
         root_size=750
         [[ $device_proc == 1 ]] && root_size=420
         [[ $device_type == "iPod2,1" ]] && root_size=450
-    elif [[ $platform == "macos" ]]; then
-        plutil -extract 'SystemPartitionSize' xml1 options.$device_model.plist -o size
-        root_size=$(cat size | sed -ne '/<integer>/,/<\/integer>/p' | sed -e "s/<integer>//" | sed "s/<\/integer>//" | sed '2d')
     else
-        root_size=$(cat options.$device_model.plist | grep -i SystemPartitionSize -A 1 | grep -oPm1 "(?<=<integer>)[^<]+")
+        root_size="$($PlistBuddy -c "Print SystemPartitionSize" options.$device_model.plist | tr -d '"')"
     fi
     root_size=$((root_size+system_partition_add))
     local rootfs_name
@@ -7992,18 +7989,10 @@ device_ramdisk_iosvers() {
     fi
     log "Getting iOS version"
     $scp -P $ssh_port root@127.0.0.1:/mnt1/System/Library/CoreServices/SystemVersion.plist .
-    if [[ $platform == "macos" ]]; then
-        rm -f BuildVer Version
-        plutil -extract 'ProductVersion' xml1 SystemVersion.plist -o Version
-        device_vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-        plutil -extract 'ProductBuildVersion' xml1 SystemVersion.plist -o BuildVer
-        device_build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-    else
-        device_vers=$(cat SystemVersion.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-        device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
-        device_vers_min=$(echo "$device_vers" | cut -d. -f2)
-        device_build=$(cat SystemVersion.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-    fi
+    device_vers="$($PlistBuddy -c "Print ProductVersion" SystemVersion.plist | tr -d '"')"
+    device_vers_maj=$(echo "$device_vers" | cut -d. -f1)
+    device_vers_min=$(echo "$device_vers" | cut -d. -f2)
+    device_build="$($PlistBuddy -c "Print ProductBuildVersion" SystemVersion.plist | tr -d '"')"
     if [[ -n $device_vers ]]; then
         log "Retrieved the current iOS version"
         print "* iOS Version: $device_vers ($device_build)"
@@ -10288,16 +10277,8 @@ ipsw_version_set() {
     log "Getting version from IPSW"
     file_extract_from_archive "$newpath.ipsw" Restore.plist
     chmod 644 Restore.plist
-    if [[ $platform == "macos" ]]; then
-        rm -f BuildVer Version
-        plutil -extract 'ProductVersion' xml1 Restore.plist -o Version
-        vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-        plutil -extract 'ProductBuildVersion' xml1 Restore.plist -o BuildVer
-        build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-    else
-        vers=$(cat Restore.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-        build=$(cat Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
-    fi
+    vers="$($PlistBuddy -c "Print ProductVersion" Restore.plist | tr -d '"')"
+    build="$($PlistBuddy -c "Print ProductBuildVersion" Restore.plist | tr -d '"')"
 
     if [[ $2 == "base" ]]; then
         device_base_vers="$vers"
