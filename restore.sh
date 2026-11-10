@@ -5934,146 +5934,101 @@ ipsw_prepare_powder() {
 }
 
 ipsw_prepare_patchcomp() {
-    local component="$1"
     local path="$all_flash/"
-    local name
-    local name41="018-7079-079"
+    local name="LLB.${device_model}ap.RELEASE"
+    local name41
     local ext="img3"
     local patch
-    local saved_path="../saved/$device_type/8B117"
     local iv
     local key
-    local ivkey
-    local name41
 
-    # Configure component
-    case "$component" in
-        WTF2 )
-            path="Firmware/dfu/"
-            name="WTF.s5l8900xall.RELEASE"
-            ext="dfu"
-        ;;
-        iBoot )
-            name="iBoot.${device_model}ap.RELEASE"
-        ;;
-        iB* )
-            path="Firmware/dfu/"
-            name="$component.${device_model}ap.RELEASE"
-            ext="dfu"
-        ;;
-        LLB )
-            name="LLB.${device_model}ap.RELEASE"
-        ;;
-        RestoreRamdisk )
-            path=""
-            ext="dmg"
-            name=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .filename')
-            name="${name%.dmg}"
-            iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .iv')
-            key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "RestoreRamdisk") | .key')
-
-            # 4.1 ramdisk keys
-            if [[ $target_vers_maj == 4 ]]; then
-                iv="a0fc6ca4ef7ef305d975e7f881ddcc7f"
-                key="18eab1ba646ae018b013bc959001fbde"
+    if [[ $1 == "WTF2" ]]; then
+        path="Firmware/dfu/"
+        name="WTF.s5l8900xall.RELEASE"
+        ext="dfu"
+    elif [[ $1 == "iBoot" ]]; then
+        name="iBoot.${device_model}ap.RELEASE"
+    elif [[ $1 == "iB"* ]]; then
+        path="Firmware/dfu/"
+        name="$1.${device_model}ap.RELEASE"
+        ext="dfu"
+    elif [[ $1 == "RestoreRamdisk" ]]; then
+        path=
+        name="018-6494-014"
+        ext="dmg"
+        iv=25e713dd5663badebe046d0ffa164fee
+        key=7029389c2dadaaa1d1e51bf579493824
+        if [[ $device_target_vers == "4"* ]]; then
+            name="018-7079-079"
+            iv=a0fc6ca4ef7ef305d975e7f881ddcc7f
+            key=18eab1ba646ae018b013bc959001fbde
+            if [[ $device_target_vers == "4.2.1" ]]; then
+                name41="$name"
+                name="038-0029-002"
             fi
-        ;;
-        RestoreDeviceTree )
-            name="DeviceTree.${device_model}ap"
-        ;;
-        RestoreKernelCache | Kernelcache )
-            path=""
-            name="kernelcache.release"
-            ext="$device_model"
-            if [[ $device_proc == 1 && $target_vers_maj != 4 ]]; then
-                ext="s5l8900x"
-            fi
-        ;;
-    esac
-
+        fi
+    elif [[ $1 == "RestoreDeviceTree" ]]; then
+        name="DeviceTree.${device_model}ap"
+    elif [[ $1 == "RestoreKernelCache" ]]; then
+        path=
+        name="kernelcache.release"
+        ext="$device_model"
+    fi
     patch="../resources/firmware/FirmwareBundles/Down_${device_type}_${device_target_vers}_${device_target_build}.bundle/$name.patch"
-
-    log "Patch $component"
-
-    # Restore ramdisk condition only
-    if [[ $component == "RestoreRamdisk" ]]; then
-        if [[ $target_vers_maj == 4 && $device_target_vers != "4.1" ]]; then
-            mkdir -p "$saved_path"
-
-            if [[ -s "$saved_path/$name41.$ext" ]]; then
-                cp "$saved_path/$name41.$ext" "$name.$ext"
+    local saved_path="../saved/$device_type/8B117"
+    if [[ $1 == "RestoreRamdisk" ]]; then
+        local ivkey
+        if [[ $device_target_vers == "4"* || $device_type == *"1,1" ]]; then
+            ivkey="-iv $iv -k $key"
+        fi
+        log "Patch $1"
+        if [[ $device_target_vers == "4.2.1" ]]; then
+            mkdir -p $saved_path
+            if [[ -s $saved_path/$name41.$ext ]]; then
+                cp $saved_path/$name41.$ext $name.$ext
             else
                 ipsw_get_url 8B117
                 download_with_pzb "$ipsw_url" "$name41.$ext" "$name.$ext"
-                cp "$name.$ext" "$saved_path/$name41.$ext"
+                cp $name.$ext $saved_path/$name41.$ext
             fi
         else
-            file_extract_from_archive "$ipsw_path.ipsw" "$name.$ext"
+            file_extract_from_archive "$ipsw_path.ipsw" $name.$ext
         fi
-
-        mv "$name.$ext" rd.orig
-        "$dir/xpwntool" rd.orig rd.dec -iv "$iv" -k "$key"
-        "$bspatch" rd.dec rd.patched "$patch"
-        "$dir/xpwntool" rd.patched "$name.$ext" -t rd.orig
-
-        zip -r0 temp.ipsw "$name.$ext"
+        mv $name.$ext rd.orig
+        "$dir/xpwntool" rd.orig rd.dec -iv $iv -k $key
+        $bspatch rd.dec rd.patched "$patch"
+        "$dir/xpwntool" rd.patched $name.$ext -t rd.orig $ivkey
+        zip -r0 temp.ipsw $name.$ext
         return
     fi
-
-    # iOS 4.2.1 (and other 4.x thats not 4.1) special handling
-    if [[ $target_vers_maj == 4 && $device_target_vers != "4.1" ]] &&
-       [[ $component == "RestoreDeviceTree" || $component == "RestoreKernelCache" ]]; then
-
-        mkdir -p "$saved_path"
-
-        if [[ -s "$saved_path/$name.$ext" ]]; then
-            cp "$saved_path/$name.$ext" "$name.$ext"
+    log "Patch $1"
+    if [[ $device_target_vers == "4.2.1" ]] && [[ $1 == "RestoreDeviceTree" || $1 == "RestoreKernelCache" ]]; then
+        mkdir -p $saved_path
+        if [[ -s $saved_path/$name.$ext ]]; then
+            cp $saved_path/$name.$ext $name.$ext
         else
             ipsw_get_url 8B117
             download_with_pzb "$ipsw_url" "${path}$name.$ext" "$name.$ext"
-            cp "$name.$ext" "$saved_path/$name.$ext"
+            cp $name.$ext $saved_path/$name.$ext
         fi
-
         mkdir -p Downgrade
-
-        if [[ $component == "RestoreKernelCache" ]]; then
-            ivkey="-iv 7238dcea75bf213eff209825a03add51 -k 0295d4ef87b9db687b44f54c8585d2b6"
-
-            "$dir/xpwntool" "$name.$ext" kernelcache $ivkey
-            "$bspatch" kernelcache kc.patched \
-                ../resources/firmware/FirmwareBundles/Down_iPhone1,2_4.1_8B117.bundle/kernelcache.release.patch
-            "$dir/xpwntool" kc.patched "Downgrade/$component" -t "$name.$ext" $ivkey
+        if [[ $1 == "RestoreKernelCache" ]]; then
+            local ivkey="-iv 7238dcea75bf213eff209825a03add51 -k 0295d4ef87b9db687b44f54c8585d2b6"
+            "$dir/xpwntool" $name.$ext kernelcache $ivkey
+            $bspatch kernelcache kc.patched ../resources/firmware/FirmwareBundles/Down_iPhone1,2_4.1_8B117.bundle/kernelcache.release.patch
+            "$dir/xpwntool" kc.patched Downgrade/$1 -t $name.$ext $ivkey
         else
-            mv "$name.$ext" "Downgrade/$component"
+            mv $name.$ext Downgrade/$1
         fi
-
-        zip -r0 temp.ipsw "Downgrade/$component"
+        zip -r0 temp.ipsw Downgrade/$1
         return
-    fi
-
-    # Standard extraction and patching
-    file_extract_from_archive "$ipsw_path.ipsw" "${path}${name}.$ext"
-
-    if [[ $target_vers_maj == 2 && $component != "WTF2" ]]; then
-        iv=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$component'") | .iv')
-        key=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "'$component'") | .key')
-        if [[ -n $iv && -n $key ]]; then
-            ivkey="-iv $iv -k $key"
-        fi
-        if [[ $component == "Kernelcache" ]]; then
-            ivkey+=" --old-img3-decrypt"
-        fi
-        "$dir/xpwntool" "$name.$ext" $component.dec $ivkey
-        $bspatch "$component.dec" "$component.patch" "$patch"
-        "$dir/xpwntool" "$component.patch" "$name.patched" -t "$name.$ext" $ivkey
     else
-        $bspatch "$name.$ext" "$name.patched" "$patch"
+        file_extract_from_archive "$ipsw_path.ipsw" ${path}$name.$ext
     fi
-
-    mkdir -p "$path" 2>/dev/null
-    mv "$name.patched" "${path}${name}.$ext"
-
-    zip -r0 temp.ipsw "${path}${name}.$ext"
+    $bspatch $name.$ext $name.patched $patch
+    mkdir -p $path
+    mv $name.patched ${path}$name.$ext
+    zip -r0 temp.ipsw ${path}$name.$ext
 }
 
 ipsw_prepare_s5l8900() {
@@ -6082,10 +6037,10 @@ ipsw_prepare_s5l8900() {
     local sha1L="none"
     if [[ $device_target_vers == "4.1" ]]; then
         rname="018-7079-079.dmg"
-        sha1E="cd439dddb48476f7b29a3bc2f4faed94319c50d4"
+        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     elif [[ $device_target_vers == "4.2.1" ]]; then
         rname="038-0029-002.dmg"
-        sha1E="cd439dddb48476f7b29a3bc2f4faed94319c50d4"
+        sha1E="9a64eea9949b720f1033d41adc85254e6dbf9525"
     fi
 
     if [[ $target_vers_maj == 4 && -e "$ipsw_custom.ipsw" ]]; then
