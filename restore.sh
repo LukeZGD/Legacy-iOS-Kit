@@ -1946,10 +1946,8 @@ device_find_mode() {
             [123] ) return 1;;
             * ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
         esac
-    elif [[ $mode == "WTF" && $device_wtfreal == 1 ]]; then
+    elif [[ $device_mode == "WTF" && $device_wtfreal == 1 ]]; then
         device_wtfreal= # clear the value, device is now in wtf mode
-    elif [[ $mode == "WTF" ]]; then
-        device_s5l8900xall
     fi
 }
 
@@ -2246,6 +2244,9 @@ device_enter_mode() {
                 return
             fi
             device_dfuhelper
+            if [[ $device_proc == 1 ]]; then
+                device_s5l8900xall
+            fi
         ;;
 
         "kDFU" )
