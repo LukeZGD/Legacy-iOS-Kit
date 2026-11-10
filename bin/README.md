@@ -77,4 +77,5 @@ These binaries use the same source on Linux and macOS.
 | ----------------- | ------- | ----- |
 | ipwnder           | https://github.com/LukeZGD/ipwnder_lite/tree/macos | macOS branch |
 | ipwnder32         | https://github.com/dora2ios/iPwnder32 | x86_64 only |
+| usbmuxd           | https://gist.github.com/LukeZGD/04af2e7b44152ef62054a62e1121e1b9 |
 | zenity            | https://github.com/ncruces/zenity | x86_64: v0.4.1 for El Capitan; other binary is universal |
