@@ -10998,9 +10998,9 @@ menu_usefulutilities() {
         selected="${menu_items[$?]}"
         case $selected in
             "Hacktivate Device" )
-                print "* Note: This is for hacktivating devices that are already restored and jailbroken with Legacy iOS Kit."
-                print "* If this is not what you want, you might be looking for the \"Restore/Downgrade\" option instead."
-                print "* From there, enable both \"Jailbreak Option\" and \"Hacktivate Option.\""
+                print "* Hacktivate Device: Use this option to hacktivate devices that have already been restored and jailbroken using Legacy iOS Kit."
+                print "* If this is not what you intend to do, or your device does not meet these requirements, use the \"Restore/Downgrade\" or \"Jailbreak Device\" options instead."
+                print "* When restoring, make sure to enable both the \"Jailbreak Option\" and \"Hacktivate Option\"."
                 echo
                 print "* Hacktivate Device: This will patch lockdownd/skip activation on your device."
                 print "* Hacktivation is for iOS versions 3.0 to 7.1.2."
@@ -11011,8 +11011,8 @@ menu_usefulutilities() {
                 mode="device_hacktivate"
             ;;
             "Revert Hacktivation" )
-                print "* This will use revert hacktivation for this device."
-                print "* This option can only be used if the hacktivation is done using Legacy iOS Kit's \"Hacktivate Device\" option."
+                print "* This will revert the hacktivation applied to the device."
+                print "* If your device was not hacktivated using Legacy iOS Kit's \"Hacktivate Device\" option, the IPSW for your current iOS version will be downloaded to restore the original files."
                 select_yesno
                 if [[ $? != 1 ]]; then
                     continue
