@@ -1867,7 +1867,7 @@ device_get_info() {
     esac
     check_vers="7"
     case $device_type in
-        iPad2,4 | iPad3,[123] | iPhone4,1 ) check_vers="7.1";;
+        iPad3,[123] | iPhone4,1 ) check_vers="7.1";;
     esac
     base_vers="$check_vers.x"
     if [[ $device_proc == 4 ]]; then
