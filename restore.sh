@@ -3233,6 +3233,11 @@ shsh_save() {
             build_id="$device_latest_build"
         fi
         buildmanifest="../saved/$device_type/$build_id.plist"
+        local bm_version="$($PlistBuddy -c "Print ProductVersion" "$buildmanifest" 2>/dev/null | tr -d '"')"
+        if [[ $bm_version != "$version" ]]; then
+            rm -f $buildmanifest
+        fi
+
         if [[ ! -s $buildmanifest ]]; then
             ipsw_latest_set
             if [[ -s "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
