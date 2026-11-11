@@ -6464,6 +6464,7 @@ restore_latest() {
 
 restore_prepare_pwnrec64() {
     local attempt=1
+    local attempts_max=3
     if [[ $device_pwnrec == 1 ]]; then
         warn "Pwned recovery flag detected, skipping pwned recovery mode procedure. Proceed with caution"
         return
@@ -6471,8 +6472,8 @@ restore_prepare_pwnrec64() {
 
     device_enter_mode pwnDFU
     sleep 1
-    while (( attempt <= 3 )); do
-        log "Entering pwned recovery mode... (Attempt $attempt of 3)"
+    while (( attempt <= attempts_max )); do
+        log "Entering pwned recovery mode... (Attempt $attempt of $attempts_max)"
         log "Sending iBSS..."
         $irecovery -f $iBSS.im4p
         sleep 1
@@ -6492,7 +6493,7 @@ restore_prepare_pwnrec64() {
         sleep 3
     fi
 
-    if (( attempt > 5 )); then
+    if (( attempt > attempts_max )); then
         error "Failed to enter pwned recovery mode. You might have to force restart your device and start over entering pwnDFU mode again"
     fi
 }
