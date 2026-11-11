@@ -1253,7 +1253,7 @@ device_s5l8900xall() {
     if [[ $platform == "macos" ]]; then
         print "* If your device is unable to be detected in DFU mode, try switching to a USB-C to USB-A dongle instead of USB-C dock/hub. (for S5L8900 devices only)"
     fi
-    device_find_mode DFUreal
+    device_find_mode DFU
     local idi_output="$($irecovery -q)"
     device_srtg="$(echo "$idi_output" | awk '/^SRTG/ {print $2}')"
     log "SRTG: $device_srtg"
@@ -1895,14 +1895,8 @@ device_find_mode() {
         usb=1281
     elif [[ $device_proc == 1 ]]; then
         usb=1222
-        if [[ $mode == "DFUreal" ]]; then
-            mode="DFU"
+        if [[ $mode == "DFU" ]]; then
             usb=1227
-        elif [[ $mode == "WTFreal" ]]; then
-            mode="WTF"
-            device_wtfreal=1
-        elif [[ $mode == "DFU" ]]; then
-            mode="WTF"
         fi
     else
         usb=1227
@@ -1946,8 +1940,6 @@ device_find_mode() {
             [123] ) return 1;;
             * ) error "Failed to find device in $mode mode (Timed out). Please run the script again.";;
         esac
-    elif [[ $device_mode == "WTF" && $device_wtfreal == 1 ]]; then
-        device_wtfreal= # clear the value, device is now in wtf mode
     fi
 }
 
@@ -2016,7 +2008,7 @@ device_find_all() {
 }
 
 device_dfuhelper() {
-    local opt sec top home mode_to_find rec found_dfu use_legacy target_code mode_name arg1
+    local opt sec top home rec found_dfu use_legacy target_code mode_name arg1
     rec=" recovery mode"
     arg1="$1"
 
@@ -2071,11 +2063,9 @@ device_dfuhelper() {
         use_legacy=0
         target_code=1
         mode_name="DFU"
-        mode_to_find="DFU"
         if [[ $device_proc == 1 ]]; then
             target_code=3
             mode_name="WTF"
-            mode_to_find="WTFreal"
         fi
 
         print "* Get ready..."
@@ -2175,7 +2165,7 @@ device_dfuhelper() {
         fi
 
         # Final mode verification check
-        device_find_mode "$mode_to_find" 3
+        device_find_mode "$mode_name" 3
         if [[ $? == 0 ]]; then
             unset -f _step
             return
@@ -2199,15 +2189,14 @@ device_enter_mode() {
     # attempt to enter given mode, and device_find_mode function will then set device_mode variable
     local opt
     case $1 in
-        "WTFreal" )
+        "WTF" )
             if [[ $device_mode == "WTF" ]]; then
                 return
             elif [[ $device_mode == "Normal" ]]; then
-                device_wtfreal=1
                 device_enter_mode Recovery
             fi
             if [[ $device_mode == "Recovery" ]]; then
-                device_dfuhelper norec WTFreal
+                device_dfuhelper norec
             elif [[ $device_mode == "DFU" ]]; then
                 log "S5L8900 detected in DFU mode. WTF mode is required."
                 print "* Force restart your device, then re-enter WTF mode by doing the DFU mode procedure."
@@ -6440,7 +6429,7 @@ restore_latest() {
             fi
             file_extract_from_archive "$ipsw_custom.ipsw" "Firmware/dfu/WTF.s5l8900xall.RELEASE.dfu"
             $irecovery -f "WTF.s5l8900xall.RELEASE.dfu"
-            device_find_mode DFUreal
+            device_find_mode DFU
         fi
 
         if [[ $target_vers_maj == 4 ]]; then
@@ -6586,7 +6575,7 @@ restore_deviceprepare() {
     case $device_proc in
         1 )
             if [[ $ipsw_jailbreak == 1 ]]; then
-                device_enter_mode WTFreal
+                device_enter_mode WTF
             fi
         ;;
 
@@ -11805,7 +11794,7 @@ restore_customipsw() {
         if [[ $device_target_vers == "3.1.3" ]]; then
             device_enter_mode DFU
         else
-            device_enter_mode WTFreal
+            device_enter_mode WTF
         fi
     else
         device_enter_mode pwnDFU
@@ -12742,13 +12731,6 @@ main() {
         "shutdown"     ) device_pair; $idevicediagnostics shutdown;;
         "restart"      ) device_pair; $idevicediagnostics restart;;
         "remove4"      ) device_ramdisk setnvram $rec;;
-        "device_dfuhelper" )
-            if [[ $device_proc == 1 ]]; then
-                device_dfuhelper norec WTFreal
-            else
-                device_dfuhelper
-            fi
-        ;;
         "device"* | "shsh"* ) $mode;;
         * ) :;;
     esac
