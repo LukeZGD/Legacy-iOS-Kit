@@ -3235,13 +3235,7 @@ shsh_save() {
         buildmanifest="../saved/$device_type/$build_id.plist"
         if [[ ! -s $buildmanifest ]]; then
             ipsw_latest_set
-            if [[ -s "$ipsw_base_path.ipsw" ]]; then
-                log "Extracting BuildManifest from $version IPSW..."
-                file_extract_from_archive "$ipsw_base_path.ipsw" BuildManifest.plist
-            elif [[ -s "$ipsw_path.ipsw" ]]; then
-                log "Extracting BuildManifest from $version IPSW..."
-                file_extract_from_archive "$ipsw_path.ipsw" BuildManifest.plist
-            elif [[ -s "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
+            if [[ -s "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
                 log "Extracting BuildManifest from $version IPSW..."
                 file_extract_from_archive "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw)" BuildManifest.plist
             fi
