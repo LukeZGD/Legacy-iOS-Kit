@@ -8406,7 +8406,7 @@ shsh_save_onboard() {
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
-    (echo -e "/upload ../resources/Lynx32b1_RELEASE.bin\ngo blob\n/exit") | $irecovery -s
+    (echo -e "/upload ../resources/Lynx32b2_RELEASE.bin\ngo blob\n/exit") | $irecovery -s
     $irecovery -g dump.raw
     log "Rebooting device"
     $irecovery -n
