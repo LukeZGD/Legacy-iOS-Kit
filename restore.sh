@@ -9016,6 +9016,11 @@ menu_ipa() {
                 fi
                 log "Registering device..."
                 device_plumesign account register-device --udid $device_udid --name $device_type
+                if [[ $? != 0 ]]; then
+                    warn "Unable to register device. Please try again later or use a different account."
+                    pause
+                    continue
+                fi
 
                 log "Signing using Plumesign..."
                 device_plumesign sign -p "$ipa_path" --apple-id --udid $device_udid -o temp.ipa
@@ -12362,6 +12367,7 @@ device_plumesign() {
     log "Running plumesign $1 $2"
     chmod +x ../saved/$plumesign
     ../saved/$plumesign "$@"
+    return $?
 }
 
 device_dumpapp() {
@@ -12704,8 +12710,8 @@ main() {
             device_dump activation
             log "Activation records dumping is done"
             print "* The output tar file contains the plist file(s) dumped. Activation record plist is all you need for activation"
-            print "* Note: Using the activation records only works on iOS 9.2.1 or lower. It will not work on iOS 9.3+"
             if (( device_proc <= device_proc_32bit )); then
+                print "* Note: Using the activation records only works on iOS 9.2.1 or lower. It will not work on iOS 9.3+"
                 print "* To stitch activation to IPSW, run Legacy iOS Kit with --activation-records flag:"
                 print "    > ./restore.sh --activation-records"
             fi
