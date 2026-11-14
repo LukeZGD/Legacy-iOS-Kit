@@ -2951,8 +2951,9 @@ download_comp() {
         * ) hwmodel+="ap";;
     esac
     download_targetfile="$comp.$hwmodel.RELEASE"
+    rm -f "$comp"
 
-    if [[ -e "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
+    if [[ -s "../saved/$device_type/${comp}_$build_id.dfu" ]]; then
         cp "../saved/$device_type/${comp}_$build_id.dfu" "$comp"
     elif [[ "$(ls ../${device_type}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
         log "Extracting $comp from $build_id IPSW..."
