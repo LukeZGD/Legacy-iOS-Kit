@@ -1970,7 +1970,7 @@ device_find_mode() {
 device_sshpass() {
     # ask for device password and use sshpass for scp and ssh
     ssh_user="root"
-    if (( device_vers_maj >= 15 )); then
+    if (( device_vers_maj >= 15 )) && [[ $mode != "device_enter_ramdisk" ]]; then
         log "iOS 15+ device detected. Connecting to device SSH as mobile..."
         ssh_user="mobile"
     fi
@@ -12290,6 +12290,7 @@ device_enter_ramdisk() {
     elif [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         if [[ -n $device_build ]]; then
             log "Using current build $device_build for the ramdisk"
+            device_rd_build="$device_build"
         else
             warn "Make sure to enter the correct ramdisk build for your device. If unsure, use your current iOS version."
             warn "Booting an incompatible ramdisk on iOS 16 or newer will cause a bootloop. Proceed with caution."
