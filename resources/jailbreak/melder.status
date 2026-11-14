@@ -1,0 +1,11 @@
+Package: com.koutsie.melder
+Status: install ok installed
+Name: Melder
+Depends: firmware (>= 3.0), firmware (<< 14.0)
+Description: Package manager and root terminal.
+Maintainer: koutsie <thesauna@ik.me>
+Author: koutsie <thesauna@ik.me>
+Section: Packaging
+Architecture: iphoneos-arm
+Version: 0.9.8+4
+Installed-Size: 4936

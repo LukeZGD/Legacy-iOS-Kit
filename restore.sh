@@ -6,7 +6,7 @@ device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
 sundance="../saved/SundanceInH2A"
 ssh_port=6414
-system_partition_add=300
+system_partition_add=500
 # ipsw_24o=1 # for testing only
 
 bash_test=$(echo -n 0)
@@ -7830,6 +7830,10 @@ device_ramdisk() {
                     log "Removing patcyh"
                     $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/var/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                     device_send_rdtar nopatcyh.tar
+                    tar -xf $jelbrek/nopatcyh.tar .
+                    mv private/var/lib/dpkg/status .
+                    cat $jelbrek/melder.status >> status
+                    $scp -P $ssh_port status root@127.0.0.1:/mnt1/private/var/lib/dpkg/status
                 ;;
             esac
 
@@ -8234,6 +8238,10 @@ menu_ramdisk() {
                     7.* | 8.[012]* ) # remove patcyh
                         $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                         cat $jelbrek/nopatcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib/dpkg/* private/lib/dpkg"
+                        tar -xf $jelbrek/nopatcyh.tar .
+                        mv private/var/lib/dpkg/status .
+                        cat $jelbrek/melder.status >> status
+                        $scp -P $ssh_port status root@127.0.0.1:/mnt1/private/lib/dpkg/status
                     ;;
                 esac
                 $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; mv private/var/mobile/Library/Preferences/com.apple.springboard.plist private; rm -r private/var/*; touch .cydia_no_stash"
