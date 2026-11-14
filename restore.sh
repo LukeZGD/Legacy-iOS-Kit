@@ -7827,7 +7827,7 @@ device_ramdisk() {
                     log "Removing patcyh"
                     $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/var/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                     device_send_rdtar nopatcyh.tar
-                    tar -xf $jelbrek/nopatcyh.tar .
+                    tar -xf $jelbrek/nopatcyh.tar
                     mv private/var/lib/dpkg/status .
                     cat $jelbrek/melder.status >> status
                     $scp -P $ssh_port status root@127.0.0.1:/mnt1/private/var/lib/dpkg/status
@@ -8235,7 +8235,7 @@ menu_ramdisk() {
                     7.* | 8.[012]* ) # remove patcyh
                         $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; rm Library/MobileSubstrate/DynamicLibraries/patcyh* private/lib/dpkg/info/com.saurik.patcyh* usr/lib/libpatcyh.dylib"
                         cat $jelbrek/nopatcyh.tar | $ssh -p $ssh_port root@127.0.0.1 "cd /mnt1; tar -xvf - -C .; mv private/var/lib/dpkg/* private/lib/dpkg"
-                        tar -xf $jelbrek/nopatcyh.tar .
+                        tar -xf $jelbrek/nopatcyh.tar
                         mv private/var/lib/dpkg/status .
                         cat $jelbrek/melder.status >> status
                         $scp -P $ssh_port status root@127.0.0.1:/mnt1/private/lib/dpkg/status
