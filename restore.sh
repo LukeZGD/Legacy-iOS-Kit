@@ -4121,7 +4121,7 @@ ipsw_prepare_bundle() {
         echo "<key>exploit</key><string>$device_powder_exploit</string>" >> $NewPlist
         echo "<key>inject</key><string>partition</string></dict>" >> $NewPlist
     elif [[ $1 == "target" ]]; then
-        echo "<key>FilesystemPackage</key><dict><key>bootstrap</key><string>freeze.tar</string>" >> $NewPlist
+        echo "<key>FilesystemPackage</key><dict><key>bootstrap</key><string/>" >> $NewPlist
         case $vers in
             [89].* ) echo "<key>package</key><string>src/ios9.tar</string>" >> $NewPlist;;
         esac
@@ -4278,7 +4278,6 @@ ipsw_prepare_bundle() {
         if [[ $ipsw_prepare_usepowder == 1 ]]; then
             echo "<key>RamdiskPackage2</key>" >> $NewPlist
         else
-            echo "<key>PackagePath</key><string>./freeze.tar</string>" >> $NewPlist
             echo "<key>RamdiskPackage</key>" >> $NewPlist
         fi
         echo "<string>./bin.tar</string><key>RamdiskReboot</key><string>./reboot.sh</string><key>UntetherPath</key><string>./untether.tar</string>" >> $NewPlist
@@ -5849,10 +5848,7 @@ ipsw_prepare_powder() {
         case $device_target_vers in
             5.* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
-        case $device_target_vers in
-            [689].* ) :;;
-            * ) JBFiles+=("freeze.tar");;
-        esac
+        JBFiles+=("freeze.tar")
         case $device_target_vers in
             [98].* ) JBFiles+=("$jelbrek/fstab8.tar");;
             7.*    ) JBFiles+=("$jelbrek/fstab7.tar");;
