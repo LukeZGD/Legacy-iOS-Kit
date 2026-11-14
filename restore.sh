@@ -928,7 +928,7 @@ version_check() {
 device_entry() {
     # enable manual entry
     log "Manual device/ECID entry is enabled."
-    until [[ -n $device_type && $device_type == "iP"* ]]; do
+    until [[ -n $device_type ]] && [[ $device_type == "iP"* || $device_type == "AppleTV"* ]]; do
         read -p "$(input 'Enter device type (eg. iPad2,1): ')" device_type_entry
         device_type="$device_type_entry"
     done
@@ -1148,6 +1148,10 @@ device_get_name() {
         "iPod5,1") device_name="iPod touch 5";;
         "iPod7,1") device_name="iPod touch 6";;
         "iPod9,1") device_name="iPod touch 7";;
+        "AppleTV2,1") device_name="Apple TV (2nd generation)";;
+        "AppleTV2,1") device_name="Apple TV (3rd generation)";;
+        "AppleTV2,1") device_name="Apple TV (3rd generation, Rev A)";;
+        "AppleTV5,3") device_name="Apple TV HD (4th generation)";;
     esac
     if [[ -z $device_name && -n $device_type ]]; then
         log "Getting device name"
@@ -1416,6 +1420,10 @@ device_get_info() {
     fi
     # device_model fallback/failsafe (this will be up to checkm8/a12/a13 devices only)
     case $device_model in
+        k66  ) device_type="AppleTV2,1";;
+        j33  ) device_type="AppleTV3,1";;
+        j33i ) device_type="AppleTV3,2";;
+        j42d ) device_type="AppleTV5,3";;
         k48  ) device_type="iPad1,1";;
         k93  ) device_type="iPad2,1";;
         k94  ) device_type="iPad2,2";;
@@ -1529,6 +1537,10 @@ device_get_info() {
     device_type_lower="$(echo "$device_type" | tr '[:upper:]' '[:lower:]')"
     # device_model fallback/failsafe
     case $device_type in
+        AppleTV2,1 ) device_model="k66";;
+        AppleTV3,1 ) device_model="j33";;
+        AppleTV3,2 ) device_model="j33i";;
+        AppleTV5,3 ) device_model="j42d";;
         iPad1,1  ) device_model="k48";;
         iPad2,1  ) device_model="k93";;
         iPad2,2  ) device_model="k94";;
@@ -1758,6 +1770,18 @@ device_get_info() {
         iPad4,[12345] | iPhone6,[12] )
             device_use_vers="10.3.3"
             device_use_build="14G60"
+        ;;
+        AppleTV2,1 )
+            device_use_vers="7.1.2"
+            device_use_build="11D258"
+        ;;
+        AppleTV3,[12] )
+            device_use_vers="8.4.7"
+            device_use_build="12H1006"
+        ;;
+        AppleTV5,3 )
+            device_use_vers="26.6.1"
+            device_use_build="23L781"
         ;;
     esac
     case $device_type in
@@ -2887,6 +2911,11 @@ download_appledb() {
         if [[ $device_type == "iPad"* ]]; then
             case $build_id in
                 1[789]* | [23]* ) phone="iPadOS";; # iPadOS
+            esac
+        elif [[ $device_type == "AppleTV"* ]]; then
+            case $build_id in
+                [89]* | 1[012]* ) phone="Apple%20TV%20Software";;
+                * ) phone="tvOS";;
             esac
         fi
         query="ios/${phone};${build_id}"
@@ -9452,6 +9481,8 @@ menu_ipsw_downloader() {
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Misc Utilities > Create Custom IPSW > IPSW Downloader"
+        elif (( device_proc >= device_proc_unsupported )); then
+            print " > Main Menu > Misc Utilities > IPSW Downloader"
         else
             print " > Main Menu > Restore/Downgrade > IPSW Downloader"
         fi
@@ -10861,6 +10892,8 @@ menu_miscutilities() {
         fi
         if (( device_proc <= device_proc_32bit )) || [[ $device_usbliter8 == 1 ]]; then
             menu_items+=("Create Custom IPSW")
+        else
+            menu_items+=("IPSW Downloader")
         fi
         if [[ $branch_current == "main" ]]; then
             menu_items+=("Switch to test branch")
@@ -10934,6 +10967,7 @@ menu_miscutilities() {
                 fi
             ;;
             "Deactivate Device" ) device_deactivate;;
+            "IPSW Downloader" ) menu_ipsw_downloader "$1";;
             "Go Back" ) back=1;;
         esac
     done
