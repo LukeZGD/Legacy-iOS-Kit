@@ -64,7 +64,7 @@ clean() {
     popd &>/dev/null
     [[ -d "$(dirname "$0")/tmp$$/" ]] && rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/tmp$$/"
     [[ $noclean == 1 ]] && return
-    rm -rf "$(dirname "$0")/iP"*/
+    rm -rf "$(dirname "$0")/AppleTV"*/ "$(dirname "$0")/iP"*/
     if [[ $platform == "macos" && $(ls "$(dirname "$0")" | grep -v tmp$$ | grep -c tmp) == 0 &&
           $no_finder != 1 ]]; then
         killall -CONT AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater 2>/dev/null
@@ -75,7 +75,7 @@ clean_sudo() {
     clean
     [[ -d "$(dirname "$0")/tmp$$/" ]] && $sudo rm -rf "$(dirname "$0")/tmp$$/"* "$(dirname "$0")/tmp$$/"
     [[ $noclean == 1 ]] && return
-    $sudo rm -rf "$(dirname "$0")/iP"*/ /tmp/futurerestore /tmp/*.json
+    $sudo rm -rf "$(dirname "$0")/AppleTV"*/ "$(dirname "$0")/iP"*/ /tmp/futurerestore /tmp/*.json
     $sudo kill $sudoloop_pid 2>/dev/null
 }
 
@@ -1149,8 +1149,8 @@ device_get_name() {
         "iPod7,1") device_name="iPod touch 6";;
         "iPod9,1") device_name="iPod touch 7";;
         "AppleTV2,1") device_name="Apple TV (2nd generation)";;
-        "AppleTV2,1") device_name="Apple TV (3rd generation)";;
-        "AppleTV2,1") device_name="Apple TV (3rd generation, Rev A)";;
+        "AppleTV3,1") device_name="Apple TV (3rd generation)";;
+        "AppleTV3,2") device_name="Apple TV (3rd generation, Rev A)";;
         "AppleTV5,3") device_name="Apple TV HD (4th generation)";;
     esac
     if [[ -z $device_name && -n $device_type ]]; then
@@ -8703,11 +8703,12 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if (( device_proc <= device_proc_32bit )); then
                 menu_items+=("Jailbreak Device")
-            fi
-            if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || [[ $device_usbliter8 == 1 ]]; then
-                case $device_mode in
-                    "Recovery" | "DFU" ) menu_items+=("Just Boot");;
-                esac
+            elif (( device_proc < device_proc_unsupported )); then
+                if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || [[ $device_usbliter8 == 1 ]]; then
+                    case $device_mode in
+                        "Recovery" | "DFU" ) menu_items+=("Just Boot");;
+                    esac
+                fi
             fi
             if [[ $device_unactivated == 1 ]]; then
                 menu_items+=("Attempt Activation")
@@ -8723,7 +8724,7 @@ menu_main() {
                 fi
             fi
         fi
-        if [[ $device_proc != 1 && $device_type != "iPod2,1" ]]; then
+        if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_type != AppleTV* ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
         if [[ $device_mode == "Normal" ]]; then
@@ -9410,7 +9411,7 @@ menu_restore() {
         if [[ $1 != "ipsw" ]] && (( device_proc < 5 )); then
             menu_items+=("Other (Custom IPSW)")
         fi
-        if (( device_proc <= device_proc_32bit )); then
+        if (( device_proc <= device_proc_32bit )) || [[ $device_type == AppleTV[23]* ]]; then
             menu_items+=("DFU IPSW")
         elif (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Set Nonce Only")
@@ -11033,7 +11034,10 @@ menu_usefulutilities() {
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache" "Console")
         fi
-        menu_items+=("DFU Mode Helper" "Go Back")
+        if [[ $device_type != AppleTV* ]]; then
+            menu_items+=("DFU Mode Helper")
+        fi
+        menu_items+=("Go Back")
         menu_print_info
         # other utilities menu
         print " > Main Menu > Useful Utilities"
@@ -11877,7 +11881,7 @@ device_dfuipsw() {
     # https://theapplewiki.com/wiki/DFU_Mode#Enter_True_Hardware_DFU_Mode_Automatically
     # this function theoretically works on 64-bit devices, but restoring the dfu ipsw requires entering dfu for pwned restore
     # which defeats the point of doing a dfu ipsw in the first place, so dfu ipsw is available for 32-bit devices only
-    local ExtraArgs="-e"
+    local ExtraArgs="-ey"
     if [[ $device_proc == 1 ]]; then
         ExtraArgs+="c"
         device_latest_vers="3.1.3"
@@ -11895,11 +11899,14 @@ device_dfuipsw() {
     if [[ -s "$ipsw_dfuipsw.ipsw" ]]; then
         log "Found existing DFU IPSW. Skipping IPSW creation."
     else
-        cp $ipsw_path.ipsw temp.ipsw
-        local llb="${device_model}ap"
+        cp -v $ipsw_path.ipsw temp.ipsw
+        local llb="$device_model"
+        case $device_latest_vers in
+            [34567].* ) llb+="ap";;
+        esac
         local all="Firmware/all_flash"
         local applelogo
-        if (( device_proc >= 6 )); then
+        if (( device_proc >= 6 )) && [[ $device_type != AppleTV[23]* ]]; then
             ipsw_hwmodel_set
             case $device_type in
                 iPhone9,[13] ) llb="d10";;
@@ -11915,20 +11922,22 @@ device_dfuipsw() {
             esac
         else
             all="$all_flash"
-            device_fw_key_check
-            applelogo=$(echo $device_fw_key | $jq -j '.keys[] | select(.image == "AppleLogo") | .filename')
+            log "Extracting BuildManifest from IPSW..."
+            file_extract_from_archive temp.ipsw BuildManifest.plist
+            applelogo="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:AppleLogo:Info:Path" BuildManifest.plist | tr -d '"')"
+            applelogo="$(basename "$applelogo")"
         fi
         llb="LLB.$llb.RELEASE"
-        if (( device_proc > device_proc_32bit )); then
+        if (( device_proc > device_proc_32bit )) && [[ $device_type != AppleTV[23]* ]]; then
             llb+=".im4p"
         else
             llb+=".img3"
         fi
         mkdir -p $all
         file_extract_from_archive temp.ipsw $all/$applelogo
-        mv $applelogo $all/$llb
+        mv -v $applelogo $all/$llb
         zip -r0 temp.ipsw $all/*
-        mv temp.ipsw $ipsw_dfuipsw.ipsw
+        mv -v temp.ipsw $ipsw_dfuipsw.ipsw
     fi
     if [[ $1 == "ipsw" ]]; then
         return

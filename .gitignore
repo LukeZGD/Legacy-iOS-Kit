@@ -8,6 +8,7 @@
 *.json
 *.log
 *shsh*
+AppleTV*
 Cydia*
 firstrun
 iP*/
