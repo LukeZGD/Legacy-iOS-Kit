@@ -9004,12 +9004,20 @@ menu_ipa() {
                     pause
                     continue
                 fi
-                log "Registering device..."
-                device_plumesign account register-device --udid $device_udid --name $device_type
-                if [[ $? != 0 ]]; then
-                    warn "Unable to register device. Please try again later or use a different account."
-                    pause
-                    continue
+
+                log "Checking registered devices..."
+                device_plumesign check
+                local registered=$?
+                if [[ $registered == 1 ]]; then
+                    log "Current device is registered"
+                else
+                    log "Registering device..."
+                    device_plumesign account register-device --udid $device_udid --name $device_type
+                    if [[ $? != 0 ]]; then
+                        warn "Unable to register device. Please try again later or use a different account."
+                        pause
+                        continue
+                    fi
                 fi
 
                 log "Signing using Plumesign..."
@@ -12366,6 +12374,36 @@ device_plumesign() {
         fi
         echo "$latest" > ../saved/${plumesign}_version
         plumesign_check_once=1
+    fi
+
+    if [[ $1 == "check" ]]; then
+        log "Running plumesign account devices"
+        RUST_LOG=warn,plumesign=info ../saved/$plumesign account devices &>output
+        if cat output |
+            sed -n '/^\[.*INFO  plumesign::commands::account\] \[$/,/^    ]$/p' |
+            sed '1s/^.*\] //' |
+            awk -v device_type="$device_type" -v device_udid="$device_udid" '
+                /Device \{/ { name = ""; device_number = "" }
+                /name:/ {
+                    name = $0
+                    sub(/^.*name: "/, "", name)
+                    sub(/".*/, "", name)
+                }
+                /device_number:/ {
+                    device_number = $0
+                    sub(/^.*device_number: "/, "", device_number)
+                    sub(/".*/, "", device_number)
+                }
+                /}/ {
+                    if (name == device_type && device_number == device_udid)
+                        found = 1
+                }
+                END { exit !found }
+            '
+        then
+            return 1
+        fi
+        return
     fi
 
     log "Running plumesign $1 $2"
