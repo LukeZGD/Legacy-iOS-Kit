@@ -8658,12 +8658,12 @@ menu_main() {
             menu_items+=("Restore/Downgrade")
             if (( device_proc <= device_proc_32bit )); then
                 menu_items+=("Jailbreak Device")
-            elif (( device_proc < device_proc_unsupported )); then
-                if [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || [[ $device_usbliter8 == 1 ]]; then
-                    case $device_mode in
-                        "Recovery" | "DFU" ) menu_items+=("Just Boot");;
-                    esac
-                fi
+            fi
+            if (( device_proc < device_proc_unsupported )) &&
+                { [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || (( device_usbliter8 == 1 )); }; then
+                case $device_mode in
+                    "Recovery" | "DFU" ) menu_items+=("Just Boot");;
+                esac
             fi
             if [[ $device_unactivated == 1 ]]; then
                 menu_items+=("Attempt Activation")
