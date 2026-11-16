@@ -6,7 +6,7 @@ device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
 sundance="../saved/SundanceInH2A"
 ssh_port=6414
-system_partition_add=500
+system_partition_add=450
 # ipsw_24o=1 # for testing only
 
 bash_test=$(echo -n 0)
