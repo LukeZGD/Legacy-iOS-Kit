@@ -959,7 +959,8 @@ device_entry() {
         :
     elif [[ $device_argmode == "none" && -n $device_ecid ]]; then
         :
-    elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" && $device_mode != "Normal" ]]; then
+    elif [[ $device_type != "iPhone1,"* && $device_type != "iPod1,1" &&
+            $device_type != AppleTV* && $device_mode != "Normal" ]]; then
         until [[ -n $device_ecid_entry ]] && [ "$device_ecid_entry" -eq "$device_ecid_entry" ]; do
             read -p "$(input 'Enter device ECID (must be decimal): ')" device_ecid_entry
         done
@@ -8967,6 +8968,57 @@ menu_appmanage() {
     done
 }
 
+device_ssh_mount() {
+    local selected="$1"
+    local path="/var/mobile/Media"
+    local ip="127.0.0.1"
+    local port="-p $ssh_port"
+
+    case $selected in
+        *"Raw"*   ) path="/";;
+        *"Cydia"* ) path="/var/root/Media/Cydia/AutoInstall";;
+    esac
+    device_iproxy no-logging
+    device_ssh_message
+    device_sshpass
+
+    if [[ $device_mode == "none" ]]; then
+        log "Trying with Wi-Fi SSH..."
+        print "* Make sure that your iOS device and PC/Mac are on the same network."
+        if [[ $device_type == AppleTV* ]]; then
+            print "* To get your Apple TV's IP Address, go to: Settings -> General -> About"
+        else
+            print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' or '>' next to your network name"
+        fi
+        ip=
+        port="-p 22"
+        until [[ -n $ip ]]; do
+            read -p "$(input 'Enter the IP Address of your device: ')" ip
+        done
+    fi
+    device_find_ssh $ip
+
+    if [[ $selected == *"Cydia"* ]]; then
+        $ssh $port ${ssh_user}@$ip "mkdir -p $path"
+        print "* Place the .deb files you want to install to the mount folder, then reboot the device afterwards."
+    fi
+    mkdir -p ../mount
+    if [[ $platform == "linux" ]]; then
+        $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p$SSHPASS $(pwd)/ssh -F $(pwd)/ssh_config $port" -d ${ssh_user}@$ip:$path ../mount &>../saved/sshfs.log &
+        sshfs_pid=$!
+    else
+        $dir/sshpass -p$SSHPASS $sshfs -d -F $(pwd)/ssh_config $port ${ssh_user}@$ip:$path ../mount &>../saved/sshfs.log &
+        sshfs_pid=$!
+    fi
+
+    log "Device's \"$path\" should now be mounted on mount folder."
+    print "* If the mount folder is empty, make sure to have run \"Connect to SSH\" at least once."
+    print "* Press Enter/Return to unmount the device."
+    pause
+    umount ../mount 2>/dev/null
+    kill $iproxy_pid $sshfs_pid
+}
+
 menu_datamanage() {
     local menu_items=("Connect to SSH")
     local selected
@@ -8977,7 +9029,7 @@ menu_datamanage() {
     if [[ -z $sshfs ]]; then
         warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
         [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs. See the wiki page linked above for more details"
-    elif [[ $device_mode != "none" ]]; then
+    else
         menu_items+=("Mount Device" "Mount Device (Raw File System)")
         if (( device_vers_maj <= 10 )); then
             menu_items+=("Cydia App Install")
@@ -9012,35 +9064,7 @@ menu_datamanage() {
             ;;
             "Restore" ) menu_backup_restore;;
             "Erase All Content and Settings" ) mode="device_erase";;
-            "Mount Device"* | "Cydia App Install" )
-                local path="/var/mobile/Media"
-                case $selected in
-                    *"Raw"*   ) path="/";;
-                    *"Cydia"* ) path="/var/root/Media/Cydia/AutoInstall";;
-                esac
-                device_iproxy no-logging
-                device_ssh_message
-                device_sshpass
-                device_find_ssh
-                if [[ $selected == *"Cydia"* ]]; then
-                    $ssh -p $ssh_port ${ssh_user}@127.0.0.1 "mkdir -p $path"
-                    print "* Place the .deb files you want to install to the mount folder, then reboot the device afterwards."
-                fi
-                mkdir -p ../mount
-                if [[ $platform == "linux" ]]; then
-                    $sshfs -o ssh_command="$(cd .. && pwd)/bin/linux/$platform_arch/sshpass -p$SSHPASS $(pwd)/ssh -F $(pwd)/ssh_config -p $ssh_port" -d ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
-                    sshfs_pid=$!
-                else
-                    $dir/sshpass -p$SSHPASS $sshfs -d -F $(pwd)/ssh_config -p $ssh_port ${ssh_user}@127.0.0.1:$path ../mount &>../saved/sshfs.log &
-                    sshfs_pid=$!
-                fi
-                log "Device's \"$path\" should now be mounted on mount folder."
-                print "* If the mount folder is empty, make sure to have run \"Connect to SSH\" at least once."
-                print "* Press Enter/Return to unmount the device."
-                pause
-                umount ../mount 2>/dev/null
-                kill $iproxy_pid $sshfs_pid
-            ;;
+            "Mount Device"* | "Cydia App Install" ) device_ssh_mount "$selected";;
             "Connect to SSH" ) device_ssh;;
             "Encryption" ) menu_backup_encryption;;
         esac
@@ -11835,8 +11859,14 @@ device_deactivate() {
 }
 
 device_find_ssh() {
+    local ip="127.0.0.1"
+    local port="-p $ssh_port"
+    if [[ -n $1 && $device_mode == "none" ]]; then
+        ip="$1"
+        port=
+    fi
     log "Checking for device..."
-    local found=$($ssh -p $ssh_port ${ssh_user}@127.0.0.1 "echo 1")
+    local found=$($ssh $port ${ssh_user}@$ip "echo 1")
     if [[ $found != 1 && $mode == *"hacktivate" ]]; then
         error "Unable to connect to device via SSH. Incorrect password? If your device is not jailbroken, jailbreak it first using Legacy iOS Kit." \
               "* Alternatively, restore using Legacy iOS Kit with the jailbreak option enabled."
