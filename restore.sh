@@ -1867,7 +1867,7 @@ device_get_info() {
     # activation issue stuff
     case $device_type in
         iPhone4,1 | iPhone5,2 | iPad2,7 | iPad3,[26] ) device_9900candidate=1;;
-        iPhone[123],[12] | iPad1,1 | iPad2,2 ) device_activationissue=1;;
+        # iPhone[123],[12] | iPad1,1 | iPad2,2 ) device_activationissue=1;;
     esac
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
     if [[ $device_disable_actrec == 1 ]]; then
@@ -3205,21 +3205,22 @@ ipsw_preference_set() {
 
     if [[ $ipsw_jailbreak == 1 && -z $ipsw_hacktivate && $ipsw_canhacktivate == 1 ]]; then
         input "Hacktivate Option"
-        print "* Recommended setting: Enabled (Y)"
-        print "* Enable this option to have the device activated on restore."
-        print "* Recommended especially for devices with known activation issues."
-        print "* Select this option if unsure."
-        select_yesno "Enable this option?" 1
-        if [[ $? != 1 ]]; then
-            log "Hacktivate option disabled by user."
-            ipsw_hacktivate=
-        else
-            log "Hacktivate option enabled."
+        print "* When enabled, your device will be hacktivated on restore."
+        print "* Enable this option if you do not have a valid SIM card for activation."
+        print "* Disable this option if you have a working SIM card and want cellular services."
+        print "* Some devices may experience activation issues without hacktivation."
+        print "* This option is disabled by default (N). Select this option if unsure."
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
+            log "Hacktivate option enabled by user."
             ipsw_hacktivate=1
             if [[ -n $device_actrec ]]; then
                 log "Activation Records stitching disabled."
                 device_actrec=
             fi
+        else
+            log "Hacktivate option disabled."
+            ipsw_hacktivate=
         fi
         echo
     fi
@@ -11522,17 +11523,18 @@ device_jailbreak_confirm() {
     if [[ $device_imei == "9900"* || $device_activationissue == 1 ]] && (( device_vers_maj <= 7 )) &&
        [[ $device_unactivated == 1 ]]; then
         input "Hacktivate Option"
-        print "* Recommended setting: Enabled (Y)"
-        print "* Enable this option to have the device activated on jailbreak."
-        print "* Recommended especially for devices with known activation issues."
-        print "* Select this option if unsure."
-        select_yesno "Enable this option?" 1
-        if [[ $? != 1 ]]; then
-            log "Hacktivate option disabled by user."
-            ipsw_hacktivate=
-        else
-            log "Hacktivate option enabled."
+        print "* When enabled, your device will be hacktivated on jailbreak."
+        print "* Enable this option if you do not have a valid SIM card for activation."
+        print "* Disable this option if you have a working SIM card and want cellular services."
+        print "* Some devices may experience activation issues without hacktivation."
+        print "* This option is disabled by default (N). Select this option if unsure."
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
+            log "Hacktivate option enabled by user."
             ipsw_hacktivate=1
+        else
+            log "Hacktivate option disabled."
+            ipsw_hacktivate=
         fi
         echo
     fi
