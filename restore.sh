@@ -3080,6 +3080,9 @@ ipsw_preference_set() {
     case $device_latest_vers in
         [876543]* ) ipsw_canjailbreak=1;;
     esac
+    if [[ $device_type == "AppleTV2,1" && $device_target_vers == "$device_latest_vers" ]]; then
+        return
+    fi
     if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]] ||
        [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]] ||
        [[ $device_proc == 5 && $target_vers_maj == 5 && $device_target_powder == 1 ]]; then
@@ -4210,8 +4213,8 @@ ipsw_prepare_bundle() {
             esac
         elif [[ $device_proc == 1 && $device_target_vers == "4.2.1" ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
-        elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]] || [[ $ipsw_24o == 1 ]] ||
-             [[ $device_target_vers == "8.4.4" ]]; then
+        elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]] ||
+             [[ $ipsw_24o == 1 || $device_target_vers == "8.4.4" ]]; then
             : # skip restorekernelcache for these
         elif [[ $device_proc != 1 && $device_target_vers != "3.0"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
@@ -4299,12 +4302,15 @@ ipsw_prepare_bundle() {
 
 ipsw_prepare_atv() {
     atv="../saved/atv"
+    rev="rev2"
     local atv_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/atv.zip"
-    if [[ ! -d $atv ]]; then
+    if [[ ! -e $atv/$rev ]]; then
+        rm -rf $atv/
         file_download "$atv_url" atv.zip
         file_extract atv.zip
         mkdir -p $atv/
-        mv atv* $atv/
+        mv atv-* $atv/
+        touch $atv/$rev
     fi
 }
 
@@ -6327,7 +6333,9 @@ restore_idevicerestore() {
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
+    print "* For device activation, go to: Main Menu -> Attempt Activation"
     if [[ $device_type == AppleTV* ]]; then
+        echo
         print "* Unplug the USB cable to allow the Apple TV to boot."
         print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
     fi
@@ -6523,6 +6531,7 @@ restore_latest() {
     fi
     print "* For device activation, go to: Main Menu -> Attempt Activation"
     if [[ $device_type == AppleTV* ]]; then
+        echo
         print "* Unplug the USB cable to allow the Apple TV to boot."
         print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
     fi
@@ -11182,10 +11191,8 @@ menu_usefulutilities() {
         if (( device_proc > device_proc_32bit )) && (( device_proc <= 10 )); then
             menu_items+=("Enter pwnDFU Mode")
         fi
-        if (( device_proc <= device_proc_checkm8 )); then
+        if (( device_proc <= device_proc_checkm8 )) || [[ $device_type == AppleTV[23]* ]]; then
             menu_items+=("SSH Ramdisk" "Update DateTime")
-        elif [[ $device_type == AppleTV[23]* ]]; then
-            menu_items+=("SSH Ramdisk")
         fi
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache" "Console")
