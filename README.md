@@ -20,6 +20,7 @@
 - Tethered downgrades/restores to supported iOS versions for some 32-bit and A12/A13 devices
 - Jailbreak all 32-bit iOS devices on nearly any iOS version
     - Available on release iOS versions 3.0 to 9.3.4
+- [Restore and jailbreak Apple TV 2 and 3 devices](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Apple-TV-2-and-3)
 - [Hacktivation](https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Hacktivation) for iPhone 2G, 3G, 3GS, 4 GSM (activate without valid SIM card)
 - Boot SSH Ramdisk for supported 32-bit and 64-bit devices
 - Save Onboard SHSH blobs for supported 32-bit and 64-bit devices
@@ -82,6 +83,7 @@
     - iPhone 3GS, 4, 4S, 5, 5C
     - iPad 1, 2, 3, 4, mini 1
     - iPod touch 2, 3, 4, 5
+    - Apple TV 2, 3 (jailbreaking and SSH ramdisk only)
 - Restoring with SHSH blobs and using SSH Ramdisks are also supported on some 64-bit devices:
     - iPhone 5S, 6, 6S, SE 2016, 7, 8, X (including Plus variants)
     - iPad 5, 6, 7
@@ -155,6 +157,7 @@
 - [ipwndfu](https://github.com/LukeZGD/ipwndfu) - axi0mX; LukeZGD fork
 - [iPwnder32](https://github.com/dora2ios/iPwnder32) - dora2ios
 - [ipwnder_lite](https://github.com/LukeZGD/ipwnder_lite/tree/old) - dora2ios; LukeZGD fork
+- [iPwnder32](https://github.com/LukeZGD/iPwnder32) libusb - dora2ios; LukeZGD fork (only used for AppleTV3,2)
 - [gaster](https://github.com/LukeZGD/gaster) - 0x7ff; LukeZGD fork
 - [primepwn](https://github.com/LukeZGD/primepwn)
 - [a6meowing](https://github.com/kok3shidoll/a6meowing) - dora/kok3shidoll; [LukeZGD fork](https://github.com/LukeZGD/a6meowing) with changes from [retr0id](https://github.com/DavidBuchanan314/a6meowing) for Linux support
@@ -216,3 +219,4 @@
 - [libdmg-apfs](https://github.com/LukeZGD/libdmg-apfs) - [NSSpiral](https://github.com/NSSpiral/libdmg-apfs) (LukeZGD fork for fixes and build)
 - [Lynx32](https://github.com/tuanemss/Lynx32) (for dumping blobs 32-bit) - tuanemss
 - [Melder](http://repo.k0.tel/depictions/com.koutsie.melder.html) - koutsie; installed alongside Cydia as an alternative/replacement package manager
+- [blackb0x](https://github.com/NSSpiral/blackb0x) - NSSpiral

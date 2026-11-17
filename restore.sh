@@ -152,6 +152,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --multipatch              Enable multipatch to get past "gas gauge" error (aka error 29 in iTunes)
                               This patch also attempts to get past "invalid ticket" error
     --memory                  Enable memory option for creating IPSW
+    --pwned-dfu               Assume that device is in pwned DFU mode
     --pwned-recovery          Assume that device is in pwned recovery mode (experimental)
     --ra1n-timeout=<value>    Set RA1N_ABORT_TIMEOUT for litera1n A6(X) (recommended: 1000000)
     --skip-first              Skip first restore and flash part 2 IPSW only for powdersn0w 4.2.x and lower
@@ -513,6 +514,7 @@ set_tool_paths() {
             futurerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
             gaster="$sudo "
             idevicerestore="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
+            ipwnder="$sudo "
             irecovery="$sudo "
             primepwn="$sudo "
         fi
@@ -644,6 +646,7 @@ set_tool_paths() {
     ideviceinfo="$dir/ideviceinfo"
     ideviceinstaller+="$dir/ideviceinstaller"
     idevicerestore+="$dir/idevicerestore"
+    ipwnder+="$dir/pwnedDFU"
     irecovery+="$dir/irecovery"
     jq="$dir/jq"
     primepwn+="$dir/primepwn"
@@ -1709,7 +1712,7 @@ device_get_info() {
     if [[ -z $device_name || -z $device_proc ]]; then
         error "Unrecognized device $device_type. Enter the device type properly."
     fi
-    if (( device_proc >= device_proc_unsupported )); then
+    if (( device_proc >= device_proc_unsupported )) && [[ $device_type != AppleTV[23]* ]]; then
         print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
@@ -1776,7 +1779,7 @@ device_get_info() {
             device_use_build="11D258"
         ;;
         AppleTV3,[12] )
-            device_use_vers="8.4.7"
+            device_use_vers="8.4.4"
             device_use_build="12H1006"
         ;;
         AppleTV5,3 )
@@ -2049,6 +2052,25 @@ device_dfuhelper() {
     if [[ $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
         log "Device is already in DFU mode"
         return
+    fi
+
+    # steps from https://blog.elcomsoft.com/2022/10/how-to-put-apple-tv-3-2012-2013-apple-tv-hd-2015-and-apple-tv-4k-2017-into-dfu/
+    if [[ $device_type == AppleTV[23]* ]]; then
+        print "* Do the following steps for entering DFU mode for Apple TV."
+        print "1. Make sure the device is connected to power and is turned on"
+        print "2. Make sure the device is connected to the computer using a micro-USB cable"
+        print "3. Press and hold Down and Menu button until the LED starts flashing very quickly (6 seconds)"
+        print "4. Release both buttons"
+        print "5. Quickly press and hold Play and Menu button until the LED starts flashing very quickly (6 seconds)"
+        print "6. Release both buttons"
+        device_find_mode DFU 50
+    elif [[ $device_type == "AppleTV5,3" ]]; then
+        print "* Do the following steps for entering DFU mode for Apple TV."
+        print "1. Make sure the device is connected to power and is turned on"
+        print "2. Connect the device to the computer using a USB-C cable"
+        print "3. Press and hold the Menu and Play buttons until the LED starts flashing rapidly (6 seconds)"
+        print "4. Release both buttons"
+        device_find_mode DFU 50
     fi
 
     print "* DFU Mode Helper - Get ready to enter DFU mode."
@@ -2377,6 +2399,12 @@ device_enter_mode() {
             local irec_pwned
             local tool_pwned
             local tool
+            local device_proc=$device_proc
+            case $device_type in
+                AppleTV2,1 ) device_proc=4;;
+                AppleTV3,1 ) device_proc=5;;
+                AppleTV3,2 ) device_proc=6;; # not actually a6, just a dummy
+            esac
 
             if [[ $device_pwnrec == 1 ]]; then
                 warn "Pwned recovery flag detected, skipping pwned DFU check. Proceed with caution"
@@ -2405,9 +2433,15 @@ device_enter_mode() {
                     ;;
                 esac
                 return
-            elif [[ $device_mode == "DFU" && $device_srtg != "iBoot"* ]] && (( device_proc <= device_proc_32bit )); then
+            elif [[ $device_mode == "DFU" && $device_srtg != "iBoot"* && $device_type != AppleTV[23]* ]] &&
+                 (( device_proc <= device_proc_32bit )); then
                 log "No SRTG for device in DFU mode! Already pwned iBSS mode?"
                 print "* If your device is not in pwnDFU/kDFU mode, sending iBEC will fail."
+                return
+            fi
+
+            if [[ $device_pwndfu == 1 ]]; then
+                warn "Pwned DFU flag detected, skipping pwned DFU check. Proceed with caution"
                 return
             fi
 
@@ -2469,7 +2503,9 @@ device_enter_mode() {
                 fi
             elif [[ $device_proc == 6 ]]; then
                 tool="litera1n"
-                if [[ $platform == "macos" ]]; then
+                if [[ $device_type == "AppleTV3,2" ]]; then
+                    tool="ipwnder"
+                elif [[ $platform == "macos" ]]; then
                     tool="ipwnder32"
                     if [[ $platform_arch == "arm64" ]]; then
                         tool="ipwnder_lite"
@@ -2513,6 +2549,9 @@ device_enter_mode() {
             elif [[ $tool == "primepwn" ]]; then
                 $primepwn
                 tool_pwned=$?
+            elif [[ $tool == "ipwnder" ]]; then
+                $ipwnder -p
+                tool_pwned=$?
             fi
             sleep 1
 
@@ -2549,7 +2588,9 @@ device_pwnerror() {
     local error_msg=$'* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
         [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates on AMD desktop CPUs if you have one.'
-        [[ $device_proc == 6 || $device_proc == 7 ]] && error_msg+=$'\n* Also, success rates for A6 and A7 checkm8 are lower on Linux.'
+        if [[ $device_proc == 6 || $device_proc == 7 || $device_type == "AppleTV3,2" ]]; then
+            error_msg+=$'\n* Also, success rates for pwning this device are lower on Linux.'
+        fi
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options if needed.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
             error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
@@ -2979,6 +3020,9 @@ patch_ibss() {
         4 ) build_id="$device_latest_build";;
         * ) build_id="12H321";;
     esac
+    if [[ $device_type == AppleTV[23]* ]]; then
+        build_id="10B329a"
+    fi
     download_comp $build_id iBSS
     device_fw_key_check temp $build_id
     local iv=$(echo $device_fw_key_temp | $jq -j '.keys[] | select(.image == "iBSS") | .iv')
@@ -3034,7 +3078,7 @@ ipsw_nojailbreak_message() {
 ipsw_preference_set() {
     # sets ipsw variables: ipsw_jailbreak, ipsw_memory, ipsw_verbose
     case $device_latest_vers in
-        [76543]* ) ipsw_canjailbreak=1;;
+        [876543]* ) ipsw_canjailbreak=1;;
     esac
     if [[ $device_target_vers == "$device_latest_vers" && $device_deadbb == 1 ]] ||
        [[ $device_proc == 6 && $target_vers_maj == 10 && $device_target_other == 1 ]] ||
@@ -3046,7 +3090,9 @@ ipsw_preference_set() {
         warn "multipatch is not supported on A6(X) tethered iOS 10, so it will be disabled."
         ipsw_gasgauge_patch=
     fi
-    if (( device_proc > device_proc_32bit )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
+    if [[ $device_type == AppleTV[23]* ]]; then
+        :
+    elif (( device_proc > device_proc_32bit )) || [[ $device_target_vers == "$device_latest_vers" && $ipsw_canjailbreak != 1 && $ipsw_gasgauge_patch != 1 ]]; then
         return
     fi
 
@@ -3258,7 +3304,7 @@ shsh_save() {
         "bbcheck" ) bbcheck=1;;
     esac
 
-    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "27.2" || $version == "18.7.11" ]]; then
+    if [[ $version == "$device_latest_vers" || $version == "4.1" || $version == "6.1.4" || $version == "27.2" || $version == "18.7.11" ]]; then
         if [[ $version == "$device_latest_vers" ]]; then
             build_id="$device_latest_build"
         fi
@@ -3289,7 +3335,13 @@ shsh_save() {
     elif [[ $device_target_drav6 == 1 && $device_proc == 5 ]]; then
         buildmanifest="../resources/manifest/BuildManifest_${device_type}_${version}.plist"
     fi
-    shsh_check=${device_ecid}_${device_type}_${device_model}ap_${version}-*_${apnonce}*.shsh*
+    local type="$device_type"
+    # apple tv blobs are saved as Appletv, so make the string lowercase, then first character uppercase
+    if [[ $type == AppleTV* ]]; then
+        type=$(printf '%s' "$type" | tr '[:upper:]' '[:lower:]')
+        type=$(printf '%s' "${type:0:1}" | tr '[:lower:]' '[:upper:]')${type:1}
+    fi
+    shsh_check=${device_ecid}_${type}_${device_model}ap_${version}-*_${apnonce}*.shsh*
 
     if [[ $(ls ../saved/shsh/$shsh_check 2>/dev/null) && -z $apnonce && $bbcheck != 1 ]]; then
         shsh_path="$(ls ../saved/shsh/$shsh_check)"
@@ -4158,7 +4210,8 @@ ipsw_prepare_bundle() {
             esac
         elif [[ $device_proc == 1 && $device_target_vers == "4.2.1" ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
-        elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]] || [[ $ipsw_24o == 1 ]]; then
+        elif [[ $device_type == "iPhone2,1" && $device_target_other != 1 ]] || [[ $ipsw_24o == 1 ]] ||
+             [[ $device_target_vers == "8.4.4" ]]; then
             : # skip restorekernelcache for these
         elif [[ $device_proc != 1 && $device_target_vers != "3.0"* ]]; then
             ipsw_prepare_keys RestoreKernelCache $1
@@ -4244,6 +4297,17 @@ ipsw_prepare_bundle() {
     cat $NewPlist
 }
 
+ipsw_prepare_atv() {
+    atv="../saved/atv"
+    local atv_url="https://github.com/LukeZGD/Legacy-iOS-Kit-Keys/releases/download/a/atv.zip"
+    if [[ ! -d $atv ]]; then
+        file_download "$atv_url" atv.zip
+        file_extract atv.zip
+        mkdir -p $atv/
+        mv atv* $atv/
+    fi
+}
+
 ipsw_prepare_32bit() {
     local ExtraArgs
     local daibutsu
@@ -4271,7 +4335,7 @@ ipsw_prepare_32bit() {
     if [[ -s "$ipsw_custom.ipsw" ]]; then
         log "Found existing Custom IPSW. Skipping IPSW creation."
         return
-    elif [[ $ipsw_jailbreak == 1 && $ipsw_everuntether != 1 ]]; then
+    elif [[ $ipsw_jailbreak == 1 && $ipsw_everuntether != 1 && $device_type != AppleTV[23]* ]]; then
         if [[ $target_vers_maj == 8 ]]; then
             daibutsu="daibutsu"
             ExtraArgs+=" -daibutsu"
@@ -4306,7 +4370,21 @@ ipsw_prepare_32bit() {
         ExtraArgs+=" -bbupdate"
     fi
 
-    if [[ $ipsw_jailbreak == 1 ]]; then
+    if [[ $ipsw_jailbreak == 1 && $device_type == AppleTV[23]* ]]; then
+        ipsw_prepare_atv
+        JBFiles=("$atv/atv-bootstrap.tar" "$atv/atv-setup.tar")
+        case $device_target_vers in
+            8.* ) JBFiles+=("$atv/atv-etason.tar" "$jelbrek/fstab8.tar");;
+            6.* ) JBFiles+=("$atv/atv-p0sixspwn.tar" "$jelbrek/fstab_rw.tar");;
+        esac
+        if [[ $ipsw_openssh == 1 ]]; then
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
+        fi
+
+    elif [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
             9.3.[56] ) :;;
             9.*  ) JBFiles=("everuntether.tar");;
@@ -6249,6 +6327,10 @@ restore_idevicerestore() {
     print "* Please read the \"Troubleshooting\" wiki page in GitHub before opening any issue!"
     print "* Your problem may have already been addressed within the wiki page."
     print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
+    if [[ $device_type == AppleTV* ]]; then
+        print "* Unplug the USB cable to allow the Apple TV to boot."
+        print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
+    fi
 }
 
 futurerestore_update() {
@@ -6440,6 +6522,10 @@ restore_latest() {
         print "* If opening an issue in GitHub, please provide a FULL log/output. Otherwise, your issue may be dismissed."
     fi
     print "* For device activation, go to: Main Menu -> Attempt Activation"
+    if [[ $device_type == AppleTV* ]]; then
+        print "* Unplug the USB cable to allow the Apple TV to boot."
+        print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
+    fi
 }
 
 restore_prepare_pwnrec64() {
@@ -6617,6 +6703,10 @@ restore_deviceprepare() {
             fi
         ;;
     esac
+    if [[ $device_type == AppleTV[23]* && $ipsw_jailbreak == 1 ]]; then
+        shsh_save
+        device_enter_mode pwnDFU
+    fi
 }
 
 restore_prepare() {
@@ -6739,7 +6829,9 @@ restore_prepare() {
             fi
         ;;
     esac
-    if (( device_proc > device_proc_checkm8 )); then
+    if [[ $device_type == AppleTV[23]* && $ipsw_jailbreak == 1 ]]; then
+        restore_idevicerestore
+    elif (( device_proc > device_proc_checkm8 )); then
         restore_latest
     elif (( device_proc > 7 )); then
         if [[ $restore_usepwndfu64 == 1 ]]; then
@@ -6900,6 +6992,9 @@ ipsw_prepare() {
             fi
         ;;
     esac
+    if [[ $device_type == AppleTV[23]* ]] && [[ $device_target_vers == "8.4.4" || $device_target_vers == "6.1.4" ]]; then
+        ipsw_prepare_32bit
+    fi
 }
 
 restore_usepwndfu64_option() {
@@ -7331,6 +7426,76 @@ device_ramdisk64() {
     menu_ramdisk $build_id
 }
 
+device_jailbreak_atv() {
+    local vers
+    local build
+    local untether
+    device_ramdisk_iosvers
+    vers=$device_vers
+    build=$device_build
+    log "$device_type is on iOS $vers-$build"
+
+    if [[ -n $($ssh -p $ssh_port root@127.0.0.1 "ls /mnt1/bin/bash 2>/dev/null") ]]; then
+        log "Mounting data partition"
+        $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
+        warn "Your device seems to be already jailbroken. Cannot continue jailbreaking."
+        if [[ $ipsw_openssh == 1 ]]; then
+            log "Will try installing OpenSSH anyway..."
+            device_send_rdtar sshdeb.tar
+            device_send_rdtar openssh.tar gz
+            device_send_rdtar openssl.tar gz
+        fi
+        log "Rebooting"
+        $ssh -p "$ssh_port" root@127.0.0.1 "reboot_bak"
+        return
+    fi
+
+    case $build in
+        12H1006 ) untether="atv-etason.tar";;
+        10B809  ) untether="atv-p0sixspwn.tar";;
+        '' )
+            warn "Something wrong happened. Failed to get iOS version."
+            $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+        ;;
+    esac
+
+    # untether var must be set by now
+    if [[ -z $untether ]]; then
+        warn "iOS $vers is not supported for jailbreaking with SSHRD."
+        $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+        return
+    fi
+    log "Nice, iOS $vers is compatible."
+
+    log "Mounting data partition"
+    $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh pv"
+
+    # do stuff
+    case $vers in
+        8.* ) device_send_rdtar fstab8.tar;;
+        6.* ) device_send_rdtar fstab_rw.tar;;
+    esac
+
+    log "Extracting $untether"
+    $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
+
+    cp $atv/atv-bootstrap.tar $jelbrek/
+    device_send_rdtar atv-bootstrap.tar
+    rm $jelbrek/atv-bootstrap.tar
+
+    # extras extraction
+    if [[ $ipsw_openssh == 1 ]]; then
+        device_send_rdtar sshdeb.tar
+        device_send_rdtar openssh.tar gz
+        device_send_rdtar openssl.tar gz
+    fi
+
+    log "Rebooting"
+    $ssh -p $ssh_port root@127.0.0.1 "reboot_bak"
+
+    log "Cool, done and jailbroken (hopefully)"
+}
+
 device_ramdisk() {
     local comps=("iBSS" "iBEC" "DeviceTree" "Kernelcache")
     local name
@@ -7358,6 +7523,7 @@ device_ramdisk() {
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,[34] ) device_target_build="11D257";;
+        AppleTV[23],* ) device_target_build="10B329a";;
         * ) device_target_build="10B329";;
     esac
     if [[ -n $device_rd_build ]]; then
@@ -7577,6 +7743,11 @@ device_ramdisk() {
         found=$($ssh -p $ssh_port root@127.0.0.1 "echo 1")
         sleep 2
     done
+
+    if [[ $mode == "jailbreak" && $device_type == AppleTV[23]* ]]; then
+        device_jailbreak_atv
+        return
+    fi
 
     case $mode in
         "activation" | "baseband" )
@@ -7954,7 +8125,7 @@ menu_ramdisk() {
     local loop
     local menu_items=("Connect to SSH")
     local reboot="reboot_bak"
-    if (( device_proc > device_proc_32bit )); then
+    if (( device_proc > device_proc_32bit )) && [[ $device_type != AppleTV[23]* ]]; then
         reboot="/sbin/reboot"
     else
         menu_items+=("Dump Baseband/Activation")
@@ -8622,6 +8793,8 @@ menu_print_info() {
     fi
     if [[ $device_pwnrec == 1 ]]; then
         warn "Pwned recovery flag detected. Assuming device is in pwned recovery mode."
+    elif [[ $device_pwndfu == 1 ]]; then
+        warn "Pwned DFU flag detected. Assuming device is in pwned DFU mode."
     fi
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
@@ -8656,11 +8829,16 @@ menu_main() {
         input "Select an option:"
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
-            if (( device_proc <= device_proc_32bit )); then
+            if (( device_proc <= device_proc_32bit )) || [[ $device_type == AppleTV[23]* ]]; then
                 menu_items+=("Jailbreak Device")
             fi
-            if (( device_proc < device_proc_unsupported )) &&
-                { [[ $device_proc != 1 && $device_type != "iPod2,1" ]] || (( device_usbliter8 == 1 )); }; then
+            if {
+                (( device_proc < device_proc_unsupported )) &&
+                {
+                    [[ $device_proc != 1 && $device_type != "iPod2,1" ]] ||
+                    [[ $device_usbliter8 == 1 ]]
+                }
+            } || [[ $device_type == AppleTV[23]* ]]; then
                 case $device_mode in
                     "Recovery" | "DFU" ) menu_items+=("Just Boot");;
                 esac
@@ -8682,12 +8860,15 @@ menu_main() {
         if [[ $device_proc != 1 && $device_type != "iPod2,1" && $device_type != AppleTV* ]]; then
             menu_items+=("Save SHSH Blobs")
         fi
-        if [[ $device_mode == "Normal" ]]; then
+        if [[ $device_mode == "Normal" && $device_type != AppleTV[23]* ]]; then
             case $device_vers in
                 [12].*  ) :;;
                 [126789]* ) menu_items+=("Sideload IPA");;
             esac
-            menu_items+=("App Management" "Data Management")
+            menu_items+=("App Management")
+        fi
+        if [[ $device_mode == "Normal" || $device_mode == "none" ]]; then
+            menu_items+=("Data Management")
         fi
         if [[ $device_mode != "none" ]]; then
             menu_items+=("Useful Utilities")
@@ -8787,13 +8968,15 @@ menu_datamanage() {
     if [[ -z $sshfs ]]; then
         warn "sshfs not installed. Mount Device options are not available. Install sshfs from your package manager to fix this"
         [[ $platform == "macos" ]] && print "* On macOS, install fuse-t-sshfs. See the wiki page linked above for more details"
-    else
+    elif [[ $device_mode != "none" ]]; then
         menu_items+=("Mount Device" "Mount Device (Raw File System)")
         if (( device_vers_maj <= 10 )); then
             menu_items+=("Cydia App Install")
         fi
     fi
-    if (( device_vers_maj < 4 )); then
+    if [[ $device_mode == "none" ]]; then
+        :
+    elif (( device_vers_maj < 4 )); then
         warn "Device is on lower than iOS 4. Backup and Restore options are not available."
     else
         menu_items+=("Backup" "Restore" "Encryption")
@@ -9133,11 +9316,11 @@ menu_shsh() {
     device_target_build=
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=("Latest iOS ($device_latest_vers)" "Latest iOS ($device_latest_vers) (Baseband Check)")
-        if [[ $device_latest_vers == 27* ]]; then
-            menu_items+=("iOS 27.2")
-        elif [[ $device_latest_vers == 18* ]]; then
-            menu_items+=("iOS 18.7.11")
-        fi
+        # if [[ $device_latest_vers == 27* ]]; then
+        #     menu_items+=("iOS 27.2")
+        # elif [[ $device_latest_vers == 18* ]]; then
+        #     menu_items+=("iOS 18.7.11")
+        # fi
         case $device_type in
             iPad4,[12345] | iPhone6,[12] )
                 menu_items+=("iOS 10.3.3");;
@@ -9350,14 +9533,15 @@ menu_restore() {
         if [[ $device_proc == 1 ]]; then
             menu_items+=("More Options")
         fi
-        if (( device_proc > device_proc_32bit )); then
-            menu_items+=("Signed iOS (IPSW must be signed)")
-        fi
         case $device_type in
+            AppleTV[23],1 ) menu_items+=("6.1.4");;
             iPod4,1 ) menu_items+=("7.1.2");;
             iPod3,1 ) menu_items+=("6.0" "6.1.3" "6.1.6");;
             iPad1,1 ) menu_items+=("6.1.3" "7.1.2");;
         esac
+        if (( device_proc > device_proc_32bit )); then
+            menu_items+=("Signed iOS (IPSW must be signed)")
+        fi
         if [[ $device_can_powder == 1 && $device_proc != 4 ]]; then
             menu_items+=("Other (powdersn0w $base_vers blobs)")
         fi
@@ -9675,6 +9859,7 @@ menu_ipsw() {
             ipsw_cancustomlogo=1
         fi
         case $1 in
+            "6.1.4" ) device_target_build="10B809";; # appletv
             "6.1.3" ) device_target_build="10B329";;
             "6.1.2" ) device_target_build="10B146";;
             "6.1"   ) device_target_build="10B141";;
@@ -10859,6 +11044,9 @@ menu_miscutilities() {
         if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("Enable Flags")
         fi
+        if [[ $device_type == AppleTV[23]* ]]; then
+            menu_items+=("SSH Ramdisk" "Create Custom IPSW")
+        fi
         if (( device_proc <= device_proc_32bit )) || [[ $device_usbliter8 == 1 ]]; then
             menu_items+=("Create Custom IPSW")
         else
@@ -10949,6 +11137,9 @@ menu_usefulutilities() {
 
     while [[ -z "$mode" && -z "$back" ]]; do
         menu_items=()
+        if [[ $device_mode == "Normal" && $device_type == AppleTV[23]* ]]; then
+            menu_items+=("Enter kDFU Mode")
+        fi
         if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
             if [[ $device_mode == "Normal" && $device_type != "iPod2,1" ]] && (( device_vers_maj >= 4 )); then
                 menu_items+=("Enter kDFU Mode")
@@ -10993,14 +11184,13 @@ menu_usefulutilities() {
         fi
         if (( device_proc <= device_proc_checkm8 )); then
             menu_items+=("SSH Ramdisk" "Update DateTime")
+        elif [[ $device_type == AppleTV[23]* ]]; then
+            menu_items+=("SSH Ramdisk")
         fi
         if [[ $device_mode == "Normal" ]]; then
             menu_items+=("Run uicache" "Console")
         fi
-        if [[ $device_type != AppleTV* ]]; then
-            menu_items+=("DFU Mode Helper")
-        fi
-        menu_items+=("Go Back")
+        menu_items+=("DFU Mode Helper" "Go Back")
         menu_print_info
         # other utilities menu
         print " > Main Menu > Useful Utilities"
@@ -11089,7 +11279,7 @@ device_update_datetime() {
 
 device_pair() {
     [[ $device_argmode == "none" ]] && return
-    if [[ $device_vers_maj == 7 && $platform == "linux" ]]; then
+    if [[ $device_vers_maj == 7 && $platform == "linux" && $device_type != AppleTV[23]* ]]; then
         warn "Pressing \"Trust\" for devices on iOS 7 can have connection issues on Linux (disconnect-reconnect)."
         print "* You may select \"Don't Trust\" on the prompt as a workaround, but that can limit some functionality."
     fi
@@ -11112,19 +11302,37 @@ device_pair() {
 }
 
 device_ssh() {
+    local ip="127.0.0.1"
+    local port="-p $ssh_port"
+    local port2=" | Port: $ssh_port"
     print "* Note: This is for connecting via SSH to devices that are already jailbroken and have OpenSSH installed."
     print "* If this is not what you want, you might be looking for the \"SSH Ramdisk\" option instead."
     echo
     device_iproxy no-logging
     device_ssh_message
     device_sshpass
+    if [[ $device_mode == "none" ]]; then
+        log "Trying with Wi-Fi SSH..."
+        print "* Make sure that your iOS device and PC/Mac are on the same network."
+        if [[ $device_type == AppleTV* ]]; then
+            print "* To get your Apple TV's IP Address, go to: Settings -> General -> About"
+        else
+            print "* To get your iOS device's IP Address, go to: Settings -> Wi-Fi/WLAN -> tap the 'i' or '>' next to your network name"
+        fi
+        ip=
+        port=
+        port2=
+        until [[ -n $ip ]]; do
+            read -p "$(input 'Enter the IP Address of your device: ')" ip
+        done
+    fi
     log "Connecting to device SSH..."
     print "* For SSH/SCP access, use the following:"
-    print "* Host: sftp://127.0.0.1 | Username: $ssh_user | Password: <your password> (default is alpine) | Port: $ssh_port"
+    print "* Host: sftp://$ip | Username: $ssh_user | Password: <your password> (default is alpine)$port2"
     if [[ $ssh_user == "root" ]]; then
         print "* You may also use mobile as the username for SSH/SCP access."
     fi
-    $ssh -p $ssh_port ${ssh_user}@127.0.0.1
+    $ssh $port ${ssh_user}@$ip
     kill $iproxy_pid
 }
 
@@ -11132,6 +11340,20 @@ device_jailbreak_confirm() {
     local device_vers="$device_vers"
     local device_vers_maj="$device_vers_maj"
     local device_vers_min="$device_vers_min"
+
+    if [[ $device_type == AppleTV[23]* ]]; then
+        warn "Jailbreaking is only supported on Apple TV firmware versions 12H1006 and 10B809. If your device is running any other version, do not continue. Perform a Restore/Downgrade instead."
+        echo
+        print "* By selecting Jailbreak Device, your device will be jailbroken using Ramdisk Method."
+        print "* Before continuing, make sure that your device does not have a jailbreak yet."
+        print "* No data will be lost, but please back up your data just in case."
+        select_yesno
+        if [[ $? != 1 ]]; then
+            return
+        fi
+        mode="device_jailbreak"
+        return
+    fi
 
     if [[ $device_vers == *"iBoot"* || $device_vers == "Unknown"* ]]; then
         device_vers=
@@ -11849,6 +12071,9 @@ device_dfuipsw() {
         ExtraArgs+="c"
         device_latest_vers="3.1.3"
         device_latest_build="7E18"
+    elif [[ $device_type == "AppleTV2,1" ]]; then
+        device_latest_vers="6.1.4"
+        device_latest_build="10B809"
     fi
     device_target_vers="$device_latest_vers"
     device_target_build="$device_latest_build"
@@ -12204,7 +12429,7 @@ device_justboot() {
         device_justboot_a12a13
         return
 
-    elif (( device_proc > device_proc_32bit )); then
+    elif (( device_proc > device_proc_32bit )) && [[ $device_type != AppleTV[23]* ]]; then
         error "Just Boot is not supported for this device"
     fi
     formatted_result=$(validate_build "$device_rd_build")
@@ -12257,7 +12482,7 @@ device_justboot_specialios7() {
 }
 
 device_enter_ramdisk() {
-    if (( device_proc > device_proc_checkm8 )); then
+    if (( device_proc > device_proc_checkm8 )) && [[ $device_type != AppleTV[23]* ]]; then
         error "SSH Ramdisk is not supported for this device"
     elif [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         if [[ -n $device_build ]]; then
@@ -12310,7 +12535,7 @@ device_enter_ramdisk() {
         return
     fi
 
-    if (( device_proc > device_proc_32bit )); then
+    if (( device_proc > device_proc_32bit )) && [[ $device_type != AppleTV[23]* ]]; then
         device_ramdisk64 $1
     else
         device_ramdisk $1
@@ -12773,11 +12998,22 @@ main() {
                 print "* Note 2: If your device is stuck in recovery mode, it may have been restored with powdersn0w before."
                 print "    - If so, try to clear the device's NVRAM: go to Useful Utilities -> Clear NVRAM"
             fi
+            if [[ $device_type == AppleTV* ]]; then
+                print "* Unplug the USB cable to allow the Apple TV to boot."
+                print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
+            fi
         ;;
         "customipsw"   ) restore_customipsw;;
         "getversion"   ) device_enter_ramdisk getversion;;
         "shutdown"     ) device_pair; $idevicediagnostics shutdown;;
-        "restart"      ) device_pair; $idevicediagnostics restart;;
+        "restart"      )
+            device_pair
+            $idevicediagnostics restart
+            if [[ $device_type == AppleTV* ]]; then
+                print "* Unplug the USB cable to allow the Apple TV to boot."
+                print "* If the device re-enters Recovery mode, unplug the USB cable and power cycle the device."
+            fi
+        ;;
         "remove4"      ) device_ramdisk setnvram $rec;;
         "device"* | "shsh"* ) $mode;;
         * ) :;;
@@ -12808,6 +13044,7 @@ for i in "$@"; do
         "--jailbreak"       ) ipsw_jailbreak=1;;
         "--gasgauge-patch" | "--multipatch") ipsw_gasgauge_patch=1;;
         "--memory"          ) ipsw_memory=1;;
+        "--pwned-dfu"       ) device_pwndfu=1;;
         "--pwned-recovery"  ) device_pwnrec=1;;
         "--ra1n-timeout="*  ) device_ra1n_timeout="${i#*=}";;
         "--skip-first"      ) ipsw_skip_first=1;;

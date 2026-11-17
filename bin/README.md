@@ -50,6 +50,7 @@ These binaries use the same source on Linux and macOS.
 | plistutil            | https://github.com/LukeZGD/idevicerestore |
 | powdersn0w           | https://github.com/LukeZGD/powdersn0w_pub |
 | primepwn             | https://github.com/LukeZGD/primepwn |
+| pwnedDFU               | https://github.com/LukeZGD/iPwnder32 |
 | pzb                  | https://github.com/LukeZGD/partialzipbrowser |
 | restoredpatcher     | https://gist.github.com/LukeZGD/d7c529aa5ef6e665cfbba5053ea7dc5b |
 | sshpass              | https://github.com/LukeZGD/sshpass |
