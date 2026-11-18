@@ -145,6 +145,7 @@ For 32-bit devices compatible with restores/downgrades (see README):
     --dead-bb                 Disable bbupdate completely without dumping/stitching baseband
     --disable-actrec          Disable dumping/stitching activation records
     --disable-bbupdate        Disable bbupdate and enable dumping/stitching baseband
+    --enable-stashing         Enable Cydia stashing
     --ipsw-hacktivate         Enable hacktivation for creating IPSW (iPhone 2G/3G/3GS only)
     --ipsw-verbose            Enable verbose boot option (3GS and powdersn0w only)
     --jailbreak               Enable jailbreak option
@@ -3289,6 +3290,22 @@ ipsw_preference_set() {
         echo
     fi
 
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_stashing ]] && (( target_vers_maj >= 5 )); then
+        input "Stashing to free up space on system partition"
+        print "* When enabled, Cydia will move some components to the data partition on its first run."
+        print "* This frees up more space for installing tweaks."
+        print "* However, this option can be unstable and lead to issues."
+        print "* This option is disabled by default (N). Disable this option if unsure."
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
+            log "Stashing option enabled by user."
+            ipsw_stashing=1
+        else
+            log "Stashing disabled."
+        fi
+        echo
+    fi
+
     ipsw_custom_set
 }
 
@@ -3683,9 +3700,12 @@ ipsw_prepare_jailbreak() {
             [432].* ) JBFiles+=("$jelbrek/fstab_old.tar");;
             *       ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
-        JBFiles+=("freeze.tar") # "$jelbrek/melder.tar")
+        JBFiles+=("freeze.tar")
         if (( target_vers_maj >= 3 )); then
             JBFiles+=("$jelbrek/melder.tar")
+        fi
+        if [[ $ipsw_stashing != 1 ]]; then
+            JBFiles+=("$jelbrek/nostash.tar")
         fi
         case $device_target_vers in
             4.2.[8761] )
@@ -4416,6 +4436,9 @@ ipsw_prepare_32bit() {
             *      ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
         JBFiles+=("freeze.tar" "$jelbrek/melder.tar")
+        if [[ $ipsw_stashing != 1 ]]; then
+            JBFiles+=("$jelbrek/nostash.tar")
+        fi
         case $device_target_vers in
             9.* ) JBFiles+=("$jelbrek/launchctl.tar");;
             5.* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
@@ -5191,9 +5214,10 @@ ipsw_prepare_specialios7() {
         gzip -d freeze.tar.gz
         "$dir/hfsplus" rootfs.dec untar freeze.tar
         "$dir/hfsplus" rootfs.dec untar $jelbrek/melder.tar
+        if [[ $ipsw_stashing != 1 ]]; then
+            "$dir/hfsplus" rootfs.dec untar $jelbrek/nostash.tar
+        fi
         "$dir/hfsplus" rootfs.dec untar $jelbrek/LukeZGD.tar
-        touch .cydia_no_stash
-        "$dir/hfsplus" rootfs.dec add .cydia_no_stash .cydia_no_stash
 
         log "Target RootFS: untar jailbreak untether"
         "$dir/hfsplus" rootfs.dec untar $jelbrek/aquila_7_old.tar
@@ -5766,6 +5790,9 @@ ipsw_prepare_ios4powder() {
         for i in {0..3}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
+        if [[ $ipsw_stashing != 1 ]]; then
+            JBFiles+=("$jelbrek/nostash.tar")
+        fi
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
             gzip -d openssh.tar.gz
@@ -5896,6 +5923,9 @@ ipsw_prepare_powder() {
             *      ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
         JBFiles+=("$jelbrek/melder.tar")
+        if [[ $ipsw_stashing != 1 ]]; then
+            JBFiles+=("$jelbrek/nostash.tar")
+        fi
         if [[ $ipsw_openssh == 1 ]]; then
             cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
             gzip -d openssh.tar.gz
@@ -7939,6 +7969,9 @@ device_ramdisk() {
                 device_send_rdtar freeze.tar gz
             fi
             device_send_rdtar melder.tar
+            if [[ $ipsw_stashing != 1 ]]; then
+                device_send_rdtar nostash.tar
+            fi
 
             # extras extraction
             if [[ $ipsw_openssh == 1 ]]; then
@@ -8418,6 +8451,7 @@ menu_ramdisk() {
                 else
                     log "Stashing disabled."
                 fi
+                echo
             ;;
             "openssh" )
                 log "Please read the message below:"
@@ -11539,6 +11573,22 @@ device_jailbreak_confirm() {
         echo
     fi
 
+    if [[ -z $ipsw_stashing ]] && (( target_vers_maj >= 5 )); then
+        input "Stashing to free up space on system partition"
+        print "* When enabled, Cydia will move some components to the data partition on its first run."
+        print "* This frees up more space for installing tweaks."
+        print "* However, this option can be unstable and lead to issues."
+        print "* This option is disabled by default (N). Disable this option if unsure."
+        select_yesno "Enable this option?" 0
+        if [[ $? != 0 ]]; then
+            log "Stashing option enabled by user."
+            ipsw_stashing=1
+        else
+            log "Stashing disabled."
+        fi
+        echo
+    fi
+
     if (( device_vers_maj >= 9 )); then
         log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
         device_rd_build="13G36"
@@ -13078,6 +13128,7 @@ for i in "$@"; do
         "--dead-bb"         ) device_deadbb=1; device_disable_bbupdate=1;;
         "--disable-actrec"  ) device_disable_actrec=1;;
         "--disable-bbupdate") device_disable_bbupdate=1;;
+        "--enable-stashing" ) ipsw_stashing=1;;
         "--ipsw-hacktivate" ) ipsw_hacktivate=1;;
         "--ipsw-verbose"    ) ipsw_verbose=1;;
         "--jailbreak"       ) ipsw_jailbreak=1;;
