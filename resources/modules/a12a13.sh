@@ -408,7 +408,10 @@ device_a12a13_restore_tethered() {
     device_a12a13_ipsw_tethered
 
     if [[ $device_pwnrec != 1 ]]; then
-        log "Sending iBSS..."
+        log "Sending iBSS.patch..."
+        if [[ $platform_cpu == "AMD"* ]]; then
+            print "* This may take a little longer on AMD desktop systems."
+        fi
         $primepwn $boot_folder/iBSS.patch
     fi
     device_find_mode Recovery
@@ -434,6 +437,10 @@ device_justboot_a12a13() {
         log "Found boot folder: $device_selectedboot"
     fi
     device_enter_mode pwnDFU
+    log "Sending iBSS.boot..."
+    if [[ $platform_cpu == "AMD"* ]]; then
+        print "* This may take a little longer on AMD desktop systems."
+    fi
     $primepwn ../saved/$device_type/$device_selectedboot/iBSS.boot
 }
 

@@ -1867,7 +1867,7 @@ device_get_info() {
     # activation issue stuff
     case $device_type in
         iPhone4,1 | iPhone5,2 | iPad2,7 | iPad3,[26] ) device_9900candidate=1;;
-        # iPhone[123],[12] | iPad1,1 | iPad2,2 ) device_activationissue=1;;
+        iPhone[123],[12] ) ipsw_canhacktivate=1;;
     esac
     # enable activation records flag if device is a5(x)/a6(x), normal mode, and activated
     if [[ $device_disable_actrec == 1 ]]; then
@@ -2482,7 +2482,7 @@ device_enter_mode() {
                     local error_msg=$'* If you have just used checkm8-a5, it may have just failed. Just re-enter DFU and retry.'
                     if [[ $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
                         error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
-                        error_msg+=$'\n* You just need to have OpenSSH installed from Cydia.'
+                        error_msg+=$'\n* You just need to have OpenSSH installed from Cydia/Melder.'
                         error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
                     fi
                     error_msg+=$'\n* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
@@ -2588,14 +2588,14 @@ device_enter_mode() {
 device_pwnerror() {
     local error_msg=$'* Exit DFU mode first by holding the TOP and HOME buttons for about 10 seconds.'
     if [[ $platform == "linux" ]]; then
-        [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates on AMD desktop CPUs if you have one.'
+        [[ $platform_cpu == "AMD"* ]] && error_msg+=$'\n\n* Unfortunately, pwning may have low success rates on AMD desktop systems if you have one.'
         if [[ $device_proc == 6 || $device_proc == 7 || $device_type == "AppleTV3,2" ]]; then
             error_msg+=$'\n* Also, success rates for pwning this device are lower on Linux.'
         fi
         error_msg+=$'\n* Pwning using an Intel PC or another Mac or iOS device may be better options if needed.'
         if [[ $device_proc == 6 && $mode != "device_justboot" && $device_target_tethered != 1 ]]; then
             error_msg+=$'\n\n* As much as possible, RESTART YOUR DEVICE IN NORMAL MODE AND USE THE JAILBREAK/KDFU METHOD INSTEAD.'
-            error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Zebra.'
+            error_msg+=$'\n* You just need to have OpenSSH (and Dropbear if on iOS 10) installed from Cydia/Melder/Zebra.'
             error_msg+=$'\n    - https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Restore-32-bit-Device'
         fi
     fi
@@ -3190,7 +3190,7 @@ ipsw_preference_set() {
         warn "Jailbreak flag detected, jailbreak option enabled by user."
     elif [[ $ipsw_canjailbreak == 1 && -z $ipsw_jailbreak ]]; then
         input "Jailbreak Option"
-        print "* Recommended setting: Enabled (Y) for jailbreak and Cydia to be pre-installed."
+        print "* Recommended setting: Enabled (Y) for jailbreak and Cydia/Melder to be pre-installed."
         print "* Select this option if unsure."
         select_yesno "Enable this option?" 1
         if [[ $? != 1 ]]; then
@@ -6597,7 +6597,7 @@ device_buttons() {
         if [[ $platform_cpu == "AMD"* ]]; then
             case $device_type in
                 iPhone3,* | iPad1,1 | iPod4,1 ) :;;
-                * ) warn "Selecting pwnDFU will use checkm8 which has low success rates on AMD desktop CPUs if you have one.";;
+                * ) warn "Selecting pwnDFU will use checkm8 which has low success rates on AMD desktop systems if you have one.";;
             esac
         fi
     else
@@ -8337,7 +8337,7 @@ menu_ramdisk() {
             "datetime" ) device_datetime_cmd;;
             "bootstrap" )
                 log "Please read the message below:"
-                warn "This will install the jailbreak bootstrap with Cydia installed to your device."
+                warn "This will install the jailbreak bootstrap with Cydia/Melder installed to your device."
                 warn "Do NOT continue if your device is not a 64-bit device on iOS 7/8/9! Also do this at your own risk."
                 warn "You might also need your device to be freshly restored/erased and never booted for this to work."
                 print "* This procedure will do the commands in this post: https://www.reddit.com/r/LegacyJailbreak/comments/1jwo0gr/tutorial_manually_install_bootstrap_to_64bit/"
@@ -11196,7 +11196,7 @@ menu_usefulutilities() {
                 case $device_type in
                     iPhone1,* )
                         case $device_vers in
-                            3.1.3 | 4.[12]* ) canhacktivate=1;;
+                            3.1* | 4.[12]* ) canhacktivate=1;;
                         esac
                     ;;
                     iPad1,1 | iPhone[23],* | iPod4,1 )
@@ -11232,7 +11232,7 @@ menu_usefulutilities() {
         case $selected in
             "Hacktivate Device" )
                 print "* Hacktivate Device: Use this option to hacktivate devices that have already been restored and jailbroken using Legacy iOS Kit."
-                print "* If this is not what you intend to do, or your device does not meet these requirements, use the \"Restore/Downgrade\" or \"Jailbreak Device\" options instead."
+                print "* If this is not what you intend to do, or your device does not meet these requirements, go to \"Restore/Downgrade\" or \"Jailbreak Device\" instead."
                 print "* When restoring, make sure to enable both the \"Jailbreak Option\" and \"Hacktivate Option\"."
                 echo
                 print "* Hacktivate Device: This will patch lockdownd/skip activation on your device."
@@ -11520,7 +11520,7 @@ device_jailbreak_confirm() {
         return
     fi
 
-    if [[ $device_imei == "9900"* || $device_activationissue == 1 ]] && (( device_vers_maj <= 7 )) &&
+    if [[ $device_imei == "9900"* || $device_activationissue == 1 || $ipsw_canhacktivate == 1 ]] && (( device_vers_maj <= 7 )) &&
        [[ $device_unactivated == 1 ]]; then
         input "Hacktivate Option"
         print "* When enabled, your device will be hacktivated on jailbreak."
@@ -11570,7 +11570,7 @@ device_ssh_message() {
         print "1. Jailbreak with socket: https://github.com/staturnzz/socket"
         print "  - And install \"Dropbear\" from my repo: https://lukezgd.github.io/repo"
     else
-        print "1. Install \"OpenSSH\" in Cydia or Zebra."
+        print "1. Install \"OpenSSH\" in Cydia/Melder/Zebra."
     fi
     print "2. You will be prompted to enter the root/mobile password of your iOS device."
     print "  - The default password is: alpine"
@@ -11825,10 +11825,10 @@ device_dumprd() {
 
 device_activate() {
     log "Attempting to activate device with ideviceactivation"
-    if [[ $device_imei == "9900"* || $device_activationissue == 1 ]]; then
-        # print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
+    if [[ $device_imei == "9900"* || $device_activationissue == 1 || $ipsw_canhacktivate == 1 ]]; then
+        print "* For iPhone 4 and older devices, make sure to have a valid SIM card."
         if (( device_vers_maj <= 7 )); then
-            print "* For hacktivation, go to \"Restore/Downgrade\" or \"Hacktivate Device\" instead."
+            print "* For hacktivation, go to \"Restore/Downgrade\" or \"Useful Utilities -> Hacktivate Device\" instead."
         fi
     fi
     $ideviceactivation activate
