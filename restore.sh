@@ -3136,7 +3136,7 @@ ipsw_preference_set() {
     esac
     if [[ $ipsw_gasgauge_patch != 1 && $ipsw_jailbreak != 1 && $device_target_vers == "$device_latest_vers" ]]; then
         ipsw_nskip=
-    elif [[ $ipsw_gasgauge_patch == 1 ]] || [[ $platform == "macos" && $platform_arch == "arm64" ]] ||
+    elif [[ $ipsw_gasgauge_patch == 1 ]] || [[ $device_proc == [56] && $ipsw_jailbreak != 1 ]] ||
          [[ $device_proc == 5 && $target_vers_maj == 4 ]]; then
         ipsw_nskip=1
     fi
@@ -4120,8 +4120,8 @@ ipsw_prepare_bundle() {
     else
         root_size="$($PlistBuddy -c "Print SystemPartitionSize" options.$device_model.plist | tr -d '"')"
     fi
-    log "root_size: $root_size + $system_partition_add"
-    root_size=$((root_size+system_partition_add))
+    log "root_size: $root_size"
+    # root_size=$((root_size+system_partition_add))
     local rootfs_name
     [[ -s BuildManifest.plist ]] && rootfs_name="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
     [[ -z $rootfs_name ]] && rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
