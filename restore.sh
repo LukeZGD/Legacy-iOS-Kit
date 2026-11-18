@@ -3023,7 +3023,7 @@ patch_ibss() {
         * ) build_id="12H321";;
     esac
     if [[ $device_type == AppleTV[23]* ]]; then
-        build_id="10B329a"
+        build_id="10B809"
     fi
     download_comp $build_id iBSS
     device_fw_key_check temp $build_id
@@ -3500,7 +3500,7 @@ ipsw_verify() {
     local IPSWSHA1L
     local type="$device_type"
     [[ $3 == "special" ]] && type="$device_type_special"
-    if [[ $ipsw_skip_verify == 1 ]]; then
+    if [[ $ipsw_skip_verify == 1 ]] && (( device_proc > device_proc_32bit )); then
         if [[ $build_id == "$device_base_build" ]]; then
             ipsw_base_validate=0
         else
@@ -4121,7 +4121,6 @@ ipsw_prepare_bundle() {
         root_size="$($PlistBuddy -c "Print SystemPartitionSize" options.$device_model.plist | tr -d '"')"
     fi
     log "root_size: $root_size"
-    # root_size=$((root_size+system_partition_add))
     local rootfs_name
     [[ -s BuildManifest.plist ]] && rootfs_name="$($PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
     [[ -z $rootfs_name ]] && rootfs_name="$(echo "$key" | $jq -j '.keys[] | select(.image == "RootFS") | .filename')"
@@ -5786,10 +5785,11 @@ ipsw_prepare_ios4powder() {
     fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
-        JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate5.tar" "melder.tar" "freeze.tar")
-        for i in {0..3}; do
+        JBFiles=("aquila_4.tar" "fstab_old.tar" "cydiasubstrate5.tar" "freeze.tar")
+        for i in {0..2}; do
             JBFiles[i]=$jelbrek/${JBFiles[$i]}
         done
+        JBFiles+=("$jelbrek/melder.tar")
         if [[ $ipsw_stashing != 1 ]]; then
             JBFiles+=("$jelbrek/nostash.tar")
         fi
@@ -5916,13 +5916,12 @@ ipsw_prepare_powder() {
         case $device_target_vers in
             5.* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
-        JBFiles+=("freeze.tar")
+        JBFiles+=("freeze.tar" "$jelbrek/melder.tar")
         case $device_target_vers in
             [98].* ) JBFiles+=("$jelbrek/fstab8.tar");;
             7.*    ) JBFiles+=("$jelbrek/fstab7.tar");;
             *      ) JBFiles+=("$jelbrek/fstab_rw.tar");;
         esac
-        JBFiles+=("$jelbrek/melder.tar")
         if [[ $ipsw_stashing != 1 ]]; then
             JBFiles+=("$jelbrek/nostash.tar")
         fi
@@ -6354,7 +6353,7 @@ restore_idevicerestore() {
     echo
     log "Restoring done! Read the message below if any error has occurred:"
     print "* For device activation, go to: Main Menu -> Attempt Activation"
-    if [[ $platform == "macos" && $platform_arch == "arm64" ]]; then
+    if [[ $platform == "macos" && $platform_arch == "arm64" && $device_proc != 1 ]]; then
         print "* Make sure that you are using a USB dock or hub to connect your device. Do not use USB dongles."
         echo
     fi
@@ -7342,7 +7341,6 @@ device_ramdisk64() {
                     "$dir/iBoot64Patcher" $getcomp.dec $getcomp.orig -b "$bootargs"
                 else
                     "$dir/iBoot64Patcher" $getcomp.dec $getcomp.orig
-                    # $bspatch $getcomp.dec $getcomp.orig ../resources/sshrd/$name.patch
                 fi
             ;;
             "Kernelcache" )
@@ -7355,7 +7353,6 @@ device_ramdisk64() {
                     "$dir/KPlooshFinder" $getcomp.raw $getcomp.patched
                     "$dir/kerneldiff" $getcomp.raw $getcomp.patched $name.bpatch
                     reco+=" -P $name.bpatch"
-                    # reco+=" -P ../resources/sshrd/$name.bpatch"
                     if (( device_proc >= 10 )) || { [[ $platform == "linux" ]] && (( target_vers_maj >= 14 )); }; then
                         reco+=" -J"
                     fi
@@ -7372,12 +7369,12 @@ device_ramdisk64() {
             "Trustcache" ) reco+="rtsc";;
             "RestoreRamdisk" )
                 reco+="rdsk -A"
-                local grow="140000000"
+                local grow=140000000
                 local tool="$dir/hfsplus"
                 mv $getcomp.orig $getcomp.orig0
                 if [[ $device_ramdisk_ios8 == 1 ]]; then
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig -k ${iv}${key}
-                    grow="50000000"
+                    grow=50000000
                 else
                     "$dir/img4" -i $getcomp.orig0 -o $getcomp.orig
                 fi
@@ -7564,7 +7561,7 @@ device_ramdisk() {
         iPod3,1 | iPad1,1 ) device_target_build="9B206";;
         iPhone2,1 | iPod4,1 ) device_target_build="10B500";;
         iPhone5,[34] ) device_target_build="11D257";;
-        AppleTV[23],* ) device_target_build="10B329a";;
+        AppleTV[23],* ) device_target_build="10B809";;
         * ) device_target_build="10B329";;
     esac
     if [[ -n $device_rd_build ]]; then
@@ -8482,7 +8479,7 @@ menu_ramdisk() {
 shsh_save_onboard64() {
     if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
         print "* There are other ways for dumping onboard blobs for 64-bit devices as listed below:"
-        print "* It is recommended to use SSH Ramdisk option to dump onboard blobs instead: Useful Utilities -> SSH Ramdisk"
+        print "* It is recommended to use SSH Ramdisk option to dump onboard blobs: Useful Utilities -> SSH Ramdisk"
         select_yesno
         if [[ $? != 1 ]]; then
             return 1
@@ -8501,7 +8498,7 @@ shsh_save_onboard64() {
     if [[ $device_mode != "Normal" ]]; then
         warn "Device must be in normal mode and jailbroken, cannot continue."
         if (( device_proc <= device_proc_checkm8 )) && [[ $device_latest_vers != "16"* && $device_checkm8ipad != 1 ]]; then
-            print "* Use the SSH Ramdisk option instead: Useful Utilities -> SSH Ramdisk"
+            print "* Try dumping blobs via the SSH Ramdisk: Useful Utilities -> SSH Ramdisk"
         fi
         return
     fi
@@ -8790,7 +8787,7 @@ menu_print_info() {
     if [[ $ipsw_jailbreak == 1 ]] && (( device_proc <= device_proc_32bit )); then
         warn "Jailbreak flag detected. Jailbreak option enabled."
     fi
-    if [[ $ipsw_skip_verify == 1 ]]; then
+    if [[ $ipsw_skip_verify == 1 ]] && (( device_proc > device_proc_32bit )); then
         warn "IPSW verification is disabled by the skip-verify flag."
     fi
     if [[ $device_proc != 1 ]] && (( device_proc <= device_proc_32bit )); then
@@ -10940,7 +10937,10 @@ menu_flags() {
         case $device_type in
             iPhone3,[13] | iPad1,1 | iPod[34],1 ) menu_items+=("Enable skip-first flag");;
         esac
-        menu_items+=("Enable no-finder flag" "Enable skip-verify flag" "Go Back")
+        if (( device_proc > device_proc_32bit )); then
+            menu_items+=("Enable skip-verify flag")
+        fi
+        menu_items+=("Enable no-finder flag" "Go Back")
         menu_print_info
         print " > Main Menu > Misc Utilities > Enable Flags"
         input "Select an option:"
@@ -11618,9 +11618,9 @@ device_jailbreak_gilbert() {
             error "g1lbertJB failed to download. Please run the script again"
         fi
         mkdir -p ../saved/$gilbertjb
-        mv -v gilbertjb ../saved/$gilbertjb
-        mv -v payload ../saved/$gilbertjb
-        [[ $platform == "macos" ]] && mv -v lib ../saved/$gilbertjb
+        mv gilbertjb ../saved/$gilbertjb
+        mv payload ../saved/$gilbertjb
+        [[ $platform == "macos" ]] && mv lib ../saved/$gilbertjb
         echo "$latest" > ../saved/$gilbertjb/version
     fi
 
