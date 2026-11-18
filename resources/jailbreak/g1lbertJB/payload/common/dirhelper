@@ -1,4 +1,0 @@
-#!/bin/sh
-/bin/mkdir -m 700 /private/var/tmp/launchd
-/bin/mv /private/var/unthreadedjb/sock /private/var/tmp/launchd/sock
-

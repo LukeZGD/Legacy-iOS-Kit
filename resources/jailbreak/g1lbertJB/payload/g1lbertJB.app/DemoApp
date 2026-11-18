@@ -1,1 +1,0 @@
-#!/bin/launchctl submit -l remount -o /var/mobile/Media/mount.stdout -e /var/mobile/Media/mount.stderr -- /sbin/mount -u -o rw,suid,dev /

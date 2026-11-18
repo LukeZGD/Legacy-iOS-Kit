@@ -11602,14 +11602,32 @@ device_jailbreak() {
 }
 
 device_jailbreak_gilbert() {
-    pushd $jelbrek/g1lbertJB >/dev/null
-    log "Copying freeze.tar to Cydia.tar"
-    cp ../freeze.tar.gz .
-    gzip -d freeze.tar.gz
-    mv freeze.tar payload/common/Cydia.tar
+    local latest="v1.1.4"
+    local gilbertjb="g1lbertJB-$platform-$(uname -m)"
+    [[ $platform == "macos" ]] && gilbertjb="g1lbertJB-macos"
+    local current="$(cat ../saved/gilbertjb/version 2>/dev/null)"
+
+    if [[ $current != "$latest" ]]; then
+        rm -rf ../saved/g1lbertJB-$platform*
+    fi
+
+    if [[ ! -s ../saved/gilbertjb ]]; then
+        file_download https://github.com/g1lbertJB/g1lbertJB/releases/download/$latest/$gilbertjb-$latest.zip $gilbertjb.zip
+        file_extract $gilbertjb.zip
+        if [[ ! -s gilbertjb ]]; then
+            error "g1lbertJB failed to download. Please run the script again"
+        fi
+        mkdir -p ../saved/$gilbertjb
+        mv -v gilbertjb ../saved/$gilbertjb
+        mv -v payload ../saved/$gilbertjb
+        [[ $platform == "macos" ]] && mv -v lib ../saved/$gilbertjb
+        echo "$latest" > ../saved/$gilbertjb/version
+    fi
+
+    pushd ../saved/$gilbertjb >/dev/null
     log "Running g1lbertJB..."
-    "../../$dir/gilbertjb"
-    rm -rf payload/common/Cydia.tar private var
+    ./gilbertjb
+    rm -rf private var
     popd >/dev/null
 }
 
