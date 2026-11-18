@@ -310,6 +310,7 @@ device_a12a13_ipsw_tethered() {
     $tool ramdisk.raw rm usr/sbin/asr
     $tool ramdisk.raw add asr_patched usr/sbin/asr
     $tool ramdisk.raw chmod 755 usr/sbin/asr
+
     if (( target_vers_maj >= 14 )); then
         log "libimg4 patch"
         $tool ramdisk.raw extract usr/lib/libimg4.dylib libimg4.dylib
@@ -344,7 +345,7 @@ device_a12a13_ipsw_tethered() {
         ramdisk_url="https://updates.cdn-apple.com/2019FallFCS/fullrestores/061-08721/B905C96C-C875-11E9-8C18-F4CC329DFA63/iPhone10,3,iPhone10,6_13.0_17A577_Restore.ipsw"
     fi
 
-    if (( target_vers_maj >= 16 )) || { [[ $device_type == "iPhone11,"* || $device_type == "iPhone12,"* ]] && [[ $device_type != "iPhone12,8" ]]; }; then
+    if (( target_vers_maj >= 16 )) || [[ $device_type == iPhone1[12],* && $device_type != "iPhone12,8" ]]; then
         log "restored patch"
         if [[ -s ../saved/$device_type/$ramdisk_download_name ]]; then
             cp -v ../saved/$device_type/$ramdisk_download_name .
@@ -380,17 +381,15 @@ device_a12a13_ipsw_tethered() {
 
     log "trustcache patch"
     "$dir/img4" -i tmp1/Firmware/$ramdisk_dmg_name.trustcache -o trustcache.raw
+    log "Adding asr_patched to trustcache"
     "$dir/trustcache" append trustcache.raw asr_patched
-    if (( target_vers_maj >= 16 )); then
+    if [[ -s restored_patch ]]; then
+        log "Adding restored_patch to trustcache"
         "$dir/trustcache" append trustcache.raw restored_patch
+    fi
+    if [[ -s libimg4.patch ]]; then
+        log "Adding libimg4.patch to trustcache"
         "$dir/trustcache" append trustcache.raw libimg4.patch
-    else
-        if [[ $device_type != "iPhone12,8" ]]; then
-            "$dir/trustcache" append trustcache.raw restored_patch
-        fi
-        if (( target_vers_maj >= 14 )); then
-            "$dir/trustcache" append trustcache.raw libimg4.patch
-        fi
     fi
     "$dir/img4" -i trustcache.raw -o tmp2/Firmware/$ramdisk_dmg_name_18.trustcache -A -T rtsc
 
