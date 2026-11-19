@@ -7579,6 +7579,10 @@ device_ramdisk() {
         device_target_build=$device_rd_build
         device_rd_build=
     fi
+    if (( device_vers_maj >= 9 )); then
+        log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
+        device_target_build="13G36"
+    fi
     version=$device_target_vers
     build_id=$device_target_build
     bundle+="${device_type}_${version}_${build_id}.bundle"
@@ -8047,10 +8051,7 @@ device_ramdisk() {
 
         "clearnvram" )
             log "Sending commands for clearing NVRAM..."
-            $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear:'; nvram -p;"
-            if (( device_proc <= device_proc_32bit )); then
-                $ssh -t -p $ssh_port root@127.0.0.1 "mount.sh root; /mnt1/bin/sync; reboot_bak"
-            fi
+            $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p; nvram -c; echo 'NVRAM variables after clear (should be empty):'; nvram -p; reboot_bak"
             log "Done. Your device should reboot now"
             return
         ;;
@@ -8105,6 +8106,7 @@ device_ramdisk_setnvram() {
             $ssh -p $ssh_port root@127.0.0.1 "tar -xvf /mnt1/$untether -C /mnt1; rm /mnt1/$untether"
         fi
     fi
+    $ssh -p $ssh_port root@127.0.0.1 "echo 'NVRAM variables:'; nvram -p"
     log "Done"
 }
 
@@ -11600,11 +11602,6 @@ device_jailbreak_confirm() {
         echo
     fi
 
-    if (( device_vers_maj >= 9 )); then
-        log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
-        device_rd_build="13G36"
-    fi
-
     mode="device_jailbreak"
 }
 
@@ -12628,10 +12625,7 @@ device_enter_ramdisk() {
             device_ramdisk_ios8=1
         fi
     elif (( device_proc >= 5 )); then
-        if (( device_vers_maj >= 9 )); then
-            log "Device is on iOS 9+, using 9.3.5 (13G36) ramdisk"
-            device_rd_build="13G36"
-        elif [[ $device_mode == "Normal" ]]; then
+        if [[ $device_mode == "Normal" ]]; then
             :
         elif [[ $device_type == "iPad2,"* && $device_rd_build == "8"* ]]; then
             device_rd_build=
