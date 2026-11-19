@@ -2001,6 +2001,9 @@ device_sshpass() {
 }
 
 device_iproxy() {
+    if [[ $device_mode == "none" ]]; then
+        return
+    fi
     local port=22
     log "Running iproxy for SSH..."
     if [[ -n $2 ]]; then
