@@ -5268,18 +5268,18 @@ download_sundancerepo() {
 
     log "Preparing SundanceInH2A"
 
-    # handle older sundance folders/repos
-    [[ -d ${sundance}_macos ]] && mv ${sundance}_macos/ ${sundance}/
-    [[ -d ${sundance}_linux ]] && rm -rf ${sundance}_linux/
-
-    if [[ -s $sundance/Sundancer ]]; then
+    if [[ $($sha1sum $sundance/resources/Cydia.tar | awk '{print $1}') != "567467e4b7e5a67fa01fdd7698ea3cba30684fc3" ]]; then
+        rm -rf $sundance
+    elif [[ -s $sundance/Sundancer ]]; then
         pushd $sundance >/dev/null
         git reset --hard
         git checkout master
         git pull
         popd >/dev/null
-    else
-        local repo="https://github.com/NyanSatan/SundanceInH2A"
+    fi
+
+    if [[ ! -s $sundance/Sundancer ]]; then
+        local repo="https://github.com/LukeZGD/SundanceInH2A"
         rm -rf $sundance
         log "git clone: $repo"
         git clone $repo $sundance
@@ -5329,11 +5329,6 @@ ipsw_prepare_sundanceinh2a() {
         sed 's/tempfile\.TemporaryDirectory()/tempfile.TemporaryDirectory(dir=".")/g' $sundance/Sundancer > Sundancer
         mv Sundancer $sundance/
     fi
-
-    log "Copying freeze.tar to Cydia.tar"
-    cp $jelbrek/freeze.tar.gz .
-    gzip -d freeze.tar.gz
-    mv freeze.tar $sundance/resources/Cydia.tar
 
     log "Copying IPSWs..."
     cp "$ipsw_path.ipsw" "$sundance/$ipsw_path2.ipsw"
