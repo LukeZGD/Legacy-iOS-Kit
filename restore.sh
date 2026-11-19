@@ -4396,6 +4396,7 @@ ipsw_prepare_32bit() {
     if [[ $device_use_bb != 0 && $device_type != "$device_disable_bbupdate" ]]; then
         ExtraArgs+=" -bbupdate"
     fi
+    ExtraArgs+=" -S $system_partition_add"
 
     if [[ $ipsw_jailbreak == 1 && $device_type == AppleTV[23]* ]]; then
         ipsw_prepare_atv
