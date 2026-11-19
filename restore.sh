@@ -6,7 +6,7 @@ device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
 sundance="../saved/SundanceInH2A"
 ssh_port=6414
-system_partition_add=420
+system_partition_add=500
 # ipsw_24o=1 # for testing only
 
 bash_test=$(echo -n 0)
@@ -3293,12 +3293,13 @@ ipsw_preference_set() {
         echo
     fi
 
-    if [[ $ipsw_jailbreak == 1 && -z $ipsw_stashing ]] && (( target_vers_maj >= 5 )); then
+    if [[ $ipsw_jailbreak == 1 && -z $ipsw_stashing ]]; then
         input "Stashing to free up space on system partition"
         print "* When enabled, Cydia will move some components to the data partition on its first run."
-        print "* This frees up more space for installing tweaks."
-        print "* However, this option can be unstable and lead to issues."
-        print "* This option is disabled by default (N). Disable this option if unsure."
+        print "* This frees up more space on the system partition for installing tweaks."
+        print "* However, this process can be unstable and may lead to issues."
+        print "* Not recommended, as the system partition is already expanded by $system_partition_add MB."
+        print "* This option is disabled by default (N). Select this option if unsure."
         select_yesno "Enable this option?" 0
         if [[ $? != 0 ]]; then
             log "Stashing option enabled by user."
@@ -3684,10 +3685,6 @@ ipsw_prepare_jailbreak() {
     local ExtraArgs=
     local JBFiles=()
     local daibutsu=$1
-    if (( target_vers_maj <= 4 )); then
-        system_partition_add=100
-        [[ $device_proc == 1 || $device_type == "iPod2,1" ]] && system_partition_add=30
-    fi
 
     if [[ $ipsw_jailbreak == 1 ]]; then
         case $device_target_vers in
@@ -11590,12 +11587,13 @@ device_jailbreak_confirm() {
         echo
     fi
 
-    if [[ -z $ipsw_stashing ]] && (( target_vers_maj >= 5 )); then
+    if [[ -z $ipsw_stashing ]]; then
         input "Stashing to free up space on system partition"
         print "* When enabled, Cydia will move some components to the data partition on its first run."
-        print "* This frees up more space for installing tweaks."
-        print "* However, this option can be unstable and lead to issues."
-        print "* This option is disabled by default (N). Disable this option if unsure."
+        print "* This frees up more space on the system partition for installing tweaks."
+        print "* However, this process can be unstable and may lead to issues."
+        print "* Not recommended, as the system partition is already expanded by $system_partition_add MB."
+        print "* This option is disabled by default (N). Select this option if unsure."
         select_yesno "Enable this option?" 0
         if [[ $? != 0 ]]; then
             log "Stashing option enabled by user."
