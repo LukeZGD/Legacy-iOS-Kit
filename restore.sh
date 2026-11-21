@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ipsw_openssh=1 # OpenSSH will be added to jailbreak/custom IPSW if set to 1.
-device_bootargs_default="pio-error=0 debug=0x2014e serial=3"
+device_bootargs_default="pio-error=0"
 device_disable_sudoloop=1
 jelbrek="../resources/jailbreak"
 sundance="../saved/SundanceInH2A"
