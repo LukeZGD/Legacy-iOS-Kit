@@ -7758,6 +7758,7 @@ device_ramdisk() {
         $irecovery -f iBEC
         if [[ $device_pwnrec == 1 ]]; then
             $irecovery -c "go"
+            sleep 3
         fi
     fi
     device_find_mode Recovery
@@ -8619,6 +8620,7 @@ shsh_save_onboard() {
     $irecovery -f pwnediBEC.dfu
     if [[ $device_pwnrec == 1 ]]; then
         $irecovery -c "go"
+        sleep 3
     fi
     device_find_mode Recovery
     log "Dumping raw dump now"
