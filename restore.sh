@@ -8193,7 +8193,7 @@ menu_ramdisk() {
     if [[ $device_ramdisk_ios8 != 1 ]]; then
         menu_items+=("Dump Blobs")
         if (( device_proc <= 8 )); then
-            menu_items+=("Erase All (iOS 7 and 8)")
+            menu_items+=("Erase All (iOS 8 and lower)")
         fi
         if (( device_proc >= 5 )); then
             menu_items+=("Erase All (iOS 9+)")
@@ -8237,7 +8237,7 @@ menu_ramdisk() {
                 "Get iOS Version" ) mode="iosvers";;
                 "Dump Baseband/Activation" ) mode="dump-bbactrec";;
                 "Install TrollStore" ) mode="trollstore";;
-                "Erase All (iOS 7 and 8)" ) mode="erase78";;
+                "Erase All (iOS 8 and lower)" ) mode="erase78";;
                 "Erase All (iOS 9+)" ) mode="erase9";;
                 "Clear NVRAM" ) mode="clearnvram";;
                 "Disable/Enable Exploit" ) menu_remove4;;
@@ -8581,8 +8581,8 @@ shsh_get_buildmanifest() {
     ipsw_latest_set
     if [[ -s $buildmanifest ]]; then
         cp -v $buildmanifest BuildManifest.plist
-    elif [[ "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw 2>/dev/null)" ]]; then
-        file_extract_from_archive "$(ls ../${ipsw_prefix}*${build_id}_Restore.ipsw)" BuildManifest.plist
+    elif [[ "$(ls ../${ipsw_prefix}*${device_target_build}_Restore.ipsw 2>/dev/null)" ]]; then
+        file_extract_from_archive "$(ls ../${ipsw_prefix}*${device_target_build}_Restore.ipsw)" BuildManifest.plist
     fi
 
     if [[ ! -s BuildManifest.plist ]]; then
@@ -8649,7 +8649,7 @@ shsh_convert_onboard() {
     local err
     local shsh="../saved/shsh/${device_ecid}-${device_type}_$(date +%Y-%m-%d-%H%M).shsh"
     if (( device_proc <= device_proc_32bit )); then
-        shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
+        shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_build}.shsh"
         # fix unknown magic errors for powdersn0w/DRA downgraded devices
         local blob=$(xxd -p dump.raw | tr -d '\n')
         local search=
@@ -8678,6 +8678,7 @@ shsh_convert_onboard() {
             return
         else
             shsh_get_buildmanifest
+            shsh="../saved/shsh/${device_ecid}-${device_type}-${device_target_vers}-${device_target_build}.shsh"
             err=$?
             if [[ $err != 0 ]]; then
                 warn "Failed to get BuildManifest for blob conversion/validation. Cannot continue."
