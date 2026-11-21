@@ -8723,7 +8723,7 @@ shsh_save_cydia() {
             1[0234]* ) continue;; # skip ios 6.0-6.1.2 and 8.0+
         esac
         printf "\n%s " "$build"
-        $tsschecker -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build >/dev/null
+        $tsschecker -d $device_type -e $device_ecid --server-url "http://cydia.saurik.com/TSS/controller?action=2/" -s -g 0x1111111111111111 --buildid $build -b >/dev/null
         if [[ $(ls *$build* 2>/dev/null) ]]; then
             printf "saved"
             mv $(ls *$build*) ../saved/shsh/$device_ecid-$device_type-$build.shsh
