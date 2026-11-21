@@ -3775,7 +3775,7 @@ ipsw_prepare_jailbreak() {
         cp "$hacktivate_patch" "$FirmwareBundle/lockdownd.patch"
     fi
 
-    if [[ $device_type == "iPod2,1" && $target_vers_maj == 3 ]]; then
+    if [[ $device_type == iPod[23],1 && $target_vers_maj == 3 ]]; then
         export SECTORS_AT_A_TIME=0x200
     fi
 
@@ -4899,10 +4899,6 @@ ipsw_prepare_ios4multipart() {
     zip -r0 $ipsw_custom_part1.ipsw *
     popd >/dev/null
 
-    if [[ $ipsw_skip_first == 1 ]]; then
-        return
-    fi
-
     # ------ part 1 (nor flash) ends here. start creating part 2 ipsw ------
     ipsw_prepare_32bit $iboot
 
@@ -5596,13 +5592,8 @@ ipsw_prepare_multipatch() {
         "$dir/hfsplus" RestoreRamdisk.dec chmod 755 usr/sbin/asr
     fi
 
-    if [[ $target_vers_maj == 3 ]] && [[ $device_type == "iPad1,1" || $device_type == "iPod3,1" ]]; then
-        log "3.x options.plist"
-        cp ../resources/firmware/src/options.$device_model.plist $options_plist
-    else
-        log "Extract options.plist from $device_target_vers IPSW"
-        "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
-    fi
+    log "Extract options.plist from $device_target_vers IPSW"
+    "$dir/hfsplus" ramdisk2.dec extract usr/local/share/restore/$options_plist
 
     log "Modify options.plist"
     cat $options_plist | sed '$d' | sed '$d' > options2.plist # remove </dict> and </plist>
