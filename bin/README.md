@@ -53,6 +53,7 @@ These binaries use the same source on Linux and macOS.
 | pwnedDFU               | https://github.com/LukeZGD/iPwnder32 |
 | pzb                  | https://github.com/LukeZGD/partialzipbrowser |
 | restoredpatcher     | https://gist.github.com/LukeZGD/d7c529aa5ef6e665cfbba5053ea7dc5b |
+| sepfix | https://github.com/pwnerblu/surrealra1n/blob/development/sep-bridge/ascm-bridge-a12-a13.c |
 | sshpass              | https://github.com/LukeZGD/sshpass |
 | ticket               | https://github.com/LukeZGD/powdersn0w_pub |
 | trustcache          | https://github.com/LukeZGD/trustcache |

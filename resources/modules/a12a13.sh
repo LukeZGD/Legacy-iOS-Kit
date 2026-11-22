@@ -194,15 +194,11 @@ device_a12a13_ipsw_tethered() {
     mv -v tmp1/BuildManifest.plist bm_target.plist
     cp -v tmp2/BuildManifest.plist bm_base.plist
 
-    local restored="restored_update"
-    local rtype="Upgrade"
-    if (( target_vers_maj >= 16 )) || [[ $target_vers_maj == 13 || $device_target_build == "18A5342e" ]]; then
-        restored="restored_external"
-        rtype="Erase"
-    fi
+    local restored="restored_external"
+    local rtype="Erase"
     log "restored: $restored"
     ipsw_get_ramdisk_identity Erase bm_base.plist
-    base_identity=$target_identity
+    local base_identity=$target_identity
     log "Base identity: $base_identity"
     ipsw_get_ramdisk_identity $rtype bm_target.plist
     log "Target identity: $target_identity"
@@ -286,6 +282,12 @@ device_a12a13_ipsw_tethered() {
         15 ) "$dir/Kernel64Patcher" kernel.raw kernelboot.patch -we;;
         16 ) "$dir/Kernel64Patcher" kernel.raw kernelboot.patch -we -d;;
     esac
+    case $target_vers_maj in
+        1[45] )
+            mv -v kernelboot.patch kernelboot.patc
+            "$dir/sepfix" kernelboot.patc kernelboot.patch
+        ;;
+    esac
     "$dir/kerneldiff" kernel.raw kernelboot.patch kernelboot.diff
     if (( target_vers_maj >= 16 )); then
         "$dir/img4" -i kernelboot.patch -o tmp2/$KERNEL2 -A -T krnl -J
@@ -327,21 +329,12 @@ device_a12a13_ipsw_tethered() {
         ramdisk_url="https://updates.cdn-apple.com/2022FallFCS/fullrestores/012-65861/0A0400A0-2174-4D49-91B7-43FC9DE24272/iPhone10,3,iPhone10,6_16.0_20A362_Restore.ipsw"
     elif [[ $target_vers_maj == 15 ]]; then
         ramdisk_download_name="018-79907-001.dmg"
-        if [[ $restored == "restored_update" ]]; then
-            ramdisk_download_name="018-80166-001.dmg"
-        fi
         ramdisk_url="https://updates.cdn-apple.com/2021FallFCS/fullrestores/002-02910/AF984499-D03A-43E7-9472-6D16BA756E5E/iPhone10,3,iPhone10,6_15.0_19A346_Restore.ipsw"
     elif [[ $target_vers_maj == 14 ]]; then
         ramdisk_download_name="048-58904-639.dmg"
-        if [[ $restored == "restored_update" ]]; then
-            ramdisk_download_name="048-58813-634.dmg"
-        fi
         ramdisk_url="https://updates.cdn-apple.com/2020SummerFCS/fullrestores/001-46617/B62CA88B-EB85-4A5A-9440-7E0B90B02006/iPhone10,3,iPhone10,6_14.0_18A373_Restore.ipsw"
     else # iOS 13
         ramdisk_download_name="048-96245-001.dmg"
-        if [[ $restored == "restored_update" ]]; then
-            ramdisk_download_name="048-96454-001.dmg"
-        fi
         ramdisk_url="https://updates.cdn-apple.com/2019FallFCS/fullrestores/061-08721/B905C96C-C875-11E9-8C18-F4CC329DFA63/iPhone10,3,iPhone10,6_13.0_17A577_Restore.ipsw"
     fi
 
@@ -534,14 +527,8 @@ menu_ipsw_a12a13_tethered() {
             else
                 warn "Selected Target IPSW failed validation, proceed with caution"
             fi
-            if [[ ( $target_vers_maj == 14 || $target_vers_maj == 15 ) && $device_target_build != "18A5342e" ]]; then
-                case $device_proc in
-                    12 ) warn "Make sure the device has been restored and activated on iOS 14 beta 4 before proceeding.";;
-                    13 ) warn "Make sure the device has been restored and activated on iOS 13.x or iOS 14 beta 4 before proceeding.";;
-                esac
-                print "* This step is required for the tethered iOS 14 or 15 installation to be usable."
-            elif (( target_vers_maj > 16 || target_vers_maj < 13 )) ||    # iOS 12 and 17+
-                 (( target_vers_maj == 13 && target_vers_min < 4 )); then # iOS 13.3.1-
+            if (( target_vers_maj > 16 || target_vers_maj < 13 )) ||    # iOS 12 and 17+
+               (( target_vers_maj == 13 && target_vers_min < 4 )); then # iOS 13.3.1-
                 warn "The selected IPSW version is not supported. Select a supported IPSW to continue."
                 print "* Supported iOS versions: $lo to $hi"
             fi
