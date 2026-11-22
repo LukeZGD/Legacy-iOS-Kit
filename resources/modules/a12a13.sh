@@ -581,7 +581,7 @@ menu_ipsw_a12a13_tethered() {
             "$start"             ) mode="device_a12a13_restore_tethered";;
             "Select Target IPSW" ) menu_ipsw_browse;;
             "Select Base IPSW"   ) menu_ipsw_browse "base";;
-            "Download Base IPSW" ) ipsw_download "../${device_type}_${device_latest_vers}_${device_latest_build}_Restore" latest;;
+            "Download Base IPSW" ) ipsw_download "../${ipsw_prefix}_${device_latest_vers}_${device_latest_build}_Restore" latest;;
             "Go Back" )
                 back=1
 
