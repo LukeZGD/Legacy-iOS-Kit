@@ -11609,13 +11609,13 @@ device_jailbreak_gilbert() {
     local latest="v1.1.4"
     local gilbertjb="g1lbertJB-$platform-$(uname -m)"
     [[ $platform == "macos" ]] && gilbertjb="g1lbertJB-macos"
-    local current="$(cat ../saved/gilbertjb/version 2>/dev/null)"
+    local current="$(cat ../saved/$gilbertjb/version 2>/dev/null)"
 
     if [[ $current != "$latest" ]]; then
-        rm -rf ../saved/g1lbertJB-$platform*
+        rm -rf ../saved/$gilbertjb
     fi
 
-    if [[ ! -s ../saved/gilbertjb ]]; then
+    if [[ ! -s ../saved/$gilbertjb ]]; then
         file_download https://github.com/g1lbertJB/g1lbertJB/releases/download/$latest/$gilbertjb-$latest.zip $gilbertjb.zip
         file_extract $gilbertjb.zip
         if [[ ! -s gilbertjb ]]; then
