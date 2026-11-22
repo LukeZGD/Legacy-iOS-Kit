@@ -395,6 +395,7 @@ set_tool_paths() {
                 "noble" | "oracular"    ) ubuntu_ver=24;;
                 "plucky" | "questing"   ) ubuntu_ver=25;;
                 "resolute" | "stonking" ) ubuntu_ver=26;;
+                "tenacious"             ) ubuntu_ver=27;;
             esac
             if [[ -z $ubuntu_ver ]]; then
                 source /etc/upstream-release/lsb-release 2>/dev/null
