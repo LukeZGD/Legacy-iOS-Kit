@@ -160,7 +160,6 @@ For 32-bit devices compatible with restores/downgrades (see README):
 
 For 64-bit checkm8 devices compatible with pwned restores:
     --skip-blob               Enable futurerestore skip blob option for OTA/onboard/factory blobs
-    --use-dev                 Use dev branch of futurerestore nightly
     --use-pwndfu              Enable futurerestore pwned restore option
 
     * Default IPSW path: <script location>/<name of IPSW file>.ipsw
@@ -6466,7 +6465,8 @@ restore_futurerestore() {
         ExtraArr+=("--rdsk" "rdsk.im4p" "--rkrn" "kcache.im4p")
     fi
 
-    if [[ $device_type == "iPhone10,"* && $device_target_other == 1 ]]; then
+    # use futurerestore dev branch for a11 devices only
+    if [[ $device_proc == 11 && $device_target_other == 1 ]]; then
         futurerestore_update
         futurerestore2=
         [[ $device_sudoloop == 1 ]] && futurerestore2="$sudo LD_LIBRARY_PATH=$LD_LIBRARY_PATH "
@@ -6474,6 +6474,7 @@ restore_futurerestore() {
         [[ $platform == "linux" ]] && futurerestore2+="-$platform_arch"
         futurerestore2+="-${fr_branch}"
     fi
+
     # custom arg(s), either --use-pwndfu or --skip-blob, or both
     for arg in "$@"; do
         [[ -n "$arg" ]] && ExtraArr+=("$arg")
@@ -8831,9 +8832,6 @@ menu_print_info() {
     elif (( device_proc > device_proc_32bit && device_proc <= device_proc_checkm8 )); then
         if [[ $restore_useskipblob == 1 ]]; then
             warn "skip-blob flag detected. futurerestore will have --skip-blob enabled."
-        fi
-        if [[ $restore_usedev == 1 ]]; then
-            warn "use-dev flag detected. futurerestore dev branch will be used."
         fi
         if [[ $restore_usepwndfu64 == 1 ]]; then
             warn "use-pwndfu flag detected. futurerestore will have --use-pwndfu enabled."
@@ -13158,7 +13156,6 @@ for i in "$@"; do
 
         # options for 64-bit devices
         "--skip-blob"       ) restore_useskipblob=1;;
-        "--use-dev"         ) restore_usedev=1;;
         "--use-pwndfu"      ) restore_usepwndfu64=1;;
 
         # device_argmode setters
