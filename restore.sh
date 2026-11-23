@@ -3725,13 +3725,10 @@ ipsw_prepare_jailbreak() {
             [543].* ) JBFiles+=("$jelbrek/cydiasubstrate5.tar");;
         esac
         if [[ $ipsw_openssh == 1 ]]; then
-            JBFiles+=("$jelbrek/sshdeb.tar")
-            if (( target_vers_maj >= 4 )); then
-                cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
-                gzip -d openssh.tar.gz
-                gzip -d openssl.tar.gz
-                JBFiles+=("openssh.tar" "openssl.tar")
-            fi
+            cp $jelbrek/openssh.tar.gz $jelbrek/openssl.tar.gz .
+            gzip -d openssh.tar.gz
+            gzip -d openssl.tar.gz
+            JBFiles+=("$jelbrek/sshdeb.tar" "openssh.tar" "openssl.tar")
         fi
         case $device_target_vers in
             [432]* ) :;;
