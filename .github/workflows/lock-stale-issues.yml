@@ -14,14 +14,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Lock issues inactive for over 3 months
+      - name: Lock issues inactive for over 1 month
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          cutoff=$(date -u -d '3 months ago' '+%Y-%m-%dT%H:%M:%SZ')
+          cutoff=$(date -u -d '1 month ago' '+%Y-%m-%dT%H:%M:%SZ')
 
           echo "Locking issues last updated before $cutoff"
 
