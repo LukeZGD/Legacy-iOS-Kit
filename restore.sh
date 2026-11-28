@@ -119,7 +119,7 @@ Usage: ./restore.sh [Options]
 
 List of options:
     --debug                   Enable script debugging (set -x and debug mode)
-    --device=<type>           Specify device type
+    --device=<type>           Specify device type (eg. iPhone8,1)
     --dfuhelper               Launch to DFU Mode Helper only
     --disable-usbmuxd         Disable use of own usbmuxd instance on Linux
     --enable-sudoloop         Enable running some tools as root on Linux
@@ -128,6 +128,7 @@ List of options:
     --exit-recovery           Attempt to exit recovery mode
     --kdfu                    Enter kDFU mode with the connected device
     --help                    Display this help message
+    --model=<model>           Specify device model (eg. n71)
     --no-color                Disable colors for script output
     --no-finder               Disable Finder device detection and keep it disabled after script exit
                               To re-enable it, run the script without this flag and exit
@@ -937,23 +938,26 @@ device_entry() {
         device_type="$device_type_entry"
     done
     case $device_type in
-    iPad6,1[12] | iPhone8,* )
-        local valid
-        local allowed
-        case $device_type in
-            iPhone8,1 ) allowed="n71 n71m";;
-            iPhone8,2 ) allowed="n66 n66m";;
-            iPhone8,4 ) allowed="n69 n69u";;
-            iPad6,11  ) allowed="j71s j71t";;
-            iPad6,12  ) allowed="j72s j72t";;
-        esac
-        until [[ $valid == 1 ]]; do
-            read -p "$(input 'Enter device model (without ap, eg. n71): ')" device_model
+        iPad6,1[12] | iPhone8,* )
+            local valid
+            local allowed
+            case $device_type in
+                iPhone8,1 ) allowed="n71 n71m";;
+                iPhone8,2 ) allowed="n66 n66m";;
+                iPhone8,4 ) allowed="n69 n69u";;
+                iPad6,11  ) allowed="j71s j71t";;
+                iPad6,12  ) allowed="j72s j72t";;
+            esac
             for m in $allowed; do
-                [[ $device_model == "$m" ]] && valid=1 && break
+                [[ $device_model == "$m" ]] && valid=1
             done
-        done
-    ;;
+            until [[ $valid == 1 ]]; do
+                read -p "$(input 'Enter device model (without ap, eg. n71): ')" device_model
+                for m in $allowed; do
+                    [[ $device_model == "$m" ]] && valid=1 && break
+                done
+            done
+        ;;
     esac
 
     if [[ $main_argmode == "device_justboot"* || $main_argmode == "device_enter_ramdisk"* ]]; then
@@ -13173,6 +13177,7 @@ for i in "$@"; do
         # entry parameters
         "--device="*        ) [[ -z $device_argmode ]] && device_argmode="entry"; device_type="${i#*=}";;
         "--ecid="*          ) [[ -z $device_argmode ]] && device_argmode="entry"; device_ecid="${i#*=}";;
+        "--model="*         ) [[ -z $device_argmode ]] && device_argmode="entry"; device_model="${i#*=}";;
 
         # main_argmode setters
         "--dfuhelper"       ) main_argmode="device_dfuhelper";;
