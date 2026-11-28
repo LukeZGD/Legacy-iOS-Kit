@@ -7232,7 +7232,7 @@ device_ramdisk64() {
             sshtar_download="https://raw.githubusercontent.com/verygenericname/sshtars/6c05c8a74095c63e1d130ecbf309d77efa6d17d5/ssh.tar.gz"
             sshtar_hash="b4a47daa18e5a391ff704da8424010a27445d1a6"
         ;;
-        1[6789]* | 15[EF]* ) :;;
+        1[6789]* | 15[EFG]* ) :;;
         * ) error "SSH ramdisk version not supported. Minimum version is 11.3";;
     esac
 
@@ -12593,10 +12593,10 @@ device_enter_ramdisk() {
         error "SSH Ramdisk is not supported for this device"
     elif [[ $device_latest_vers == "16"* || $device_checkm8ipad == 1 ]]; then
         if [[ -n $device_build ]]; then
-            log "Using current build $device_build for the ramdisk"
             device_rd_build="$device_build"
         else
             warn "Make sure to enter the correct ramdisk build for your device. If unsure, use your current iOS version."
+            print "* If your device is on iOS 11.2.6 or older, leave the build blank to use the default ramdisk."
             warn "Booting an incompatible ramdisk on iOS 16 or newer will cause a bootloop. Proceed with caution."
             select_yesno "Select Y to continue, N to exit" 0
             if [[ $? != 1 ]]; then
@@ -12605,6 +12605,14 @@ device_enter_ramdisk() {
             print "* Pressing Enter/Return without entering a build will default to the iOS 14.3 ramdisk. Do not use this default on iOS 16 or newer; enter your current iOS version instead."
             device_enter_build # this is the user input part
         fi
+        # 64-bit ramdisks need iOS 11.3 or newer, so devices on older versions use the default instead
+        case $device_rd_build in
+            [0-9][A-Z]* | 1[0-4][A-Z]* | 15[A-D]* )
+                log "Build $device_rd_build is older than iOS 11.3, using the default ramdisk instead"
+                device_rd_build=
+            ;;
+            ?* ) log "Using build $device_rd_build for the ramdisk";;
+        esac
     elif (( device_proc > 7 )); then
         :
     elif [[ $device_proc == 7 ]]; then
