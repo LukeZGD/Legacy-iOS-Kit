@@ -76,7 +76,7 @@ a12a13_values_init() {
             WIRELESS="WirelessPower.iphone11.im4p"
         ;;
 
-        iPhone12,[2358] )
+        iPhone12,[1358] )
             REFER="iphone12"
             AOP14="aopfw-iphone12aop.im4p"
             AOP="aopfw-iphone12aop.RELEASE.im4p"
